@@ -89,6 +89,22 @@ export default function ProbeScreen() {
         const res = await fetch(`${RELAY_URL}/health`);
         log(`11. relay raggiungibile: HTTP ${res.status}`);
 
+        const { createPairingInvite, parsePairingUri } = core;
+        const invite = createPairingInvite(core.generateVaultKey(expoRandom), { now: Date.now() });
+        const parsed = parsePairingUri(invite.uri, Date.now());
+        log(`12. invito di pairing costruito e riletto: ${parsed.ok ? 'OK' : 'FALLITO'}`);
+
+        const { buildQrPath } = await import('@/features/pairing/qr-path');
+        const qr = buildQrPath(invite.uri);
+        log(`13. QR generato: griglia ${qr.extent}×${qr.extent} moduli`);
+
+        // La fotocamera è l'unico modulo nativo che l'app carica pigramente: se manca,
+        // il pairing resta possibile incollando il codice, e va saputo qui.
+        const { loadCameraModule } = await import('@/features/pairing/camera');
+        log(
+          `14. modulo fotocamera: ${loadCameraModule() === null ? 'NON disponibile (resta l’incolla manuale)' : 'disponibile'}`,
+        );
+
         await persistence.destroy();
         log('TUTTO OK — ogni sottosistema funziona su questo dispositivo');
       } catch (error) {
