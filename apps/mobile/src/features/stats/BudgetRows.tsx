@@ -36,7 +36,10 @@ export function BudgetRows({ statuses, categories }: BudgetRowsProps) {
           <View key={status.categoryId} style={{ gap: spacing.xs }}>
             <View style={styles.row}>
               <Text style={{ fontSize: fontSize.sm }}>{category?.icon ?? '·'}</Text>
-              <Text numberOfLines={1} style={{ flex: 1, color: colors.text, fontSize: fontSize.sm }}>
+              <Text
+                numberOfLines={1}
+                style={{ flex: 1, color: colors.text, fontSize: fontSize.sm }}
+              >
                 {category?.name ?? 'Categoria rimossa'}
               </Text>
               <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>

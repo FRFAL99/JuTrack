@@ -76,12 +76,20 @@ describe('parsePairingUri', () => {
     ['un QR qualsiasi del mondo', 'https://example.com/', 'not-pairing-uri'],
     ['un altro schema custom', 'otpauth://totp/x', 'not-pairing-uri'],
     ['stringa vuota', '', 'not-pairing-uri'],
-    ['versione futura', `${PAIRING_URI_PREFIX}?v=2&k=${bytesToBase64url(key)}`, 'unsupported-version'],
+    [
+      'versione futura',
+      `${PAIRING_URI_PREFIX}?v=2&k=${bytesToBase64url(key)}`,
+      'unsupported-version',
+    ],
     ['versione assente', `${PAIRING_URI_PREFIX}?k=${bytesToBase64url(key)}`, 'unsupported-version'],
     ['chiave assente', `${PAIRING_URI_PREFIX}?v=1`, 'missing-key'],
     ['chiave vuota', `${PAIRING_URI_PREFIX}?v=1&k=`, 'missing-key'],
     ['chiave non base64url', `${PAIRING_URI_PREFIX}?v=1&k=non!valido!`, 'malformed-key'],
-    ['chiave troppo corta', `${PAIRING_URI_PREFIX}?v=1&k=${bytesToBase64url(key.slice(0, 16))}`, 'malformed-key'],
+    [
+      'chiave troppo corta',
+      `${PAIRING_URI_PREFIX}?v=1&k=${bytesToBase64url(key.slice(0, 16))}`,
+      'malformed-key',
+    ],
     [
       'chiave troppo lunga',
       `${PAIRING_URI_PREFIX}?v=1&k=${bytesToBase64url(new Uint8Array(VAULT_KEY_BYTES + 1))}`,

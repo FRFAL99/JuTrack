@@ -51,7 +51,14 @@ export function CategoryBars({ totals, categories }: CategoryBarsProps) {
               >
                 {formatMoney(total.totalCents)}
               </Text>
-              <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, minWidth: 34, textAlign: 'right' }}>
+              <Text
+                style={{
+                  color: colors.textMuted,
+                  fontSize: fontSize.xs,
+                  minWidth: 34,
+                  textAlign: 'right',
+                }}
+              >
                 {formatShare(total.share)}
               </Text>
             </View>

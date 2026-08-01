@@ -30,7 +30,14 @@ export default function SettleScreen() {
   const settlements = useSettlements();
 
   const transfers = useMemo(
-    () => simplifyDebts(computeBalances(expenses, settlements, members.map((m) => m.id))),
+    () =>
+      simplifyDebts(
+        computeBalances(
+          expenses,
+          settlements,
+          members.map((m) => m.id),
+        ),
+      ),
     [expenses, settlements, members],
   );
 

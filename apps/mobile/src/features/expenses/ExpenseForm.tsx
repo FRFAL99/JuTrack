@@ -64,7 +64,9 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   // impedirebbe di scrivere «12,» mentre si digita «12,50».
   const [customShares, setCustomShares] = useState<Record<string, string>>(() =>
     initial?.split.mode === 'custom'
-      ? Object.fromEntries(Object.entries(initial.split.shares).map(([id, v]) => [id, formatCents(v)]))
+      ? Object.fromEntries(
+          Object.entries(initial.split.shares).map(([id, v]) => [id, formatCents(v)]),
+        )
       : {},
   );
   const [touched, setTouched] = useState(false);
@@ -84,14 +86,19 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   const customGap = (amountCents ?? 0) - customTotal;
   const customBalances = mode !== 'custom' || (amountCents !== null && customGap === 0);
 
-  const canSubmit =
-    amountCents !== null && amountCents > 0 && paidBy !== '' && customBalances;
+  const canSubmit = amountCents !== null && amountCents > 0 && paidBy !== '' && customBalances;
 
   /** Passando a quote libere si parte dalla divisione equa: è il punto di partenza più probabile. */
   const chooseMode = (next: SplitMode): void => {
     if (next === 'custom' && Object.keys(customShares).length === 0 && amountCents !== null) {
-      const equal = buildSplit('equal', amountCents, members.map((m) => m.id)).shares;
-      setCustomShares(Object.fromEntries(Object.entries(equal).map(([id, v]) => [id, formatCents(v)])));
+      const equal = buildSplit(
+        'equal',
+        amountCents,
+        members.map((m) => m.id),
+      ).shares;
+      setCustomShares(
+        Object.fromEntries(Object.entries(equal).map(([id, v]) => [id, formatCents(v)])),
+      );
     }
     setMode(next);
   };
@@ -104,7 +111,11 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
       );
       return { mode: 'custom', shares };
     }
-    return buildSplit('equal', total, members.map((m) => m.id));
+    return buildSplit(
+      'equal',
+      total,
+      members.map((m) => m.id),
+    );
   };
 
   const handleSubmit = (): void => {

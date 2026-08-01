@@ -82,12 +82,12 @@ export default function PairInviteScreen() {
               </Text>
               <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
                 La chiave del vault, in chiaro. Chi la inquadra — anche da una foto o da uno schermo
-                condiviso — può leggere tutte le spese, adesso e in futuro. Mostralo solo all&apos;altro
-                telefono e solo mentre lo state guardando entrambi.
+                condiviso — può leggere tutte le spese, adesso e in futuro. Mostralo solo
+                all&apos;altro telefono e solo mentre lo state guardando entrambi.
               </Text>
               <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-                Il codice smette di essere accettato dopo {Math.round(DEFAULT_PAIRING_TTL_MS / 60000)}{' '}
-                minuti.
+                Il codice smette di essere accettato dopo{' '}
+                {Math.round(DEFAULT_PAIRING_TTL_MS / 60000)} minuti.
               </Text>
             </Card>
 
@@ -100,13 +100,19 @@ export default function PairInviteScreen() {
             ) : (
               <Card style={{ alignItems: 'center', gap: spacing.md }}>
                 {expired ? (
-                  <View style={{ alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xl }}>
+                  <View
+                    style={{ alignItems: 'center', gap: spacing.sm, paddingVertical: spacing.xl }}
+                  >
                     <Text style={{ fontSize: 40 }}>⌛</Text>
-                    <Text style={{ color: colors.text, fontSize: fontSize.md }}>Codice scaduto</Text>
+                    <Text style={{ color: colors.text, fontSize: fontSize.md }}>
+                      Codice scaduto
+                    </Text>
                   </View>
                 ) : (
                   <>
-                    <View style={{ padding: spacing.md, backgroundColor: '#FFFFFF', borderRadius: 8 }}>
+                    <View
+                      style={{ padding: spacing.md, backgroundColor: '#FFFFFF', borderRadius: 8 }}
+                    >
                       <PairingQr value={invite.uri} size={qrSize} />
                     </View>
                     <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>

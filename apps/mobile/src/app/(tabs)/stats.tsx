@@ -54,7 +54,14 @@ export default function StatsScreen() {
   // Il saldo è cumulativo su tutta la storia, non sul mese scelto: un debito non si
   // azzera al cambio di pagina del calendario.
   const transfers = useMemo(
-    () => simplifyDebts(computeBalances(allExpenses, settlements, members.map((m) => m.id))),
+    () =>
+      simplifyDebts(
+        computeBalances(
+          allExpenses,
+          settlements,
+          members.map((m) => m.id),
+        ),
+      ),
     [allExpenses, settlements, members],
   );
 
@@ -83,7 +90,11 @@ export default function StatsScreen() {
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
         <Card style={{ gap: spacing.md }}>
           <View style={styles.rowBetween}>
-            <MonthStep label="‹" hint="Mese precedente" onPress={() => setMonth(shiftMonth(month, -1))} />
+            <MonthStep
+              label="‹"
+              hint="Mese precedente"
+              onPress={() => setMonth(shiftMonth(month, -1))}
+            />
             <Text
               style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
             >
@@ -98,7 +109,9 @@ export default function StatsScreen() {
           </View>
 
           <View style={{ alignItems: 'center', gap: 2 }}>
-            <Text style={{ color: colors.text, fontSize: fontSize.xxl, fontWeight: fontWeight.bold }}>
+            <Text
+              style={{ color: colors.text, fontSize: fontSize.xxl, fontWeight: fontWeight.bold }}
+            >
               {formatMoney(monthTotal)}
             </Text>
             <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
@@ -171,7 +184,11 @@ export default function StatsScreen() {
             >
               Budget
             </Text>
-            <Pressable onPress={() => router.push('/budget')} accessibilityRole="button" hitSlop={8}>
+            <Pressable
+              onPress={() => router.push('/budget')}
+              accessibilityRole="button"
+              hitSlop={8}
+            >
               <Text style={{ color: colors.accent, fontSize: fontSize.sm }}>Imposta</Text>
             </Pressable>
           </View>

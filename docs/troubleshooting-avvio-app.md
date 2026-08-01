@@ -36,15 +36,15 @@ solida, e le prove erano corrette — solo che nessuna guardava dove serviva.
 
 Il dato che avrebbe portato subito alla soluzione era già lì dal primo giorno: **il 404 sul
 bundle**. È stato letto come «il bundle non arriva» (sintomo) invece che come «il server non sa dove
-sia il progetto» (causa). La domanda mancante non era *perché il telefono rifiuta il bundle*, ma
+sia il progetto» (causa). La domanda mancante non era _perché il telefono rifiuta il bundle_, ma
 **da quale directory sta rispondendo questo server**.
 
 Aggravante: il processo Metro era rimasto vivo per ore fra un tentativo e l'altro. Ogni prova
 ripartiva dal telefono, mai dal server — che nel frattempo aveva anche una mappa dei file
 invalidata da una reinstallazione delle dipendenze avvenuta sotto di lui.
 
-**Lezione da tenere:** quando un client non riceve nulla, verificare *cosa serve il server* prima di
-indagare *cosa fa il client*. E un demone di sviluppo lasciato in esecuzione va riavviato prima di
+**Lezione da tenere:** quando un client non riceve nulla, verificare _cosa serve il server_ prima di
+indagare _cosa fa il client_. E un demone di sviluppo lasciato in esecuzione va riavviato prima di
 dichiarare riprodotto un problema.
 
 ## Sintomo originale
@@ -66,15 +66,15 @@ quindi destinato a non produrre effetti: non stava fallendo, non stava partendo.
 Tutte queste esclusioni restano valide, ed è il motivo per cui il codice era già sano quando la
 causa vera è stata rimossa.
 
-| Ipotesi                         | Come è stata esclusa                                                                                                       |
-| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Bug nel nostro codice           | App ridotta al **livello 0** — solo `expo-router` e React Native, zero Yjs, zero crypto, zero SQLite. Crashava comunque    |
-| Errore di compilazione          | `expo export` completava senza errori                                                                                      |
-| Bytecode Hermes incompatibile   | Il bundle servito è **JavaScript normale** (`var __BUNDLE_START_TIME__`), non bytecode                                     |
-| Errore JavaScript a runtime     | Nessuna schermata rossa, nessuna eccezione nel log, nessun motore collegato                                                |
-| Metro non in ascolto sulla rete | `ss` mostra `*:8081`; il manifest rispondeva HTTP 200                                                                      |
-| Rete locale, firewall, VPN      | Riprovato via **tunnel pubblico** (`exp.direct`), verificato dall'esterno. Crashava ancora                                 |
-| Expo Go non realmente SDK 57    | Caduta con la development build: quella non usa Expo Go, e il sintomo era identico                                         |
+| Ipotesi                         | Come è stata esclusa                                                                                                    |
+| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Bug nel nostro codice           | App ridotta al **livello 0** — solo `expo-router` e React Native, zero Yjs, zero crypto, zero SQLite. Crashava comunque |
+| Errore di compilazione          | `expo export` completava senza errori                                                                                   |
+| Bytecode Hermes incompatibile   | Il bundle servito è **JavaScript normale** (`var __BUNDLE_START_TIME__`), non bytecode                                  |
+| Errore JavaScript a runtime     | Nessuna schermata rossa, nessuna eccezione nel log, nessun motore collegato                                             |
+| Metro non in ascolto sulla rete | `ss` mostra `*:8081`; il manifest rispondeva HTTP 200                                                                   |
+| Rete locale, firewall, VPN      | Riprovato via **tunnel pubblico** (`exp.direct`), verificato dall'esterno. Crashava ancora                              |
+| Expo Go non realmente SDK 57    | Caduta con la development build: quella non usa Expo Go, e il sintomo era identico                                      |
 
 ## Tre problemi reali trovati lungo il percorso
 

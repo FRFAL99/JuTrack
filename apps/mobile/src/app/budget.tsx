@@ -82,7 +82,11 @@ export default function BudgetScreen() {
       >
         <Card style={{ gap: spacing.sm }}>
           <View style={styles.rowBetween}>
-            <Step label="‹" hint="Mese precedente" onPress={() => setMonth(shiftMonth(month, -1))} />
+            <Step
+              label="‹"
+              hint="Mese precedente"
+              onPress={() => setMonth(shiftMonth(month, -1))}
+            />
             <Text
               style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
             >
@@ -110,7 +114,10 @@ export default function BudgetScreen() {
               <View key={category.id} style={{ gap: spacing.xs }}>
                 <View style={styles.row}>
                   <Text style={{ fontSize: fontSize.md }}>{category.icon}</Text>
-                  <Text numberOfLines={1} style={{ flex: 1, color: colors.text, fontSize: fontSize.md }}>
+                  <Text
+                    numberOfLines={1}
+                    style={{ flex: 1, color: colors.text, fontSize: fontSize.md }}
+                  >
                     {category.name}
                   </Text>
                   <TextInput
@@ -138,7 +145,9 @@ export default function BudgetScreen() {
                   />
                 </View>
                 {status !== undefined && status.limitCents > 0 && (
-                  <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, textAlign: 'right' }}>
+                  <Text
+                    style={{ color: colors.textMuted, fontSize: fontSize.xs, textAlign: 'right' }}
+                  >
                     Spesi {formatMoney(status.spentCents)}
                     {status.state === 'over'
                       ? ` · superato di ${formatMoney(-status.remainingCents)}`

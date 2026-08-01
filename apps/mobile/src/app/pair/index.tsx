@@ -57,7 +57,10 @@ export default function PairDeepLinkScreen() {
 
         {error !== null && (
           <Card style={{ borderColor: colors.danger }}>
-            <Text style={{ color: colors.danger, fontSize: fontSize.sm, lineHeight: 20 }} selectable>
+            <Text
+              style={{ color: colors.danger, fontSize: fontSize.sm, lineHeight: 20 }}
+              selectable
+            >
               {error}
             </Text>
           </Card>

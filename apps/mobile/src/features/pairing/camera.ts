@@ -43,9 +43,7 @@ export function loadCameraModule(): ExpoCameraModule | null {
  * L'accesso è difensivo perché quell'API è marcata `@hidden` a monte e potrebbe sparire
  * in una versione futura — nel qual caso resta il campo per incollare il codice.
  */
-export async function requestCameraPermission(
-  module: ExpoCameraModule,
-): Promise<CameraPermission> {
+export async function requestCameraPermission(module: ExpoCameraModule): Promise<CameraPermission> {
   const request = module.Camera?.requestCameraPermissionsAsync;
   if (typeof request !== 'function') {
     markError('permessi fotocamera', new Error('Camera.requestCameraPermissionsAsync assente'));

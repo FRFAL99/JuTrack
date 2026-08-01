@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { BUDGET_NEAR_THRESHOLD, budgetStatuses, stateOf } from './budget';
 import type { Budget, Expense } from '../model/types';
 
-function expense(id: string, amountCents: number, date: string, categoryId: string | null): Expense {
+function expense(
+  id: string,
+  amountCents: number,
+  date: string,
+  categoryId: string | null,
+): Expense {
   return {
     id,
     amountCents,

@@ -2,7 +2,12 @@ import { describe, expect, it } from 'vitest';
 import { averagePerMonth, totalCents, totalsByCategory, totalsByMonth } from './breakdown';
 import type { Expense } from '../model/types';
 
-function expense(id: string, amountCents: number, date: string, categoryId: string | null): Expense {
+function expense(
+  id: string,
+  amountCents: number,
+  date: string,
+  categoryId: string | null,
+): Expense {
   return {
     id,
     amountCents,
@@ -34,11 +39,7 @@ describe('totalCents', () => {
 
 describe('totalsByCategory', () => {
   it('ordina dal più speso al meno', () => {
-    expect(totalsByCategory(expenses).map((t) => t.categoryId)).toEqual([
-      'spesa',
-      'casa',
-      null,
-    ]);
+    expect(totalsByCategory(expenses).map((t) => t.categoryId)).toEqual(['spesa', 'casa', null]);
   });
 
   it('somma per categoria e conta le spese', () => {
