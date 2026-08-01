@@ -1,0 +1,52 @@
+# Dipendenze
+node_modules/
+.pnp
+.pnp.js
+
+# Build / output
+dist/
+build/
+*.tsbuildinfo
+coverage/
+
+# Expo
+.expo/
+.expo-shared/
+apps/*/android/
+apps/*/ios/
+*.apk
+*.aab
+*.ipa
+
+# Cloudflare / Wrangler
+.wrangler/
+.dev.vars
+.dev.vars.*
+
+# Segreti — MAI committare
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.keystore
+*.jks
+
+# Log
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+
+# Test / cache
+.cache/
+.turbo/
+.eslintcache

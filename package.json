@@ -1,0 +1,32 @@
+{
+  "name": "jutrack",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tracciamento spese condiviso, local-first e cifrato end-to-end",
+  "license": "MIT",
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "services/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "npm run test --workspaces --if-present"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.6",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.65.0"
+  },
+  "comment:typescript": "TS bloccato a 6.x: typescript-eslint 8.x dichiara peer 'typescript <6.1.0'. TS 7 (port in Go) romperebbe il linting."
+}
