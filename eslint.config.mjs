@@ -80,6 +80,18 @@ export default tseslint.config(
                 "packages/core deve restare indipendente dalla piattaforma. Definisci un'interfaccia in crypto/types.ts e inietta l'implementazione.",
             },
           ],
+          paths: [
+            {
+              // `utf8ToBytes` di noble usa TextEncoder al proprio interno, e su Hermes
+              // TextEncoder non esiste: Expo installa TextDecoder e TextEncoderStream,
+              // ma non TextEncoder. Ha causato un crash all'avvio dell'app.
+              // La nostra implementazione in crypto/encoding.ts non ne dipende.
+              name: '@noble/hashes/utils.js',
+              importNames: ['utf8ToBytes'],
+              message:
+                'utf8ToBytes di noble usa TextEncoder, assente su Hermes. Importa quello da crypto/encoding.',
+            },
+          ],
         },
       ],
     },

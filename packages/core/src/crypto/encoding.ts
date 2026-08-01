@@ -1,12 +1,66 @@
 /**
- * Codifiche binarie, senza dipendere da Buffer o da atob/btoa.
+ * Codifiche binarie, senza dipendere da Buffer, da atob/btoa o da TextEncoder.
  *
- * `Buffer` non esiste nel browser e `atob`/`btoa` non esistono in React Native senza
- * polyfill. Implementarle qui tiene il package indipendente dalla piattaforma.
+ * `Buffer` non esiste nel browser, `atob`/`btoa` non esistono in React Native senza
+ * polyfill, e **`TextEncoder` non è disponibile su Hermes**: Expo installa `TextDecoder`
+ * e `TextEncoderStream`, ma non `TextEncoder` (vedi `expo/src/winter/runtime.native.ts`).
+ * Implementarle qui tiene il package davvero indipendente dalla piattaforma.
  */
-import { bytesToHex, concatBytes, hexToBytes, utf8ToBytes } from '@noble/hashes/utils.js';
+import { bytesToHex, concatBytes, hexToBytes } from '@noble/hashes/utils.js';
 
-export { bytesToHex, hexToBytes, concatBytes, utf8ToBytes };
+export { bytesToHex, hexToBytes, concatBytes };
+
+/**
+ * Codifica una stringa in UTF-8.
+ *
+ * Scritta a mano invece di usare `utf8ToBytes` di `@noble/hashes`, che internamente
+ * usa `TextEncoder` e quindi va in crash su Hermes con `TextEncoder is not defined`.
+ *
+ * Le coppie surrogate sono gestite esplicitamente: senza, ogni emoji — che nei nomi
+ * delle categorie sono la norma — verrebbe codificata come due caratteri di
+ * sostituzione, cambiando i byte e quindi il risultato di cifratura e derivazione.
+ */
+export function utf8ToBytes(input: string): Uint8Array {
+  const out: number[] = [];
+
+  for (let i = 0; i < input.length; i++) {
+    let codePoint = input.charCodeAt(i);
+
+    // Surrogato alto seguito da uno basso: vanno ricomposti nel codepoint reale.
+    if (codePoint >= 0xd800 && codePoint <= 0xdbff && i + 1 < input.length) {
+      const low = input.charCodeAt(i + 1);
+      if (low >= 0xdc00 && low <= 0xdfff) {
+        codePoint = (codePoint - 0xd800) * 0x400 + (low - 0xdc00) + 0x10000;
+        i++;
+      }
+    }
+
+    // Un surrogato spaiato non è un carattere valido: si sostituisce con U+FFFD,
+    // come fa TextEncoder, invece di produrre byte non validi.
+    if (codePoint >= 0xd800 && codePoint <= 0xdfff) codePoint = 0xfffd;
+
+    if (codePoint < 0x80) {
+      out.push(codePoint);
+    } else if (codePoint < 0x800) {
+      out.push(0xc0 | (codePoint >> 6), 0x80 | (codePoint & 0x3f));
+    } else if (codePoint < 0x10000) {
+      out.push(
+        0xe0 | (codePoint >> 12),
+        0x80 | ((codePoint >> 6) & 0x3f),
+        0x80 | (codePoint & 0x3f),
+      );
+    } else {
+      out.push(
+        0xf0 | (codePoint >> 18),
+        0x80 | ((codePoint >> 12) & 0x3f),
+        0x80 | ((codePoint >> 6) & 0x3f),
+        0x80 | (codePoint & 0x3f),
+      );
+    }
+  }
+
+  return Uint8Array.from(out);
+}
 
 const B64URL_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
 
