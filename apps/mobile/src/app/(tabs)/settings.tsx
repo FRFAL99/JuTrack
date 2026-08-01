@@ -129,6 +129,31 @@ export default function SettingsScreen() {
           </Text>
         </Card>
 
+        <Pressable onPress={() => router.push('/probe')} accessibilityRole="button">
+          {({ pressed }) => (
+            <Card style={{ backgroundColor: pressed ? colors.surfacePressed : colors.surface }}>
+              <View style={styles.rowBetween}>
+                <View style={{ gap: 2, flex: 1 }}>
+                  <Text
+                    style={{
+                      color: colors.text,
+                      fontSize: fontSize.md,
+                      fontWeight: fontWeight.semibold,
+                    }}
+                  >
+                    Diagnostica
+                  </Text>
+                  <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
+                    Verifica un sottosistema alla volta — crypto, database, portachiavi, relay — e
+                    mostra dove si interrompe.
+                  </Text>
+                </View>
+                <Text style={{ color: colors.textMuted, fontSize: fontSize.lg }}>›</Text>
+              </View>
+            </Card>
+          )}
+        </Pressable>
+
         <View style={{ paddingHorizontal: spacing.xs, paddingTop: spacing.sm }}>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
             JuTrack 0.1.0 · core {CORE_VERSION}

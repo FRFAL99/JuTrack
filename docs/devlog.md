@@ -4,6 +4,68 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-01 — Relay in produzione; l'app non parte ancora sul telefono
+
+**Relay: online e verificato**
+
+Deploy su Cloudflare: **https://jutrack-relay.jutrack-relayfrfal.workers.dev**
+
+Il primo deploy era riuscito ma irraggiungibile: l'account non aveva mai registrato un sottodominio
+`workers.dev`. Diagnosticato osservando che il nome risolveva **solo su IPv6** e che il TLS falliva.
+Non è un errore di configurazione del progetto — `wrangler` lo aveva segnalato, ma il comando
+`wrangler subdomain` non esiste più nella versione 4: è diventata un'azione da dashboard.
+
+Rieseguita contro il relay reale la stessa prova end-to-end fatta in locale: update Yjs veri,
+cifrati, spediti su Cloudflare, documento ricostruito dall'altra parte. Tutto verde, incluso il
+controllo che un update **non** cifrato esporrebbe la nota in chiaro mentre quello cifrato no.
+
+Verificato anche con `wrangler tail` che i log operativi non espongano i payload: il `vaultId`
+compare `REDACTED`, i corpi delle richieste non vengono registrati. Precisazione onesta: questo prova
+che il _logging_ di Cloudflare non perde nulla, non la cifratura — quella è dimostrata dalla prova
+precedente.
+
+**App: ancora non parte, e la causa è fuori dal nostro codice**
+
+Indagine completa in [troubleshooting-avvio-app.md](troubleshooting-avvio-app.md). In sintesi.
+
+Il dato decisivo: `curl http://localhost:8081/json/list` restituisce `[]`. Quell'endpoint elenca i
+motori JavaScript collegati a Metro, ed **è sempre stato vuoto**. Il telefono non ha mai eseguito una
+riga del nostro codice. Ogni correzione all'applicazione era quindi inutile per definizione: non
+stava fallendo, non stava partendo.
+
+Escluso con prove: bug nel nostro codice (app ridotta al **livello 0** — solo expo-router e React
+Native — crasha comunque), errori di compilazione (bundle HTTP 200 da 6,2 MB), incompatibilità di
+bytecode Hermes (il bundle servito è JavaScript, non bytecode), rete locale e firewall (riprovato via
+**tunnel pubblico**, con manifest e bundle verificati dall'esterno).
+
+**Due bug veri trovati lungo il percorso, nessuno dei due era la causa**
+
+1. **`TextEncoder` non esiste su Hermes**, e `utf8ToBytes` di noble lo usa internamente. Expo
+   installa `TextDecoder` e `TextEncoderStream` ma non `TextEncoder`. Riprodotto rimuovendo il global
+   in Node. Corretto scrivendo la codifica UTF-8 nel core, con `hermes-compat.test.ts` a presidio.
+   La regola ESLint che vietava `TextEncoder` guardava il nostro codice ma non le dipendenze: ora
+   vieta anche l'import di `utf8ToBytes` da noble.
+2. **Metro annunciava `127.0.0.1` come host del bundle.** Il telefono scaricava il manifest da
+   `192.168.1.6` e poi cercava il bundle su sé stesso. Corretto con
+   `REACT_NATIVE_PACKAGER_HOSTNAME`, ma l'app continua a chiudersi: non era (solo) questo.
+
+**Lezione di metodo.** La correzione di `TextEncoder` era giusta ma non stava risolvendo il sintomo,
+e me ne sono accorto solo notando che i log non mostravano _alcun_ errore JavaScript — incompatibile
+con un'eccezione in `deriveVaultKeys`. Il passaggio utile è stato smettere di correggere e ridurre
+l'app al minimo che **deve** funzionare. Se avessi cominciato da lì avrei risparmiato diversi giri.
+
+**Predisposto per il prossimo tentativo**
+
+- `eas.json` con profilo `development` (APK) ed `expo-dev-client` installato: la build avviene nel
+  cloud, quindi non serve l'SDK Android in locale, e produce un APK autonomo che aggira Expo Go.
+  Richiede `npx eas login`.
+- **Impostazioni → Diagnostica** (`/probe`): carica un sottosistema alla volta con import dinamici e
+  mostra dove si interrompe. Primo posto da guardare quando la build sarà installata.
+
+**Stato:** 245 test verdi, typecheck e lint puliti, relay in produzione. Step 6 in attesa del via.
+
+---
+
 ## 2026-08-01 — Step 5: relay Cloudflare
 
 **Fatto**
