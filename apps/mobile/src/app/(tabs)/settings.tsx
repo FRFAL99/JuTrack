@@ -1,18 +1,53 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CORE_VERSION } from '@jutrack/core';
+import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
-import { useCategories, useMembers, useVaultStore } from '@/state';
+import { SyncBadge } from '@/features/sync/SyncBadge';
+import { expoKeyStore } from '@/platform';
+import { createVault, useCategories, useMembers, useSyncState, useVaultRuntime } from '@/state';
 import { useTheme } from '@/theme';
 
 export default function SettingsScreen() {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
-  const store = useVaultStore();
+  const { store, keys, engine } = useVaultRuntime();
+  const syncState = useSyncState();
   const categories = useCategories();
   const members = useMembers();
   const [newMember, setNewMember] = useState('');
+  const [creating, setCreating] = useState(false);
+
+  const handleCreateVault = (): void => {
+    Alert.alert(
+      'Creare un vault?',
+      "Le spese verranno sincronizzate cifrate con l'altro dispositivo. " +
+        'Se perdi la chiave i dati non sono recuperabili: non esiste un reset lato server.',
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Crea',
+          onPress: () => {
+            setCreating(true);
+            void createVault(expoKeyStore)
+              .then(() => {
+                // Il motore di sync viene avviato all'apertura dell'app: il riavvio
+                // è il modo più semplice e prevedibile per attivarlo.
+                Alert.alert('Vault creato', "Riavvia l'app per attivare la sincronizzazione.");
+              })
+              .catch((error: unknown) => {
+                Alert.alert(
+                  'Creazione fallita',
+                  error instanceof Error ? error.message : String(error),
+                );
+              })
+              .finally(() => setCreating(false));
+          },
+        },
+      ],
+    );
+  };
 
   const handleAddMember = (): void => {
     const trimmed = newMember.trim();
@@ -104,16 +139,44 @@ export default function SettingsScreen() {
           </View>
         </Card>
 
-        <Card style={{ gap: spacing.xs }}>
-          <Text
-            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-          >
-            Vault condiviso
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            Non ancora configurato. Da qui potrai creare un vault o collegarti a quello del tuo
-            partner scansionando un QR.
-          </Text>
+        <Card style={{ gap: spacing.md }}>
+          <View style={{ gap: 2 }}>
+            <Text
+              style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
+            >
+              Vault condiviso
+            </Text>
+            {keys === null ? (
+              <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
+                Non configurato. Le spese restano solo su questo telefono. Creando un vault verranno
+                sincronizzate, cifrate end-to-end, con l&apos;altro dispositivo.
+              </Text>
+            ) : (
+              <>
+                <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
+                  Attivo · vault {keys.vaultId.slice(0, 8)}…
+                </Text>
+                <View style={{ paddingTop: spacing.xs }}>
+                  <SyncBadge state={syncState} />
+                </View>
+              </>
+            )}
+          </View>
+
+          {keys === null ? (
+            <Button
+              label={creating ? 'Creazione…' : 'Crea vault'}
+              onPress={handleCreateVault}
+              loading={creating}
+            />
+          ) : (
+            <Button
+              label="Sincronizza adesso"
+              variant="secondary"
+              onPress={() => void engine?.syncOnce()}
+              disabled={engine === null}
+            />
+          )}
         </Card>
 
         <Card style={{ gap: spacing.xs }}>

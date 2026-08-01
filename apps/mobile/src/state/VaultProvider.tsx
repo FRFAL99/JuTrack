@@ -1,9 +1,24 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
 import * as Y from 'yjs';
-import { SqliteYPersistence, VaultStore } from '@jutrack/core';
-import { ExpoSqliteDatabase, expoRandom } from '@/platform';
+import {
+  RelayClient,
+  SqliteYPersistence,
+  SyncEngine,
+  VaultStore,
+  type SyncState,
+  type VaultKeys,
+} from '@jutrack/core';
+import { RELAY_URL } from '@/config';
+import {
+  ExpoSqliteDatabase,
+  expoHttp,
+  expoKeyStore,
+  expoRandom,
+  SqliteSyncStore,
+} from '@/platform';
 import { seedDefaults } from './seed';
+import { loadVaultKeys } from './vault-key';
 
 /**
  * Vault pronto all'uso.
@@ -16,6 +31,10 @@ export interface VaultRuntime {
   store: VaultStore;
   subscribe(listener: () => void): () => void;
   getVersion(): number;
+  /** `null` finché non esiste un vault: l'app funziona comunque, solo in locale. */
+  keys: VaultKeys | null;
+  /** `null` se il sync non è attivo. */
+  engine: SyncEngine | null;
 }
 
 type VaultStatus =
@@ -24,15 +43,17 @@ type VaultStatus =
   | { phase: 'error'; message: string };
 
 const VaultContext = createContext<VaultStatus>({ phase: 'loading' });
+const SyncContext = createContext<SyncState>({ phase: 'idle' });
 
 /**
- * Apre il database, ricostruisce il documento Yjs e lo rende disponibile all'app.
+ * Apre il database, ricostruisce il documento Yjs e, se esiste una chiave, avvia il sync.
  *
  * Finché la persistenza non ha finito di caricare lo stato resta `loading`: mostrare la
  * UI prima significherebbe far comparire un vault vuoto che si riempie subito dopo.
  */
 export function VaultProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<VaultStatus>({ phase: 'loading' });
+  const [syncState, setSyncState] = useState<SyncState>({ phase: 'idle' });
   // Il documento vive per tutta la durata dell'app: tenerlo in un ref evita che un
   // re-render ne crei uno nuovo, perdendo lo stato in memoria.
   const docRef = useRef<Y.Doc | null>(null);
@@ -40,6 +61,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     let persistence: SqliteYPersistence | null = null;
+    let engine: SyncEngine | null = null;
     let doc: Y.Doc | null = null;
     let onUpdate: (() => void) | null = null;
 
@@ -59,17 +81,36 @@ export function VaultProvider({ children }: { children: ReactNode }) {
 
         let version = 0;
         const listeners = new Set<() => void>();
-
         onUpdate = () => {
           version++;
           for (const listener of listeners) listener();
         };
         doc.on('update', onUpdate);
 
+        // Il sync parte solo se esiste una chiave. Senza, l'app resta un tracker
+        // locale perfettamente funzionante: è uno stato legittimo, non un errore.
+        const keys = await loadVaultKeys(expoKeyStore);
+        if (keys !== null && !cancelled) {
+          const syncStore = await SqliteSyncStore.open(db);
+          const client = new RelayClient(RELAY_URL, keys, expoHttp, expoRandom);
+          engine = new SyncEngine(doc, client, syncStore);
+          engine.subscribe((state) => {
+            if (!cancelled) setSyncState(state);
+          });
+          await engine.start();
+          // Senza await: il ciclo continua per tutta la vita dell'app e non deve
+          // bloccare la comparsa dell'interfaccia.
+          void engine.runForever();
+        }
+
+        if (cancelled) return;
+
         setStatus({
           phase: 'ready',
           runtime: {
             store,
+            keys,
+            engine,
             getVersion: () => version,
             subscribe: (listener) => {
               listeners.add(listener);
@@ -92,17 +133,27 @@ export function VaultProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      engine?.stop();
       if (doc !== null && onUpdate !== null) doc.off('update', onUpdate);
       void persistence?.destroy();
     };
   }, []);
 
-  return <VaultContext.Provider value={status}>{children}</VaultContext.Provider>;
+  return (
+    <VaultContext.Provider value={status}>
+      <SyncContext.Provider value={syncState}>{children}</SyncContext.Provider>
+    </VaultContext.Provider>
+  );
 }
 
 /** Stato di caricamento del vault, inclusi gli errori. */
 export function useVaultStatus(): VaultStatus {
   return useContext(VaultContext);
+}
+
+/** Stato corrente della sincronizzazione. */
+export function useSyncState(): SyncState {
+  return useContext(SyncContext);
 }
 
 /**

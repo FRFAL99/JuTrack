@@ -4,6 +4,71 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-01 — Step 6: motore di sincronizzazione
+
+**Fatto**
+
+`packages/core/src/sync/`: `RelayClient` (cifra in uscita, decifra in ingresso) e `SyncEngine`
+(ciclo pull → applica → push, cursore persistito, coda offline, backoff esponenziale).
+Adattatori nell'app: `expoHttp` (fetch con timeout), `SqliteSyncStore` (cursore e coda su SQLite),
+gestione della chiave del vault, indicatore di stato nelle Impostazioni.
+
+**Decisioni prese**
+
+- **Prima si scarica, poi si invia.** Al contrario, un dispositivo rimasto offline a lungo
+  caricherebbe la propria storia prima di conoscere quella dell'altro, allungando il log del relay
+  senza alcun vantaggio.
+- **Si rimuovono dalla coda solo gli update accettati.** Il relay ne accetta 100 per richiesta: con
+  150 in coda, svuotarla dopo il primo lotto perderebbe 50 spese in silenzio.
+- **Un ciclo alla volta.** Due cicli concorrenti invierebbero gli stessi update due volte.
+- **Gli errori permanenti (401/403/400/413) non vengono ritentati con backoff breve**: reinviare la
+  stessa richiesta produrrebbe lo stesso esito, consumando batteria e quota.
+- **Il cursore avanza anche se una pagina è interamente indecifrabile**, altrimenti verrebbe riletta
+  a ogni giro e la sincronizzazione resterebbe bloccata per sempre.
+- **Il sync parte solo se esiste una chiave.** Senza, l'app resta un tracker locale pienamente
+  funzionante: è uno stato legittimo, non un errore.
+
+**Una scoperta importante: un buco nel log blocca più di quanto sembri**
+
+Due test fallivano, e la mia aspettativa era sbagliata — non il codice. Verificato il comportamento
+reale di Yjs con un update mancante:
+
+```
+saltando il 2° update:      [ 'id0' ]           ← id2 NON compare
+dopo aver colmato il buco:  [ 'id0', 'id1', 'id2' ]
+```
+
+Yjs **trattiene** gli struct che dipendono da un update mancante. Quindi un singolo blob corrotto non
+perde una spesa: **blocca tutte quelle registrate dopo da quel dispositivo**. E poiché il blob
+corrotto non è decifrabile, senza rimedio la sincronizzazione resterebbe ferma per sempre.
+
+Aggiunto il recupero: quando un dispositivo rileva blob indecifrabili, **ripubblica il proprio stato
+completo**. Uno snapshot non ha dipendenze mancanti, quindi applicarlo colma qualunque buco. Facendolo
+entrambi i dispositivi quando rilevano corruzione, il vault si ripara da solo. Con test dedicato che
+verifica il recupero completo delle tre spese, senza duplicati.
+
+Questa è la ragione per cui vale la pena indagare un test che fallisce invece di adattarne le
+aspettative: la correzione ha portato a una funzionalità mancante, non a un numero cambiato.
+
+**Il relay finto replica i vincoli di quello vero**
+
+`FakeRelay` implementa log append-only, `since` esclusivo, paginazione con `hasMore` e limite di 100
+blob per richiesta — gli stessi del relay reale. Un fake più permissivo del server darebbe test verdi
+e sincronizzazione rotta in produzione.
+
+**Verifica:** typecheck pulito su 3 workspace, **277 test verdi** (215 core + 27 app + 35 relay),
+lint pulito, bundle Android da 1368 moduli.
+
+**Non ancora verificato sul dispositivo:** vale quanto scritto in
+[troubleshooting-avvio-app.md](troubleshooting-avvio-app.md). Il sync è coperto da test contro un
+relay finto fedele e da una prova end-to-end contro quello reale, ma il ciclo completo su due
+telefoni fisici resta da fare.
+
+**Prossimo:** Step 7 — pairing via QR, che è ciò che permette al secondo telefono di ricevere la
+chiave.
+
+---
+
 ## 2026-08-01 — Relay in produzione; l'app non parte ancora sul telefono
 
 **Relay: online e verificato**
