@@ -1,5 +1,13 @@
 import { useMemo, useSyncExternalStore } from 'react';
-import type { Category, Expense, ExpenseFilter, Member } from '@jutrack/core';
+import type {
+  Budget,
+  Category,
+  Expense,
+  ExpenseFilter,
+  IsoMonth,
+  Member,
+  Settlement,
+} from '@jutrack/core';
 import { useVaultRuntime } from './VaultProvider';
 
 /**
@@ -71,6 +79,26 @@ export function useMembers(): Member[] {
     dependsOnDocument(version);
     return store.listMembers();
   }, [store, version]);
+}
+
+/** Pareggi registrati, dal più recente. */
+export function useSettlements(): Settlement[] {
+  const { store } = useVaultRuntime();
+  const version = useDocVersion();
+  return useMemo(() => {
+    dependsOnDocument(version);
+    return store.listSettlements();
+  }, [store, version]);
+}
+
+/** Budget definiti, filtrabili per mese. */
+export function useBudgets(month?: IsoMonth): Budget[] {
+  const { store } = useVaultRuntime();
+  const version = useDocVersion();
+  return useMemo(() => {
+    dependsOnDocument(version);
+    return month === undefined ? store.listBudgets() : store.listBudgets(month);
+  }, [store, version, month]);
 }
 
 /** Singola spesa, o `null` se non esiste. */

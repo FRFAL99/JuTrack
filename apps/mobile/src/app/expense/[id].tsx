@@ -1,15 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { Alert } from 'react-native';
-import { buildSplit } from '@jutrack/core';
 import { EmptyState } from '@/components/EmptyState';
 import { ModalScreen } from '@/components/ModalScreen';
 import { ExpenseForm, type ExpenseFormValues } from '@/features/expenses/ExpenseForm';
-import { useExpense, useMembers, useVaultStore } from '@/state';
+import { useExpense, useVaultStore } from '@/state';
 
 export default function EditExpenseScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const store = useVaultStore();
-  const members = useMembers();
   const expense = useExpense(id);
 
   if (expense === null || expense.deletedAt !== null) {
@@ -27,20 +25,14 @@ export default function EditExpenseScreen() {
   }
 
   const handleSubmit = (values: ExpenseFormValues): void => {
-    const participants = values.splitEqually ? members.map((m) => m.id) : [values.paidBy];
-
     store.updateExpense(expense.id, {
       amountCents: values.amountCents,
       categoryId: values.categoryId,
       note: values.note,
       paidBy: values.paidBy,
-      // Lo split va sempre ricalcolato insieme all'importo: VaultStore rifiuta un
-      // aggiornamento che lascerebbe le quote incoerenti col totale.
-      split: buildSplit(
-        values.splitEqually && participants.length > 1 ? 'equal' : 'single',
-        values.amountCents,
-        participants,
-      ),
+      // Lo split arriva sempre insieme all'importo: VaultStore rifiuta un aggiornamento
+      // che lascerebbe le quote incoerenti col totale.
+      split: values.split,
     });
 
     router.back();

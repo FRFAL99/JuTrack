@@ -9,7 +9,15 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { buildSplit, formatCents, parseAmount, type Expense } from '@jutrack/core';
+import {
+  buildSplit,
+  formatCents,
+  formatMoney,
+  parseAmount,
+  type Expense,
+  type ExpenseSplit,
+  type SplitMode,
+} from '@jutrack/core';
 import { Button } from '@/components/Button';
 import { useCategories, useMembers } from '@/state';
 import { useTheme } from '@/theme';
@@ -21,7 +29,14 @@ export interface ExpenseFormValues {
   categoryId: string | null;
   note: string;
   paidBy: string;
-  splitEqually: boolean;
+  /**
+   * Quote già bilanciate sull'importo.
+   *
+   * Le costruisce il form, non le schermate che lo usano: la coerenza fra `mode` e
+   * `shares` è una sola regola, e duplicarla in ogni chiamante è il modo più rapido per
+   * farle divergere.
+   */
+  split: ExpenseSplit;
 }
 
 interface ExpenseFormProps {
@@ -42,8 +57,15 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   const [note, setNote] = useState(initial?.note ?? '');
   const [categoryId, setCategoryId] = useState<string | null>(initial?.categoryId ?? null);
   const [paidBy, setPaidBy] = useState<string>(initial?.paidBy ?? members[0]?.id ?? '');
-  const [splitEqually, setSplitEqually] = useState(
-    initial === undefined ? members.length > 1 : initial.split.mode !== 'single',
+  const [mode, setMode] = useState<SplitMode>(
+    initial?.split.mode ?? (members.length > 1 ? 'equal' : 'single'),
+  );
+  // Quote personalizzate come testo: convertirle in centesimi a ogni tasto
+  // impedirebbe di scrivere «12,» mentre si digita «12,50».
+  const [customShares, setCustomShares] = useState<Record<string, string>>(() =>
+    initial?.split.mode === 'custom'
+      ? Object.fromEntries(Object.entries(initial.split.shares).map(([id, v]) => [id, formatCents(v)]))
+      : {},
   );
   const [touched, setTouched] = useState(false);
 
@@ -55,7 +77,35 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
       ? 'Inserisci un importo maggiore di zero'
       : undefined;
 
-  const canSubmit = amountCents !== null && amountCents > 0 && paidBy !== '';
+  const customTotal = useMemo(
+    () => members.reduce((sum, m) => sum + (parseAmount(customShares[m.id] ?? '') ?? 0), 0),
+    [customShares, members],
+  );
+  const customGap = (amountCents ?? 0) - customTotal;
+  const customBalances = mode !== 'custom' || (amountCents !== null && customGap === 0);
+
+  const canSubmit =
+    amountCents !== null && amountCents > 0 && paidBy !== '' && customBalances;
+
+  /** Passando a quote libere si parte dalla divisione equa: è il punto di partenza più probabile. */
+  const chooseMode = (next: SplitMode): void => {
+    if (next === 'custom' && Object.keys(customShares).length === 0 && amountCents !== null) {
+      const equal = buildSplit('equal', amountCents, members.map((m) => m.id)).shares;
+      setCustomShares(Object.fromEntries(Object.entries(equal).map(([id, v]) => [id, formatCents(v)])));
+    }
+    setMode(next);
+  };
+
+  const buildValues = (total: number): ExpenseSplit => {
+    if (mode === 'single' || members.length < 2) return buildSplit('single', total, [paidBy]);
+    if (mode === 'custom') {
+      const shares = Object.fromEntries(
+        members.map((m) => [m.id, parseAmount(customShares[m.id] ?? '') ?? 0]),
+      );
+      return { mode: 'custom', shares };
+    }
+    return buildSplit('equal', total, members.map((m) => m.id));
+  };
 
   const handleSubmit = (): void => {
     setTouched(true);
@@ -66,7 +116,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
       categoryId,
       note: note.trim(),
       paidBy,
-      splitEqually,
+      split: buildValues(amountCents),
     });
   };
 
@@ -217,44 +267,98 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
               </View>
             </View>
 
-            <Pressable
-              onPress={() => setSplitEqually((v) => !v)}
-              accessibilityRole="switch"
-              accessibilityState={{ checked: splitEqually }}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                backgroundColor: colors.surface,
-                borderRadius: radius.md,
-                borderWidth: StyleSheet.hairlineWidth,
-                borderColor: colors.border,
-                padding: spacing.md,
-              }}
-            >
-              <View style={{ flex: 1, gap: 2 }}>
-                <Text style={{ color: colors.text, fontSize: fontSize.md }}>Dividi a metà</Text>
+            <View style={{ gap: spacing.sm }}>
+              <Text style={[labelStyle(colors.textMuted, fontSize.xs), styles.label]}>
+                COME SI DIVIDE
+              </Text>
+              <View style={styles.chips}>
+                {SPLIT_MODES.map(({ value, label }) => {
+                  const selected = value === mode;
+                  return (
+                    <Pressable
+                      key={value}
+                      onPress={() => chooseMode(value)}
+                      accessibilityRole="button"
+                      accessibilityState={{ selected }}
+                      style={{
+                        paddingVertical: spacing.sm,
+                        paddingHorizontal: spacing.md,
+                        borderRadius: radius.pill,
+                        backgroundColor: selected ? colors.accent : colors.surface,
+                        borderWidth: StyleSheet.hairlineWidth,
+                        borderColor: selected ? colors.accent : colors.border,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: selected ? colors.textOnAccent : colors.textMuted,
+                          fontSize: fontSize.sm,
+                          fontWeight: fontWeight.medium,
+                        }}
+                      >
+                        {label}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {mode === 'equal' && (
                 <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
-                  {splitEqually
-                    ? splitPreview(amountCents, members.length)
-                    : 'Interamente a carico di chi ha pagato'}
+                  {splitPreview(amountCents, members.length)}
                 </Text>
-              </View>
-              <View
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 6,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  backgroundColor: splitEqually ? colors.accent : 'transparent',
-                  borderWidth: splitEqually ? 0 : StyleSheet.hairlineWidth * 2,
-                  borderColor: colors.border,
-                }}
-              >
-                {splitEqually && <Text style={{ color: colors.textOnAccent }}>✓</Text>}
-              </View>
-            </Pressable>
+              )}
+              {mode === 'single' && (
+                <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
+                  Interamente a carico di chi ha pagato
+                </Text>
+              )}
+
+              {mode === 'custom' && (
+                <View style={{ gap: spacing.sm }}>
+                  {members.map((member) => (
+                    <View key={member.id} style={styles.shareRow}>
+                      <Text style={{ flex: 1, color: colors.text, fontSize: fontSize.sm }}>
+                        {member.name}
+                      </Text>
+                      <TextInput
+                        value={customShares[member.id] ?? ''}
+                        onChangeText={(text) =>
+                          setCustomShares((current) => ({ ...current, [member.id]: text }))
+                        }
+                        placeholder="0,00"
+                        placeholderTextColor={colors.textMuted}
+                        keyboardType="decimal-pad"
+                        accessibilityLabel={`Quota a carico di ${member.name}`}
+                        style={{
+                          width: 110,
+                          textAlign: 'right',
+                          color: colors.text,
+                          fontSize: fontSize.sm,
+                          backgroundColor: colors.surface,
+                          borderRadius: radius.md,
+                          borderWidth: StyleSheet.hairlineWidth,
+                          borderColor: colors.border,
+                          paddingVertical: spacing.sm,
+                          paddingHorizontal: spacing.md,
+                        }}
+                      />
+                    </View>
+                  ))}
+                  {/* Quote che non sommano al totale produrrebbero un saldo sbagliato:
+                      VaultStore le rifiuterebbe, ma dirlo qui è più utile che scoprirlo
+                      con un errore al salvataggio. */}
+                  <Text
+                    style={{
+                      color: customGap === 0 ? colors.income : colors.danger,
+                      fontSize: fontSize.xs,
+                    }}
+                  >
+                    {describeGap(customGap, amountCents)}
+                  </Text>
+                </View>
+              )}
+            </View>
           </>
         )}
 
@@ -267,6 +371,19 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
       </ScrollView>
     </KeyboardAvoidingView>
   );
+}
+
+const SPLIT_MODES: { value: SplitMode; label: string }[] = [
+  { value: 'equal', label: 'In parti uguali' },
+  { value: 'single', label: 'Solo chi ha pagato' },
+  { value: 'custom', label: 'Quote libere' },
+];
+
+/** Dice quanto manca o quanto avanza rispetto al totale, in parole. */
+function describeGap(gap: number, amountCents: number | null): string {
+  if (amountCents === null || amountCents <= 0) return 'Inserisci prima l’importo della spesa';
+  if (gap === 0) return 'Le quote coprono esattamente il totale';
+  return gap > 0 ? `Mancano ${formatMoney(gap)}` : `Eccedono di ${formatMoney(-gap)}`;
 }
 
 /** Anteprima della quota per persona, per rendere concreto l'effetto dello split. */
@@ -298,4 +415,5 @@ const styles = StyleSheet.create({
   label: { letterSpacing: 0.8, fontWeight: '600' as const },
   amountRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  shareRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
 });

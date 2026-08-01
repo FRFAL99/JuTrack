@@ -4,6 +4,69 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-01 — Step 8: split, saldo, budget, grafici
+
+**Fatto**
+
+`packages/core/src/insights/`: saldo per membro e debiti semplificati (`balance.ts`), totali per
+categoria e per mese (`breakdown.ts`), stato dei budget (`budget.ts`), aritmetica dei mesi civili
+(`period.ts`). Nell'app: schermata Statistiche con selettore del mese, totale, saldo «chi deve quanto
+a chi», barre per categoria e andamento a sei mesi; schermata dei pareggi; schermata dei budget;
+quote libere nel form della spesa.
+
+**Decisioni prese**
+
+- **Il saldo è cumulativo, non mensile.** Un debito non si azzera cambiando pagina del calendario.
+  Le altre viste sono per mese; questa no, e la differenza è deliberata.
+- **I pareggi non toccano le spese.** Le spese restano lo storico di cosa è stato comprato; il
+  pareggio sposta solo il saldo. Senza una schermata per registrarli, il debito calcolato
+  crescerebbe all'infinito anche dopo essere stato pagato davvero.
+- **`simplifyDebts` è greedy ma stabile.** Non minimizza in assoluto il numero di pagamenti — il
+  problema è NP-difficile — ma evita il giro «A paga B, B paga C» quando basta «A paga C», e a
+  parità di importo decide l'id: i due telefoni devono proporre lo **stesso** pagamento, non due
+  frasi contraddittorie.
+- **I mesi senza spese restano in asse, a zero.** Ometterli comprimerebbe l'asse del tempo: due
+  barre affiancate sembrerebbero mesi consecutivi anche a distanza di un anno.
+- **Le barre delle categorie sono rapportate alla voce più alta, non al totale**, altrimenti il
+  confronto fra le voci sparirebbe dentro una frazione minuscola.
+- **Il form costruisce lo split completo.** Prima la regola «mode coerente con shares» era duplicata
+  in due schermate: il modo più rapido per farle divergere.
+- **I limiti di budget non si ereditano da soli** da un mese all'altro; c'è un «copia dal mese
+  scorso» che rende comodo il caso frequente senza fingere che sia automatico.
+- Il testo digitato nei campi vive nello stato locale e finisce nel documento solo al termine:
+  scrivere a ogni tasto genererebbe un update Yjs per carattere, e ogni update viaggia cifrato
+  verso il relay.
+
+**La palette delle categorie era inadatta a un grafico, ed è stato misurato**
+
+I colori del seed erano stati scelti a occhio, quando servivano solo come pallino accanto a un nome.
+Diventando barre, sono passati da decorazione a informazione. Un validatore di palette ha mostrato
+che **Svago e Viaggi erano indistinguibili anche a vista piena** (ΔE 5,8 su una soglia di 15): due
+teal quasi identici. Altri difetti: `#0C8599` sotto la soglia di saturazione (leggeva grigio) e
+coppie non separabili in deuteranopia.
+
+Palette rivista e verificata su **entrambi i temi** — banda di luminosità, saturazione, separazione
+per protanopia/deuteranopia/tritanopia, contrasto sullo sfondo: tutti i controlli passano in chiaro
+e in scuro. Il giallo è stato il vincolo più stretto: le bande accettabili su fondo chiaro e su fondo
+scuro quasi non si intersecano, e i colori sono dati nel vault — uno solo per entrambi i temi, non
+due varianti.
+
+Vale la pena dirlo: il cambio è a costo zero **solo adesso**. Il seed gira una volta sola, al primo
+avvio, e l'app non è ancora mai partita su un telefono. Dopo il primo avvio quei colori sarebbero
+diventati dati dell'utente.
+
+Nessun grafico affida però l'identità al colore: ogni barra porta icona, nome e importo. È ciò che
+la rende leggibile a prescindere dalla vista di chi guarda — e ciò che permette di ordinare le barre
+per importo senza rendere ambiguo nulla.
+
+**Verifica**
+
+371 test verdi (289 core + 47 app + 35 relay), typecheck e lint puliti, `expo export` completato.
+
+**Non ancora verificato su hardware**: nessuna di queste schermate è mai stata toccata con un dito.
+
+---
+
 ## 2026-08-01 — Step 7: pairing via QR
 
 **Fatto**

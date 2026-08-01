@@ -71,6 +71,32 @@ export function formatDayTitle(isoDate: string, now: Date = new Date()): string 
   return sameYear ? `${weekday} ${day} ${monthName}` : `${day} ${monthName} ${year}`;
 }
 
+/** Mese corrente del dispositivo in formato `YYYY-MM`. */
+export function currentMonth(now: Date = new Date()): string {
+  return todayIso(now).slice(0, 7);
+}
+
+/**
+ * Intestazione di un mese: «agosto» nell'anno in corso, «agosto 2025» altrove.
+ *
+ * L'anno compare solo quando serve a distinguere: ripeterlo su ogni schermata del mese
+ * corrente è rumore.
+ */
+export function formatMonthTitle(month: string, now: Date = new Date()): string {
+  const [yearPart, monthPart] = month.split('-');
+  const year = Number(yearPart);
+  const index = Number(monthPart) - 1;
+  const name = MONTHS[index];
+  if (!Number.isFinite(year) || name === undefined) return month;
+  return year === now.getFullYear() ? name : `${name} ${year}`;
+}
+
+/** Abbreviazione di tre lettere per gli assi dei grafici, dove lo spazio è poco. */
+export function shortMonthLabel(month: string): string {
+  const index = Number(month.split('-')[1]) - 1;
+  return MONTHS[index]?.slice(0, 3) ?? month;
+}
+
 /**
  * Raggruppa le spese per giorno, conservando l'ordine ricevuto.
  *

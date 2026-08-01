@@ -17,10 +17,10 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 5 — Relay Cloudflare              | ✅              | **In produzione**, verificato end-to-end                |
 | 6 — Motore di sincronizzazione    | ✅              | Push/pull cifrato, coda offline, recupero via snapshot  |
 | 7 — Pairing via QR                | ✅              | QR, scanner, incolla manuale, deep link `jutrack://pair` |
-| **8 — Split, saldo, budget, grafici** | ⏭️ **prossimo** | Chi deve quanto a chi, andamento mensile            |
-| 9 — CI, export, build, doc finale | ⬜              |                                                         |
+| 8 — Split, saldo, budget, grafici | ✅              | Saldo, pareggi, budget mensili, barre per categoria e mese |
+| **9 — CI, export, build, doc finale** | ⏭️ **prossimo** | GitHub Actions, export dei dati, build di rilascio   |
 
-**306 test verdi** (238 core + 33 app + 35 relay), typecheck e lint puliti.
+**371 test verdi** (289 core + 47 app + 35 relay), typecheck e lint puliti.
 
 ## Riferimenti operativi
 
@@ -75,8 +75,10 @@ Va detto con precisione, perché è la differenza fra «testato» e «funzionant
   la fotocamera funzioni sulla build. La logica è coperta dai test, l'ottica no
 - Il costo di `scrypt` con `logN = 16` su mobile (default da calibrare, in
   `packages/core/src/crypto/backup.ts`)
+- **Nessuna schermata dello Step 8** è mai stata toccata con un dito: i calcoli sono coperti dai
+  test, la resa dei grafici su uno schermo vero no
 
-Tutto il resto è verificato: 306 test, convergenza CRDT, relay reale in produzione.
+Tutto il resto è verificato: 371 test, convergenza CRDT, relay reale in produzione.
 
 ## Trappole già risolte — da non riscoprire
 
@@ -108,12 +110,26 @@ documentato nel threat model — l'interfaccia lo dichiara. La scadenza di cinqu
 cortesia, non una difesa: sta dentro l'URI, quindi è rimovibile. Un protocollo autenticato
 (SAS/PAKE) risolverebbe, ed è fra i miglioramenti futuri.
 
-## Step 8 — cosa serve
+## Saldo, budget e grafici (Step 8)
 
-Split e saldo sono già nel modello dati (`buildSplit`, resto coi maggiori resti, deterministico su
-entrambi i telefoni): manca l'interfaccia che li usa.
+I calcoli stanno in `packages/core/src/insights/`, mai nei componenti: sono la parte che vale la
+pena verificare, e un totale sbagliato non si nota guardando un grafico.
 
-- Chi ha pagato e come si divide, nel form della spesa
-- «Chi deve quanto a chi», calcolato dal saldo netto
-- Budget mensile per categoria e andamento nel tempo
-- Grafici — attenzione: nessuna libreria di charting è ancora entrata nel progetto
+- **Il saldo è cumulativo**, non mensile: un debito non si azzera cambiando pagina del calendario.
+  Tutto il resto della schermata Statistiche è invece per mese.
+- **I pareggi non toccano le spese**: spostano solo il saldo. `/settle` li registra, anche parziali.
+- `simplifyDebts` è greedy ma **stabile**: a parità di importo decide l'id, così i due telefoni
+  propongono lo stesso pagamento.
+- **Nessun grafico affida l'identità al colore**: ogni barra porta icona, nome e importo. La palette
+  delle categorie è stata comunque rivista e validata su entrambi i temi (i due teal originali erano
+  indistinguibili). Il seed gira una volta sola: cambiarli dopo il primo avvio reale non sarebbe più
+  gratis.
+- Nessuna libreria di charting: le barre sono `View`, il QR è l'unico uso di `react-native-svg`.
+
+## Step 9 — cosa serve
+
+- CI su GitHub Actions: typecheck, test, lint e `expo export` a ogni push
+- Export dei dati (CSV o JSON) e backup della chiave, che ha già le primitive in
+  `crypto/backup.ts` ma nessuna interfaccia
+- Build di rilascio e documentazione finale
+- **Prima di tutto questo, però, resta il bloccante**: l'app non è mai stata eseguita su un telefono

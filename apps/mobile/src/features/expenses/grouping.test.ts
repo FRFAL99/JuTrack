@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import type { Expense } from '@jutrack/core';
-import { formatDayTitle, groupByDay, todayIso } from './grouping';
+import {
+  currentMonth,
+  formatDayTitle,
+  formatMonthTitle,
+  groupByDay,
+  shortMonthLabel,
+  todayIso,
+} from './grouping';
 
 function expense(date: string, amountCents: number, id = date + amountCents): Expense {
   return {
@@ -113,5 +120,40 @@ describe('groupByDay', () => {
     ];
     const total = groupByDay(input, now).reduce((sum, s) => sum + s.totalCents, 0);
     expect(total).toBe(1000);
+  });
+});
+
+describe('currentMonth', () => {
+  it('usa la data locale, non UTC', () => {
+    // Alle 23:30 del 31 agosto in Italia, `toISOString` direbbe già settembre.
+    expect(currentMonth(new Date(2026, 7, 31, 23, 30))).toBe('2026-08');
+  });
+});
+
+describe('formatMonthTitle', () => {
+  const now = new Date(2026, 7, 1, 12);
+
+  it("omette l'anno in corso", () => {
+    expect(formatMonthTitle('2026-08', now)).toBe('agosto');
+  });
+
+  it('mostra l’anno quando serve a distinguere', () => {
+    expect(formatMonthTitle('2025-12', now)).toBe('dicembre 2025');
+  });
+
+  it('non inventa un mese da una stringa malformata', () => {
+    expect(formatMonthTitle('2026-13', now)).toBe('2026-13');
+    expect(formatMonthTitle('boh', now)).toBe('boh');
+  });
+});
+
+describe('shortMonthLabel', () => {
+  it('abbrevia a tre lettere per gli assi', () => {
+    expect(shortMonthLabel('2026-01')).toBe('gen');
+    expect(shortMonthLabel('2026-12')).toBe('dic');
+  });
+
+  it('ripiega sull’input se il mese non esiste', () => {
+    expect(shortMonthLabel('2026-99')).toBe('2026-99');
   });
 });

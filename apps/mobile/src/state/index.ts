@@ -13,5 +13,12 @@ export {
   loadVaultKeyBytes,
   loadVaultKeys,
 } from './vault-key';
-export { useCategories, useExpense, useExpenses, useMembers } from './hooks';
+export {
+  useBudgets,
+  useCategories,
+  useExpense,
+  useExpenses,
+  useMembers,
+  useSettlements,
+} from './hooks';
 export { seedDefaults } from './seed';
