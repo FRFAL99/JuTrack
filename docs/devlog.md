@@ -4,6 +4,51 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-01 — Step 1: scheletro app Expo
+
+**Fatto**
+
+- `apps/mobile` con Expo SDK 57 (React Native 0.86.2, React 19.2.3) ed expo-router.
+- Navigazione a tab: Spese · Statistiche · Impostazioni, con route in `src/app/(tabs)/`.
+- Design token in `src/theme/tokens.ts` con palette **semantica** (`expense`, `income`, `danger`)
+  invece che cromatica: i nomi dicono a cosa serve il colore, così cambiare palette non impone di
+  riscrivere le schermate. Tema chiaro e scuro, seguendo l'impostazione di sistema.
+- Componenti base: `Button`, `Card`, `Screen`, `EmptyState`.
+- `eslint-plugin-react-hooks` limitato ad `apps/**`: `exhaustive-deps` intercetta le dipendenze
+  mancanti negli effetti, che in RN si manifestano come stato stantio difficile da diagnosticare.
+
+**Verificato, non assunto**
+
+- **Metro risolve e transpila `@jutrack/core`** attraverso il symlink del workspace, pur essendo
+  TypeScript sorgente non compilato. Era il rischio principale dell'impianto monorepo — di norma
+  Metro non transpila i package dentro `node_modules`. Provato importando `CORE_VERSION` in una
+  schermata reale: il bundle passa da 1236 a 1237 moduli. Questo de-rischia gli Step 2 e 3.
+- **L'app fa davvero il bundle**, non solo il typecheck: `expo export --platform android` produce
+  un bundle Hermes da 2.6 MB. Il typecheck da solo non avrebbe dimostrato nulla sul grafo dei moduli.
+- Dal **SDK 52 Metro auto-configura i monorepo**: nessun `metro.config.js` da scrivere e mantenere.
+- Dal **SDK 56 expo-router non consente più di importare da `@react-navigation/*`**: gli import vanno
+  verso `expo-router`. Vincolo da ricordare quando aggiungeremo navigazione più complessa.
+- Il template Expo usa esso stesso `typescript ~6.0.3`, il che conferma indipendentemente la scelta
+  fatta allo Step 0 di bloccare TS a 6.x.
+- `eslint-plugin-react-hooks` v7 espone la flat config sotto `.configs.flat.recommended`;
+  `.configs.recommended` è ancora in formato eslintrc ed ESLint 10 la rifiuta.
+
+**Vulnerabilità npm: 10 moderate, non risolvibili e non rilevanti**
+
+Causa unica: `expo → @expo/config-plugins → xcode → uuid@7` (GHSA-w5hq-g745-h8pq, bounds check
+mancante nei codepath v3/v5/v6 di `uuid`). `xcode` manipola i progetti iOS durante il prebuild:
+è tooling di build, **non finisce nel bundle runtime**.
+
+npm suggerisce «aggiorna expo alla major successiva», ma **la 57 è l'ultima esistente**: il fix
+proposto non è applicabile. Nessuna azione: rivalutare al prossimo SDK.
+
+**Verifica:** typecheck pulito su 3 workspace, 12/12 test verdi, lint pulito, bundle Android
+esportato con successo.
+
+**Prossimo:** Step 2 — layer crypto in `packages/core`.
+
+---
+
 ## 2026-08-01 — Step 0: repo, workspace e documentazione
 
 **Fatto**
