@@ -10,6 +10,49 @@ import { expoKeyStore } from '@/platform';
 import { createVault, useCategories, useMembers, useSyncState, useVaultRuntime } from '@/state';
 import { useTheme } from '@/theme';
 
+/**
+ * Riga che porta a un'altra schermata.
+ *
+ * Le impostazioni ne contengono quattro identiche: tenerle allineate a mano significava
+ * che una finiva col chevron disallineato o senza stato di pressione.
+ */
+function NavCard({
+  title,
+  subtitle,
+  onPress,
+}: {
+  title: string;
+  subtitle: string;
+  onPress: () => void;
+}) {
+  const { colors, fontSize, fontWeight, spacing } = useTheme();
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button">
+      {({ pressed }) => (
+        <Card style={{ backgroundColor: pressed ? colors.surfacePressed : colors.surface }}>
+          <View style={styles.rowBetween}>
+            <View style={{ gap: 2, flex: 1, paddingRight: spacing.sm }}>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontSize: fontSize.md,
+                  fontWeight: fontWeight.semibold,
+                }}
+              >
+                {title}
+              </Text>
+              <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
+                {subtitle}
+              </Text>
+            </View>
+            <Text style={{ color: colors.textMuted, fontSize: fontSize.lg }}>›</Text>
+          </View>
+        </Card>
+      )}
+    </Pressable>
+  );
+}
+
 export default function SettingsScreen() {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const { store, keys, engine } = useVaultRuntime();
@@ -59,29 +102,11 @@ export default function SettingsScreen() {
   return (
     <Screen title="Impostazioni">
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
-        <Pressable onPress={() => router.push('/categories')} accessibilityRole="button">
-          {({ pressed }) => (
-            <Card style={{ backgroundColor: pressed ? colors.surfacePressed : colors.surface }}>
-              <View style={styles.rowBetween}>
-                <View style={{ gap: 2 }}>
-                  <Text
-                    style={{
-                      color: colors.text,
-                      fontSize: fontSize.md,
-                      fontWeight: fontWeight.semibold,
-                    }}
-                  >
-                    Categorie
-                  </Text>
-                  <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-                    {categories.length} attive
-                  </Text>
-                </View>
-                <Text style={{ color: colors.textMuted, fontSize: fontSize.lg }}>›</Text>
-              </View>
-            </Card>
-          )}
-        </Pressable>
+        <NavCard
+          title="Categorie"
+          subtitle={`${categories.length} attive`}
+          onPress={() => router.push('/categories')}
+        />
 
         <Card style={{ gap: spacing.md }}>
           <View style={{ gap: 2 }}>
@@ -195,43 +220,23 @@ export default function SettingsScreen() {
           )}
         </Card>
 
-        <Card style={{ gap: spacing.xs }}>
-          <Text
-            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-          >
-            Backup della chiave
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            I dati sono cifrati end-to-end: senza la chiave nessuno può leggerli, nemmeno noi. Il
-            rovescio della medaglia è che se perdi la chiave i dati non sono recuperabili — non
-            esiste un reset lato server. Il backup sarà disponibile qui.
-          </Text>
-        </Card>
+        <NavCard
+          title="Backup della chiave"
+          subtitle="I dati sono cifrati end-to-end: senza la chiave nessuno può leggerli, nemmeno noi. Se la perdi non esiste un reset lato server — il backup è l'unica rete di sicurezza."
+          onPress={() => router.push('/backup')}
+        />
 
-        <Pressable onPress={() => router.push('/probe')} accessibilityRole="button">
-          {({ pressed }) => (
-            <Card style={{ backgroundColor: pressed ? colors.surfacePressed : colors.surface }}>
-              <View style={styles.rowBetween}>
-                <View style={{ gap: 2, flex: 1 }}>
-                  <Text
-                    style={{
-                      color: colors.text,
-                      fontSize: fontSize.md,
-                      fontWeight: fontWeight.semibold,
-                    }}
-                  >
-                    Diagnostica
-                  </Text>
-                  <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-                    Verifica un sottosistema alla volta — crypto, database, portachiavi, relay — e
-                    mostra dove si interrompe.
-                  </Text>
-                </View>
-                <Text style={{ color: colors.textMuted, fontSize: fontSize.lg }}>›</Text>
-              </View>
-            </Card>
-          )}
-        </Pressable>
+        <NavCard
+          title="Esporta i dati"
+          subtitle="Spese e pareggi in CSV, oppure il vault intero in JSON. Nessun lock-in: i tuoi dati escono quando vuoi."
+          onPress={() => router.push('/export')}
+        />
+
+        <NavCard
+          title="Diagnostica"
+          subtitle="Verifica un sottosistema alla volta — crypto, database, portachiavi, relay — e mostra dove si interrompe."
+          onPress={() => router.push('/probe')}
+        />
 
         <View style={{ paddingHorizontal: spacing.xs, paddingTop: spacing.sm }}>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>

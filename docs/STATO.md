@@ -1,26 +1,30 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-01, fine Step 7.
+Aggiornato: 2026-08-01, fine Step 9.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
 
 ## Avanzamento
 
-| Step                              | Stato           | Cosa contiene                                           |
-| --------------------------------- | --------------- | ------------------------------------------------------- |
-| 0 — Repo e documentazione         | ✅              | Monorepo npm workspaces, toolchain, ADR, threat model   |
-| 1 — Scheletro Expo                | ✅              | SDK 57, expo-router, tema chiaro/scuro, componenti base |
-| 2 — Crypto                        | ✅              | HKDF, XChaCha20-Poly1305, backup con passphrase         |
-| 3 — Modello Yjs e persistenza     | ✅              | VaultStore, SQLite, convergenza CRDT verificata         |
-| 4 — UI spese e categorie          | ✅              | Lista, form, categorie, persone — funzionante offline   |
-| 5 — Relay Cloudflare              | ✅              | **In produzione**, verificato end-to-end                |
-| 6 — Motore di sincronizzazione    | ✅              | Push/pull cifrato, coda offline, recupero via snapshot  |
-| 7 — Pairing via QR                | ✅              | QR, scanner, incolla manuale, deep link `jutrack://pair` |
-| 8 — Split, saldo, budget, grafici | ✅              | Saldo, pareggi, budget mensili, barre per categoria e mese |
-| **9 — CI, export, build, doc finale** | ⏭️ **prossimo** | GitHub Actions, export dei dati, build di rilascio   |
+| Step                                | Stato | Cosa contiene                                                |
+| ----------------------------------- | ----- | ------------------------------------------------------------ |
+| 0 — Repo e documentazione           | ✅    | Monorepo npm workspaces, toolchain, ADR, threat model        |
+| 1 — Scheletro Expo                  | ✅    | SDK 57, expo-router, tema chiaro/scuro, componenti base      |
+| 2 — Crypto                          | ✅    | HKDF, XChaCha20-Poly1305, backup con passphrase              |
+| 3 — Modello Yjs e persistenza       | ✅    | VaultStore, SQLite, convergenza CRDT verificata              |
+| 4 — UI spese e categorie            | ✅    | Lista, form, categorie, persone — funzionante offline        |
+| 5 — Relay Cloudflare                | ✅    | **In produzione**, verificato end-to-end                     |
+| 6 — Motore di sincronizzazione      | ✅    | Push/pull cifrato, coda offline, recupero via snapshot       |
+| 7 — Pairing via QR                  | ✅    | QR, scanner, incolla manuale, deep link `jutrack://pair`     |
+| 8 — Split, saldo, budget, grafici   | ✅    | Saldo, pareggi, budget mensili, barre per categoria e mese   |
+| 9 — CI, export, backup della chiave | ✅    | GitHub Actions, export CSV/JSON, backup cifrato della chiave |
 
-**371 test verdi** (289 core + 47 app + 35 relay), typecheck e lint puliti.
+**417 test verdi** (322 core + 60 app + 35 relay), typecheck, lint e `format:check` puliti.
+
+**Tutti gli step del piano sono chiusi.** Quello che resta non è codice da scrivere: è
+[verifica su hardware](#cosa-non-è-ancora-stato-verificato-su-hardware-reale) e, quando si vorrà,
+una build di rilascio.
 
 ## Riferimenti operativi
 
@@ -29,10 +33,13 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 - Account Cloudflare: `francesco.fallavena@gmail.com`, già autenticato in `wrangler`
 
 ```bash
-npm run typecheck && npm test && npm run lint    # verifica completa
-cd services/relay && npm run e2e                 # prova cifrata contro il relay
+npm run format:check && npm run lint && npm run typecheck && npm test   # verifica completa
+cd services/relay && npm run e2e                       # prova cifrata contro il relay
 cd apps/mobile && npx expo export --platform android   # il bundle regge?
 ```
+
+Sono esattamente i passaggi della CI, nello stesso ordine: `.github/workflows/ci.yml` gira a ogni
+push, su qualunque ramo.
 
 `expo export` va eseguito a ogni step: ha già intercettato una trappola che né typecheck né test
 vedevano.
@@ -65,29 +72,37 @@ la lista si è accorciata parecchio, ma non è vuota:
   generazione è confermata, la scansione no
 - Che `expo-sqlite` **persista fra due riavvii** dell'app: la diagnostica scrive e rilegge nella
   stessa sessione, che è meno
-- Le **schermate degli Step 7 e 8** — statistiche, budget, pareggi, quote libere — mai toccate con
-  un dito
+- Le **schermate degli Step 7, 8 e 9** — statistiche, budget, pareggi, quote libere, export, backup
+  della chiave — mai toccate con un dito
 - L'**APK autonomo** (profilo `preview`), che gira senza Metro: mai costruito
 - Il costo di `scrypt` con `logN = 16` su mobile (default da calibrare, in
-  `packages/core/src/crypto/backup.ts`)
+  `packages/core/src/crypto/backup.ts`). La schermata di backup **misura e mostra** il tempo
+  impiegato: basta un backup reale per avere il numero
+- Il **foglio di condivisione** e la scrittura del file in cache: richiedono una build che contenga
+  `expo-file-system` ed `expo-sharing`, aggiunti allo Step 9
 
-Tutto il resto è verificato: 371 test, convergenza CRDT, relay reale in produzione, e ora
-l'esecuzione su un dispositivo Android reale.
+> **La development build installata sul telefono non contiene i due moduli nuovi.** È stata
+> compilata prima che venissero aggiunti. L'app si apre lo stesso — sono caricati con `require` in
+> `try/catch` proprio per questo — e l'export ripiega sugli appunti, dichiarandolo nell'interfaccia.
+> Il foglio di condivisione comparirà solo dopo una build aggiornata.
+
+Tutto il resto è verificato: 417 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+su un dispositivo Android reale.
 
 ## Trappole già risolte — da non riscoprire
 
-| Trappola                                                                    | Soluzione adottata                                               |
-| --------------------------------------------------------------------------- | ---------------------------------------------------------------- |
-| `TextEncoder` non esiste su Hermes                                          | UTF-8 scritta in `crypto/encoding.ts`; vietato l'import da noble |
-| Yjs non fa il bundle su RN (`lib0` → `isomorphic-webcrypto`, fermo al 2022) | Alias in `metro.config.js` verso uno shim su `expo-crypto`       |
-| `storage.deleteAll()` su Durable Object SQLite cancella anche le tabelle    | `ensureSchema()` subito dopo, con test di regressione            |
-| Un blob corrotto blocca **tutti** gli update successivi di quel device      | Ripubblicazione dello stato completo al rilevamento              |
-| TypeScript bloccato a 6.x                                                   | `typescript-eslint` dichiara peer `typescript <6.1.0`            |
-| Nella flat config ESLint vince l'ultima regola                              | Gli override vanno **dopo** il blocco generale                   |
-| Metro annunciava `127.0.0.1` come host del bundle                           | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                        |
-| expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera | `expo-camera` caricato con `require` in `try/catch` |
-| **`expo start` dalla root del monorepo**: 404 su ogni bundle, app muta      | Avviarlo **sempre** da `apps/mobile`; è costato giorni           |
-| Due copie di React (`expo-*` dichiara `"react": "*"`)                       | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede  |
+| Trappola                                                                                   | Soluzione adottata                                                             |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
+| `TextEncoder` non esiste su Hermes                                                         | UTF-8 scritta in `crypto/encoding.ts`; vietato l'import da noble               |
+| Yjs non fa il bundle su RN (`lib0` → `isomorphic-webcrypto`, fermo al 2022)                | Alias in `metro.config.js` verso uno shim su `expo-crypto`                     |
+| `storage.deleteAll()` su Durable Object SQLite cancella anche le tabelle                   | `ensureSchema()` subito dopo, con test di regressione                          |
+| Un blob corrotto blocca **tutti** gli update successivi di quel device                     | Ripubblicazione dello stato completo al rilevamento                            |
+| TypeScript bloccato a 6.x                                                                  | `typescript-eslint` dichiara peer `typescript <6.1.0`                          |
+| Nella flat config ESLint vince l'ultima regola                                             | Gli override vanno **dopo** il blocco generale                                 |
+| Metro annunciava `127.0.0.1` come host del bundle                                          | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                                      |
+| expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera | `expo-camera`, `expo-file-system`, `expo-sharing` con `require` in `try/catch` |
+| **`expo start` dalla root del monorepo**: 404 su ogni bundle, app muta                     | Avviarlo **sempre** da `apps/mobile`; è costato giorni                         |
+| Due copie di React (`expo-*` dichiara `"react": "*"`)                                      | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede                |
 
 ## Com'è fatto il pairing (Step 7)
 
@@ -122,10 +137,40 @@ pena verificare, e un totale sbagliato non si nota guardando un grafico.
   gratis.
 - Nessuna libreria di charting: le barre sono `View`, il QR è l'unico uso di `react-native-svg`.
 
-## Step 9 — cosa serve
+## Export e backup (Step 9)
 
-- CI su GitHub Actions: typecheck, test, lint e `expo export` a ogni push
-- Export dei dati (CSV o JSON) e backup della chiave, che ha già le primitive in
-  `crypto/backup.ts` ma nessuna interfaccia
-- Build di rilascio e documentazione finale
-- **Prima di tutto questo, però, resta il bloccante**: l'app non è mai stata eseguita su un telefono
+Due schermate distinte, raggiungibili dalle impostazioni, che fanno cose diverse e non vanno
+confuse:
+
+| Schermata               | Cosa produce                                     | Cifrato?                     |
+| ----------------------- | ------------------------------------------------ | ---------------------------- |
+| **Esporta i dati**      | CSV delle spese, CSV dei pareggi, JSON integrale | **No.** Escono in chiaro     |
+| **Backup della chiave** | Un blob `JTBK1.…` con dentro solo la chiave      | Sì, con la passphrase scelta |
+
+- **Il CSV si legge, il JSON si conserva.** Il CSV perde struttura (le quote diventano colonne, i
+  budget non ci sono) e non è reimportabile; il JSON è integrale, tombstone compresi.
+- **CSV in RFC 4180 puro** (`,` separatore, `.` decimale) più una colonna `importo_centesimi`
+  intera: è quella l'autorevole, e nessun locale può fraintenderla. In testa c'è il BOM UTF-8, senza
+  il quale Excel su Windows sbaglia le accentate.
+- **Le note sono disinnescate contro la CSV injection**: un `=` iniziale verrebbe valutato come
+  formula da Excel e da Fogli Google.
+- **Nessun file di export contiene la chiave del vault** — c'è un test che lo verifica.
+- **La passphrase del backup è l'unico punto del progetto in cui la sicurezza dipende da una scelta
+  umana.** Il campo dà un giudizio (minimo 12 caratteri, si consigliano quattro parole slegate), ma
+  è dichiaratamente una euristica, non una misura di entropia.
+
+## Se un giorno si vuole pubblicare
+
+Non è stato fatto, per scelta: si sta ancora provando la development build.
+
+```bash
+cd apps/mobile && npx eas-cli build -p android --profile preview      # APK autonomo, senza Metro
+cd apps/mobile && npx eas-cli build -p android --profile production   # app bundle per il Play Store
+```
+
+- Piano EAS Free: **15 build Android al mese**, concorrenza 1, timeout 45 minuti. Al 2026-08-01 ne è
+  stata consumata **una** (la development build, 19 minuti).
+- Il keystore è custodito da EAS ed è quello che lega gli aggiornamenti all'app già installata:
+  perderlo significa non poter più aggiornare quell'installazione.
+- Il profilo `preview` è quello che serve per far provare l'app a qualcun altro: gira senza Metro,
+  quindi senza il computer acceso.

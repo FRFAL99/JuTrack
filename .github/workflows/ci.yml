@@ -1,0 +1,57 @@
+name: CI
+
+# Solo `push`, su qualunque ramo. Niente trigger su `pull_request`: le PR di questo repo
+# nascono da rami dello stesso repo, quindi sarebbero già coperte dal push e ogni commit
+# consumerebbe il doppio dei minuti — che su un repo privato sono contati.
+on:
+  push:
+    branches: ['**']
+
+# Un push che ne supera un altro sullo stesso ramo annulla la corsa precedente: verificare
+# un commit già sorpassato non serve a nessuno.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verifica:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      # `npm ci` e non `npm install`: installa esattamente il lockfile e fallisce se è
+      # disallineato dai package.json. Su un monorepo con un override su React (vedi il
+      # commento in package.json) è proprio il disallineamento che si vuole intercettare.
+      - name: Installa le dipendenze
+        run: npm ci
+
+      # Prima i controlli veloci, poi quelli lenti: un errore di formattazione non deve
+      # costare i tre minuti del bundle per venire fuori.
+      - name: Formattazione
+        run: npm run format:check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # 3 workspace: core (vitest), mobile (vitest), relay (dentro workerd, non mock).
+      - name: Test
+        run: npm test
+
+      # Il passaggio che gli altri non sostituiscono. `expo export` risolve l'intero grafo
+      # dei moduli con Metro, ed è l'unico controllo che vede i problemi di bundling su
+      # React Native: la trappola lib0 → isomorphic-webcrypto era invisibile a typecheck e
+      # test, e si è manifestata solo qui. Va eseguito da apps/mobile — dalla root del
+      # monorepo non esiste alcun progetto Expo.
+      - name: Bundle Android
+        working-directory: apps/mobile
+        run: npx expo export --platform android

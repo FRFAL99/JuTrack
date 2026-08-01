@@ -32,6 +32,7 @@ import type {
   Member,
   Settlement,
   SplitMode,
+  VaultSnapshot,
 } from './types';
 
 export interface StoreDeps {
@@ -380,5 +381,25 @@ export class VaultStore {
       out.push(settlement);
     });
     return out.sort((a, b) => (a.date < b.date ? 1 : -1));
+  }
+
+  /**
+   * Fotografia completa del vault, per l'export.
+   *
+   * Con `includeDeleted` include anche i tombstone: l'export JSON deve conservarli, perché
+   * un file che li perde, reimportato, farebbe riapparire spese che qualcuno aveva
+   * cancellato di proposito. Il CSV invece li lascia fuori.
+   *
+   * Categorie archiviate sempre incluse: le spese passate continuano a riferirle, e senza
+   * di esse l'export mostrerebbe id grezzi al posto dei nomi.
+   */
+  snapshot(includeDeleted = true): VaultSnapshot {
+    return {
+      expenses: this.listExpenses({ includeDeleted }),
+      categories: this.listCategories(true),
+      members: this.listMembers(),
+      budgets: this.listBudgets(),
+      settlements: this.listSettlements(includeDeleted),
+    };
   }
 }

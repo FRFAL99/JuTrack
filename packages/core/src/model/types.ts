@@ -70,6 +70,21 @@ export interface Budget {
   limitCents: Cents;
 }
 
+/**
+ * Fotografia completa del contenuto di un vault.
+ *
+ * Vive qui e non in `export/` perché è `VaultStore.snapshot()` a produrla: se stesse nel
+ * modulo d'export, il modello dipenderebbe dall'export invece del contrario. Le funzioni
+ * di `export/` la consumano e restano pure — testabili senza costruire un `Y.Doc`.
+ */
+export interface VaultSnapshot {
+  expenses: Expense[];
+  categories: Category[];
+  members: Member[];
+  budgets: Budget[];
+  settlements: Settlement[];
+}
+
 /** Pareggio: un membro salda il proprio debito verso un altro. */
 export interface Settlement {
   id: string;

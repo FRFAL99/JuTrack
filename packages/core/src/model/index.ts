@@ -9,6 +9,7 @@ export type {
   Member,
   Settlement,
   SplitMode,
+  VaultSnapshot,
 } from './types';
 
 export {

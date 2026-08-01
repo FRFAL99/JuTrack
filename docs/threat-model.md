@@ -67,6 +67,37 @@ telefono non entrerebbe più nel vault. Il prezzo è che la chiave transita dagl
 leggibili da altre app installate. Chi usa la fotocamera non paga questo prezzo; chi incolla
 dovrebbe copiare qualcos'altro subito dopo.
 
+### L'export dei dati esce in chiaro
+
+CSV e JSON prodotti da «Esporta i dati» **non sono cifrati**. È deliberato: servono a essere aperti
+altrove, e un file che richiede JuTrack per essere letto non risolverebbe il lock-in che l'export
+esiste per evitare.
+
+La conseguenza va detta: da lì in poi quei dati valgono quanto vale il posto dove finiscono. La
+cifratura end-to-end protegge ciò che transita dal relay, non ciò che si manda a qualcun altro.
+L'interfaccia lo dichiara nella schermata stessa.
+
+Il file viene scritto nella **cache** e non nella directory dei documenti: è di transito verso l'app
+scelta nel foglio di condivisione, e il sistema può rimuoverlo. Lasciarlo fra i documenti
+significherebbe accumulare export in chiaro che nessuno cancella.
+
+Nessun file di export contiene la chiave del vault — c'è un test di regressione che lo verifica.
+
+### La sicurezza del backup dipende da una passphrase umana
+
+È l'unico punto dell'intero progetto in cui è così: nell'uso quotidiano la chiave è casuale a 256
+bit, qui invece il file regge quanto regge la passphrase. Chi ottiene il backup può provare offline,
+senza limiti di tentativi. `scrypt` (`logN = 16`) rende ogni tentativo costoso, ma su una passphrase
+indovinabile il costo non basta.
+
+Mitigazione: soglia minima di 12 caratteri e un giudizio esplicito nel campo, che spinge verso
+quattro parole slegate. È una **euristica, non una misura di entropia** — una frase lunga presa da
+una canzone nota la supererebbe e cadrebbe al primo attacco a dizionario.
+
+I parametri di `scrypt` viaggiano dentro il backup, legati al ciphertext dall'AAD: un file vecchio
+resta importabile anche dopo che il costo di default sarà stato alzato, e nessuno può rigiocarlo
+abbassandolo.
+
 ### Il telefono sbloccato è il vault aperto
 
 `vaultKey` sta in `expo-secure-store` (Keychain iOS / Keystore Android), protetta a riposo. Ma con

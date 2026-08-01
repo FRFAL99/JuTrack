@@ -4,6 +4,89 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-01 — Step 9: CI, export dei dati, backup della chiave
+
+**Fatto**
+
+`packages/core/src/export/`: CSV delle spese e dei pareggi, JSON integrale del vault. Nell'app due
+schermate nuove — «Esporta i dati» e «Backup della chiave» — raggiungibili dalle impostazioni, dove
+il backup era rimasto un segnaposto («sarà disponibile qui») dallo Step 2. CI su GitHub Actions.
+
+**Decisioni prese**
+
+- **Due formati, due scopi diversi, e la schermata lo dice.** Il CSV serve a leggere i dati altrove
+  e perde struttura; il JSON serve a conservarli ed è integrale. Presentarli come alternative
+  equivalenti avrebbe portato qualcuno a tenere il CSV come backup.
+- **CSV in RFC 4180 puro** — separatore `,`, decimale `.` — e non nella convenzione italiana
+  (`;` e `,`), che si aprirebbe meglio in un Excel italiano e peggio ovunque altro. Il conflitto si
+  risolve alla radice con una colonna `importo_centesimi` in più: intera, senza separatore decimale,
+  non fraintendibile da nessun locale. È coerente col resto del progetto, dove il denaro è sempre in
+  centesimi interi.
+- **BOM UTF-8 in testa**, altrimenti Excel su Windows legge le accentate come mojibake.
+- **Le note sono disinnescate contro la CSV injection**: un `=` iniziale in una cella viene valutato
+  come formula da Excel e da Fogli Google. Qui i testi li scrivono i due proprietari del vault, ma un
+  export si gira a terzi e la difesa costa un carattere.
+- **I pareggi in un file separato dalle spese.** Non sono spese: in un unico foglio qualcuno
+  sommerebbe due colonne che non vanno sommate.
+- **L'export JSON conserva i tombstone**, il CSV no. Un backup che perde le cancellazioni, se
+  reimportato, farebbe riapparire spese cancellate di proposito.
+- **Nessuno dei due file contiene la chiave del vault**, e c'è un test che lo verifica. Sono file in
+  chiaro: metterci dentro la chiave significherebbe che chi li riceve legge tutto, per sempre.
+- **`VaultSnapshot` sta in `model/types.ts`, non in `export/`.** È `VaultStore.snapshot()` a
+  produrla: se il tipo vivesse nel modulo d'export, il modello dipenderebbe dall'export invece del
+  contrario. Così le funzioni di export restano pure e testabili senza costruire un `Y.Doc`.
+
+**La passphrase del backup è l'unico punto in cui la sicurezza dipende da un umano**
+
+Ovunque altro la chiave è casuale a 256 bit. Qui il file regge quanto regge la passphrase, e chi lo
+ottiene può provare offline all'infinito. Il campo ha quindi un giudizio esplicito
+(`features/backup/passphrase.ts`): minimo 12 caratteri come soglia bloccante, e un consiglio verso
+quattro parole slegate. È dichiarato nel codice che è una **euristica e non una misura di entropia** —
+una frase lunga presa da una canzone nota la passerebbe e cadrebbe al primo dizionario.
+
+Il tempo di scrypt viene misurato e mostrato nel messaggio finale: `logN = 16` è tarato su desktop
+(~175 ms) e il costo su telefono non è mai stato osservato. Il numero che comparirà dopo il primo
+backup reale dice se vada alzato o abbassato — e i backup già esportati resterebbero importabili
+comunque, perché i parametri viaggiano dentro il file.
+
+**I due moduli nativi nuovi sono caricati pigramente, e non è un dettaglio**
+
+`expo-file-system` ed `expo-sharing` sono richiesti con `require` in `try/catch`, come già
+`expo-camera` allo Step 7. Il motivo è la trappola nota: **expo-router importa tutte le route
+all'avvio**, quindi un `import` in cima a `export.tsx` verrebbe eseguito al boot. La development
+build attualmente installata sul telefono è stata compilata **prima** che questi moduli esistessero:
+con un import normale non si aprirebbe affatto. Così invece si apre, e l'export ripiega sugli
+appunti dichiarandolo nell'interfaccia.
+
+**Il repo non era mai stato formattato con prettier**
+
+`npm run lint` (eslint) passava e veniva eseguito a ogni step, ma `format:check` non è mai stato
+lanciato: su `main` falliva. Emerso solo scrivendo la CI, che lo esegue. Riformattato in un commit a
+parte per non confondere il diff dello step — 16 file, tutti a capo e nessuna modifica di
+comportamento.
+
+**CI**
+
+Un solo job, controlli dal più veloce al più lento: `format:check`, `lint`, `typecheck`, `test`,
+`expo export --platform android`. Un solo job e non quattro paralleli perché i minuti di Actions su
+repo privato sono contati e ogni job rifarebbe `npm ci` da capo. `expo export` è il passaggio che
+gli altri non sostituiscono: è l'unico che risolve il grafo dei moduli con Metro, ed è così che era
+emersa la trappola `lib0` → `isomorphic-webcrypto`, invisibile a typecheck e test.
+
+Solo trigger `push`, su qualunque ramo: le PR nascono da rami dello stesso repo e sarebbero già
+coperte, mentre un doppio trigger raddoppierebbe il consumo.
+
+**Verifica**
+
+417 test verdi (322 core + 60 app + 35 relay), typecheck, lint e `format:check` puliti,
+`expo export` completato con i due moduli nuovi nel grafo.
+
+**Non ancora verificato su hardware**: nessuna delle due schermate nuove è mai stata aperta. Il
+foglio di condivisione, la scrittura del file in cache e il costo reale di scrypt richiedono una
+build aggiornata, che per scelta non è stata prodotta — si continua a testare quella attuale.
+
+---
+
 ## 2026-08-01 — L'app gira sul telefono: il bloccante era Metro nella directory sbagliata
 
 **Risolto.** Development build EAS installata su Android, **Diagnostica: 14 passaggi su 14, «TUTTO
@@ -29,8 +112,8 @@ da una reinstallazione delle dipendenze avvenuta sotto di lui.
 
 **L'errore di metodo, che vale più di quello tecnico**
 
-Il 404 sul bundle era visibile dal primo giorno. È stato letto come *sintomo* («il bundle non
-arriva») invece che come *causa* («il server non sa dove sia il progetto»). La domanda mancante non
+Il 404 sul bundle era visibile dal primo giorno. È stato letto come _sintomo_ («il bundle non
+arriva») invece che come _causa_ («il server non sa dove sia il progetto»). La domanda mancante non
 era «perché il telefono rifiuta il bundle», ma **«da quale directory sta rispondendo questo
 server?»**.
 

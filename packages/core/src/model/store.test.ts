@@ -308,3 +308,47 @@ describe('VaultStore — categorie, membri, budget, pareggi', () => {
     ).toThrow(/deve essere positivo/);
   });
 });
+
+describe('snapshot', () => {
+  it('raccoglie tutte e cinque le collezioni', () => {
+    const { store, a, b } = makeCouple();
+    const category = store.addCategory({ name: 'Spesa' });
+    store.addExpense({
+      amountCents: 1000,
+      date: '2026-08-01',
+      paidBy: a,
+      split: buildSplit('equal', 1000, [a, b]),
+      categoryId: category.id,
+    });
+    store.setBudget(category.id, '2026-08', 50000);
+    store.addSettlement({ fromMember: b, toMember: a, amountCents: 500, date: '2026-08-02' });
+
+    const snapshot = store.snapshot();
+    expect(snapshot.expenses).toHaveLength(1);
+    expect(snapshot.categories).toHaveLength(1);
+    expect(snapshot.members).toHaveLength(2);
+    expect(snapshot.budgets).toHaveLength(1);
+    expect(snapshot.settlements).toHaveLength(1);
+  });
+
+  it('include i tombstone di default, e li esclude su richiesta', () => {
+    const { store, a, b } = makeCouple();
+    const expense = store.addExpense({
+      amountCents: 1000,
+      date: '2026-08-01',
+      paidBy: a,
+      split: buildSplit('equal', 1000, [a, b]),
+    });
+    store.deleteExpense(expense.id);
+
+    expect(store.snapshot().expenses).toHaveLength(1);
+    expect(store.snapshot(false).expenses).toHaveLength(0);
+  });
+
+  it('include le categorie archiviate: le spese passate le riferiscono ancora', () => {
+    const store = makeStore();
+    const category = store.addCategory({ name: 'Vacanze' });
+    store.updateCategory(category.id, { archived: true });
+    expect(store.snapshot().categories).toHaveLength(1);
+  });
+});

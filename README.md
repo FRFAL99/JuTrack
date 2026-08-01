@@ -64,9 +64,12 @@ dependency injection. È la condizione che rende quasi gratuito un futuro client
 
 ```bash
 npm install
-npm run typecheck
-npm test
+npm run format:check && npm run lint && npm run typecheck && npm test
 ```
+
+Sono gli stessi passaggi che gira la CI (`.github/workflows/ci.yml`) a ogni push, seguiti da
+`expo export --platform android` — l'unico controllo che risolve il grafo dei moduli con Metro, e
+quindi l'unico che vede i problemi di bundling su React Native.
 
 ### Provare l'app sul telefono
 
@@ -95,10 +98,25 @@ bloccato. Il dettaglio cronologico è in [docs/devlog.md](docs/devlog.md).
 
 Relay in produzione: https://jutrack-relay.jutrack-relayfrfal.workers.dev
 
+## I tuoi dati escono quando vuoi
+
+Nessun lock-in. Da Impostazioni → «Esporta i dati»:
+
+- **CSV** delle spese e dei pareggi: si apre in Excel, Fogli Google o un notebook Python. Ogni
+  importo compare due volte, in euro e in centesimi interi — la seconda colonna è quella che nessun
+  locale può fraintendere.
+- **JSON** integrale del vault: spese, categorie, persone, budget, pareggi, tombstone compresi. È il
+  formato da conservare; il CSV, per come è fatto, perde struttura.
+
+Entrambi escono **in chiaro**: la cifratura protegge ciò che passa dal relay, non ciò che mandi a
+qualcun altro. Nessuno dei due contiene la chiave del vault.
+
 ## Sicurezza
 
 Se perdi la chiave del vault, **i dati non sono recuperabili**: non esiste un reset lato server, è il
-prezzo della cifratura end-to-end. Fai il backup della chiave.
+prezzo della cifratura end-to-end. Fai il backup della chiave — Impostazioni → «Backup della chiave»
+produce un file cifrato con una passphrase che scegli tu. Serve sia il file sia la passphrase:
+nessuno dei due, da solo, basta.
 
 Modello di minaccia, garanzie e limiti reali: [docs/threat-model.md](docs/threat-model.md).
 
