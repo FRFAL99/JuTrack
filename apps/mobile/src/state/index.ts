@@ -7,6 +7,27 @@ export {
   type VaultRuntime,
 } from './VaultProvider';
 export {
+  ProfileProvider,
+  useAppData,
+  useAppDataStatus,
+  useProfile,
+  type AppData,
+} from './ProfileProvider';
+export {
+  createProfile,
+  loadProfile,
+  loadMyMemberId,
+  loadVaultOrigin,
+  markVaultOrigin,
+  normalizeProfileName,
+  saveProfile,
+  setMyMemberId,
+  MAX_PROFILE_NAME,
+  PROFILE_COLORS,
+  type Profile,
+  type VaultOrigin,
+} from './profile';
+export {
   adoptVaultKey,
   createVault,
   forgetVault,

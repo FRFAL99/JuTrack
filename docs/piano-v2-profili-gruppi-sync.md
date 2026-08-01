@@ -1,8 +1,8 @@
 # JuTrack — Piano v2: profili, gruppi, inviti, sync veloce
 
 > **Avanzamento al 2026-08-01.**
-> Completati: **Step 0–9** (il piano originale) e lo **Step 10** di questo documento. Restano gli
-> **Step 11–14**.
+> Completati: **Step 0–9** (il piano originale) e gli **Step 10 e 11** di questo documento. Restano
+> gli **Step 12–14**.
 >
 > Nasce dalla prima prova reale con **due dispositivi**, che ha fatto emergere due bug con
 > conseguenze sui numeri e tre limiti di prodotto che il piano originale non copriva.
@@ -198,7 +198,17 @@ _Verifica:_ un test che avvia il motore su un `Y.Doc` **già popolato** e contro
 dispositivo riceva tutto — è lo scenario che oggi nessun test copre. Poi, sui due telefoni: una spesa
 creata su A compare su B in 2-3 secondi, **e viceversa**.
 
-### Step 11 — Profili: chi sono io
+### Step 11 — Profili: chi sono io ✅
+
+**Fatto**, con una differenza dichiarata: il **ricollegamento a un membro esistente** («sei già in
+questo gruppo con un altro nome?») è rinviato allo Step 12. `my_member_id` è già scritto e letto per
+vault, ma la domanda va posta **dopo** il primo sync — al boot il documento di chi è appena entrato è
+ancora vuoto, quindi non c'è nulla a cui legarsi — e il momento giusto è l'apertura di un gruppo.
+Servirebbe inoltre poter cancellare il membro creato per sbaglio, e i membri non hanno tombstone.
+
+Non essendoci ancora i gruppi, «createGroup / joinGroup» qui sono `createVault` e l'adozione di una
+chiave (pairing o ripristino del backup): è lì che viene registrata l'origine del vault. Il
+resoconto è nel [devlog](devlog.md).
 
 **Il profilo.** Uno per persona, **condiviso fra tutti i gruppi**:
 `{ profileId, name, color, identity? }`.

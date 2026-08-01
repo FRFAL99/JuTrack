@@ -2,7 +2,7 @@ import { useCallback, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { describePairingError, deriveVaultKeys, parsePairingUri } from '@jutrack/core';
 import { expoKeyStore } from '@/platform';
-import { adoptVaultKey, useVaultRuntime } from '@/state';
+import { adoptVaultKey, useAppData, useVaultRuntime } from '@/state';
 
 interface AdoptPairing {
   /** Interpreta un URI (scansionato, incollato o arrivato per deep link) e chiede conferma. */
@@ -21,29 +21,34 @@ interface AdoptPairing {
  */
 export function useAdoptPairing(): AdoptPairing {
   const { keys } = useVaultRuntime();
+  const { meta } = useAppData();
   const [error, setError] = useState<string | null>(null);
   const [adopting, setAdopting] = useState(false);
   // La fotocamera continua a emettere finché il codice resta inquadrato: senza freno
   // partirebbero decine di conferme sovrapposte per la stessa scansione.
   const handled = useRef(false);
 
-  const adopt = useCallback((key: Uint8Array): void => {
-    setAdopting(true);
-    void adoptVaultKey(expoKeyStore, key)
-      .then(() => {
-        // Il motore di sync viene costruito all'avvio con le chiavi di allora: il
-        // riavvio è il modo più prevedibile per farlo ripartire su quelle nuove.
-        Alert.alert(
-          'Dispositivo collegato',
-          "Riavvia l'app: le spese di questo telefono e quelle dell'altro verranno unite nello stesso vault.",
-        );
-      })
-      .catch((cause: unknown) => {
-        setError(cause instanceof Error ? cause.message : String(cause));
-        handled.current = false;
-      })
-      .finally(() => setAdopting(false));
-  }, []);
+  const adopt = useCallback(
+    (key: Uint8Array): void => {
+      setAdopting(true);
+      void adoptVaultKey(expoKeyStore, meta, key)
+        .then(() => {
+          // Il motore di sync viene costruito all'avvio con le chiavi di allora: il
+          // riavvio è il modo più prevedibile per farlo ripartire su quelle nuove.
+          Alert.alert(
+            'Dispositivo collegato',
+            "Riavvia l'app: le spese di questo telefono e quelle dell'altro verranno unite nello stesso vault. " +
+              'Comparirai fra le persone del vault con il tuo nome.',
+          );
+        })
+        .catch((cause: unknown) => {
+          setError(cause instanceof Error ? cause.message : String(cause));
+          handled.current = false;
+        })
+        .finally(() => setAdopting(false));
+    },
+    [meta],
+  );
 
   const submit = useCallback(
     (raw: string): void => {

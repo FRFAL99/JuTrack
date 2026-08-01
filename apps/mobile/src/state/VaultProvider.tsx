@@ -11,13 +11,9 @@ import {
   type VaultKeys,
 } from '@jutrack/core';
 import { RELAY_URL } from '@/config';
-import {
-  ExpoSqliteDatabase,
-  expoHttp,
-  expoKeyStore,
-  expoRandom,
-  SqliteSyncStore,
-} from '@/platform';
+import { expoHttp, expoKeyStore, expoRandom, SqliteSyncStore } from '@/platform';
+import { loadMyMemberId, loadVaultOrigin } from './profile';
+import { useAppData, useProfile } from './ProfileProvider';
 import { seedDefaults } from './seed';
 import { loadVaultKeys } from './vault-key';
 
@@ -36,6 +32,13 @@ export interface VaultRuntime {
   keys: VaultKeys | null;
   /** `null` se il sync non è attivo. */
   engine: SyncEngine | null;
+  /**
+   * Il membro che rappresenta **me** in questo vault.
+   *
+   * Di norma coincide col `profileId`. È lui il `paidBy` predefinito di una spesa nuova,
+   * ed è la ragione per cui i due telefoni non contano più due persone al posto di una.
+   */
+  myMemberId: string;
 }
 
 type VaultStatus =
@@ -55,6 +58,9 @@ const SyncContext = createContext<SyncState>({ phase: 'idle' });
 export function VaultProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<VaultStatus>({ phase: 'loading' });
   const [syncState, setSyncState] = useState<SyncState>({ phase: 'idle' });
+  const { db, meta } = useAppData();
+  const profile = useProfile();
+  const { profileId, name, color } = profile;
   // Il documento vive per tutta la durata dell'app: tenerlo in un ref evita che un
   // re-render ne crei uno nuovo, perdendo lo stato in memoria.
   const docRef = useRef<Y.Doc | null>(null);
@@ -72,14 +78,25 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         doc = new Y.Doc();
         docRef.current = doc;
 
-        const db = await ExpoSqliteDatabase.open();
         persistence = new SqliteYPersistence(db, doc);
         await persistence.load();
 
         if (cancelled) return;
 
+        // Il sync parte solo se esiste una chiave. Senza, l'app resta un tracker
+        // locale perfettamente funzionante: è uno stato legittimo, non un errore.
+        const keys = await loadVaultKeys(expoKeyStore);
+        if (cancelled) return;
+
+        // Chi è entrato nel vault di qualcun altro non semina le categorie: le riceve
+        // col primo sync, e seminarle vorrebbe dire ritrovarsene sedici invece di otto.
+        const origin = keys === null ? null : await loadVaultOrigin(meta, keys.vaultId);
+        const myMemberId =
+          keys === null ? profileId : await loadMyMemberId(meta, keys.vaultId, profileId);
+        if (cancelled) return;
+
         const store = new VaultStore(doc, { random: expoRandom });
-        seedDefaults(store);
+        seedDefaults(store, { seedCategories: origin !== 'joined' });
 
         let version = 0;
         const listeners = new Set<() => void>();
@@ -89,9 +106,6 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         };
         doc.on('update', onUpdate);
 
-        // Il sync parte solo se esiste una chiave. Senza, l'app resta un tracker
-        // locale perfettamente funzionante: è uno stato legittimo, non un errore.
-        const keys = await loadVaultKeys(expoKeyStore);
         if (keys !== null && !cancelled) {
           const syncStore = await SqliteSyncStore.open(db);
           const client = new RelayClient(RELAY_URL, keys, expoHttp, expoRandom);
@@ -126,6 +140,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
             store,
             keys,
             engine,
+            myMemberId,
             getVersion: () => version,
             subscribe: (listener) => {
               listeners.add(listener);
@@ -153,7 +168,20 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       if (doc !== null && onUpdate !== null) doc.off('update', onUpdate);
       void persistence?.destroy();
     };
-  }, []);
+    // `profileId` e non l'intero profilo: rinominarsi non deve smontare e rimontare
+    // motore e persistenza. Il nome è gestito dall'effetto sotto.
+  }, [db, meta, profileId]);
+
+  // Il membro che sono io nasce qui, con il `profileId` come id — non con un id casuale
+  // generato a ogni installazione. Scritto solo se manca o se è cambiato: rieseguirlo a
+  // ogni avvio non duplica nulla, e un cambio di nome raggiunge l'altro telefono da sé.
+  useEffect(() => {
+    if (status.phase !== 'ready') return;
+    const { store, myMemberId } = status.runtime;
+    const current = store.getMember(myMemberId);
+    if (current !== null && current.name === name && current.color === color) return;
+    store.setMember(myMemberId, { name, color });
+  }, [status, name, color]);
 
   return (
     <VaultContext.Provider value={status}>

@@ -4,6 +4,88 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-01 — Step 11: chi sono io
+
+**Fatto**
+
+Il secondo bug emerso dalla prova con due telefoni, quello che rendeva **sbagliati i numeri**. Dentro
+il vault non esisteva alcun identificatore stabile di «me»: `seed.ts` creava al primo avvio un membro
+«Io» con un id casuale **proprio di quel dispositivo**. Dopo il sync erano due persone distinte, le
+spese di ciascuno puntavano al proprio id, e il calcolo di chi deve quanto all'altro partiva da
+quattro membri invece di due.
+
+Non era un problema di autenticazione — è la ragione per cui l'auth di Google era stata scartata: un
+provider d'identità avrebbe comunque dovuto scrivere un id dentro il CRDT, che è esattamente ciò che
+fa un id generato sul telefono, senza costare un modulo nativo e una build.
+
+**Il profilo**
+
+`{ profileId, name, color, identity? }`, uno per persona, in una tabella `app_meta` di SQLite —
+**non** in SecureStore, che resta riservato al materiale crittografico. `profileId` è casuale e
+**opaco**: mai derivato dal nome né dalla chiave. È il seam che permetterà di agganciare un provider
+d'identità senza cambiare la chiave con cui i membri sono scritti nei vault, che è la parte cara da
+modificare a posteriori perché toccherebbe `paidBy` e le quote di ogni spesa.
+
+Il membro nasce da lì: `VaultStore.setMember(id, …)` scrive con un id scelto da chi chiama, invece di
+generarne uno. È idempotente per costruzione, quindi rieseguirla a ogni avvio non duplica nulla — e
+un cambio di nome raggiunge l'altro telefono da solo, senza creare una persona nuova.
+
+**L'ordine dei provider non è cosmetico**
+
+`ProfileProvider` sta **sopra** `VaultProvider`, non accanto. Il membro è scritto col `profileId`,
+quindi il profilo deve esistere già quando il vault si monta: se arrivasse dopo, ci sarebbe una
+finestra in cui l'app funziona ma «io» non esisto — ed è in quella finestra che nascevano i duplicati.
+Effetto collaterale utile: il database viene aperto una volta sola e passato al vault, invece di una
+connessione per componente.
+
+**Le sedici categorie**
+
+L'altra metà della duplicazione. Chi entra nel vault di qualcun altro ha il documento vuoto finché
+non arriva il primo sync: seminare lì le otto categorie di default significa ritrovarsene sedici
+quando i due documenti si uniscono. Ora l'origine del vault (`created` / `joined`) viene registrata
+in `app_meta` **al momento in cui si crea o si adotta la chiave** — dopo, guardando un documento
+pieno di dati sincronizzati, i due casi sono indistinguibili. Vale anche per il ripristino del backup
+della chiave, che è un ingresso a tutti gli effetti.
+
+**Via la gestione manuale delle persone**
+
+La card «Persone» col campo di inserimento è sparita, sostituita da «Il tuo profilo» (nome e colore,
+modificabili) e da un elenco **in sola lettura** di chi divide le spese. Una persona aggiunta a mano
+non ha un telefono dietro: non potrebbe mai registrare una spesa né vedere il saldo. Il nome si salva
+quando il campo perde il fuoco, non a ogni tasto — altrimenti ogni lettera sarebbe un update Yjs, e
+quindi una riga nel log del relay.
+
+Nel form spesa il `paidBy` predefinito è ora il proprio membro, non il primo della lista in ordine
+alfabetico.
+
+**Rinviato consapevolmente**
+
+Il ricollegamento a un membro esistente («sei già in questo gruppo con un altro nome?»), che serve a
+chi ripristina il backup della chiave su un telefono nuovo. Il posto dove scriverlo c'è già
+(`my_member_id` per vault in `app_meta`, letto dal runtime), ma la domanda va fatta al momento giusto
+— **dopo** il primo sync, non al boot su un documento ancora vuoto — e il momento giusto è l'apertura
+di un gruppo, che arriva con lo Step 12. Farlo adesso significherebbe anche poter cancellare il
+membro creato per sbaglio, e i membri non hanno tombstone.
+
+**Verifica**
+
+463 test verdi (341 core + 87 app + 35 relay), da 433. Typecheck, lint e `format:check` puliti,
+`expo export --platform android` completo. Il test che conta è in `convergence.test.ts`: due
+dispositivi con profili distinti producono **due** membri anche riscrivendoli a ogni avvio, e una
+spesa divisa a metà riferisce membri che esistono su entrambi i telefoni.
+
+**Attenzione ai dati già sul telefono**
+
+Non c'è migrazione, per scelta presa nel piano v2. Un'installazione che ha già dei dati si ritroverà
+il vecchio membro «Io» accanto al proprio profilo, e le spese continueranno a riferirsi a quello: il
+saldo resterebbe sbagliato. Prima di provare va **cancellati i dati dell'app** su entrambi i telefoni
+(Impostazioni Android → App → JuTrack → Archiviazione → Cancella dati) e rifatto il pairing. La
+ripartenza pulita automatica, con `schema_version`, è prevista allo Step 12.
+
+**Prossimo:** Step 12 — più gruppi sullo stesso telefono.
+
+---
+
 ## 2026-08-01 — Step 10: il motore di sync smette di mentire
 
 **Fatto**

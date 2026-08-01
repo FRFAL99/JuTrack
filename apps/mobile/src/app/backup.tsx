@@ -9,7 +9,7 @@ import { assessPassphrase } from '@/features/backup/passphrase';
 import { exportFileName } from '@/features/export/filenames';
 import { isFileSharingAvailable, shareTextFile } from '@/features/export/share';
 import { expoKeyStore, expoRandom } from '@/platform';
-import { adoptVaultKey, loadVaultKeyBytes, useVaultRuntime } from '@/state';
+import { adoptVaultKey, loadVaultKeyBytes, useAppData, useVaultRuntime } from '@/state';
 import { useTheme } from '@/theme';
 
 /**
@@ -26,6 +26,7 @@ import { useTheme } from '@/theme';
 export default function BackupScreen() {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const { keys } = useVaultRuntime();
+  const { meta } = useAppData();
 
   const [passphrase, setPassphrase] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -128,7 +129,10 @@ export default function BackupScreen() {
             text: 'Ripristina',
             style: keys === null ? 'default' : 'destructive',
             onPress: () => {
-              void adoptVaultKey(expoKeyStore, key)
+              // Come per il pairing: si sta **entrando** in un vault che esiste già, e
+              // le sue categorie arriveranno col primo sync. Seminare le proprie
+              // significherebbe raddoppiarle.
+              void adoptVaultKey(expoKeyStore, meta, key)
                 .then(() => {
                   setRestoreBlob('');
                   setRestorePassphrase('');

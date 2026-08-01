@@ -284,7 +284,21 @@ export class VaultStore {
   /* ------------------------------- Membri ------------------------------- */
 
   addMember(input: { name: string; color?: string }): Member {
-    const id = newId(this.random);
+    return this.setMember(newId(this.random), input);
+  }
+
+  /**
+   * Scrive un membro con un id **scelto da chi chiama**, creandolo o aggiornandolo.
+   *
+   * È la differenza fra «io» e «un altro io». L'app passa il proprio `profileId`, che è
+   * lo stesso su tutti i gruppi e non cambia mai: due dispositivi che generano ciascuno
+   * un id casuale per la stessa persona producono due membri distinti, e da lì un saldo
+   * sbagliato — non solo una lista Persone dall'aspetto strano.
+   *
+   * Idempotente per costruzione: rieseguirla a ogni avvio non duplica nulla, e propaga
+   * un cambio di nome all'altro dispositivo.
+   */
+  setMember(id: string, input: { name: string; color?: string }): Member {
     this.transact(() => {
       writeRecord(membersMap(this.doc), id, {
         name: input.name,

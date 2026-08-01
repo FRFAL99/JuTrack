@@ -266,6 +266,26 @@ describe('VaultStore — categorie, membri, budget, pareggi', () => {
     expect(store.listCategories(true)).toHaveLength(3);
   });
 
+  it('scrive il membro con l id scelto da chi chiama, senza duplicarlo', () => {
+    // È il meccanismo che toglie i membri doppi: due dispositivi passano lo **stesso**
+    // `profileId` per la stessa persona, invece di generarsi ciascuno un id casuale.
+    const store = makeStore();
+    store.setMember('profilo-francesco', { name: 'Francesco', color: '#3B5BDB' });
+    store.setMember('profilo-francesco', { name: 'Francesco', color: '#3B5BDB' });
+
+    expect(store.listMembers()).toHaveLength(1);
+    expect(store.getMember('profilo-francesco')?.name).toBe('Francesco');
+  });
+
+  it('propaga il cambio di nome sullo stesso membro', () => {
+    const store = makeStore();
+    store.setMember('profilo-giulia', { name: 'Giulia' });
+    store.setMember('profilo-giulia', { name: 'Giulia B.' });
+
+    expect(store.listMembers()).toHaveLength(1);
+    expect(store.getMember('profilo-giulia')?.name).toBe('Giulia B.');
+  });
+
   it('memorizza e rilegge un budget mensile', () => {
     const store = makeStore();
     const cat = store.addCategory({ name: 'Cibo' });

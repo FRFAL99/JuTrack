@@ -1,10 +1,14 @@
 import type { VaultStore } from '@jutrack/core';
 
 /**
- * Categorie e membri iniziali, creati solo al primissimo avvio.
+ * Categorie iniziali, create solo al primissimo avvio.
  *
  * Il controllo «esiste già qualcosa?» è essenziale: senza, ogni avvio aggiungerebbe un
- * nuovo set di categorie, e dopo il sync i due dispositivi ne avrebbero il doppio.
+ * nuovo set di categorie.
+ *
+ * **Non crea più alcun membro.** Prima ne creava uno chiamato «Io» con un id casuale, su
+ * ogni dispositivo: dopo il sync erano due persone diverse, e il saldo era sbagliato. Ora
+ * il membro nasce dal profilo, con il `profileId` come id — vedi `profile.ts`.
  */
 /**
  * I colori non sono decorativi: finiscono nelle barre delle statistiche, dove due
@@ -30,17 +34,18 @@ const DEFAULT_CATEGORIES: { name: string; icon: string; color: string }[] = [
   { name: 'Altro', icon: '📦', color: '#868E96' },
 ];
 
-export function seedDefaults(store: VaultStore): void {
-  if (store.listCategories(true).length === 0) {
+/**
+ * @param seedCategories `false` per chi è **entrato** nel vault di qualcun altro.
+ *
+ * Chi entra ha un documento vuoto finché non arriva il primo sync: seminare lì le otto
+ * categorie di default significa ritrovarsene sedici appena i due documenti si uniscono.
+ * Le categorie dell'altro arrivano da sole, e sono quelle giuste — magari già rinominate.
+ */
+export function seedDefaults(store: VaultStore, { seedCategories = true } = {}): void {
+  if (seedCategories && store.listCategories(true).length === 0) {
     // Una sola transazione: otto categorie generano un solo update invece di otto.
     store.transact(() => {
       for (const category of DEFAULT_CATEGORIES) store.addCategory(category);
-    });
-  }
-
-  if (store.listMembers().length === 0) {
-    store.transact(() => {
-      store.addMember({ name: 'Io', color: '#3B5BDB' });
     });
   }
 }

@@ -19,7 +19,7 @@ import {
   type SplitMode,
 } from '@jutrack/core';
 import { Button } from '@/components/Button';
-import { useCategories, useMembers } from '@/state';
+import { useCategories, useMembers, useVaultRuntime } from '@/state';
 import { useTheme } from '@/theme';
 import { todayIso } from './grouping';
 
@@ -50,13 +50,16 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const categories = useCategories();
   const members = useMembers();
+  const { myMemberId } = useVaultRuntime();
 
   const [amountText, setAmountText] = useState(
     initial === undefined ? '' : formatCents(initial.amountCents).replace(/\./g, ''),
   );
   const [note, setNote] = useState(initial?.note ?? '');
   const [categoryId, setCategoryId] = useState<string | null>(initial?.categoryId ?? null);
-  const [paidBy, setPaidBy] = useState<string>(initial?.paidBy ?? members[0]?.id ?? '');
+  // Chi paga è quasi sempre chi sta scrivendo: il proprio membro è il default, non il
+  // primo della lista in ordine alfabetico.
+  const [paidBy, setPaidBy] = useState<string>(initial?.paidBy ?? myMemberId);
   const [mode, setMode] = useState<SplitMode>(
     initial?.split.mode ?? (members.length > 1 ? 'equal' : 'single'),
   );

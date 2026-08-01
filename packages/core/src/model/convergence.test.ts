@@ -204,6 +204,57 @@ describe('convergenza fra due dispositivi', () => {
     expect(readForward).toHaveLength(5);
   });
 
+  it('due dispositivi producono due membri, non quattro, e un saldo corretto', () => {
+    // Il difetto che rendeva sbagliati i numeri sul campo: ciascun telefono creava un
+    // membro «Io» con un id casuale **proprio**, e dopo il sync erano due persone
+    // diverse. Le spese di A puntavano all'id di A, quelle di B all'id di B, e il
+    // calcolo di chi deve quanto all'altro partiva da quattro persone invece di due.
+    //
+    // Con il `profileId` come id del membro, riscriverlo a ogni avvio su entrambi i
+    // dispositivi resta un'operazione a vuoto.
+    const { docA, docB, storeA, storeB } = twoDevices();
+    const francesco = 'profilo-francesco';
+    const giulia = 'profilo-giulia';
+
+    storeA.setMember(francesco, { name: 'Francesco', color: '#3B5BDB' });
+    storeB.setMember(giulia, { name: 'Giulia', color: '#C2255C' });
+    sync(docA, docB);
+
+    // Ogni avvio riscrive il proprio membro: non deve aggiungerne un altro.
+    storeA.setMember(francesco, { name: 'Francesco', color: '#3B5BDB' });
+    storeB.setMember(giulia, { name: 'Giulia', color: '#C2255C' });
+    sync(docA, docB);
+
+    expect(storeA.listMembers()).toHaveLength(2);
+    expect(storeB.listMembers()).toEqual(storeA.listMembers());
+
+    // E una spesa divisa a metà riferisce membri che esistono su entrambi i telefoni.
+    storeA.addExpense({
+      amountCents: 1000,
+      date: '2026-08-01',
+      paidBy: francesco,
+      split: buildSplit('equal', 1000, [francesco, giulia]),
+    });
+    sync(docA, docB);
+
+    const onB = storeB.listExpenses()[0];
+    expect(onB?.split.shares).toEqual({ [francesco]: 500, [giulia]: 500 });
+    expect(storeB.getMember(onB?.paidBy as string)?.name).toBe('Francesco');
+  });
+
+  it('un cambio di nome raggiunge l altro dispositivo senza creare una persona nuova', () => {
+    const { docA, docB, storeA, storeB } = twoDevices();
+    const francesco = 'profilo-francesco';
+
+    storeA.setMember(francesco, { name: 'Francesco', color: '#3B5BDB' });
+    sync(docA, docB);
+    storeA.setMember(francesco, { name: 'Fra', color: '#3B5BDB' });
+    sync(docA, docB);
+
+    expect(storeB.listMembers()).toHaveLength(1);
+    expect(storeB.getMember(francesco)?.name).toBe('Fra');
+  });
+
   it('è idempotente: applicare due volte lo stesso update non duplica nulla', () => {
     // Il client può ricevere lo stesso blob due volte dopo un retry di rete.
     const source = new Y.Doc();

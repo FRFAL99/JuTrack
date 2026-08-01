@@ -5,9 +5,20 @@ import { CORE_VERSION } from '@jutrack/core';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
+import { ColorChoice } from '@/features/profile/ColorChoice';
 import { SyncBadge } from '@/features/sync/SyncBadge';
 import { expoKeyStore } from '@/platform';
-import { createVault, useCategories, useMembers, useSyncState, useVaultRuntime } from '@/state';
+import {
+  createVault,
+  MAX_PROFILE_NAME,
+  normalizeProfileName,
+  useAppData,
+  useCategories,
+  useMembers,
+  useProfile,
+  useSyncState,
+  useVaultRuntime,
+} from '@/state';
 import { useTheme } from '@/theme';
 
 /**
@@ -55,12 +66,26 @@ function NavCard({
 
 export default function SettingsScreen() {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
-  const { store, keys, engine } = useVaultRuntime();
+  const { keys, engine, myMemberId } = useVaultRuntime();
+  const { meta, update } = useAppData();
+  const profile = useProfile();
   const syncState = useSyncState();
   const categories = useCategories();
   const members = useMembers();
-  const [newMember, setNewMember] = useState('');
+  const [draftName, setDraftName] = useState(profile.name);
   const [creating, setCreating] = useState(false);
+
+  // Il nome si salva quando il campo perde il fuoco, non a ogni tasto: scrivendo, ogni
+  // lettera produrrebbe un update Yjs, e quindi una riga nel log del relay.
+  const commitName = (): void => {
+    const normalized = normalizeProfileName(draftName);
+    if (normalized === null) {
+      setDraftName(profile.name);
+      return;
+    }
+    if (normalized === profile.name) return;
+    void update({ name: normalized });
+  };
 
   const handleCreateVault = (): void => {
     Alert.alert(
@@ -73,7 +98,7 @@ export default function SettingsScreen() {
           text: 'Crea',
           onPress: () => {
             setCreating(true);
-            void createVault(expoKeyStore)
+            void createVault(expoKeyStore, meta)
               .then(() => {
                 // Il motore di sync viene avviato all'apertura dell'app: il riavvio
                 // è il modo più semplice e prevedibile per attivarlo.
@@ -92,12 +117,7 @@ export default function SettingsScreen() {
     );
   };
 
-  const handleAddMember = (): void => {
-    const trimmed = newMember.trim();
-    if (trimmed === '') return;
-    store.addMember({ name: trimmed, color: '#C2255C' });
-    setNewMember('');
-  };
+  const others = members.filter((member) => member.id !== myMemberId);
 
   return (
     <Screen title="Impostazioni">
@@ -113,55 +133,78 @@ export default function SettingsScreen() {
             <Text
               style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
             >
-              Persone
+              Il tuo profilo
             </Text>
             <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-              Con almeno due persone le spese possono essere divise e l&apos;app calcola chi deve
-              quanto all&apos;altro.
+              È così che ti vede chi divide le spese con te. Cambiarlo aggiorna anche il suo
+              telefono, non crea una persona nuova.
             </Text>
           </View>
 
-          {members.map((member) => (
-            <View key={member.id} style={[styles.rowBetween, { paddingVertical: spacing.xs }]}>
-              <Text style={{ color: colors.text, fontSize: fontSize.md }}>{member.name}</Text>
-            </View>
-          ))}
+          <TextInput
+            value={draftName}
+            onChangeText={setDraftName}
+            onBlur={commitName}
+            onSubmitEditing={commitName}
+            placeholder="Il tuo nome"
+            placeholderTextColor={colors.textMuted}
+            maxLength={MAX_PROFILE_NAME}
+            returnKeyType="done"
+            accessibilityLabel="Il tuo nome"
+            style={{
+              color: colors.text,
+              fontSize: fontSize.md,
+              backgroundColor: colors.background,
+              borderRadius: radius.md,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: colors.border,
+              padding: spacing.md,
+            }}
+          />
 
-          <View style={{ flexDirection: 'row', gap: spacing.sm }}>
-            <TextInput
-              value={newMember}
-              onChangeText={setNewMember}
-              onSubmitEditing={handleAddMember}
-              placeholder="Aggiungi una persona"
-              placeholderTextColor={colors.textMuted}
-              returnKeyType="done"
-              accessibilityLabel="Nome della persona da aggiungere"
+          <ColorChoice value={profile.color} onChange={(color) => void update({ color })} />
+        </Card>
+
+        <Card style={{ gap: spacing.sm }}>
+          <View style={{ gap: 2 }}>
+            <Text
+              style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
+            >
+              Chi divide le spese
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
+              {others.length === 0
+                ? 'Per ora solo tu. Chi collega il proprio telefono a questo vault compare qui da solo, con il nome del suo profilo.'
+                : 'Ognuno si aggiunge da sé collegando il proprio telefono: qui non si aggiungono persone a mano.'}
+            </Text>
+          </View>
+
+          {/* Sola lettura, di proposito: una persona aggiunta a mano non ha un telefono
+              dietro, quindi non potrebbe mai registrare una spesa né vedere il saldo. */}
+          {members.map((member) => (
+            <View
+              key={member.id}
               style={{
-                flex: 1,
-                color: colors.text,
-                fontSize: fontSize.md,
-                backgroundColor: colors.background,
-                borderRadius: radius.md,
-                borderWidth: StyleSheet.hairlineWidth,
-                borderColor: colors.border,
-                padding: spacing.md,
-              }}
-            />
-            <Pressable
-              onPress={handleAddMember}
-              disabled={newMember.trim() === ''}
-              accessibilityRole="button"
-              style={{
-                paddingHorizontal: spacing.lg,
-                justifyContent: 'center',
-                borderRadius: radius.md,
-                backgroundColor: colors.accent,
-                opacity: newMember.trim() === '' ? 0.4 : 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: spacing.sm,
+                paddingVertical: spacing.xs,
               }}
             >
-              <Text style={{ color: colors.textOnAccent, fontWeight: fontWeight.semibold }}>+</Text>
-            </Pressable>
-          </View>
+              <View
+                style={{
+                  width: 12,
+                  height: 12,
+                  borderRadius: 6,
+                  backgroundColor: member.color,
+                }}
+              />
+              <Text style={{ color: colors.text, fontSize: fontSize.md }}>{member.name}</Text>
+              {member.id === myMemberId && (
+                <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>· tu</Text>
+              )}
+            </View>
+          ))}
         </Card>
 
         <Card style={{ gap: spacing.md }}>

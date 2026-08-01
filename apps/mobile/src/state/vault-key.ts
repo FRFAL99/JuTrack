@@ -7,7 +7,8 @@ import {
   type SecureKeyStore,
   type VaultKeys,
 } from '@jutrack/core';
-import { expoRandom, VAULT_KEY_STORAGE_KEY } from '@/platform';
+import { expoRandom, VAULT_KEY_STORAGE_KEY, type KeyValueStore } from '@/platform';
+import { markVaultOrigin } from './profile';
 
 /**
  * Chiave del vault a riposo.
@@ -60,16 +61,25 @@ export async function loadVaultKeyBytes(store: SecureKeyStore): Promise<Uint8Arr
  * chiave** tramite il pairing: generarne una propria creerebbe due vault separati che
  * non si sincronizzerebbero mai.
  */
-export async function createVault(store: SecureKeyStore): Promise<VaultKeys> {
+export async function createVault(store: SecureKeyStore, meta: KeyValueStore): Promise<VaultKeys> {
   const key = generateVaultKey(expoRandom);
+  const keys = deriveVaultKeys(key);
   await store.set(VAULT_KEY_STORAGE_KEY, bytesToHex(key));
-  return deriveVaultKeys(key);
+  // Chi crea semina le categorie di default; chi entra no. Va registrato adesso: dopo,
+  // guardando un documento pieno di dati sincronizzati, i due casi sono indistinguibili.
+  await markVaultOrigin(meta, keys.vaultId, 'created');
+  return keys;
 }
 
 /** Adotta una chiave ricevuta da un altro dispositivo. */
-export async function adoptVaultKey(store: SecureKeyStore, key: Uint8Array): Promise<VaultKeys> {
+export async function adoptVaultKey(
+  store: SecureKeyStore,
+  meta: KeyValueStore,
+  key: Uint8Array,
+): Promise<VaultKeys> {
   const keys = deriveVaultKeys(key);
   await store.set(VAULT_KEY_STORAGE_KEY, bytesToHex(key));
+  await markVaultOrigin(meta, keys.vaultId, 'joined');
   return keys;
 }
 

@@ -1,6 +1,6 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-01, a Step 10 chiuso.
+Aggiornato: 2026-08-01, a Step 11 chiuso.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -20,19 +20,22 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 8 — Split, saldo, budget, grafici   | ✅    | Saldo, pareggi, budget mensili, barre per categoria e mese   |
 | 9 — CI, export, backup della chiave | ✅    | GitHub Actions, export CSV/JSON, backup cifrato della chiave |
 | 10 — Sync: correttezza e velocità   | ✅    | Catch-up al boot, push immediato, poll adattivo, `AppState`  |
-| 11 — Profili                        | ⬜    | Un profilo per persona, il membro nasce da lì                |
+| 11 — Profili                        | ✅    | Un profilo per persona, il membro nasce da lì                |
 | 12 — Più gruppi per telefono        | ⬜    | Registro gruppi, tabelle per vault, runtime rimontabile      |
 | 13 — Inviti via link                | ⬜    | Link condivisibile, pagina `/j` sul Worker                   |
 | 14 — Uscire da un gruppo            | ⬜    | Abbandono, wipe sul relay, rigenerazione della chiave        |
 
-**433 test verdi** (337 core + 61 app + 35 relay), typecheck, lint e `format:check` puliti.
+**463 test verdi** (341 core + 87 app + 35 relay), typecheck, lint e `format:check` puliti.
 
 **Il piano originale (Step 0–9) è chiuso.** La prima prova con **due dispositivi** ha fatto emergere
 due bug con conseguenze sui numeri e tre limiti di prodotto: da lì nasce un secondo piano,
-[piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md), che copre gli **Step 10–14**. Il
-**10 è chiuso**, gli altri quattro no.
+[piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md), che copre gli **Step 10–14**.
+Chiusi il **10** e l'**11**; restano il 12, il 13 e il 14.
 
-## Il bug del sync è corretto; quello dei membri no
+## I due bug che rendevano sbagliati i numeri sono corretti
+
+Entrambi nel codice e coperti dai test. **Nessuno dei due è ancora stato visto risolto su due
+telefoni veri** — è la verifica che manca, e va fatta in entrambe le direzioni.
 
 - ~~**La sincronizzazione è unilaterale.**~~ **Corretto allo Step 10.** `SyncEngine.start()` ora
   pubblica il delta fra il documento e lo state vector dell'ultima pubblicazione riuscita, che il
@@ -40,15 +43,16 @@ due bug con conseguenze sui numeri e tre limiti di prodotto: da lì nasce un sec
   documento già pieno e gli update prodotti a motore spento. Insieme è stato corretto un secondo
   difetto trovato leggendo: su una pagina interamente indecifrabile il cursore saltava a `head`, cioè
   alla fine dell'**intero** log, perdendo in silenzio tutti gli update validi che seguivano.
-- **I membri si duplicano e il saldo è sbagliato.** `apps/mobile/src/state/seed.ts:41-45` crea «Io»
-  con un id casuale **su ogni dispositivo**: dopo il sync sono due persone diverse, e il calcolo di
-  chi deve quanto all'altro è errato. Lo stesso meccanismo raddoppia le categorie di default.
-  **Aperto — è lo Step 11.**
+- ~~**I membri si duplicano e il saldo è sbagliato.**~~ **Corretto allo Step 11.** Il membro non
+  nasce più da un id casuale generato su ogni dispositivo, ma dal **profilo**: `profileId` è lo
+  stesso su tutti i gruppi e non cambia mai. Le categorie di default non vengono più seminate da chi
+  **entra** in un vault esistente — era la ragione delle sedici invece di otto.
 
-Il sync corretto è coperto dai test, **non ancora visto funzionare su due telefoni veri**: la prova
-va fatta in **entrambe** le direzioni, e con un telefono che aveva già dei dati suoi. Fino ad allora
-non si dice che «funziona». E fino allo Step 11 il saldo resta comunque sbagliato, perché i membri
-si duplicano: sono due difetti indipendenti.
+> **Prima di provare su un telefono che ha già dei dati, vanno cancellati.** Non c'è migrazione, per
+> scelta: un'installazione esistente si ritroverebbe il vecchio membro «Io» accanto al proprio
+> profilo, con le spese ancora riferite a quello — e il saldo resterebbe sbagliato. Impostazioni
+> Android → App → JuTrack → Archiviazione → **Cancella dati**, su entrambi i telefoni, poi si rifà il
+> pairing. La ripartenza pulita automatica arriva con lo Step 12.
 
 ## Riferimenti operativi
 
@@ -92,8 +96,13 @@ Va detto con precisione, perché è la differenza fra «testato» e «funzionant
 la lista si è accorciata parecchio, ma non è vuota:
 
 - Il ciclo di sync completo **fra due telefoni fisici**: provato una volta e **fallito** (una sola
-  direzione, con ritardi di parecchi secondi). Le cause sono state corrette allo Step 10, ma la
-  riprova sul campo non è ancora stata fatta. È la verifica più importante della lista
+  direzione, con ritardi di parecchi secondi, e membri duplicati). Le cause sono state corrette agli
+  Step 10 e 11, ma la riprova sul campo non è ancora stata fatta. È la verifica più importante della
+  lista: due membri e non quattro, saldo che coincide col calcolo a mano, e la spesa che compare
+  sull'altro telefono **in entrambi i versi**
+- La **schermata di onboarding** del profilo, che al primo avvio viene mostrata **fuori** dallo
+  `Stack` di expo-router — come già facevano le schermate di attesa e di errore, ma quella è la prima
+  interattiva a farlo
 - Il **pairing ottico**: che il QR mostrato da un telefono venga davvero inquadrato dall'altro. La
   generazione è confermata, la scansione no
 - Che `expo-sqlite` **persista fra due riavvii** dell'app: la diagnostica scrive e rilegge nella
@@ -112,7 +121,7 @@ la lista si è accorciata parecchio, ma non è vuota:
 > `try/catch` proprio per questo — e l'export ripiega sugli appunti, dichiarandolo nell'interfaccia.
 > Il foglio di condivisione comparirà solo dopo una build aggiornata.
 
-Tutto il resto è verificato: 433 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 463 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 ## Trappole già risolte — da non riscoprire
@@ -146,6 +155,31 @@ motore di sync viene costruito all'avvio con le chiavi di allora.
 documentato nel threat model — l'interfaccia lo dichiara. La scadenza di cinque minuti è una
 cortesia, non una difesa: sta dentro l'URI, quindi è rimovibile. Un protocollo autenticato
 (SAS/PAKE) risolverebbe, ed è fra i miglioramenti futuri.
+
+## Chi sono io (Step 11)
+
+Il **profilo** è uno per persona e vive in `app_meta`, una tabella di SQLite — non in SecureStore,
+che resta riservato al materiale crittografico. `{ profileId, name, color, identity? }`.
+
+- **`profileId` è casuale e opaco**, mai derivato dal nome né dalla chiave. È il seam per agganciare
+  un giorno un provider d'identità senza cambiare la chiave con cui i membri sono scritti nei vault:
+  cambiarla dopo vorrebbe dire riscrivere `paidBy` e le quote di ogni spesa.
+- **Il membro nasce dal profilo**: `VaultStore.setMember(id, …)` scrive con un id scelto da chi
+  chiama. È idempotente, quindi rieseguirla a ogni avvio non duplica nulla e un cambio di nome
+  raggiunge l'altro telefono da solo.
+- **`ProfileProvider` sta sopra `VaultProvider`**, non accanto: il profilo deve esistere prima che il
+  vault si monti, altrimenti resta una finestra in cui l'app funziona ma «io» non esisto — ed è lì
+  che nascevano i duplicati.
+- **L'origine del vault (`created` / `joined`) si registra quando si crea o si adotta la chiave**, non
+  dopo: guardando un documento pieno di dati sincronizzati i due casi sono indistinguibili. Chi entra
+  non semina le categorie, le riceve col primo sync.
+- **Le persone non si aggiungono a mano.** Una persona senza telefono dietro non potrebbe registrare
+  una spesa né vedere il saldo: l'elenco è in sola lettura, e ognuno si aggiunge collegando il
+  proprio telefono.
+
+Non ancora fatto, e voluto: il ricollegamento a un membro esistente per chi ripristina il backup
+della chiave su un telefono nuovo. Il posto dove scriverlo c'è (`my_member_id` per vault), ma la
+domanda va fatta **dopo** il primo sync, e il momento giusto è l'apertura di un gruppo — Step 12.
 
 ## Come funziona il sync (Step 10)
 
