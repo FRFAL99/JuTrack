@@ -4,6 +4,66 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-01 — Step 2: layer crypto
+
+**Fatto**
+
+`packages/core/src/crypto/`: `encoding` (base64url senza Buffer né atob), `types` (interfacce
+`RandomSource` e `SecureKeyStore` iniettate dalla piattaforma), `keys` (generazione e derivazione),
+`seal` (cifratura dei blob di sync), `backup` (export/import protetto da passphrase).
+
+**Decisioni prese**
+
+- **`vaultId` derivato dalla chiave**, non generato a parte:
+  `HKDF(vaultKey, "jutrack/vault-id/v1", 16)`. Il QR di pairing trasporta così solo la chiave, e non
+  esiste un identificatore da tenere sincronizzato fra i dispositivi.
+- **Byte di versione in testa a entrambi i formati binari.** Permette di cambiare cifrario in futuro:
+  un client vecchio rifiuta esplicitamente un blob nuovo invece di decifrare spazzatura.
+- **AAD = versione ‖ vaultId** sui blob di sync. Un relay ostile che travasi blob fra vault ottiene
+  solo errori di autenticazione. Nel backup l'AAD include i parametri scrypt, così non si possono
+  riscrivere per abbassare il costo e facilitare il brute force.
+- **`scryptAsync` invece di `scrypt`.** La variante sincrona bloccherebbe il thread JS per secondi,
+  congelando l'interfaccia durante export e import del backup.
+- **Passphrase normalizzata NFKC.** Senza, la stessa passphrase con accenti digitata su due tastiere
+  diverse (forma composta vs decomposta) fallirebbe il ripristino. Il test lo verifica con due
+  stringhe realmente diverse a livello di codepoint — controllato che non fossero identiche nel
+  sorgente, altrimenti il test sarebbe passato senza verificare nulla.
+- **`generateVaultKey` fallisce se la `RandomSource` restituisce meno byte del richiesto.** Una
+  sorgente difettosa che degrada in silenzio produrrebbe chiavi deboli senza alcun segnale.
+
+**Il vincolo di indipendenza dalla piattaforma ora è verificato, non solo scritto**
+
+Finora «`packages/core` non importa nulla di react-native» era una convenzione nei commenti. Ora è
+una regola ESLint su `packages/core/src/**` che vieta gli import di `react-native`/`expo`/`node:*` e
+i global `Buffer`, `window`, `document`, `localStorage`, `TextEncoder`, ciascuno con il messaggio che
+indica l'alternativa. I test sono esclusi, perché usano `Buffer` di proposito come implementazione di
+riferimento indipendente per validare la nostra base64url.
+
+Verificato che le regole mordano davvero, scrivendo un file di prova con le violazioni: 3 errori
+segnalati come atteso. Una guardia che non si verifica non è una guardia.
+
+**Verificato, non assunto**
+
+- `equalBytes` di `@noble/ciphers` **è a tempo costante**: accumula le differenze con XOR senza
+  uscita anticipata. Letto il sorgente prima di usarla per confrontare token.
+- `@noble/hashes` espone **`scryptAsync`**, che cede il controllo periodicamente.
+- Il crypto **entra nel bundle React Native**: `expo export` passa da 1237 a 1254 moduli.
+- 67 test, di cui buona parte verifica direttamente le garanzie del threat model: rifiuto di
+  ciphertext manomesso, di AAD errata, di blob destinati ad altri vault, e il fatto che `authKey`
+  (che il relay conosce) **non** riesce a decifrare i contenuti.
+
+**Ancora da verificare sul dispositivo**
+
+Il bundle non è l'esecuzione: che noble giri correttamente su **Hermes** va confermato sul telefono.
+Verifica prevista allo Step 4, quando l'app avrà schermate reali. Va calibrato anche `logN` di
+scrypt: il default 16 è ~175 ms su desktop, ignoto su telefono.
+
+**Verifica:** typecheck pulito su 3 workspace, 67/67 test verdi, lint pulito, bundle Android OK.
+
+**Prossimo:** Step 3 — modello dati Yjs e persistenza SQLite.
+
+---
+
 ## 2026-08-01 — Step 1: scheletro app Expo
 
 **Fatto**

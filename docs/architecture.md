@@ -53,6 +53,53 @@ dell'intero vault pari alla robustezza di una passphrase scelta da un umano. La 
 la passphrase (con scrypt) serve solo a cifrare un backup esportabile — recupero manuale, non uso
 quotidiano.
 
+**Il `vaultId` è derivato, non generato.** `vaultId = HKDF(vaultKey, "jutrack/vault-id/v1", 16)`,
+in esadecimale. Due conseguenze utili: il QR di pairing trasporta solo la chiave (i due dispositivi
+calcolano lo stesso `vaultId` da soli), e non esiste un identificatore da tenere sincronizzato. La
+derivazione è a senso unico: dal `vaultId` pubblico non si risale alla chiave.
+
+> Le etichette di dominio (`jutrack/content/v1`, `jutrack/auth/v1`, `jutrack/vault-id/v1`) sono
+> **normative**. Modificarle rende illeggibili tutti i dati già cifrati e invalida i vault esistenti.
+
+## Formati binari
+
+Entrambi i formati iniziano con un byte di versione. Serve a poter cambiare cifrario in futuro senza
+ambiguità: un client nuovo riconosce i dati vecchi, uno vecchio rifiuta esplicitamente i nuovi invece
+di decifrare spazzatura.
+
+### Blob di sync (`crypto/seal.ts`)
+
+```
+byte 0        versione dello schema (0x01)
+byte 1..24    nonce (24 byte, casuale per messaggio)
+byte 25..     ciphertext + tag Poly1305 (16 byte)
+```
+
+**AAD = `versione ‖ vaultId`.** Autenticata ma non cifrata. Lega il blob al proprio vault: un relay
+ostile che travasi blob da un vault a un altro produce solo errori di autenticazione.
+
+### Backup con passphrase (`crypto/backup.ts`)
+
+92 byte, poi base64url con prefisso `JTBK1.`
+
+```
+byte 0        versione del formato (0x01)
+byte 1        log2(N) di scrypt
+byte 2        r di scrypt
+byte 3        p di scrypt
+byte 4..19    salt (16 byte)
+byte 20..43   nonce (24 byte)
+byte 44..91   vaultKey cifrata (32 byte + tag 16)
+```
+
+I parametri scrypt viaggiano dentro il backup, così un file esportato oggi resta importabile anche
+dopo che avremo alzato il costo di default. Sono anche nella AAD: non si possono riscrivere per
+abbassare il costo e rendere banale un attacco a forza bruta sulla passphrase.
+
+Default `logN = 16` (~175 ms su desktop, qualche secondo su telefono). **Da calibrare sul
+dispositivo reale.** Si usa `scryptAsync`, non la variante sincrona, per non congelare l'interfaccia
+durante la derivazione.
+
 ## Modello dati (Y.Doc)
 
 Cinque `Y.Map` top-level. Ogni record è a sua volta una `Y.Map`: due edit su campi diversi dello

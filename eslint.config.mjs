@@ -37,4 +37,39 @@ export default tseslint.config(
       'no-console': ['warn', { allow: ['warn', 'error'] }],
     },
   },
+  // packages/core deve restare indipendente dalla piattaforma: è la condizione che
+  // permetterà di riusarlo sul web senza modifiche. Finora era solo una convenzione
+  // scritta nei commenti; qui diventa verificabile.
+  //
+  // I test sono esclusi: usano Buffer di proposito come implementazione di riferimento
+  // indipendente per validare la nostra base64url.
+  {
+    files: ['packages/core/src/**/*.ts'],
+    ignores: ['packages/core/src/**/*.test.ts', 'packages/core/src/**/testing.ts'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        { name: 'Buffer', message: 'Buffer non esiste in React Native. Usa Uint8Array.' },
+        { name: 'window', message: 'packages/core non può dipendere da API del browser.' },
+        { name: 'document', message: 'packages/core non può dipendere da API del browser.' },
+        { name: 'localStorage', message: 'Usa SecureKeyStore per dependency injection.' },
+        {
+          name: 'TextEncoder',
+          message: 'Richiederebbe il lib DOM. Usa utf8ToBytes da ./encoding.',
+        },
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['react-native', 'react-native/*', 'expo', 'expo-*', 'node:*'],
+              message:
+                "packages/core deve restare indipendente dalla piattaforma. Definisci un'interfaccia in crypto/types.ts e inietta l'implementazione.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

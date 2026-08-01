@@ -4,7 +4,10 @@
     "composite": true,
     "rootDir": "./src",
     "outDir": "./dist",
-    "types": ["vitest/globals"]
+    // "node" serve solo ai test, che usano Buffer come implementazione di riferimento
+    // indipendente per verificare la nostra base64url. Il codice di produzione non deve
+    // usare Buffer: in React Native non esiste. Il divieto è imposto da eslint.config.mjs.
+    "types": ["vitest/globals", "node"]
   },
   "include": ["src/**/*"]
 }
