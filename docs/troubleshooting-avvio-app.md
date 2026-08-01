@@ -1,45 +1,84 @@
-# L'app non parte sul telefono — registro dell'indagine
+# L'app non partiva sul telefono — registro dell'indagine
 
-Aggiornato: 2026-08-01. **Non ancora risolto.**
+Aggiornato: 2026-08-01. **RISOLTO.**
 
 Documento scritto durante l'indagine, non dopo: include le ipotesi sbagliate, perché sapere cosa è
-già stato escluso vale quanto sapere cosa è stato trovato.
+stato escluso vale quanto sapere cosa è stato trovato. La conclusione è in fondo, ma vale la pena
+leggere come ci si è arrivati — l'errore di metodo è più istruttivo dell'errore tecnico.
 
-## Sintomo
+## La causa
 
-Expo Go si apre, l'app si chiude immediatamente. **Nessuna schermata rossa**, nessun messaggio,
+**Metro era in esecuzione dalla root del monorepo invece che da `apps/mobile`.**
+
+```
+node /home/frfal/frfal/JuTrack/node_modules/.bin/expo start --tunnel --clear
+                              ^^^^^^^^^^^^^^ nessun progetto Expo qui
+```
+
+Dalla root non esistono `app.json` né `src/app`: l'entry point `expo-router/entry` veniva risolto
+con origine `/home/frfal/frfal/JuTrack/.` e non si trovava. Il server rispondeva **404 a ogni
+richiesta di bundle**.
+
+Da lì tutto il resto discende: nessun bundle servito → nessun JavaScript eseguito → nessun motore
+collegato a `/json/list` → nessuna schermata rossa, perché non c'era nulla che potesse fallire.
+
+La correzione è una riga:
+
+```bash
+cd apps/mobile && npx expo start --dev-client   # non dalla root del monorepo
+```
+
+## Perché ci è voluto tanto
+
+Il sintomo diceva «l'app non parte» e l'indagine ha cercato **la causa nell'app**: Hermes, il
+bytecode, il bundle, la rete, la versione di Expo Go. Ogni ipotesi è stata esclusa con una prova
+solida, e le prove erano corrette — solo che nessuna guardava dove serviva.
+
+Il dato che avrebbe portato subito alla soluzione era già lì dal primo giorno: **il 404 sul
+bundle**. È stato letto come «il bundle non arriva» (sintomo) invece che come «il server non sa dove
+sia il progetto» (causa). La domanda mancante non era *perché il telefono rifiuta il bundle*, ma
+**da quale directory sta rispondendo questo server**.
+
+Aggravante: il processo Metro era rimasto vivo per ore fra un tentativo e l'altro. Ogni prova
+ripartiva dal telefono, mai dal server — che nel frattempo aveva anche una mappa dei file
+invalidata da una reinstallazione delle dipendenze avvenuta sotto di lui.
+
+**Lezione da tenere:** quando un client non riceve nulla, verificare *cosa serve il server* prima di
+indagare *cosa fa il client*. E un demone di sviluppo lasciato in esecuzione va riavviato prima di
+dichiarare riprodotto un problema.
+
+## Sintomo originale
+
+Expo Go si apriva, l'app si chiudeva immediatamente. **Nessuna schermata rossa**, nessun messaggio,
 nessun errore nel log di Metro.
-
-L'assenza di schermata rossa è il dato più informativo: React Native la mostra per **qualunque**
-eccezione JavaScript non gestita. La sua assenza significa che l'errore non è JavaScript — o che
-JavaScript non è mai partito.
-
-## Il fatto decisivo
 
 ```
 $ curl http://localhost:8081/json/list
 []
 ```
 
-`/json/list` elenca i motori JavaScript collegati al debugger di Metro. **È sempre stato vuoto.**
+`/json/list` elenca i motori JavaScript collegati al debugger di Metro: **sempre vuoto**. Il telefono
+non ha mai eseguito una riga del nostro codice. Ogni tentativo di correggere l'applicazione era
+quindi destinato a non produrre effetti: non stava fallendo, non stava partendo.
 
-Il telefono non ha mai eseguito una riga del nostro codice. Ogni tentativo di correggere
-l'applicazione era quindi destinato a non produrre effetti: non stava fallendo, non stava partendo.
+## Cosa era stato escluso, con la prova
 
-## Cosa è stato escluso, con la prova
+Tutte queste esclusioni restano valide, ed è il motivo per cui il codice era già sano quando la
+causa vera è stata rimossa.
 
 | Ipotesi                         | Come è stata esclusa                                                                                                       |
 | ------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Bug nel nostro codice           | App ridotta al **livello 0** — solo `expo-router` e React Native, zero Yjs, zero crypto, zero SQLite. Crasha comunque      |
-| Errore di compilazione          | `expo export` e la richiesta diretta del bundle restituiscono HTTP 200, 6,2 MB, nessun errore                              |
-| Bytecode Hermes incompatibile   | Il bundle servito è **JavaScript normale** (`var __BUNDLE_START_TIME__`), non bytecode: nessuna versione da far combaciare |
+| Bug nel nostro codice           | App ridotta al **livello 0** — solo `expo-router` e React Native, zero Yjs, zero crypto, zero SQLite. Crashava comunque    |
+| Errore di compilazione          | `expo export` completava senza errori                                                                                      |
+| Bytecode Hermes incompatibile   | Il bundle servito è **JavaScript normale** (`var __BUNDLE_START_TIME__`), non bytecode                                     |
 | Errore JavaScript a runtime     | Nessuna schermata rossa, nessuna eccezione nel log, nessun motore collegato                                                |
-| Metro non in ascolto sulla rete | `ss` mostra `*:8081` (tutte le interfacce); il manifest risponde HTTP 200 da `192.168.1.6`                                 |
-| Rete locale, firewall, VPN      | Riprovato via **tunnel pubblico** (`exp.direct`): manifest e bundle HTTP 200 verificati dall'esterno. Crasha ancora        |
+| Metro non in ascolto sulla rete | `ss` mostra `*:8081`; il manifest rispondeva HTTP 200                                                                      |
+| Rete locale, firewall, VPN      | Riprovato via **tunnel pubblico** (`exp.direct`), verificato dall'esterno. Crashava ancora                                 |
+| Expo Go non realmente SDK 57    | Caduta con la development build: quella non usa Expo Go, e il sintomo era identico                                         |
 
-## Due problemi reali trovati e corretti lungo il percorso
+## Tre problemi reali trovati lungo il percorso
 
-Nessuno dei due era la causa di questo crash, ma entrambi erano bug veri.
+Nessuno era la causa, tutti e tre erano bug veri.
 
 ### 1. `TextEncoder` non esiste su Hermes
 
@@ -47,16 +86,9 @@ Nessuno dei due era la causa di questo crash, ma entrambi erano bug veri.
 `TextEncoderStream`, `URL` e `structuredClone`, ma **non `TextEncoder`** — verificato leggendo
 `expo/src/winter/runtime.native.ts`.
 
-Riprodotto rimuovendo quel global in Node:
-
-```
-CRASH generateVaultKey + deriveVaultKeys
-      TextEncoder is not defined
-      at utf8ToBytes (@noble/hashes/src/utils.ts:585)
-```
-
 Corretto implementando la codifica UTF-8 in `crypto/encoding.ts`, senza dipendere da alcun global.
-Coperto da `hermes-compat.test.ts`, che rimuove quei global e riesegue tutto.
+Coperto da `hermes-compat.test.ts`. Confermato sul dispositivo: la diagnostica passa il punto 6
+(«HKDF e UTF-8 OK») su Hermes vero.
 
 **Nota sul metodo:** `TextEncoder` era già vietato nel core da una regola ESLint, ma la regola
 guardava il nostro codice e non quello delle dipendenze. Ora vieta anche l'import di `utf8ToBytes`
@@ -64,70 +96,43 @@ da noble.
 
 ### 2. Metro annunciava `127.0.0.1` come host del bundle
 
-Il manifest servito al telefono conteneva:
+Il telefono scaricava il manifest da `192.168.1.6` ma cercava il bundle su `127.0.0.1`, che per il
+telefono è sé stesso. Corretto con `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`.
 
-```json
-"launchAsset": { "url": "http://127.0.0.1:8081/node_modules/expo-router/entry.bundle?..." }
-```
+### 3. Due copie di React nell'albero delle dipendenze
 
-Il telefono scaricava il manifest da `192.168.1.6` ma poi cercava il bundle su `127.0.0.1`, che per
-il telefono è sé stesso. Nessun bundle, nessun JavaScript, nessun errore visibile.
+`expo-doctor` segnalava `react@19.2.3` in `apps/mobile` e `react@19.2.8` nella root: i pacchetti
+`expo-*` dichiarano `"react": "*"` e npm risolveva con l'ultima pubblicata invece di riusare quella
+dell'app. In una build nativa gli hook finirebbero su un'istanza diversa da quella che ha creato il
+componente.
 
-Corretto con `REACT_NATIVE_PACKAGER_HOSTNAME=192.168.1.6`. Il manifest ora punta all'indirizzo
-corretto — ma l'app continua a chiudersi, quindi non era (solo) questo.
+Corretto con un `overrides` nella root. Il lock è stato rigenerato: l'entry precedente era una peer
+risolta automaticamente, e gli override non riscrivono ciò che è già nel lock.
 
-## Cosa resta
+## Verifica finale sul dispositivo
 
-Due sole spiegazioni compatibili con tutte le prove raccolte:
-
-1. **L'Expo Go installato non è realmente SDK 57.** L'APK potrebbe non essersi installato: Android
-   mantiene la versione esistente se le firme confliggono, e l'installazione fallisce in silenzio.
-2. **Expo Go crasha su questo dispositivo**, indipendentemente dal progetto.
-
-Entrambe sono esterne al codice.
-
-## Prossimo passo: development build
-
-Espone la strada che Expo stessa raccomanda per le app reali, e aggira Expo Go del tutto:
-
-```bash
-cd apps/mobile
-npx eas login          # richiede l'account Expo
-npx eas build --platform android --profile development
-```
-
-La build avviene **nel cloud**: non serve l'SDK Android in locale. Produce un APK autonomo che
-include già i moduli nativi del progetto — niente più vincoli di versione fra progetto ed Expo Go.
-
-Configurazione già pronta: `eas.json` (profilo `development`, `buildType: apk`) e `expo-dev-client`
-installato.
-
-## Schermata di diagnostica
-
-L'app include **Impostazioni → Diagnostica** (`/probe`), che carica un sottosistema alla volta con
-import dinamici e mostra dove si interrompe: Yjs → `Y.Doc` → crypto → SQLite → SecureStore → relay.
-
-Gli import sono dinamici di proposito: quelli statici verrebbero valutati tutti insieme prima di
-qualunque riga di log, rendendo impossibile isolare il colpevole. Ogni passaggio finisce anche nel
-log di Metro con prefisso `[JUTRACK]`, così resta leggibile se l'app si chiude prima di disegnare.
-
-È il primo posto da guardare quando la build sarà installata.
+Development build EAS installata, **Impostazioni → Diagnostica**: 14 passaggi su 14, «TUTTO OK».
+Yjs, `Y.Doc` (shim lib0/webcrypto), crypto, XChaCha20-Poly1305, SQLite, SecureStore, relay in
+produzione (HTTP 200), invito di pairing, QR 45×45 moduli, modulo fotocamera disponibile.
 
 ## Comandi utili
 
 ```bash
-# Server con host esplicito (evita il bug del 127.0.0.1)
-cd apps/mobile && REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan> npx expo start --clear
+# Server di sviluppo — SEMPRE da apps/mobile, mai dalla root del monorepo
+cd apps/mobile && npx expo start --dev-client
 
 # Tunnel pubblico, aggira LAN/firewall/VPN
-npx expo start --tunnel --clear
+cd apps/mobile && npx expo start --dev-client --tunnel
+
+# Da quale directory sta rispondendo il server? (la prima domanda da farsi)
+ps aux | grep "expo start" | grep -v grep
+
+# Il server risolve davvero l'entry point? 404 = progetto non trovato
+curl -s -o /dev/null -w "%{http_code}\n" \
+  "http://localhost:8081/node_modules/expo-router/entry.bundle?platform=android&dev=true"
 
 # Il telefono ha collegato il motore JS? `[]` = mai arrivato
 curl -s http://localhost:8081/json/list
-
-# Cosa riceve davvero il telefono
-curl -s -H "expo-platform: android" -H "accept: application/expo+json,application/json" \
-  http://localhost:8081/ | python3 -m json.tool | head -20
 ```
 
-L'ultimo è il più utile: mostra il manifest esatto, dove è emerso il problema del `127.0.0.1`.
+Il terzo e il quarto comando sono quelli che avrebbero risolto l'indagine in cinque minuti.

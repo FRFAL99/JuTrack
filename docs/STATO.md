@@ -37,48 +37,42 @@ cd apps/mobile && npx expo export --platform android   # il bundle regge?
 `expo export` va eseguito a ogni step: ha già intercettato una trappola che né typecheck né test
 vedevano.
 
-## Bloccante aperto: l'app non parte sul telefono
+## L'app gira sul telefono ✅
 
-**La causa è esterna al codice.** Prove e ragionamento completi in
-[troubleshooting-avvio-app.md](troubleshooting-avvio-app.md).
-
-Il dato decisivo: `curl http://localhost:8081/json/list` è **sempre** rimasto vuoto. Quell'endpoint
-elenca i motori JavaScript collegati a Metro — il telefono non ha mai eseguito una riga del nostro
-codice. Escluso con prove il codice (app ridotta a solo React Native: crasha comunque), la
-compilazione, il bytecode Hermes e la rete (tunnel pubblico verificato dall'esterno).
-
-Restano due spiegazioni, entrambe fuori dal progetto: l'Expo Go installato non è realmente SDK 57
-(Android rifiuta in silenzio l'installazione se le firme confliggono), oppure Expo Go crasha su
-quel dispositivo.
-
-**Prossimo tentativo — development build, già configurata:**
+**Bloccante risolto il 2026-08-01.** La causa non era nel codice: **Metro era in esecuzione dalla
+root del monorepo** invece che da `apps/mobile`, e da lì non esiste alcun progetto Expo — l'entry
+point non si risolveva e il server rispondeva 404 a ogni richiesta di bundle. Storia completa e
+lezione di metodo in [troubleshooting-avvio-app.md](troubleshooting-avvio-app.md).
 
 ```bash
-cd apps/mobile
-npx eas login
-npx eas build --platform android --profile development
+cd apps/mobile && npx expo start --dev-client    # MAI dalla root del monorepo
 ```
 
-Build nel cloud (non serve l'SDK Android in locale), produce un APK autonomo che aggira Expo Go.
-Una volta installato, la prima cosa da aprire è **Impostazioni → Diagnostica**: carica un
-sottosistema alla volta e mostra dove si interrompe.
+Development build EAS installata su Android. **Diagnostica: 14 passaggi su 14, «TUTTO OK»** — Yjs,
+`Y.Doc` con lo shim lib0/webcrypto, crypto su Hermes vero, XChaCha20-Poly1305, SQLite, SecureStore,
+relay in produzione, invito di pairing, QR, fotocamera.
+
+- Progetto EAS: `@frfal/jutrack`, build con `npx eas-cli build -p android --profile development`
+- Il keystore Android è custodito da EAS: serve per ogni aggiornamento futuro dell'app installata
 
 ## Cosa non è ancora stato verificato su hardware reale
 
-Va detto con precisione, perché è la differenza fra «testato» e «funzionante»:
+Va detto con precisione, perché è la differenza fra «testato» e «funzionante». Dopo la diagnostica
+la lista si è accorciata parecchio, ma non è vuota:
 
-- Che il crypto giri su **Hermes** — coperto da `hermes-compat.test.ts`, che rimuove i global assenti
-  su Hermes, ma mai eseguito su un telefono
-- Che `expo-sqlite` persista fra due riavvii dell'app
-- Il ciclo di sync completo **fra due telefoni fisici**
-- Il **pairing end-to-end**: che il QR mostrato da un telefono venga davvero letto dall'altro, e che
-  la fotocamera funzioni sulla build. La logica è coperta dai test, l'ottica no
+- Il ciclo di sync completo **fra due telefoni fisici** — mai provato
+- Il **pairing ottico**: che il QR mostrato da un telefono venga davvero inquadrato dall'altro. La
+  generazione è confermata, la scansione no
+- Che `expo-sqlite` **persista fra due riavvii** dell'app: la diagnostica scrive e rilegge nella
+  stessa sessione, che è meno
+- Le **schermate degli Step 7 e 8** — statistiche, budget, pareggi, quote libere — mai toccate con
+  un dito
+- L'**APK autonomo** (profilo `preview`), che gira senza Metro: mai costruito
 - Il costo di `scrypt` con `logN = 16` su mobile (default da calibrare, in
   `packages/core/src/crypto/backup.ts`)
-- **Nessuna schermata dello Step 8** è mai stata toccata con un dito: i calcoli sono coperti dai
-  test, la resa dei grafici su uno schermo vero no
 
-Tutto il resto è verificato: 371 test, convergenza CRDT, relay reale in produzione.
+Tutto il resto è verificato: 371 test, convergenza CRDT, relay reale in produzione, e ora
+l'esecuzione su un dispositivo Android reale.
 
 ## Trappole già risolte — da non riscoprire
 
@@ -92,6 +86,8 @@ Tutto il resto è verificato: 371 test, convergenza CRDT, relay reale in produzi
 | Nella flat config ESLint vince l'ultima regola                              | Gli override vanno **dopo** il blocco generale                   |
 | Metro annunciava `127.0.0.1` come host del bundle                           | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                        |
 | expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera | `expo-camera` caricato con `require` in `try/catch` |
+| **`expo start` dalla root del monorepo**: 404 su ogni bundle, app muta      | Avviarlo **sempre** da `apps/mobile`; è costato giorni           |
+| Due copie di React (`expo-*` dichiara `"react": "*"`)                       | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede  |
 
 ## Com'è fatto il pairing (Step 7)
 

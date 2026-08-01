@@ -4,6 +4,58 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-01 — L'app gira sul telefono: il bloccante era Metro nella directory sbagliata
+
+**Risolto.** Development build EAS installata su Android, **Diagnostica: 14 passaggi su 14, «TUTTO
+OK»**. Yjs, `Y.Doc` con lo shim lib0/webcrypto, crypto su Hermes vero, XChaCha20-Poly1305, SQLite,
+SecureStore, relay in produzione (HTTP 200), invito di pairing, QR 45×45 moduli, fotocamera.
+
+**La causa**
+
+```
+node /home/frfal/frfal/JuTrack/node_modules/.bin/expo start --tunnel --clear
+                              ^^^^^^^^^^^^^^ nessun progetto Expo qui
+```
+
+Metro girava dalla **root del monorepo** invece che da `apps/mobile`. Da lì non esistono `app.json`
+né `src/app`: l'entry point `expo-router/entry` veniva risolto con origine `/…/JuTrack/.` e non si
+trovava. Il server rispondeva **404 a ogni richiesta di bundle**. Nessun bundle → nessun JavaScript
+→ nessun motore su `/json/list` → nessuna schermata rossa, perché non c'era niente che potesse
+fallire.
+
+Aggravante: quel processo era vivo dalle 13:09 e ha attraversato ore di tentativi. Ogni prova
+ripartiva dal telefono, mai dal server — che nel frattempo aveva anche la mappa dei file invalidata
+da una reinstallazione delle dipendenze avvenuta sotto di lui.
+
+**L'errore di metodo, che vale più di quello tecnico**
+
+Il 404 sul bundle era visibile dal primo giorno. È stato letto come *sintomo* («il bundle non
+arriva») invece che come *causa* («il server non sa dove sia il progetto»). La domanda mancante non
+era «perché il telefono rifiuta il bundle», ma **«da quale directory sta rispondendo questo
+server?»**.
+
+Quando un client non riceve nulla, si verifica cosa serve il server prima di indagare cosa fa il
+client. E un demone di sviluppo lasciato in esecuzione va riavviato prima di dichiarare riprodotto
+un problema.
+
+**Corretto anche lungo la strada: due copie di React**
+
+`expo-doctor` segnalava `react@19.2.3` in `apps/mobile` e `react@19.2.8` nella root — i pacchetti
+`expo-*` dichiarano `"react": "*"` e npm risolveva con l'ultima pubblicata. In una build nativa gli
+hook finirebbero su un'istanza diversa da quella che ha creato il componente. Risolto con
+`overrides` nella root; il lock è stato rigenerato, perché l'entry precedente era una peer risolta
+automaticamente e gli override non riscrivono ciò che è già nel lock.
+
+Non era la causa del blocco — l'app non arrivava a eseguire un solo hook — ma era un bug vero, e
+ora `expo-doctor` dà 20/20.
+
+**Cosa resta da provare su hardware**
+
+Sync fra due telefoni fisici, scansione ottica del QR, persistenza fra due riavvii, le schermate
+degli Step 7 e 8 toccate a mano, l'APK autonomo senza Metro.
+
+---
+
 ## 2026-08-01 — Step 8: split, saldo, budget, grafici
 
 **Fatto**
