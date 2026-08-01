@@ -31,5 +31,9 @@
     "typescript": "^6.0.3",
     "typescript-eslint": "^8.65.0"
   },
-  "comment:typescript": "TS bloccato a 6.x: typescript-eslint 8.x dichiara peer 'typescript <6.1.0'. TS 7 (port in Go) romperebbe il linting."
+  "overrides": {
+    "react": "19.2.3"
+  },
+  "comment:typescript": "TS bloccato a 6.x: typescript-eslint 8.x dichiara peer 'typescript <6.1.0'. TS 7 (port in Go) romperebbe il linting.",
+  "comment:react": "I pacchetti expo-* dichiarano 'react': '*', e npm lo risolve con l'ultima pubblicata invece di riusare quella dell'app: due copie di React nello stesso albero. In una build nativa è un guasto serio — hook chiamati su un'istanza diversa da quella che ha creato il componente. L'override tiene la versione raccomandata da Expo SDK 57."
 }
