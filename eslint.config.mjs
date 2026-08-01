@@ -25,6 +25,18 @@ export default tseslint.config(
     // in formato eslintrc e ESLint 10 la rifiuta.
     extends: [reactHooks.configs.flat.recommended],
   },
+  // File di configurazione e shim in CommonJS, eseguiti da Node (Metro) e non dal
+  // bundle dell'app: `require` e `module` sono legittimi qui.
+  {
+    files: ['**/metro.config.js', 'apps/**/src/platform/*-shim.js'],
+    languageOptions: {
+      globals: { require: 'readonly', module: 'writable', __dirname: 'readonly' },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+      'no-undef': 'off',
+    },
+  },
   prettier,
   {
     rules: {

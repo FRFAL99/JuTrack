@@ -163,6 +163,32 @@ Decisione tracciata in [adr/0002-ydoc-in-memory.md](adr/0002-ydoc-in-memory.md).
 commit: il provider di persistenza è ~60 righe e ci serve comunque customizzato per il cursore di
 sync, quindi lo scriviamo noi.
 
+## Trappola: Yjs, lib0 e webcrypto su React Native
+
+Yjs genera il clientID del documento con `lib0/random`, che importa `getRandomValues` da
+`lib0/webcrypto`. Sotto la condizione `react-native`, l'export map di `lib0` punta a un file che
+richiede **`isomorphic-webcrypto`**, un pacchetto fermo al 2022. Senza intervento il bundle React
+Native non si risolve nemmeno.
+
+Non lo installiamo: metterebbe una dipendenza abbandonata da quattro anni esattamente sul percorso da
+cui dipende l'integrità dei dati. Al suo posto, `metro.config.js` reindirizza `lib0/webcrypto` a
+[`src/platform/lib0-webcrypto-shim.js`](../apps/mobile/src/platform/lib0-webcrypto-shim.js), che
+espone `getRandomValues` appoggiandosi a `expo-crypto` — mantenuto da Expo, già nostra dipendenza,
+e collegato al CSPRNG di sistema.
+
+Verificata la compatibilità delle firme: `lib0/random` chiama `getRandomValues(new Uint32Array(1))`
+ed `expo-crypto` dichiara
+`getRandomValues<T extends IntBasedTypedArray | UintBasedTypedArray>(typedArray: T): T`, che riempie
+in place e restituisce lo stesso array.
+
+`SubtleCrypto` non è fornita: Yjs non la usa. Lo shim espone un proxy che, se qualcuno dovesse
+richiederla, solleva un errore esplicito invece di lasciare un `undefined` che esploderebbe molto
+più a valle.
+
+> **Nota:** `expo-crypto` non installa un polyfill globale di `crypto.getRandomValues`. È il motivo
+> per cui `packages/core` riceve la sorgente casuale per dependency injection invece di leggerla da
+> un global che su React Native potrebbe non esistere.
+
 ## Vincoli del free tier Cloudflare
 
 Verificati sulla documentazione ufficiale:

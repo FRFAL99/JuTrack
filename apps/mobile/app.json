@@ -21,7 +21,7 @@
       },
       "predictiveBackGestureEnabled": false
     },
-    "plugins": ["expo-router"],
+    "plugins": ["expo-router", "expo-sqlite", "expo-secure-store"],
     "experiments": {
       "typedRoutes": true
     }

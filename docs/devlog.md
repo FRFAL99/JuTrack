@@ -4,6 +4,83 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-01 — Step 3: modello dati Yjs e persistenza SQLite
+
+**Fatto**
+
+`packages/core/src/model/`: `money` (centesimi interi, parsing e split), `types`, `ids`, `doc`
+(accessori tipati sulle `Y.Map`), `store` (API applicativa con le invarianti).
+`packages/core/src/persistence/`: `y-sqlite` (log append-only con compattazione), `memory-db`
+(implementazione in memoria per i test). `apps/mobile/src/platform/`: adattatori expo-sqlite,
+expo-crypto, expo-secure-store.
+
+**Decisioni prese**
+
+- **`split` memorizzato come valore unico, non come `Y.Map` annidata.** Tutto il resto del record è
+  a merge per-campo, ma `mode` e `shares` devono restare coerenti fra loro: una fusione campo per
+  campo potrebbe combinare il `mode` di un dispositivo con le `shares` dell'altro, producendo quote
+  che non sommano al totale — cioè un saldo sbagliato che nessuno dei due utenti ha chiesto.
+  Trattandolo come unità atomica, in caso di conflitto vince uno dei due split per intero e
+  l'invariante regge. C'è un test dedicato.
+- **Resto dei centesimi distribuito in modo deterministico** (metodo dei maggiori resti, a parità di
+  resto vince l'indice più basso). Deterministico e non casuale perché i due dispositivi devono
+  calcolare la stessa suddivisione senza consultarsi.
+- **`updateExpense` rifiuta un cambio di importo che lascerebbe lo split incoerente.** Portare una
+  spesa da 10 a 20 euro lasciando le quote a 5+5 falserebbe il saldo in silenzio.
+- **Ordinamento con criterio finale sull'id**: senza, due spese create nello stesso istante
+  comparirebbero in ordine diverso sui due telefoni.
+
+**Un bug vero, trovato dai test: `destroy()` perdeva le scritture in coda**
+
+`destroy()` impostava `this.destroyed = true` in modo sincrono e _poi_ attendeva il flush. Ma gli
+update Yjs arrivano sincroni e vengono accodati come microtask: quando quei microtask partivano
+trovavano il flag già alzato e uscivano subito. Risultato: **ogni scrittura non ancora eseguita
+andava persa**, cioè l'app avrebbe perso i dati recenti a ogni chiusura pulita.
+
+Tre test falliti, una sola causa. Corretto l'ordine: prima si smette di osservare il documento, poi
+si svuota la coda, e solo alla fine si marca l'oggetto come distrutto. Il perché è ora un commento
+nel codice, perché è il tipo di ordine che qualcuno "sistemerebbe" nella direzione sbagliata.
+
+**Trappola risolta: Yjs non fa il bundle su React Native senza intervento**
+
+Yjs genera il clientID con `lib0/random`, che importa `getRandomValues` da `lib0/webcrypto`. Sotto
+la condizione `react-native` l'export map di lib0 punta a un file che richiede
+**`isomorphic-webcrypto`, fermo al 2022**: il bundle non si risolve.
+
+Non installato — sarebbe una dipendenza abbandonata da quattro anni sul percorso dell'integrità dei
+dati, la stessa ragione per cui avevamo scartato `y-expo-sqlite`. `metro.config.js` reindirizza a uno
+shim su `expo-crypto`. Verificate le firme: lib0 chiama `getRandomValues(new Uint32Array(1))` ed
+expo-crypto accetta qualunque TypedArray, riempiendolo in place.
+
+Trovato dal bundler, non dal typecheck né dai test: è la conferma che `expo export` va eseguito a
+ogni step e non solo alla fine.
+
+**Verificato, non assunto**
+
+- **I due dispositivi convergono davvero.** 7 test dedicati riproducono lo scenario che giustifica
+  l'architettura: spese create offline su entrambi si uniscono senza perdite; modifiche a campi
+  diversi si fondono; modifiche allo stesso campo convergono su un valore identico su entrambi; una
+  cancellazione non viene annullata da una modifica concorrente; gli update sono commutativi
+  (applicati in ordine inverso danno lo stesso stato) e idempotenti (applicarli due volte non
+  duplica).
+- **La persistenza sopravvive a una compattazione interrotta a metà.** L'ordine INSERT → DELETE è
+  deliberato: se il processo muore fra le due, restano vecchi update _più_ lo snapshot, e
+  l'idempotenza di Yjs rende il risultato corretto. L'ordine inverso svuoterebbe la tabella.
+- `expo-sqlite` gestisce i BLOB come `Uint8Array` in entrambe le direzioni: nessuna conversione.
+  Rimosso il cast su `SQLiteBindValue`, che poteva mascherare una futura incompatibilità.
+- `expo-crypto` **non** installa un polyfill globale di `crypto.getRandomValues`: conferma che la
+  dependency injection nel core era la scelta giusta.
+
+**Verifica:** typecheck pulito su 3 workspace, 172/172 test verdi, lint pulito, bundle Android
+risolto (1305 moduli).
+
+**Ancora da verificare sul dispositivo:** che l'insieme giri su Hermes. Il bundle non è l'esecuzione.
+Verifica allo Step 4.
+
+**Prossimo:** Step 4 — UI spese e categorie, con la prima prova reale sul telefono.
+
+---
+
 ## 2026-08-01 — Step 2: layer crypto
 
 **Fatto**
