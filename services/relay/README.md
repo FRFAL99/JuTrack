@@ -67,6 +67,8 @@ esponga davvero il testo in chiaro.
 
 ## Deploy
 
+**In produzione:** https://jutrack-relay.jutrack-relayfrfal.workers.dev
+
 ```bash
 npx wrangler login
 npm run deploy
