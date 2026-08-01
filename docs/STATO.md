@@ -1,6 +1,6 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-01, fine Step 6.
+Aggiornato: 2026-08-01, fine Step 7.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -16,11 +16,11 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 4 — UI spese e categorie          | ✅              | Lista, form, categorie, persone — funzionante offline   |
 | 5 — Relay Cloudflare              | ✅              | **In produzione**, verificato end-to-end                |
 | 6 — Motore di sincronizzazione    | ✅              | Push/pull cifrato, coda offline, recupero via snapshot  |
-| **7 — Pairing via QR**            | ⏭️ **prossimo** | Come il secondo telefono riceve la chiave               |
-| 8 — Split, saldo, budget, grafici | ⬜              |                                                         |
+| 7 — Pairing via QR                | ✅              | QR, scanner, incolla manuale, deep link `jutrack://pair` |
+| **8 — Split, saldo, budget, grafici** | ⏭️ **prossimo** | Chi deve quanto a chi, andamento mensile            |
 | 9 — CI, export, build, doc finale | ⬜              |                                                         |
 
-**277 test verdi** (215 core + 27 app + 35 relay), typecheck e lint puliti.
+**306 test verdi** (238 core + 33 app + 35 relay), typecheck e lint puliti.
 
 ## Riferimenti operativi
 
@@ -71,10 +71,12 @@ Va detto con precisione, perché è la differenza fra «testato» e «funzionant
   su Hermes, ma mai eseguito su un telefono
 - Che `expo-sqlite` persista fra due riavvii dell'app
 - Il ciclo di sync completo **fra due telefoni fisici**
+- Il **pairing end-to-end**: che il QR mostrato da un telefono venga davvero letto dall'altro, e che
+  la fotocamera funzioni sulla build. La logica è coperta dai test, l'ottica no
 - Il costo di `scrypt` con `logN = 16` su mobile (default da calibrare, in
   `packages/core/src/crypto/backup.ts`)
 
-Tutto il resto è verificato: 277 test, convergenza CRDT, relay reale in produzione.
+Tutto il resto è verificato: 306 test, convergenza CRDT, relay reale in produzione.
 
 ## Trappole già risolte — da non riscoprire
 
@@ -87,16 +89,31 @@ Tutto il resto è verificato: 277 test, convergenza CRDT, relay reale in produzi
 | TypeScript bloccato a 6.x                                                   | `typescript-eslint` dichiara peer `typescript <6.1.0`            |
 | Nella flat config ESLint vince l'ultima regola                              | Gli override vanno **dopo** il blocco generale                   |
 | Metro annunciava `127.0.0.1` come host del bundle                           | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                        |
+| expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera | `expo-camera` caricato con `require` in `try/catch` |
 
-## Step 7 — cosa serve
+## Com'è fatto il pairing (Step 7)
 
-Il secondo telefono deve ricevere la **stessa** chiave del vault: generarne una propria creerebbe due
-vault separati che non si sincronizzerebbero mai.
+Tre strade portano alla stessa conferma, in `useAdoptPairing`:
 
-- QR con `jutrack://pair?v=1&k=<chiave base64url>` — il `vaultId` **non** serve, viene derivato
-- Scansione con `expo-camera`, poi `adoptVaultKey()` (già implementata in `src/state/vault-key.ts`)
-- Scadenza breve e conferma esplicita prima di mostrare il QR
+1. **Scanner interno** — Impostazioni → «Ho già un vault sull'altro telefono»
+2. **Lettore QR di sistema** — apre `jutrack://pair?…`, raccolto dalla rotta `/pair`
+3. **Incolla il codice** — sempre disponibile, unica via se la fotocamera non c'è
 
-**Il QR contiene la chiave in chiaro: chi lo fotografa entra nel vault.** È un rischio accettato e
-documentato nel threat model — l'interfaccia deve dirlo, non nasconderlo. Un protocollo autenticato
-(SAS/PAKE) lo eliminerebbe, ed è tracciato fra i miglioramenti futuri.
+L'URI trasporta **solo la chiave** (`jutrack://pair?v=1&k=<base64url>&e=<scadenza>`): `vaultId`,
+`contentKey` e `authKey` sono derivate. Dopo `adoptVaultKey()` serve un **riavvio dell'app**: il
+motore di sync viene costruito all'avvio con le chiavi di allora.
+
+**Il QR contiene la chiave in chiaro: chi lo fotografa entra nel vault.** Rischio accettato e
+documentato nel threat model — l'interfaccia lo dichiara. La scadenza di cinque minuti è una
+cortesia, non una difesa: sta dentro l'URI, quindi è rimovibile. Un protocollo autenticato
+(SAS/PAKE) risolverebbe, ed è fra i miglioramenti futuri.
+
+## Step 8 — cosa serve
+
+Split e saldo sono già nel modello dati (`buildSplit`, resto coi maggiori resti, deterministico su
+entrambi i telefoni): manca l'interfaccia che li usa.
+
+- Chi ha pagato e come si divide, nel form della spesa
+- «Chi deve quanto a chi», calcolato dal saldo netto
+- Budget mensile per categoria e andamento nel tempo
+- Grafici — attenzione: nessuna libreria di charting è ancora entrata nel progetto

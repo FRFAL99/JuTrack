@@ -56,6 +56,17 @@ mitigazioni, non soluzioni — il QR è un segreto trasmesso otticamente.
 Mostralo solo in un luogo privato. Un protocollo di pairing autenticato (SAS/PAKE) eliminerebbe il
 problema; non è in v1 ed è tracciato tra i miglioramenti futuri.
 
+La scadenza scritta nell'URI (`e=`, cinque minuti) **non è una difesa crittografica**: è dentro il
+codice, quindi chi ne ha copiato il contenuto può rimuoverla. Limita la finestra in cui uno
+screenshot dimenticato viene ancora accettato da un'app onesta, niente di più.
+
+### Il codice di pairing incollato passa dagli appunti
+
+Lo scanner offre un campo per incollare il codice, perché senza fotocamera funzionante il secondo
+telefono non entrerebbe più nel vault. Il prezzo è che la chiave transita dagli appunti di sistema,
+leggibili da altre app installate. Chi usa la fotocamera non paga questo prezzo; chi incolla
+dovrebbe copiare qualcos'altro subito dopo.
+
 ### Il telefono sbloccato è il vault aperto
 
 `vaultKey` sta in `expo-secure-store` (Keychain iOS / Keystore Android), protetta a riposo. Ma con

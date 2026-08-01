@@ -164,18 +164,34 @@ export default function SettingsScreen() {
           </View>
 
           {keys === null ? (
-            <Button
-              label={creating ? 'Creazione…' : 'Crea vault'}
-              onPress={handleCreateVault}
-              loading={creating}
-            />
+            <>
+              <Button
+                label={creating ? 'Creazione…' : 'Crea vault'}
+                onPress={handleCreateVault}
+                loading={creating}
+              />
+              {/* Il secondo telefono non deve creare un vault proprio: due vault separati
+                  non si sincronizzano mai, pur sembrando entrambi funzionanti. */}
+              <Button
+                label="Ho già un vault sull'altro telefono"
+                variant="secondary"
+                onPress={() => router.push('/pair/scan')}
+              />
+            </>
           ) : (
-            <Button
-              label="Sincronizza adesso"
-              variant="secondary"
-              onPress={() => void engine?.syncOnce()}
-              disabled={engine === null}
-            />
+            <>
+              <Button
+                label="Sincronizza adesso"
+                variant="secondary"
+                onPress={() => void engine?.syncOnce()}
+                disabled={engine === null}
+              />
+              <Button
+                label="Collega un dispositivo"
+                variant="secondary"
+                onPress={() => router.push('/pair/invite')}
+              />
+            </>
           )}
         </Card>
 

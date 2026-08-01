@@ -4,6 +4,69 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-01 — Step 7: pairing via QR
+
+**Fatto**
+
+`packages/core/src/pairing/`: costruzione e lettura dell'URI `jutrack://pair?v=1&k=…&e=…`, con
+versione, chiave in base64url e scadenza. Nell'app: schermata che mostra il QR (dopo conferma
+esplicita, con conto alla rovescia), scanner con `expo-camera`, campo per incollare il codice come
+alternativa, e una rotta che raccoglie il deep link `jutrack://pair` aperto dal lettore QR di
+sistema. Il QR è disegnato con `qrcode-generator` e `react-native-svg`.
+
+**Decisioni prese**
+
+- **Nell'URI viaggia solo la chiave radice.** `vaultId`, `contentKey` e `authKey` sono tutte derivate
+  con HKDF: trasmetterle allungherebbe il QR per dati che il ricevente ricava da sé, e un `vaultId`
+  incoerente con la chiave produrrebbe un vault muto.
+- **Vince la prima occorrenza di ogni parametro.** Accodare `&k=<chiave dell'attaccante>` a un
+  invito legittimo non deve poter dirottare il pairing.
+- **La scadenza tollera un minuto di sfasamento fra i due orologi.** I telefoni non ne condividono
+  uno: senza tolleranza, mezzo minuto di deriva farebbe rifiutare un QR appena generato con un
+  messaggio di scadenza incomprensibile.
+- **Una scadenza assente o illeggibile vale «nessuna scadenza», non «scaduto».** È una cortesia, non
+  una difesa: sta dentro l'URI, quindi chi ha copiato il contenuto può toglierla comunque.
+- **`parsePairingUri` restituisce un esito tipizzato invece di sollevare.** L'input arriva da una
+  fotocamera puntata sul mondo: un QR sbagliato è un evento ordinario da spiegare, non un guasto.
+- **Il conto alla rovescia si ricalcola dall'orologio a ogni tick**, non si decrementa: dopo una
+  sospensione del telefono un contatore decrementato mostrerebbe come valido un invito già scaduto.
+- **Sfondo bianco e moduli scuri anche in tema scuro**: i lettori si aspettano il contrasto canonico
+  e un codice invertito viene spesso ignorato in silenzio.
+
+**`expo-camera` è caricato pigramente, e non è un vezzo**
+
+expo-router importa **tutte** le route all'avvio. Un `import` in cima allo scanner verrebbe eseguito
+al boot, e su una build in cui il modulo nativo della fotocamera manca o fallisce l'inizializzazione
+porterebbe giù l'intera app — non solo quella schermata. Con l'app che già non parte sul telefono
+per cause esterne, aggiungere una nuova causa di crash al boot sarebbe stato un pessimo affare. Il
+`require` in `try/catch` confina il guasto: la schermata dichiara «fotocamera non disponibile» e il
+pairing si completa incollando il codice.
+
+Conseguenza secondaria: i permessi passano dall'API imperativa `Camera.requestCameraPermissionsAsync`
+e non dall'hook `useCameraPermissions`, che pure sarebbe la via documentata — un hook va chiamato a
+ogni render, e qui il modulo potrebbe non esistere affatto. Quell'API è marcata `@hidden` a monte,
+quindi l'accesso è difensivo: se sparisce, resta il campo per incollare.
+
+**Il lettore QR di sistema è il gesto naturale, e va assecondato**
+
+Chi vede un QR inquadra con la fotocamera del telefono, non cerca lo scanner dentro l'app. Quel
+percorso apre `jutrack://pair?…` su una rotta che, senza una schermata dedicata, avrebbe mostrato un
+errore di rotta inesistente — e la conclusione sarebbe stata «il pairing non funziona». La rotta
+`/pair` ora lo raccoglie e chiede **la stessa** conferma della scansione interna: arrivare da un link
+non deve rendere l'adozione più silenziosa.
+
+**Verifica**
+
+306 test verdi (238 core + 33 app + 35 relay), typecheck e lint puliti, `expo export` completato.
+Fra i test dell'app c'è la generazione del QR con `TextEncoder` e `Buffer` rimossi dai global: è
+l'unico punto in cui una libreria di terze parti tocca la chiave del vault, e su Hermes quei global
+non esistono.
+
+**Non ancora verificato su hardware**: il ciclo completo fra due telefoni fisici, che resta il
+banco di prova vero di questo step.
+
+---
+
 ## 2026-08-01 — Step 6: motore di sincronizzazione
 
 **Fatto**

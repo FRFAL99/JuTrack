@@ -1,4 +1,5 @@
 import {
+  assertVaultKey,
   bytesToHex,
   deriveVaultKeys,
   generateVaultKey,
@@ -27,6 +28,27 @@ export async function loadVaultKeys(store: SecureKeyStore): Promise<VaultKeys | 
     // produrrebbe un vaultId sbagliato e un vault vuoto che sembra funzionante.
     // Meglio comportarsi come se non ci fosse e lasciare che l'utente ne crei o
     // ripristini una.
+    return null;
+  }
+}
+
+/**
+ * Legge la chiave radice così com'è, senza derivarla.
+ *
+ * Serve solo al pairing: è la chiave radice, non le derivate, a dover finire nel QR.
+ * Ovunque altrove si usa `loadVaultKeys`, che restituisce già le chiavi d'uso.
+ */
+export async function loadVaultKeyBytes(store: SecureKeyStore): Promise<Uint8Array | null> {
+  const hex = await store.get(VAULT_KEY_STORAGE_KEY);
+  if (hex === null) return null;
+
+  try {
+    const key = hexToBytes(hex);
+    // Meglio non generare alcun invito che generarne uno con una chiave corrotta:
+    // l'altro telefono la adotterebbe e finirebbe in un vault che non esiste.
+    assertVaultKey(key);
+    return key;
+  } catch {
     return null;
   }
 }
