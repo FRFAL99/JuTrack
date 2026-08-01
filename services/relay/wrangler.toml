@@ -1,0 +1,18 @@
+name = "jutrack-relay"
+main = "src/index.ts"
+compatibility_date = "2026-08-01"
+
+# Un Durable Object per vault, con backend SQLite.
+#
+# Il backend SQLite non è una preferenza: sul piano Workers Free è l'unico disponibile.
+# Vedi docs/architecture.md § Vincoli del free tier Cloudflare.
+[[durable_objects.bindings]]
+name = "VAULT_ROOM"
+class_name = "VaultRoom"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["VaultRoom"]
+
+[observability]
+enabled = true

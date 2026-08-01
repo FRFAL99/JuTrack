@@ -9,10 +9,14 @@
     "typecheck": "tsc --noEmit",
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "tail": "wrangler tail"
+    "tail": "wrangler tail",
+    "test": "vitest run",
+    "e2e": "tsx scripts/e2e-check.mts"
   },
   "devDependencies": {
+    "@cloudflare/vitest-pool-workers": "^0.20.1",
     "@cloudflare/workers-types": "^5.20260801.1",
+    "vitest": "^4.1.10",
     "wrangler": "^4.118.0"
   }
 }

@@ -4,6 +4,72 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-01 — Step 5: relay Cloudflare
+
+**Fatto**
+
+Worker che instrada al Durable Object del vault (`idFromName`, deterministico: nessun registro
+centrale). `VaultRoom` con backend SQLite conserva un log append-only di blob opachi. Rotte
+`POST/GET /v1/vault/:id/updates`, `DELETE /v1/vault/:id/vault`, `/health`.
+
+**Decisioni prese**
+
+- **Autenticazione trust-on-first-use.** Il primo client a scrivere registra `SHA-256(authToken)`;
+  i successivi devono presentarne uno che produca lo stesso hash, confrontato in tempo costante.
+  Il relay non conosce mai `contentKey`.
+- **Il `vaultId` è validato nel Worker**, prima di raggiungere il Durable Object. Senza, chiunque
+  potrebbe far istanziare un DO per ogni stringa inventata, consumando quota.
+- **Validazione totale prima di scrivere alcunché.** Se un solo blob della richiesta è invalido non
+  se ne inserisce nessuno: un inserimento parziale lascerebbe il client incerto su cosa sia passato.
+- **Paginazione con un elemento in più del limite** per calcolare `hasMore` senza una `COUNT`
+  aggiuntiva.
+- **`toArray()` invece di `raw()`** sulle query: accesso alle colonne per nome, così un cambio
+  nell'ordine della `SELECT` non produce silenziosamente valori scambiati.
+
+**Un bug che solo il runtime reale poteva mostrare**
+
+`storage.deleteAll()` su un Durable Object con backend SQLite **elimina anche le tabelle**, non solo
+le chiavi. Lo schema si crea nel costruttore, che però non viene rieseguito finché l'istanza resta
+viva: dopo una `DELETE`, ogni richiesta successiva a quel vault falliva con `no such table`. Una
+cancellazione avrebbe rotto il vault in modo permanente.
+
+I test girano dentro **workerd** con Durable Object e SQLite veri, proprio per questo: con dei mock
+si sarebbe verificata solo la nostra idea di come funziona un DO. Aggiunto un test di regressione
+che pretende che il vault resti utilizzabile dopo la cancellazione.
+
+**Verifica end-to-end contro un relay in esecuzione**
+
+`services/relay/scripts/e2e-check.mts` (`npm run e2e` nel workspace) non prova il protocollo in
+astratto: cifra update Yjs **reali** con il nostro crypto, li fa transitare da `wrangler dev` e
+ricostruisce il documento dall'altra parte. Tutto verde:
+
+- il dispositivo B riceve tutte le spese e ottiene uno stato identico ad A;
+- **un update non cifrato ESPONE la nota in chiaro, quello cifrato no.** Questo controllo preliminare
+  è deliberato: senza, l'asserzione «nessuna nota in chiaro sul relay» passerebbe anche cercando una
+  stringa che non compare mai, dando una falsa sensazione di sicurezza;
+- un blob manomesso viene respinto, un altro vault non può decifrare;
+- blob oltre 1 MB rifiutato con 413;
+- rinviare gli stessi update non duplica le spese.
+
+**Toolchain**
+
+`@cloudflare/vitest-pool-workers` 0.20 (per vitest 4) **non espone più `defineWorkersConfig` da
+`./config`**: si usa il plugin `cloudflareTest`. Il package include un codemod `vitest-v3-to-v4` che
+documenta la migrazione. `cloudflare:test` tipizza `env` come `Cloudflare.Env`: i binding sono
+dichiarati una volta sola in `src/env.d.ts` e `src/index.ts` li riesporta.
+
+Nella flat config di ESLint **vince l'ultima regola che corrisponde**: un override piazzato prima del
+blocco generale non ha effetto. Costato un giro di verifica.
+
+**Verifica:** typecheck pulito su 3 workspace, **222 test verdi** (172 core + 15 app + 35 relay),
+lint pulito, e la prova end-to-end cifrata contro un relay reale.
+
+**Non ancora fatto:** il deploy su Cloudflare. Richiede l'account di Francesco (`wrangler login`).
+
+**Prossimo:** Step 6 — sync engine sul client.
+
+---
+
 ## 2026-08-01 — Step 4: UI spese e categorie (offline)
 
 **Fatto**

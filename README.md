@@ -68,6 +68,26 @@ npm run typecheck
 npm test
 ```
 
+### Provare l'app sul telefono
+
+```bash
+cd apps/mobile && npm start
+```
+
+Poi si scansiona il QR con Expo Go.
+
+> **Expo Go e SDK 57.** L'SDK 57 è uscito il 30 giugno 2026 e la build di Expo Go corrispondente è
+> ancora in attesa di approvazione sugli store. La versione presente sul Play Store è precedente e
+> rifiuta il progetto con `incompatible SDK version`.
+>
+> Soluzione: installare l'APK ufficiale da
+> [expo.dev/go (SDK 57, Android)](https://expo.dev/go?sdkVersion=57&platform=android&device=true).
+> Se l'installazione fallisce per un errore di firma, disinstallare prima l'Expo Go dello store: le
+> due build usano chiavi diverse.
+>
+> **Attenzione:** i dati dell'app vivono nella sandbox di Expo Go. Disinstallarlo cancella anche il
+> database SQLite di JuTrack — da ricordare quando si verifica la persistenza fra riavvii.
+
 ## Stato
 
 In sviluppo. Avanzamento in [docs/devlog.md](docs/devlog.md).

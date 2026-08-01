@@ -84,4 +84,12 @@ export default tseslint.config(
       ],
     },
   },
+  // In fondo di proposito: nella flat config vince l'ultima regola che corrisponde al
+  // file, quindi un override piazzato prima del blocco generale non avrebbe effetto.
+  //
+  // Script di verifica eseguiti a mano: il loro output *è* console.log.
+  {
+    files: ['services/*/scripts/**/*.mts'],
+    rules: { 'no-console': 'off' },
+  },
 );
