@@ -4,6 +4,67 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-01 — Step 4: UI spese e categorie (offline)
+
+**Fatto**
+
+`VaultProvider` apre il database, ricostruisce il `Y.Doc` e lo espone all'app. Lista spese
+raggruppata per giorno con totali, form di creazione e modifica, eliminazione con conferma,
+gestione categorie, gestione persone. Categorie di default create al primo avvio.
+
+**Decisioni prese**
+
+- **Il rendering è bloccato finché il vault non è caricato.** Senza, la lista comparirebbe vuota per
+  un istante prima di popolarsi — e in caso di errore sembrerebbe un vault senza dati, nascondendo
+  il guasto. Ora un errore di apertura del database si vede, con il messaggio selezionabile.
+- **Le categorie si archiviano, non si cancellano.** Le spese passate continuano a riferirle e
+  resterebbero orfane. La conferma dice quante spese usano quella categoria e che restano invariate.
+- **Il seed controlla se esiste già qualcosa.** Senza, ogni avvio aggiungerebbe un set di categorie
+  e dopo il sync i due dispositivi ne avrebbero il doppio.
+- **L'errore sull'importo compare solo dopo il primo tentativo di invio**, non mentre si digita la
+  prima cifra.
+- **Anteprima delle quote nel form** («5,00 € / 5,01 € a testa» quando l'importo è dispari): mostrare
+  la differenza di un centesimo evita che sembri un errore di calcolo.
+- La schermata di modifica gestisce il caso in cui la spesa **non esiste più**: può succedere
+  davvero, se l'altro dispositivo l'ha cancellata mentre la schermata era aperta.
+
+**Reattività: la trappola di `useSyncExternalStore`**
+
+`getSnapshot` deve restituire un valore **stabile** fra un cambiamento e l'altro. Restituire
+direttamente la lista delle spese darebbe un array nuovo a ogni chiamata, che React interpreta come
+"cambiato": ciclo di render infinito. Si restituisce quindi un contatore di versione, e le liste si
+derivano con `useMemo`.
+
+Il contatore vive nel `VaultProvider` e non in un hook: l'observer sul documento va registrato una
+volta sola. La prima stesura lo registrava dentro `getSnapshot`, che React chiama in fase di render —
+un effetto collaterale nel render, riscritto prima di committare.
+
+`exhaustive-deps` segnalava `version` come dipendenza inutile, perché non compare nel corpo del memo.
+Ma è l'unica cosa che rende reattivo il calcolo: le liste si leggono da un `Y.Doc` mutabile, la cui
+identità non cambia mai. Risolto con una funzione `dependsOnDocument(version)` che la legge
+esplicitamente, invece di disabilitare la regola — così il motivo resta scritto nel codice.
+
+**Trappola di fuso orario nelle date**
+
+`todayIso` costruisce la data dai componenti **locali**, non da `toISOString()`. Quest'ultimo
+converte in UTC: alle 23:30 in Italia restituirebbe già il giorno successivo, e una spesa registrata
+la sera comparirebbe sotto «domani». C'è un test dedicato. `formatDayTitle` costruisce le date a
+mezzogiorno per la stessa ragione: a mezzanotte l'ora legale può spostare il giorno.
+
+**Verifica:** typecheck pulito, 187 test verdi (172 core + 15 app), lint pulito senza warning,
+bundle Android da 1354 moduli.
+
+**Non ancora verificato: l'esecuzione su Hermes**
+
+In questo ambiente non c'è un SDK Android né un emulatore, quindi l'app non è mai stata _eseguita_.
+Il bundle si risolve, ma il bundle non è l'esecuzione. **Va provata sul telefono** con `npm start`
+in `apps/mobile` e la scansione del QR con Expo Go. Le cose da confermare: che noble giri su Hermes,
+che `expo-sqlite` persista davvero fra due avvii, e quanto impiega `scrypt` con `logN = 16`.
+
+**Prossimo:** Step 5 — relay Cloudflare.
+
+---
+
 ## 2026-08-01 — Step 3: modello dati Yjs e persistenza SQLite
 
 **Fatto**
