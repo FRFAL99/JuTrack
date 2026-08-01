@@ -4,6 +4,80 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-01 — Prova con due dispositivi: due bug, e il piano v2
+
+**Fatto**
+
+Nessun codice. Analisi del repo dopo la prima prova reale con **due telefoni**, dove la
+sincronizzazione «funzionava, ma in una sola direzione e dopo parecchio tempo», e dove la gestione
+delle persone e del pairing si è rivelata poco chiara. L'esito è
+[piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md), Step 10–14, e l'aggiornamento di
+[STATO.md](STATO.md), che non può più dire che tutti gli step sono chiusi.
+
+**Due bug, non due rifiniture**
+
+- **Sync unilaterale** (`packages/core/src/sync/engine.ts:88-91`). `start()` registra l'observer e
+  riprende la coda, ma non pubblica mai lo stato **già presente** nel documento. La persistenza
+  carica prima (`VaultProvider.tsx:75`) con `origin = persistence`, quindi non passa da
+  `onLocalUpdate`: lo storico non raggiunge mai il relay, parte solo ciò che si scrive dopo quel
+  boot. E gli update ricevuti che dipendono da struct mai trasmessi restano _pending_ dentro Yjs
+  senza essere applicati, mentre il cursore avanza — il ciclo riporta `synced` e la UI resta vuota.
+  Il sintomo osservato era esattamente questo.
+- **Membri duplicati e saldo errato** (`apps/mobile/src/state/seed.ts:41-45`). «Io» nasce con un id
+  casuale **su ogni dispositivo**: dopo il sync sono due persone distinte, e il calcolo di chi deve
+  quanto è sbagliato. Non era solo la lista Persone a sembrare strana. Lo stesso meccanismo raddoppia
+  le otto categorie di default.
+
+Nessuno dei due era coperto dai test, per la stessa ragione: `makeDevice()` in `engine.test.ts` parte
+sempre da un `Y.Doc` vuoto e chiama `start()` prima di scrivere. Lo scenario «motore avviato su un
+documento che ha già contenuto» — cioè il caso reale — non esiste nella suite. È la lezione di metodo
+di questa sessione: 417 test verdi non dicono nulla su uno scenario che nessun test costruisce.
+
+**Decisioni prese**
+
+- **Niente auth di Google**, benché fosse la prima ipotesi. Il problema è di modello dati, non di
+  autenticazione: un id account andrebbe comunque scritto nel CRDT come chiave del membro, che è
+  esattamente ciò che fa un id casuale generato sul telefono. In cambio costerebbe un modulo nativo
+  (quindi una build EAS nuova), un progetto Google Cloud con OAuth consent e il fingerprint SHA-1 del
+  keystore, e — soprattutto — un Sign-In solo lato client **non è verificabile**: senza un backend
+  che validi l'`id_token` chiunque può dichiararsi chiunque, e quel backend darebbe al relay un ruolo
+  di identità, rompendo il principio portante del progetto. Il campo `identity?: { provider, subject }`
+  resta però previsto nel profilo, e `profileId` è **opaco**: agganciare un provider più avanti non
+  richiederà di cambiare la chiave dei membri, che è la parte cara da modificare a posteriori.
+- **Un gruppo = un vault = un Durable Object.** Il relay non cambia struttura: `idFromName(vaultId)`
+  dà già una stanza isolata per gruppo. Niente database da gestire, com'era richiesto.
+- **Si riparte con dati puliti.** Sono dati di prova, e ripartire elimina la migrazione di schema e
+  lo strumento di fusione dei membri duplicati — i due pezzi più rischiosi, uno dei quali (riscrivere
+  `paidBy` e le quote su tutte le spese) sbaglia i numeri in modo che si nota tardi.
+- **Solo profili, niente membri ospite.** La gestione manuale delle persone sparisce del tutto.
+- **Inviti via link con la chiave nel fragment**, non più solo QR. Il fragment non viene mai
+  trasmesso al server: il relay continua a non poter leggere nulla, e la pagina di atterraggio sta
+  sul Worker che già esiste. Il QR resta come alternativa per quando i due telefoni sono uno di
+  fronte all'altro.
+- **Polling adattivo, non WebSocket.** La Hibernation API porterebbe la latenza sotto il secondo ed è
+  gratuita, ma il grosso del ritardo non è l'intervallo: è che non esiste alcun trigger sulla
+  modifica locale. Prima si misura se 2-3 secondi bastano.
+- **Nessuna nuova build EAS**: `AppState` e `Share` sono API core di React Native, già presenti nella
+  development build installata.
+
+**Due pezzi di lavoro che sembravano da fare e invece no**
+
+Vale la pena annotarli, perché a occhio sembrano costosi: `SqliteYPersistence` **accetta già** un
+`tableName` (`packages/core/src/persistence/y-sqlite.ts:28`, col commento «Consente più documenti
+nello stesso database»), quindi il multi-vault lato persistenza non tocca il core; e
+`DELETE /v1/vault/:id/vault` **esiste già** nel relay (`services/relay/src/index.ts:11`), quindi
+«esci dal gruppo ed elimina anche dal server» è già servito.
+
+**Il punto in cui si perdono dati**
+
+`setPending` fa `DELETE FROM sync_pending` **senza `WHERE`**
+(`apps/mobile/src/platform/sync-store.ts:59`). Oggi è innocuo perché il vault è uno solo; con due
+gruppi attivi cancellerebbe la coda offline dell'altro, e sarebbero spese registrate offline che
+spariscono senza che nulla lo segnali. È l'unico punto del piano v2 dove un errore distrugge dati, ed
+è annotato come tale.
+
+---
+
 ## 2026-08-01 — Step 9: CI, export dei dati, backup della chiave
 
 **Fatto**
