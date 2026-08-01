@@ -90,7 +90,10 @@ Poi si scansiona il QR con Expo Go.
 
 ## Stato
 
-In sviluppo. Avanzamento in [docs/devlog.md](docs/devlog.md).
+In sviluppo. **Punto di partenza: [docs/STATO.md](docs/STATO.md)** — cosa è fatto, cosa manca, cosa è
+bloccato. Il dettaglio cronologico è in [docs/devlog.md](docs/devlog.md).
+
+Relay in produzione: https://jutrack-relay.jutrack-relayfrfal.workers.dev
 
 ## Sicurezza
 
