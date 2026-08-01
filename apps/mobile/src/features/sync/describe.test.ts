@@ -43,6 +43,14 @@ describe('describeSync', () => {
     expect(icon).toBe('⚠');
   });
 
+  it('non fa credere che un accesso rifiutato si risolverà da solo', () => {
+    // `error` promette implicitamente un altro tentativo. `blocked` no: la chiave non
+    // apre quel vault, e nessuna attesa cambierà l'esito.
+    const { text } = describeSync({ phase: 'blocked', message: 'HTTP 403' }, NOW);
+    expect(text).toContain('fermata');
+    expect(text).not.toContain('Sincronizzazione…');
+  });
+
   it('segnala che le modifiche offline non sono perse', () => {
     const { text } = describeSync({ phase: 'offline' }, NOW);
     expect(text).toContain('coda');

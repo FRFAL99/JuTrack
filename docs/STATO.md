@@ -1,54 +1,54 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-01, dopo la prima prova con due dispositivi.
+Aggiornato: 2026-08-01, a Step 10 chiuso.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
 
 ## Avanzamento
 
-| Step                                | Stato | Cosa contiene                                                      |
-| ----------------------------------- | ----- | ------------------------------------------------------------------ |
-| 0 — Repo e documentazione           | ✅    | Monorepo npm workspaces, toolchain, ADR, threat model              |
-| 1 — Scheletro Expo                  | ✅    | SDK 57, expo-router, tema chiaro/scuro, componenti base            |
-| 2 — Crypto                          | ✅    | HKDF, XChaCha20-Poly1305, backup con passphrase                    |
-| 3 — Modello Yjs e persistenza       | ✅    | VaultStore, SQLite, convergenza CRDT verificata                    |
-| 4 — UI spese e categorie            | ✅    | Lista, form, categorie, persone — funzionante offline              |
-| 5 — Relay Cloudflare                | ✅    | **In produzione**, verificato end-to-end                           |
-| 6 — Motore di sincronizzazione      | ✅    | Push/pull cifrato, coda offline, recupero via snapshot             |
-| 7 — Pairing via QR                  | ✅    | QR, scanner, incolla manuale, deep link `jutrack://pair`           |
-| 8 — Split, saldo, budget, grafici   | ✅    | Saldo, pareggi, budget mensili, barre per categoria e mese         |
-| 9 — CI, export, backup della chiave | ✅    | GitHub Actions, export CSV/JSON, backup cifrato della chiave       |
-| 10 — Sync: correttezza e velocità   | ⬜    | Catch-up al boot, push immediato, poll adattivo — **indipendente** |
-| 11 — Profili                        | ⬜    | Un profilo per persona, il membro nasce da lì                      |
-| 12 — Più gruppi per telefono        | ⬜    | Registro gruppi, tabelle per vault, runtime rimontabile            |
-| 13 — Inviti via link                | ⬜    | Link condivisibile, pagina `/j` sul Worker                         |
-| 14 — Uscire da un gruppo            | ⬜    | Abbandono, wipe sul relay, rigenerazione della chiave              |
+| Step                                | Stato | Cosa contiene                                                |
+| ----------------------------------- | ----- | ------------------------------------------------------------ |
+| 0 — Repo e documentazione           | ✅    | Monorepo npm workspaces, toolchain, ADR, threat model        |
+| 1 — Scheletro Expo                  | ✅    | SDK 57, expo-router, tema chiaro/scuro, componenti base      |
+| 2 — Crypto                          | ✅    | HKDF, XChaCha20-Poly1305, backup con passphrase              |
+| 3 — Modello Yjs e persistenza       | ✅    | VaultStore, SQLite, convergenza CRDT verificata              |
+| 4 — UI spese e categorie            | ✅    | Lista, form, categorie, persone — funzionante offline        |
+| 5 — Relay Cloudflare                | ✅    | **In produzione**, verificato end-to-end                     |
+| 6 — Motore di sincronizzazione      | ✅    | Push/pull cifrato, coda offline, recupero via snapshot       |
+| 7 — Pairing via QR                  | ✅    | QR, scanner, incolla manuale, deep link `jutrack://pair`     |
+| 8 — Split, saldo, budget, grafici   | ✅    | Saldo, pareggi, budget mensili, barre per categoria e mese   |
+| 9 — CI, export, backup della chiave | ✅    | GitHub Actions, export CSV/JSON, backup cifrato della chiave |
+| 10 — Sync: correttezza e velocità   | ✅    | Catch-up al boot, push immediato, poll adattivo, `AppState`  |
+| 11 — Profili                        | ⬜    | Un profilo per persona, il membro nasce da lì                |
+| 12 — Più gruppi per telefono        | ⬜    | Registro gruppi, tabelle per vault, runtime rimontabile      |
+| 13 — Inviti via link                | ⬜    | Link condivisibile, pagina `/j` sul Worker                   |
+| 14 — Uscire da un gruppo            | ⬜    | Abbandono, wipe sul relay, rigenerazione della chiave        |
 
-**417 test verdi** (322 core + 60 app + 35 relay), typecheck, lint e `format:check` puliti.
+**433 test verdi** (337 core + 61 app + 35 relay), typecheck, lint e `format:check` puliti.
 
-**Il piano originale (Step 0–9) è chiuso.** La prima prova con **due dispositivi**, però, ha fatto
-emergere due bug con conseguenze sui numeri e tre limiti di prodotto: da lì nasce un secondo piano,
-[piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md), che copre gli **Step 10–14** —
-**nessuno ancora iniziato**.
+**Il piano originale (Step 0–9) è chiuso.** La prima prova con **due dispositivi** ha fatto emergere
+due bug con conseguenze sui numeri e tre limiti di prodotto: da lì nasce un secondo piano,
+[piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md), che copre gli **Step 10–14**. Il
+**10 è chiuso**, gli altri quattro no.
 
-## Due bug noti e non ancora corretti
+## Il bug del sync è corretto; quello dei membri no
 
-Sono documentati per intero nel [piano v2](piano-v2-profili-gruppi-sync.md). In breve, perché
-condizionano ogni prova sul campo fatta da qui in avanti:
-
-- **La sincronizzazione è unilaterale.** `SyncEngine.start()`
-  (`packages/core/src/sync/engine.ts:88-91`) non pubblica mai lo stato **già presente** nel
-  documento: la persistenza carica prima, con `origin = persistence`, quindi non passa da
-  `onLocalUpdate`. Lo storico di un telefono non raggiunge mai il relay — parte solo ciò che si
-  scrive dopo quel boot. Il ciclo riporta comunque `synced`. Nessun test lo copre: partono tutti da
-  un `Y.Doc` vuoto.
+- ~~**La sincronizzazione è unilaterale.**~~ **Corretto allo Step 10.** `SyncEngine.start()` ora
+  pubblica il delta fra il documento e lo state vector dell'ultima pubblicazione riuscita, che il
+  `SyncCursorStore` ricorda. Copre lo storico precedente al vault, il seed, la chiave adottata su un
+  documento già pieno e gli update prodotti a motore spento. Insieme è stato corretto un secondo
+  difetto trovato leggendo: su una pagina interamente indecifrabile il cursore saltava a `head`, cioè
+  alla fine dell'**intero** log, perdendo in silenzio tutti gli update validi che seguivano.
 - **I membri si duplicano e il saldo è sbagliato.** `apps/mobile/src/state/seed.ts:41-45` crea «Io»
   con un id casuale **su ogni dispositivo**: dopo il sync sono due persone diverse, e il calcolo di
   chi deve quanto all'altro è errato. Lo stesso meccanismo raddoppia le categorie di default.
+  **Aperto — è lo Step 11.**
 
-Finché lo **Step 10** non è fatto, un sync che «sembra funzionare» non dimostra granché: va sempre
-verificato in **entrambe** le direzioni, e con un telefono che aveva già dei dati suoi.
+Il sync corretto è coperto dai test, **non ancora visto funzionare su due telefoni veri**: la prova
+va fatta in **entrambe** le direzioni, e con un telefono che aveva già dei dati suoi. Fino ad allora
+non si dice che «funziona». E fino allo Step 11 il saldo resta comunque sbagliato, perché i membri
+si duplicano: sono due difetti indipendenti.
 
 ## Riferimenti operativi
 
@@ -91,7 +91,9 @@ relay in produzione, invito di pairing, QR, fotocamera.
 Va detto con precisione, perché è la differenza fra «testato» e «funzionante». Dopo la diagnostica
 la lista si è accorciata parecchio, ma non è vuota:
 
-- Il ciclo di sync completo **fra due telefoni fisici** — mai provato
+- Il ciclo di sync completo **fra due telefoni fisici**: provato una volta e **fallito** (una sola
+  direzione, con ritardi di parecchi secondi). Le cause sono state corrette allo Step 10, ma la
+  riprova sul campo non è ancora stata fatta. È la verifica più importante della lista
 - Il **pairing ottico**: che il QR mostrato da un telefono venga davvero inquadrato dall'altro. La
   generazione è confermata, la scansione no
 - Che `expo-sqlite` **persista fra due riavvii** dell'app: la diagnostica scrive e rilegge nella
@@ -110,7 +112,7 @@ la lista si è accorciata parecchio, ma non è vuota:
 > `try/catch` proprio per questo — e l'export ripiega sugli appunti, dichiarandolo nell'interfaccia.
 > Il foglio di condivisione comparirà solo dopo una build aggiornata.
 
-Tutto il resto è verificato: 417 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 433 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 ## Trappole già risolte — da non riscoprire
@@ -144,6 +146,28 @@ motore di sync viene costruito all'avvio con le chiavi di allora.
 documentato nel threat model — l'interfaccia lo dichiara. La scadenza di cinque minuti è una
 cortesia, non una difesa: sta dentro l'URI, quindi è rimovibile. Un protocollo autenticato
 (SAS/PAKE) risolverebbe, ed è fra i miglioramenti futuri.
+
+## Come funziona il sync (Step 10)
+
+Ciclo pull → applica → push, in quest'ordine: al contrario, un dispositivo rimasto offline a lungo
+caricherebbe la propria storia prima di conoscere quella dell'altro.
+
+- **Il motore ricorda cosa ha già pubblicato**, come state vector Yjs, e all'avvio manda il delta. È
+  la correzione del bug principale: osservare gli update dal vivo cattura solo ciò che si scrive a
+  motore acceso, e la persistenza carica il documento prima.
+- Lo state vector si registra **solo a coda vuota**. Salvarlo con update ancora in attesa li
+  cancellerebbe dal catch-up del prossimo avvio, e sparirebbero senza che nulla lo segnali.
+- **Il cursore avanza all'ultimo `seq` visto**, non all'ultimo applicato e mai a `head`: un blob
+  illeggibile non deve essere riletto in eterno, ma nemmeno far saltare quelli validi che seguono.
+- **Il sonno è interrompibile.** Una modifica locale sveglia il ciclo dopo 400 ms di debounce, così
+  una raffica di scritture produce una richiesta sola. Poll a 3 s in finestra attiva (due minuti),
+  30 s a riposo, sospeso in background via `AppState`.
+- **Tre esiti distinti, non uno solo.** `offline` (il relay non è stato raggiunto), `error` (il relay
+  ha risposto male, si riprova col backoff), `blocked` (403: la chiave non apre quel vault — il ciclo
+  si ferma, perché ritentare darebbe lo stesso esito per sempre).
+
+Un ciclo che riporta `synced` non dimostra che i due lati siano allineati: era vero anche con
+entrambi i bug. La prova è vedere il dato comparire sull'altro telefono, in entrambi i versi.
 
 ## Saldo, budget e grafici (Step 8)
 

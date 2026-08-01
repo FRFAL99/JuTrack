@@ -11,7 +11,7 @@ export function SyncBadge({ state }: { state: SyncState }) {
   const { icon, text } = describeSync(state);
 
   const color =
-    state.phase === 'error' || state.phase === 'offline'
+    state.phase === 'error' || state.phase === 'offline' || state.phase === 'blocked'
       ? colors.warning
       : state.phase === 'synced'
         ? colors.income

@@ -23,6 +23,15 @@ export class SqliteSyncStore implements SyncCursorStore {
          data BLOB NOT NULL
        )`,
     );
+    // Tabella separata da `sync_state` perché lo state vector è binario: passarlo per
+    // una colonna TEXT vorrebbe dire base64 all'andata e al ritorno, cioè due
+    // conversioni in più e un formato da sbagliare.
+    await db.execute(
+      `CREATE TABLE IF NOT EXISTS sync_meta (
+         key TEXT PRIMARY KEY,
+         data BLOB NOT NULL
+       )`,
+    );
     return new SqliteSyncStore(db);
   }
 
@@ -56,10 +65,40 @@ export class SqliteSyncStore implements SyncCursorStore {
     // Riscrittura completa invece di una differenza: la coda è piccola (decine di
     // update) e la logica incrementale introdurrebbe stati intermedi in cui un crash
     // lascerebbe la coda incoerente.
-    await this.db.execute('DELETE FROM sync_pending');
-    for (const update of updates) {
-      await this.db.execute('INSERT INTO sync_pending (data) VALUES (?)', [update]);
+    //
+    // In transazione, però: fuori da una, la finestra fra il DELETE e l'ultimo INSERT è
+    // una coda **vuota** su disco. Un crash lì dentro — o la chiusura dell'app da parte
+    // del sistema — farebbe sparire le spese registrate offline senza che nulla lo
+    // segnali. È anche molto più veloce: un solo fsync invece di uno per riga.
+    await this.db.execute('BEGIN');
+    try {
+      await this.db.execute('DELETE FROM sync_pending');
+      for (const update of updates) {
+        await this.db.execute('INSERT INTO sync_pending (data) VALUES (?)', [update]);
+      }
+      await this.db.execute('COMMIT');
+    } catch (error) {
+      // Senza ROLLBACK la transazione resterebbe aperta e ogni scrittura successiva
+      // fallirebbe con «cannot start a transaction within a transaction».
+      await this.db.execute('ROLLBACK').catch(() => undefined);
+      throw error;
     }
+  }
+
+  async getPushedStateVector(): Promise<Uint8Array | null> {
+    const rows = await this.db.query<{ data: Uint8Array }>(
+      'SELECT data FROM sync_meta WHERE key = ?',
+      ['pushed_state_vector'],
+    );
+    const raw = rows[0]?.data;
+    return raw === undefined ? null : toBytes(raw);
+  }
+
+  async setPushedStateVector(stateVector: Uint8Array): Promise<void> {
+    await this.db.execute(
+      'INSERT INTO sync_meta (key, data) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET data = ?',
+      ['pushed_state_vector', stateVector, stateVector],
+    );
   }
 }
 

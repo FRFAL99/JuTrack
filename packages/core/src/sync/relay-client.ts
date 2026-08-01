@@ -19,6 +19,15 @@ export interface PullResult {
   head: number;
   hasMore: boolean;
   /**
+   * Ultimo `seq` **visto** in questa pagina, decifrabile o no. Pari a `since` se la
+   * pagina era vuota.
+   *
+   * È il valore a cui il cursore può avanzare senza perdere nulla. Non va confuso con
+   * `head`, che è la fine dell'**intero** log: saltare là dopo una pagina illeggibile
+   * scarterebbe in silenzio tutti gli update validi delle pagine successive.
+   */
+  lastSeq: number;
+  /**
    * Blob che non è stato possibile decifrare, contati e scartati.
    *
    * Non è un errore fatale: un blob corrotto o prodotto con uno schema futuro non deve
@@ -46,6 +55,21 @@ export class RelayError extends Error {
    */
   get permanent(): boolean {
     return this.status === 400 || this.status === 401 || this.status === 403 || this.status === 413;
+  }
+
+  /**
+   * `true` se non ha senso ritentare **mai più**, nemmeno fra cinque minuti.
+   *
+   * 401/403 significano che questo dispositivo non ha titolo per accedere a quel vault:
+   * la chiave è sbagliata, o il relay ha già registrato un altro token per quel
+   * `vaultId`. Nessuna attesa cambia l'esito, e continuare a riprovare lascia
+   * l'indicatore in uno stato che sembra temporaneo mentre non lo è.
+   *
+   * 400 e 413 restano `permanent` ma non `fatal`: dipendono dal contenuto della
+   * richiesta, quindi una richiesta diversa può riuscire.
+   */
+  get fatal(): boolean {
+    return this.status === 401 || this.status === 403;
   }
 }
 
@@ -120,8 +144,11 @@ export class RelayClient {
 
     const updates: PulledUpdate[] = [];
     let undecryptable = 0;
+    // Non si assume che il relay ordini la pagina: il massimo è comunque corretto.
+    let lastSeq = since;
 
     for (const entry of body.updates) {
+      if (entry.seq > lastSeq) lastSeq = entry.seq;
       try {
         updates.push({
           seq: entry.seq,
@@ -134,7 +161,7 @@ export class RelayClient {
       }
     }
 
-    return { updates, head: body.head, hasMore: body.hasMore, undecryptable };
+    return { updates, head: body.head, hasMore: body.hasMore, undecryptable, lastSeq };
   }
 }
 

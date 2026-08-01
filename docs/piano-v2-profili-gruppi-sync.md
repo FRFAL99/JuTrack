@@ -1,8 +1,8 @@
 # JuTrack — Piano v2: profili, gruppi, inviti, sync veloce
 
 > **Avanzamento al 2026-08-01.**
-> Completati: **Step 0–9** (il piano originale). Questo documento copre gli **Step 10–14**:
-> **nessuno iniziato**.
+> Completati: **Step 0–9** (il piano originale) e lo **Step 10** di questo documento. Restano gli
+> **Step 11–14**.
 >
 > Nasce dalla prima prova reale con **due dispositivi**, che ha fatto emergere due bug con
 > conseguenze sui numeri e tre limiti di prodotto che il piano originale non copriva.
@@ -129,7 +129,12 @@ repo in stato non compilante.
 > **Lo Step 10 è indipendente dagli altri quattro.** Non tocca profili né gruppi, e da solo risolve
 > la sincronizzazione unilaterale. Se una sessione futura ha tempo per una cosa sola, è quella.
 
-### Step 10 — Motore di sync: correttezza e velocità
+### Step 10 — Motore di sync: correttezza e velocità ✅
+
+**Fatto.** Realizzato come previsto, con due aggiunte emerse strada facendo: `RelayError.fatal`
+(401/403) distinto da `permanent`, e il nuovo stato `blocked` nella UI — un 403 non è un errore che
+passerà, e dirlo «non sincronizzato, riprovo» sarebbe una bugia. Il resoconto è nel
+[devlog](devlog.md). Restano da vedere su hardware i 2-3 secondi promessi.
 
 Tutto in `packages/core/src/sync/`, più due file di `apps/mobile/src/platform/`.
 

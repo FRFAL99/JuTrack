@@ -4,6 +4,10 @@ import type { HttpClient, SyncCursorStore } from './types';
 export class MemoryCursorStore implements SyncCursorStore {
   private cursor = 0;
   private pending: Uint8Array[] = [];
+  private pushedStateVector: Uint8Array | null = null;
+
+  /** Quante volte lo state vector è stato registrato, per i test sul catch-up. */
+  pushedStateVectorWrites = 0;
 
   async getCursor(): Promise<number> {
     return this.cursor;
@@ -17,6 +21,13 @@ export class MemoryCursorStore implements SyncCursorStore {
   async setPending(updates: Uint8Array[]): Promise<void> {
     this.pending = [...updates];
   }
+  async getPushedStateVector(): Promise<Uint8Array | null> {
+    return this.pushedStateVector === null ? null : new Uint8Array(this.pushedStateVector);
+  }
+  async setPushedStateVector(stateVector: Uint8Array): Promise<void> {
+    this.pushedStateVector = new Uint8Array(stateVector);
+    this.pushedStateVectorWrites++;
+  }
 }
 
 /**
@@ -29,9 +40,15 @@ export class MemoryCursorStore implements SyncCursorStore {
 export class FakeRelay implements HttpClient {
   private readonly blobs: string[] = [];
 
-  /** Limiti allineati a quelli del relay reale. */
-  readonly maxBlobsPerPush = 100;
-  readonly maxUpdatesPerResponse = 200;
+  /**
+   * Limiti allineati a quelli del relay reale.
+   *
+   * Modificabili solo per costringere la paginazione a scattare con pochi update: un
+   * test che ne richiedesse 200 per esercitare `hasMore` sarebbe lento e illeggibile. I
+   * valori di partenza restano quelli veri.
+   */
+  maxBlobsPerPush = 100;
+  maxUpdatesPerResponse = 200;
 
   /** Errore da restituire alla prossima richiesta, per simulare i guasti. */
   failNextWith: { status: number; body?: string } | null = null;

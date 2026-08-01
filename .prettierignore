@@ -5,3 +5,6 @@ coverage/
 .expo/
 .wrangler/
 package-lock.json
+# Generato da `expo start` e già ignorato da git: in CI non esiste, in locale
+# faceva fallire `format:check` senza che ci fosse nulla da correggere.
+apps/mobile/expo-env.d.ts

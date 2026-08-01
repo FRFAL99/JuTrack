@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import type { ReactNode } from 'react';
+import { AppState } from 'react-native';
 import * as Y from 'yjs';
 import {
   RelayClient,
@@ -64,6 +65,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
     let engine: SyncEngine | null = null;
     let doc: Y.Doc | null = null;
     let onUpdate: (() => void) | null = null;
+    let appStateSub: { remove: () => void } | null = null;
 
     async function boot(): Promise<void> {
       try {
@@ -101,6 +103,19 @@ export function VaultProvider({ children }: { children: ReactNode }) {
           // Senza await: il ciclo continua per tutta la vita dell'app e non deve
           // bloccare la comparsa dell'interfaccia.
           void engine.runForever();
+
+          // In background il sistema può congelare i timer: il ciclo resterebbe fermo
+          // e, al ritorno, ancora addormentato per tutto il backoff maturato. `resume`
+          // lo azzera e fa subito un giro, così riaprendo l'app si vede l'aggiornamento
+          // invece di aspettarlo.
+          //
+          // Solo `background`: su iOS `inactive` è uno stato di passaggio (notifiche,
+          // commutatore di app) e sospendere lì darebbe pause continue.
+          const currentEngine = engine;
+          appStateSub = AppState.addEventListener('change', (next) => {
+            if (next === 'active') currentEngine.resume();
+            else if (next === 'background') currentEngine.pause();
+          });
         }
 
         if (cancelled) return;
@@ -133,6 +148,7 @@ export function VaultProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      appStateSub?.remove();
       engine?.stop();
       if (doc !== null && onUpdate !== null) doc.off('update', onUpdate);
       void persistence?.destroy();

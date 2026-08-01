@@ -4,6 +4,98 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-01 — Step 10: il motore di sync smette di mentire
+
+**Fatto**
+
+Il primo step del [piano v2](piano-v2-profili-gruppi-sync.md), e l'unico dei cinque che è
+indipendente dagli altri. Tutto in `packages/core/src/sync/`, più tre file di `apps/mobile`. Nessun
+modulo nativo aggiunto: **nessuna build EAS necessaria**.
+
+**Il bug principale: la coda non basta**
+
+`start()` registrava l'observer e riprendeva la coda, e questo è tutto ciò che il motore sapeva del
+documento. Ma `onLocalUpdate` vede solo ciò che si scrive **mentre il motore è acceso**: la
+persistenza ricarica il documento prima, con un'origine sua, e non passa di lì. Risultato: lo storico
+di un telefono non lasciava mai il telefono, e il ciclo riportava comunque `synced`.
+
+Ora `SyncCursorStore` ricorda lo **state vector dell'ultima pubblicazione riuscita**, e `start()`
+pubblica il delta fra quello e il documento attuale. Copre in un colpo tutti i casi che sfuggivano:
+storico precedente al vault, seed eseguito prima di `start()`, chiave adottata su un documento già
+pieno, update prodotti a motore spento.
+
+Due dettagli che non sono dettagli:
+
+- **La soglia è `> 2` byte.** Un delta Yjs vuoto pesa esattamente due byte; senza la soglia, ogni
+  avvio a vault nuovo scriverebbe un blob inutile sul relay.
+- **Lo state vector si registra solo a coda vuota.** Salvarlo con update ancora in attesa li
+  cancellerebbe dal catch-up del prossimo avvio: sparirebbero, e nulla lo segnalerebbe. Gli update
+  appena _scaricati_ invece si includono — sono per definizione già sul relay, e includerli impedisce
+  che tornino indietro al boot successivo.
+
+**Il secondo bug, trovato leggendo: il cursore saltava alla fine del log**
+
+Se un'intera pagina risultava indecifrabile, il cursore avanzava a `result.head` — la fine
+dell'**intero** log, non della pagina. Con `hasMore` acceso, tutti gli update validi delle pagine
+successive sparivano in silenzio, e il ciclo riportava `synced`. Ora `pull` restituisce anche
+`lastSeq`, l'ultimo `seq` **visto** nella pagina, decifrabile o no, e il cursore avanza a quello.
+
+Il test è stato il pezzo più istruttivo: le spese leggibili devono venire da un **terzo**
+dispositivo. Se venissero da quello corrotto resterebbero comunque in sospeso dentro Yjs per il buco
+nella sua sequenza, e il test misurerebbe quel comportamento invece del cursore — passando anche col
+bug presente.
+
+**Velocità: da ~15 s medi a pochi secondi**
+
+- **Sonno interrompibile** (`wake()`): il ciclo dormiva un intervallo fisso e nulla poteva svegliarlo.
+  Senza questo, il push immediato non avrebbe avuto alcun effetto.
+- **Debounce sull'invio** (400 ms): una modifica locale accorcia l'attesa, e una raffica di scritture
+  produce **una** richiesta invece di una per update.
+- **Poll adattivo**: 3 s dentro la finestra attiva (due minuti dall'ultima modifica locale o dall'ultimo
+  pull con contenuto), 30 s a riposo.
+- **`pause()`/`resume()` legati ad `AppState`**: in background non si interroga il relay; al ritorno
+  in primo piano il backoff si azzera e parte subito un giro. Risolve anche il caso in cui il backoff
+  arrivava a cinque minuti e non si azzerava al ritorno della connettività.
+
+Il ciclo resta l'unico a parlare col relay: il debounce non lancia un `syncOnce()` proprio, sveglia
+soltanto il sonno. Altrimenti sarebbero due motori in parallelo.
+
+**Diagnosi onesta**
+
+- **`phase: 'offline'` ora viene davvero emesso.** Esisteva nei tipi ed era già gestito nella UI, ma
+  il motore non lo produceva mai: gli errori di rete finivano in `error` col messaggio grezzo di
+  `fetch`. La regola è netta — se non è un `RelayError`, il relay non è stato raggiunto affatto.
+- **Nuovo stato `blocked`, e il ciclo si ferma.** Un 403 è definitivo (la chiave non apre quel
+  vault): prima portava solo il backoff a cinque minuti e il dispositivo restava a ripetere la stessa
+  richiesta per sempre, mostrando uno stato che sembrava in attesa di risolversi. `RelayError` guadagna
+  `fatal` (401/403) accanto a `permanent`: 400 e 413 dipendono dalla richiesta, quindi una richiesta
+  diversa può ancora riuscire.
+- **`setPending` ora è in transazione.** Fuori da una, la finestra fra il `DELETE` e l'ultimo `INSERT`
+  è una coda **vuota su disco**: un crash lì dentro faceva sparire le spese registrate offline. È
+  anche molto più veloce, un solo fsync invece di uno per riga.
+- **Timeout HTTP da 20 s a 10 s**: deve restare sotto l'intervallo di poll, o una richiesta appesa
+  tiene fermo il ciclo oltre il giro successivo.
+
+**Verifica**
+
+433 test verdi (337 core + 61 app + 35 relay), da 417. Typecheck, lint e `format:check` puliti,
+`expo export --platform android` completo, prova cifrata end-to-end contro un relay reale (`wrangler
+dev`): 12 controlli verdi.
+
+Aggiunto `apps/mobile/expo-env.d.ts` a `.prettierignore`: è generato da `expo start` e già ignorato
+da git, ma faceva fallire `format:check` in locale senza che ci fosse nulla da correggere.
+
+**Cosa questo step NON dimostra**
+
+Che il sync funzioni fra due telefoni veri. I test coprono lo scenario che prima non esisteva —
+motore avviato su un `Y.Doc` che ha già contenuto — ma la conferma è una prova sul campo **in
+entrambe le direzioni**, con un telefono che aveva già dati suoi. E i membri continueranno a
+duplicarsi finché non si fa lo Step 11: il saldo resta sbagliato.
+
+**Prossimo:** Step 11 — profili, così «Io» smette di essere due persone.
+
+---
+
 ## 2026-08-01 — Prova con due dispositivi: due bug, e il piano v2
 
 **Fatto**

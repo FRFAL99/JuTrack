@@ -1,7 +1,13 @@
 import type { HttpClient } from '@jutrack/core';
 
-/** Timeout di una richiesta. Senza, una rete che non risponde bloccherebbe il ciclo. */
-const REQUEST_TIMEOUT_MS = 20_000;
+/**
+ * Timeout di una richiesta. Senza, una rete che non risponde bloccherebbe il ciclo.
+ *
+ * Deve restare **sotto** l'intervallo di poll: più lungo, e una richiesta appesa terrebbe
+ * fermo il ciclo oltre il giro successivo, facendo sembrare il sync più lento di quanto
+ * sia. Col poll attivo a 3 s questi 10 s sono già larghi.
+ */
+const REQUEST_TIMEOUT_MS = 10_000;
 
 /**
  * `HttpClient` basato su `fetch`.

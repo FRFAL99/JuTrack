@@ -22,6 +22,10 @@ export function describeSync(state: SyncState, now = Date.now()): { icon: string
       return { icon: '⚠', text: 'Offline — le modifiche restano in coda' };
     case 'error':
       return { icon: '⚠', text: `Non sincronizzato: ${state.message}` };
+    case 'blocked':
+      // Non «riproverà fra poco»: qui non c'è nessun tentativo in arrivo, e dirlo
+      // com'è evita di aspettare per ore una cosa che non succederà.
+      return { icon: '✕', text: 'Sincronizzazione fermata: il relay rifiuta la chiave' };
   }
 }
 
