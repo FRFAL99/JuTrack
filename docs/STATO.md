@@ -1,6 +1,6 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-02, a Step 16 chiuso — **piano v3 in corso, restano gli Step 17–22**.
+Aggiornato: 2026-08-02, a Step 17 chiuso — **piano v3 in corso, restano gli Step 18–22**.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -26,24 +26,24 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 14 — Uscire da un gruppo            | ✅    | Cancellazione dal relay, rigenerazione con chiave nuova      |
 | 15 — Piano v3 scritto               | ✅    | Quattro tab, gruppo come luogo, azzeramento, sync tarato     |
 | 16 — Poll a scala, `markActive`     | ✅    | Scala 2→5→15→60 s invece del gradino 3 s/30 s                |
-| 17 — Offline ≠ errore del relay     | ⬜    | `offlineRetryMs`, state vector scritto solo se cambia        |
+| 17 — Offline ≠ errore del relay     | ✅    | `offlineRetryMs`, state vector scritto solo se cambia        |
 | 18 — Tab Gruppi: elenco → gruppo    | ⬜    | Le spese diventano il dettaglio del gruppo, URL invariati    |
 | 19 — Tutto il gruppo nel gruppo     | ⬜    | Categorie, budget, pareggi, export dietro un'unica guardia   |
 | 20 — Quattro tab                    | ⬜    | Gruppi, Grafici, Impostazioni, Profilo                       |
 | 21 — Nessun gruppo al primo avvio   | ⬜    | Fase `absent`, l'utente crea o entra con un invito           |
 | 22 — Azzera questo telefono         | ⬜    | Wipe totale e ritorno all'onboarding, senza riavvio          |
 
-**548 test verdi** (383 core + 122 app + 43 relay), typecheck, lint e `format:check` puliti.
+**554 test verdi** (387 core + 124 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 **I piani chiusi sono due.** Il piano originale (Step 0–9), e
 [piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md) (**Step 10–14**), nato dalla prima
 prova con due dispositivi che aveva fatto emergere due bug sui numeri e tre limiti di prodotto.
 
 **Il terzo è in corso:** [piano-v3-tab-gruppi-azzeramento-sync.md](piano-v3-tab-gruppi-azzeramento-sync.md),
-**Step 16–22**, di cui il 16 è fatto. Nasce dalla prova a mano delle funzionalità: la gestione dei
-gruppi non è intuitiva, il gruppo di default al primo avvio genera confusione, e il poll del relay va
-tarato. **Uno step per sessione**, e lo Step 17 — l'ultimo che non tocca una sola schermata — è ancora
-indipendente da tutti gli altri.
+**Step 16–22**, di cui **16 e 17 sono fatti**. Nasce dalla prova a mano delle funzionalità: la
+gestione dei gruppi non è intuitiva, il gruppo di default al primo avvio genera confusione, e il poll
+del relay va tarato. **Uno step per sessione.** La taratura del motore è finita: da qui in poi si
+spostano rotte e schermate, e **lo Step 18 è il rischio numero uno del piano**.
 
 > **Non resta codice da scrivere per i piani v1 e v2, resta la prova sul campo.** Dallo Step 10 in poi
 > nulla è mai stato visto funzionare su un telefono: quello che manca è il [criterio di «fatto»
@@ -149,6 +149,9 @@ la lista si è accorciata parecchio, ma non è vuota:
 - La **scala del poll** dello Step 16: che una spesa scritta sull'altro telefono compaia entro pochi
   secondi mentre entrambi sono aperti, e ancora entro un minuto dopo che uno è rimasto fermo cinque
   minuti. È il punto 5 del criterio di «fatto» del piano v3, e a occhio si vede subito
+- L'**`offlineRetryMs`** dello Step 17: telefono in aereo, due spese, rete riaccesa → devono partire
+  entro ~15 s senza toccare nulla. È il sostituto del listener di connettività, quindi è la prova che
+  quel sostituto basta
 - **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
   rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
   l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima
@@ -324,6 +327,15 @@ caricherebbe la propria storia prima di conoscere quella dell'altro.
 - **Tre esiti distinti, non uno solo.** `offline` (il relay non è stato raggiunto), `error` (il relay
   ha risposto male, si riprova col backoff), `blocked` (403: la chiave non apre quel vault — il ciclo
   si ferma, perché ritentare darebbe lo stesso esito per sempre).
+- **Offline non è un errore del relay** (Step 17). Senza rete la richiesta fallisce **localmente**:
+  si riprova dopo `offlineRetryMs` (15 s, mai meno del poll corrente) e **`backoffMs` non si tocca**,
+  così una galleria non fa ripartire da capo la progressione maturata contro un relay in difficoltà.
+  È anche il sostituto del listener di connettività, che sarebbe un modulo nativo.
+- **Lo state vector si riscrive solo se è cambiato** (Step 17), e la cache in memoria si aggiorna
+  **dopo** la scrittura riuscita: prima, una scrittura fallita farebbe credere di aver pubblicato ciò
+  che non è stato pubblicato, e il catch-up del riavvio salterebbe quel delta.
+- **Le scritture della coda sono serializzate** (Step 17), per **connessione** e non per vault: la
+  transazione appartiene alla connessione, e cambiando gruppo due `setPending` si sovrappongono.
 
 Un ciclo che riporta `synced` non dimostra che i due lati siano allineati: era vero anche con
 entrambi i bug. La prova è vedere il dato comparire sull'altro telefono, in entrambi i versi.

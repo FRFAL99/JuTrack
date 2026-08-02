@@ -118,6 +118,20 @@ export interface SyncEngineOptions {
   initialBackoffMs?: number;
   /** Tetto del backoff. Default 5 min. */
   maxBackoffMs?: number;
+  /**
+   * Attesa dopo un guasto di **rete**, distinta dal backoff degli errori del relay.
+   * Default 15 s.
+   *
+   * Una `fetch` che fallisce perché non c'è connessione non tocca il relay: non c'è
+   * niente da proteggere, e salire a cinque minuti significherebbe cinque minuti in cui
+   * il ritorno della rete non produce nulla. Non potendo avere un listener di
+   * connettività — sarebbe un modulo nativo — **è questo il modo in cui ci si accorge che
+   * la rete è tornata**.
+   *
+   * L'attesa effettiva non scende mai sotto l'intervallo di poll corrente: quando nessuno
+   * guarda, ritentare ogni 15 s mentre il poll normale sarebbe di 60 non ha senso.
+   */
+  offlineRetryMs?: number;
   now?: () => number;
   /** Attende `ms`. Iniettabile per rendere i test istantanei. */
   sleep?: (ms: number) => Promise<void>;

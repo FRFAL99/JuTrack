@@ -106,6 +106,27 @@ describe('SqliteSyncStore con più vault', () => {
     expect(await b.getPushedStateVector()).toEqual(bytes(8));
   });
 
+  it('due scritture della coda avviate insieme non si accavallano', async () => {
+    // `SyncEngine.onLocalUpdate` chiama `setPending` **senza `await`**: due spese
+    // registrate una dopo l'altra partono insieme. Senza serializzazione i due `BEGIN` si
+    // intrecciano sulla stessa connessione, il secondo fallisce con «cannot start a
+    // transaction within a transaction» e il suo `ROLLBACK` annulla la transazione del
+    // primo — una promessa rigettata senza gestore, e una coda su disco sbagliata.
+    await Promise.all([a.setPending([bytes(1)]), a.setPending([bytes(1), bytes(2)])]);
+
+    expect(await a.getPending()).toEqual([bytes(1), bytes(2)]);
+  });
+
+  it('nemmeno se arrivano da due gruppi diversi', async () => {
+    // La transazione appartiene alla **connessione**, non al vault: la `setPending`
+    // ancora in volo del gruppo che si chiude e la prima del gruppo che si apre sono
+    // sulla stessa connessione, ed è esattamente ciò che capita cambiando gruppo.
+    await Promise.all([a.setPending([bytes(1), bytes(2)]), b.setPending([bytes(9)])]);
+
+    expect(await a.getPending()).toEqual([bytes(1), bytes(2)]);
+    expect(await b.getPending()).toEqual([bytes(9)]);
+  });
+
   it('riapre lo stesso stato dopo una riapertura del gruppo', async () => {
     await a.setPending([bytes(42)]);
     await a.setCursor(12);

@@ -46,6 +46,8 @@ const DEFAULT_ACTIVE_WINDOW_MS = 120_000;
 const DEFAULT_DEBOUNCE_MS = 400;
 const DEFAULT_INITIAL_BACKOFF_MS = 2_000;
 const DEFAULT_MAX_BACKOFF_MS = 300_000;
+/** Attesa dopo un guasto di rete: fallisce localmente, quindi ritentare non costa nulla. */
+const DEFAULT_OFFLINE_RETRY_MS = 15_000;
 
 /**
  * Peso di un delta Yjs che non contiene nulla.
@@ -115,6 +117,13 @@ function resolvePollSchedule(options: SyncEngineOptions): readonly PollStep[] {
   return schedule;
 }
 
+/** Confronto byte a byte, con `null` che non è mai uguale a nulla. */
+function sameBytes(a: Uint8Array, b: Uint8Array | null): boolean {
+  if (b === null || a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
+}
+
 export interface SyncOutcome {
   pulled: number;
   pushed: number;
@@ -131,6 +140,7 @@ export class SyncEngine {
   private readonly debounceMs: number;
   private readonly initialBackoffMs: number;
   private readonly maxBackoffMs: number;
+  private readonly offlineRetryMs: number;
   private readonly now: () => number;
   private readonly sleep: (ms: number) => Promise<void>;
   private readonly schedule: (fn: () => void, ms: number) => () => void;
@@ -146,8 +156,24 @@ export class SyncEngine {
   /** Acceso da un errore senza rimedio: il ciclo non riparte da solo. */
   private blocked = false;
   private backoffMs: number;
+  /**
+   * Quanto attendere dopo l'ultimo giro fallito.
+   *
+   * Distinto da `backoffMs` perché i due guasti non sono la stessa cosa: il backoff
+   * protegge un relay in difficoltà e va conservato, l'attesa di un guasto di rete no.
+   * Tenerli separati è ciò che impedisce a una galleria di far ripartire da capo la
+   * progressione maturata contro un relay che stava rispondendo 500.
+   */
+  private retryDelayMs: number;
   /** Un giro alla volta: due cicli concorrenti duplicherebbero le scritture. */
   private inFlight: Promise<SyncOutcome | null> | null = null;
+  /**
+   * State vector dell'ultima scrittura **riuscita**, per non riscriverlo identico.
+   *
+   * A vault fermo il documento non cambia, e registrarlo a ogni ciclo è un `fsync`
+   * inutile ogni pochi secondi, per ore.
+   */
+  private lastPushedStateVector: Uint8Array | null = null;
 
   /** Ultimo momento in cui è successo qualcosa: decide il ritmo del poll. */
   private lastActivityAt: number;
@@ -181,6 +207,7 @@ export class SyncEngine {
     this.debounceMs = options.debounceMs ?? DEFAULT_DEBOUNCE_MS;
     this.initialBackoffMs = options.initialBackoffMs ?? DEFAULT_INITIAL_BACKOFF_MS;
     this.maxBackoffMs = options.maxBackoffMs ?? DEFAULT_MAX_BACKOFF_MS;
+    this.offlineRetryMs = options.offlineRetryMs ?? DEFAULT_OFFLINE_RETRY_MS;
     this.now = options.now ?? (() => Date.now());
     this.sleep = options.sleep ?? ((ms) => new Promise((resolve) => setTimeout(resolve, ms)));
     this.schedule =
@@ -190,6 +217,7 @@ export class SyncEngine {
         return () => clearTimeout(id);
       });
     this.backoffMs = this.initialBackoffMs;
+    this.retryDelayMs = this.initialBackoffMs;
     // Il motore nasce quando l'app si apre: è per definizione un momento attivo.
     this.lastActivityAt = this.now();
   }
@@ -221,6 +249,8 @@ export class SyncEngine {
     this.pending = await this.store.getPending();
 
     const pushed = await this.store.getPushedStateVector();
+    // La cache parte dalla lettura che avviene comunque qui: nessuna lettura in più.
+    this.lastPushedStateVector = pushed;
     // `undefined` e non `null`: senza state vector si pubblica il documento intero.
     const delta = Y.encodeStateAsUpdate(this.doc, pushed ?? undefined);
     if (delta.length > EMPTY_UPDATE_BYTES) {
@@ -262,6 +292,7 @@ export class SyncEngine {
   resume(): void {
     this.paused = false;
     this.backoffMs = this.initialBackoffMs;
+    this.retryDelayMs = this.initialBackoffMs;
     this.lastActivityAt = this.now();
     this.wake();
   }
@@ -332,20 +363,28 @@ export class SyncEngine {
         return null;
       }
 
-      if (error instanceof RelayError && error.permanent) {
+      if (!(error instanceof RelayError)) {
+        // Il relay non è stato raggiunto affatto: è un guasto di rete, non un rifiuto.
+        // La richiesta è fallita **localmente**, quindi ritentare presto non costa nulla
+        // a nessuno — ed è l'unico modo che abbiamo di accorgerci che la rete è tornata.
+        //
+        // `backoffMs` **non si tocca**: se il relay stava rispondendo 500 e poi è caduta
+        // la rete, al ritorno non si deve ricominciare da due secondi a martellare un
+        // relay ancora in difficoltà.
+        this.retryDelayMs = Math.max(this.offlineRetryMs, this.pollIntervalMs());
+        // Mostrare il messaggio grezzo di `fetch` non aiuterebbe nessuno.
+        this.setState({ phase: 'offline' });
+        return null;
+      }
+
+      if (error.permanent) {
         // Richiesta malformata o troppo grande: ritentare uguale darebbe lo stesso
         // esito, ma una richiesta diversa può riuscire. Backoff al massimo.
         this.backoffMs = this.maxBackoffMs;
       } else {
         this.backoffMs = Math.min(this.backoffMs * 2, this.maxBackoffMs);
       }
-
-      if (!(error instanceof RelayError)) {
-        // Il relay non è stato raggiunto affatto: è un guasto di rete, non un rifiuto.
-        // Mostrare il messaggio grezzo di `fetch` non aiuterebbe nessuno.
-        this.setState({ phase: 'offline' });
-        return null;
-      }
+      this.retryDelayMs = this.backoffMs;
 
       this.setState({ phase: 'error', message, retryAt: this.now() + this.backoffMs });
       return null;
@@ -417,8 +456,19 @@ export class SyncEngine {
     // «pubblicato» li cancellerebbe dal catch-up del prossimo avvio, e sparirebbero
     // senza che nulla lo segnali. Gli update appena scaricati sono per definizione già
     // sul relay, quindi includerli è corretto e impedisce che tornino indietro.
+    //
+    // E solo se è cambiato: a vault fermo il documento è identico giro dopo giro, e
+    // riscriverlo sarebbe un `fsync` ogni pochi secondi per ore.
     if (this.pending.length === 0) {
-      await this.store.setPushedStateVector(Y.encodeStateVector(this.doc));
+      const stateVector = Y.encodeStateVector(this.doc);
+      if (!sameBytes(stateVector, this.lastPushedStateVector)) {
+        await this.store.setPushedStateVector(stateVector);
+        // **Dopo** la scrittura, mai prima. Con la cache già avanzata, una scrittura
+        // fallita farebbe credere al giro successivo di aver pubblicato ciò che non ha
+        // pubblicato, e al riavvio il catch-up di `start()` salterebbe quel delta: spese
+        // sparite in silenzio.
+        this.lastPushedStateVector = stateVector;
+      }
     }
 
     return { pulled, pushed, undecryptable, snapshotPushed };
@@ -459,7 +509,7 @@ export class SyncEngine {
 
       const outcome = await this.syncOnce();
       if (this.stopped || this.blocked) break;
-      await this.interruptibleSleep(outcome === null ? this.backoffMs : this.pollIntervalMs());
+      await this.interruptibleSleep(outcome === null ? this.retryDelayMs : this.pollIntervalMs());
     }
 
     this.running = false;

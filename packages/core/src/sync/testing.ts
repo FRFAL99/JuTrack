@@ -8,6 +8,8 @@ export class MemoryCursorStore implements SyncCursorStore {
 
   /** Quante volte lo state vector è stato registrato, per i test sul catch-up. */
   pushedStateVectorWrites = 0;
+  /** Fa fallire la prossima scrittura dello state vector, per i test sul recupero. */
+  failNextStateVectorWrite = false;
 
   async getCursor(): Promise<number> {
     return this.cursor;
@@ -25,6 +27,10 @@ export class MemoryCursorStore implements SyncCursorStore {
     return this.pushedStateVector === null ? null : new Uint8Array(this.pushedStateVector);
   }
   async setPushedStateVector(stateVector: Uint8Array): Promise<void> {
+    if (this.failNextStateVectorWrite) {
+      this.failNextStateVectorWrite = false;
+      throw new Error('scrittura dello state vector fallita');
+    }
     this.pushedStateVector = new Uint8Array(stateVector);
     this.pushedStateVectorWrites++;
   }

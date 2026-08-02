@@ -2,7 +2,8 @@
 
 > **Avanzamento al 2026-08-02.**
 > Completati: **Step 0–9** (piano originale), **Step 10–14** ([piano v2](piano-v2-profili-gruppi-sync.md)),
-> lo **Step 15** — questo documento — e lo **Step 16**. Da fare: **Step 17–22**, uno per sessione.
+> lo **Step 15** — questo documento — e gli **Step 16 e 17**. Da fare: **Step 18–22**, uno per
+> sessione.
 >
 > Nasce dalla prova a mano delle funzionalità già scritte: la gestione dei gruppi non è intuitiva, il
 > gruppo di default al primo avvio genera duplicati e confusione, e il relay sembra interrogato in
@@ -138,7 +139,7 @@ cd apps/mobile && npx expo export --platform android
 
 > **Gli Step 16 e 17 sono indipendenti da tutti gli altri.** Stanno in `packages/core/src/sync/` e non
 > toccano una sola schermata. Se una sessione ha tempo per una cosa sola, sono quelle: rischio nullo
-> sull'app e guadagno immediato su batteria e traffico. **Il 16 è fatto**, il 17 resta.
+> sull'app e guadagno immediato su batteria e traffico. **Fatti entrambi.**
 
 > **Gli Step 18 e 19 sono spostamenti di file, e sono i due più delicati del piano** — non per la
 > logica, che non cambia, ma perché rompono rotte in silenzio. Vanno fatti uno per commit, con
@@ -211,7 +212,19 @@ _Verifica:_ `pollIntervalFor` a tabella (0 → 2000, 14 999 → 2000, 15 000 →
 `markActive riporta il poll al gradino più stretto`; `markActive sveglia un'attesa in corso`. Il test
 605 resta verde senza essere toccato.
 
-### Step 17 — Offline non è un errore del relay
+### Step 17 — Offline non è un errore del relay ✅
+
+> **Fatto il 2026-08-02**, con una deviazione deliberata sul 17.3: **la catena di promesse è per
+> connessione e non per istanza** (`WeakMap<SqliteDatabase, Promise<void>>` statica, non `private
+tail`). La transazione appartiene alla connessione, che i due store dei due gruppi condividono:
+> cambiando gruppo, la `setPending` in volo del gruppo che si chiude e la prima del gruppo che si
+> apre sono esattamente il caso da escludere, e `VaultProvider` non attende la prima. C'è un secondo
+> test (`nemmeno se arrivano da due gruppi diversi`) che con `tail` per istanza fallirebbe.
+>
+> Riordinato anche il `catch` di `runCycle`: il ramo «non è un `RelayError`» esce **prima** di
+> toccare il backoff, invece di modificarlo e poi uscire — il vecchio ordine era la ragione per cui
+> il difetto esisteva. Entrambi i test di `sync-store` sono stati **visti fallire** senza la
+> correzione.
 
 Tre sprechi distinti, tutti dentro il motore.
 

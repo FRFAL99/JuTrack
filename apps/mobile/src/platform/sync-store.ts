@@ -103,7 +103,38 @@ export class SqliteSyncStore implements SyncCursorStore {
     return rows.map((row) => toBytes(row.data));
   }
 
+  /**
+   * Scrive la coda, **una alla volta**.
+   *
+   * `SyncEngine.onLocalUpdate` chiama `setPending` senza `await`: due update ravvicinati
+   * — due `addExpense` non racchiusi in una `transact` — intreccerebbero due `BEGIN`
+   * sulla stessa connessione. Il secondo fallisce con «cannot start a transaction within
+   * a transaction», e il suo `catch` esegue un `ROLLBACK` che annulla la transazione
+   * **del primo**: una promessa rigettata senza gestore, e una coda su disco sbagliata.
+   * Non è perdita di dati certa — il catch-up dello state vector la recupera — ma quella
+   * è l'ultima rete di sicurezza, e non va sprecata su un guasto evitabile.
+   *
+   * La catena è **per connessione e non per vault**, contrariamente alla prima idea: la
+   * transazione appartiene alla connessione, e i due store dei due gruppi la
+   * condividono. Cambiando gruppo, la `setPending` ancora in volo del gruppo che si
+   * chiude e la prima del gruppo che si apre sono esattamente il caso che si vuole
+   * escludere.
+   */
+  private static readonly writeQueues = new WeakMap<SqliteDatabase, Promise<void>>();
+
   async setPending(updates: Uint8Array[]): Promise<void> {
+    const queue = SqliteSyncStore.writeQueues.get(this.db) ?? Promise.resolve();
+    const run = queue.then(() => this.writePending(updates));
+    // La coda prosegue anche dopo un fallimento: l'errore lo riceve chi ha chiamato, ma
+    // la scrittura successiva deve comunque partire, non restare bloccata per sempre.
+    SqliteSyncStore.writeQueues.set(
+      this.db,
+      run.catch(() => undefined),
+    );
+    return run;
+  }
+
+  private async writePending(updates: Uint8Array[]): Promise<void> {
     // Riscrittura completa invece di una differenza: la coda è piccola (decine di
     // update) e la logica incrementale introdurrebbe stati intermedi in cui un crash
     // lascerebbe la coda incoerente.

@@ -795,6 +795,112 @@ describe('la scala del poll', () => {
   });
 });
 
+describe('offline non è un errore del relay', () => {
+  it('senza rete si riprova presto invece di salire a cinque minuti', async () => {
+    // Una `fetch` che fallisce perché non c'è connessione non tocca il relay: non c'è
+    // niente da proteggere con un backoff, e cinque minuti sarebbero cinque minuti in
+    // cui il ritorno della rete non produce nulla. Non potendo avere un listener di
+    // connettività — sarebbe un modulo nativo, cioè una build EAS nuova — è questo il
+    // modo in cui ci si accorge che la rete è tornata.
+    const unreachable: HttpClient = {
+      request: () => Promise.reject(new Error('Network request failed')),
+    };
+    const clock = frozenSleep();
+    const client = new RelayClient('https://relay.test', SHARED_KEYS, unreachable, testRandom);
+    const engine = new SyncEngine(new Y.Doc(), client, new MemoryCursorStore(), {
+      ...INERT,
+      sleep: clock.sleep,
+    });
+    await engine.start();
+
+    void engine.runForever();
+    await settle();
+    engine.wake();
+    await settle();
+    engine.wake();
+    await settle();
+
+    expect(engine.getState().phase).toBe('offline');
+    expect(clock.waited).toEqual([15_000, 15_000, 15_000]);
+    engine.stop();
+  });
+
+  it('un guasto di rete non gonfia il backoff degli errori del relay', async () => {
+    // Se il relay stava rispondendo 500 e poi cade la rete, al ritorno non si deve
+    // ricominciare da due secondi a martellare un relay ancora in difficoltà.
+    const relay = new FakeRelay();
+    const clock = frozenSleep();
+    let offline = false;
+    const flaky: HttpClient = {
+      request: (url, init) =>
+        offline ? Promise.reject(new Error('Network request failed')) : relay.request(url, init),
+    };
+    const client = new RelayClient('https://relay.test', SHARED_KEYS, flaky, testRandom);
+    const engine = new SyncEngine(new Y.Doc(), client, new MemoryCursorStore(), {
+      ...INERT,
+      sleep: clock.sleep,
+      initialBackoffMs: 2_000,
+    });
+    await engine.start();
+    relay.failAllWith = { status: 500 };
+
+    void engine.runForever();
+    await settle();
+    engine.wake();
+    await settle();
+    expect(clock.waited).toEqual([4_000, 8_000]);
+
+    offline = true;
+    engine.wake();
+    await settle();
+    engine.wake();
+    await settle();
+    // Attese brevi, e il backoff maturato resta dov'era.
+    expect(clock.waited).toEqual([4_000, 8_000, 15_000, 15_000]);
+
+    offline = false;
+    engine.wake();
+    await settle();
+    // Riprende da 16 s, non da 4 s.
+    expect(clock.waited).toEqual([4_000, 8_000, 15_000, 15_000, 16_000]);
+    engine.stop();
+  });
+
+  it('lo state vector non viene riscritto se il documento non è cambiato', async () => {
+    // A vault fermo era un `fsync` ogni tre secondi, per ore.
+    const relay = new FakeRelay();
+    const a = makeDevice(relay);
+    await a.engine.start();
+    addExpense(a.store, 100, 'unica');
+
+    await a.engine.syncOnce();
+    await a.engine.syncOnce();
+    await a.engine.syncOnce();
+
+    expect(a.cursors.pushedStateVectorWrites).toBe(1);
+  });
+
+  it('una scrittura fallita non fa credere di aver pubblicato', async () => {
+    // Con la cache avanzata prima della scrittura, il giro dopo crederebbe di aver
+    // pubblicato ciò che non ha pubblicato, e al riavvio il catch-up di `start()`
+    // salterebbe quel delta: spese sparite in silenzio.
+    const relay = new FakeRelay();
+    const a = makeDevice(relay);
+    await a.engine.start();
+    addExpense(a.store, 100, 'unica');
+
+    a.cursors.failNextStateVectorWrite = true;
+    await a.engine.syncOnce();
+    expect(a.cursors.pushedStateVectorWrites).toBe(0);
+    expect(await a.cursors.getPushedStateVector()).toBeNull();
+
+    // Il giro seguente ci riprova, invece di considerarlo già fatto.
+    await a.engine.syncOnce();
+    expect(a.cursors.pushedStateVectorWrites).toBe(1);
+    expect(await a.cursors.getPushedStateVector()).not.toBeNull();
+  });
+});
+
 describe('blob non decifrabili', () => {
   it('un buco nel log blocca gli update successivi dello stesso dispositivo', async () => {
     // Comportamento di Yjs, verificato: gli struct che dipendono da un update mancante

@@ -4,6 +4,78 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-02 — Step 17: offline non è un errore del relay
+
+**Fatto**
+
+Tre sprechi distinti, tutti trovati **leggendo** il motore allo Step 15 e nessuno coperto da un
+test. Ultimo step del piano v3 che non tocca una sola schermata: `packages/core/src/sync/` più
+`apps/mobile/src/platform/sync-store.ts`.
+
+**17.1 — `offlineRetryMs`, che è il listener di connettività che non possiamo avere**
+
+Una `fetch` che fallisce perché non c'è rete **non tocca il relay**: non c'è niente da proteggere con
+un backoff, e salire a cinque minuti significa cinque minuti in cui il ritorno della connettività non
+produce nulla. Un listener vero (`netinfo`, `expo-network`) sarebbe un modulo nativo, cioè una build
+EAS nuova — che questo piano si vieta. Il sostituto è ritentare presto: default 15 s.
+
+- Campo `retryDelayMs` **distinto** da `backoffMs`, ed è la parte che conta. Un errore non-`RelayError`
+  non tocca più `backoffMs`: se il relay stava rispondendo 500 e poi si entra in galleria, al ritorno
+  non si riparte da due secondi a martellare un relay ancora in difficoltà. C'è un test che fissa
+  proprio la sequenza (500, 500 → 4 s, 8 s; due giri senza rete → 15 s, 15 s; poi 500 → **16 s**, non
+  4 s).
+- `Math.max(offlineRetryMs, pollIntervalMs())`: quando nessuno guarda e il poll normale è di 60 s,
+  ritentare ogni 15 non ha senso. La rete che torna viene comunque intercettata entro un minuto, e
+  riaprendo l'app `AppState → active` fa `resume()` con giro immediato.
+- Riordinato il `catch` di `runCycle`: il ramo «non è un `RelayError`» ora esce **prima** di toccare
+  il backoff, invece di modificarlo e poi uscire. Il vecchio ordine era la ragione per cui il bug
+  esisteva.
+
+**17.2 — Lo state vector si riscrive solo se è cambiato**
+
+Era `setPushedStateVector` a **ogni** ciclo, anche a vault fermo: un `fsync` ogni tre secondi per ore.
+Campo `lastPushedStateVector`, valorizzato in `start()` con la lettura che **già avviene lì** — nessuna
+lettura in più — e confronto byte a byte prima di scrivere.
+
+La cache si aggiorna **dopo** che la scrittura è riuscita, mai prima. Con la cache già avanzata, una
+scrittura fallita farebbe credere al giro dopo di aver pubblicato ciò che non ha pubblicato, e al
+riavvio il catch-up di `start()` salterebbe quel delta: spese sparite in silenzio. `MemoryCursorStore`
+ha guadagnato `failNextStateVectorWrite` apposta, accanto al `failNextWith` di `FakeRelay`.
+
+**17.3 — Le scritture della coda non si accavallano**
+
+`onLocalUpdate` fa `void this.store.setPending(...)` senza `await`, e `setPending` apre una
+transazione. Due spese ravvicinate intrecciano due `BEGIN` sulla stessa connessione: il secondo
+fallisce con «cannot start a transaction within a transaction», e il suo `catch` esegue un `ROLLBACK`
+che annulla la transazione **del primo**. Rimedio: catena di promesse in `SqliteSyncStore`, che
+prosegue anche dopo un fallimento — l'errore lo riceve chi ha chiamato, ma la scrittura successiva non
+deve restare bloccata per sempre.
+
+**Deviazione dal piano, deliberata: la catena è per connessione, non per vault.** Il piano diceva
+`private tail` sull'istanza. Ma la transazione appartiene alla **connessione**, e i due store dei due
+gruppi la condividono: cambiando gruppo, la `setPending` ancora in volo del gruppo che si chiude e la
+prima del gruppo che si apre sono esattamente il caso da escludere — e `VaultProvider` non attende la
+prima prima di montare il secondo. Quindi `WeakMap<SqliteDatabase, Promise<void>>` statica. Il secondo
+test nuovo (`nemmeno se arrivano da due gruppi diversi`) copre proprio quello, e con `tail` per
+istanza fallirebbe.
+
+**I due test nuovi sono stati visti fallire senza la correzione**, su SQLite vero: rimossa la
+serializzazione, entrambi rossi; rimessa, entrambi verdi. Su un finto motore sarebbero passati
+comunque — è la stessa ragione per cui il test del `WHERE vault_id` gira su SQLite vero.
+
+**Verifica:** 554 test verdi (387 core + 124 app + 43 relay), da 548. Typecheck, lint e
+`format:check` puliti, `expo export --platform android` a posto. Il test esistente `il ritorno in
+primo piano azzera il backoff` è verde senza essere stato toccato.
+
+**Sul telefono non è ancora stato visto.** La prova che conta è nel criterio di «fatto» del piano v3:
+telefono in aereo, due spese, rete riaccesa → partono entro ~15 s senza toccare nulla.
+
+**Prossimo:** Step 18 — il tab Gruppi diventa uno stack elenco → gruppo. È il primo step che sposta
+rotte, ed è il rischio numero uno del piano: **prima conviene fare la prova sui due telefoni fisici**,
+altrimenti si perde la baseline.
+
+---
+
 ## 2026-08-02 — Step 16: il poll diventa una scala, e l'app dice quando qualcuno guarda
 
 **Fatto**
