@@ -19,14 +19,17 @@ Ogni scelta che seguirà è subordinata a questo vincolo.
 ```
 UI React Native
     ↕  hooks reattivi
-Y.Doc (in memoria)         ← sorgente di verità per la UI
+Y.Doc (in memoria)         ← sorgente di verità per la UI, uno per gruppo aperto
     ↕  ydoc.on('update')
-SqliteYPersistence         ← durabilità (log di update binari)
+SqliteYPersistence         ← durabilità (log di update binari, y_updates_<vaultId>)
     ↕
 SyncEngine                 ← cifra in uscita, decifra in ingresso
     ↕  HTTPS
 Cloudflare Worker → Durable Object per vault
 ```
+
+I tre livelli sotto la UI sono montati sul **gruppo corrente** e vengono rimontati quando si passa a
+un altro: non esiste uno stato globale costruito una volta per vita del processo.
 
 ## Gestione delle chiavi
 
@@ -100,10 +103,24 @@ Default `logN = 16` (~175 ms su desktop, qualche secondo su telefono). **Da cali
 dispositivo reale.** Si usa `scryptAsync`, non la variante sincrona, per non congelare l'interfaccia
 durante la derivazione.
 
+## Un gruppo, un vault
+
+Un **gruppo** di spesa è un vault: una `vaultKey`, un `vaultId`, un Durable Object, un documento
+Yjs. Un telefono può appartenere a più gruppi contemporaneamente, e le loro spese non si mescolano.
+
+Sul dispositivo, per ciascun gruppo: una chiave in SecureStore (`jutrack.groupKey.<vaultId>`), una
+riga nella tabella `groups`, una tabella `y_updates_<vaultId>` per il log del documento, e righe
+`vault_id` nelle tabelle di sync. **Un solo motore di sincronizzazione è attivo per volta**, quello
+del gruppo aperto: gli altri si riallineano quando li si apre.
+
+Il `vaultId` è derivato dalla chiave ed è esadecimale, quindi è un identificatore SQL valido per
+costruzione — nessuna stringa scelta dall'utente finisce in un nome di tabella.
+
 ## Modello dati (Y.Doc)
 
-Cinque `Y.Map` top-level. Ogni record è a sua volta una `Y.Map`: due edit su campi diversi dello
-stesso record si fondono invece di sovrascriversi a vicenda.
+Cinque `Y.Map` top-level di record, più `meta` per le proprietà del gruppo. Ogni record è a sua
+volta una `Y.Map`: due edit su campi diversi dello stesso record si fondono invece di
+sovrascriversi a vicenda.
 
 | Mappa         | Chiave                   | Valore                                                                                          |
 | ------------- | ------------------------ | ----------------------------------------------------------------------------------------------- |
@@ -112,6 +129,11 @@ stesso record si fondono invece di sovrascriversi a vicenda.
 | `budgets`     | `<categoryId>:<YYYY-MM>` | `limitCents`                                                                                    |
 | `members`     | `id`                     | `name, color`                                                                                   |
 | `settlements` | `id`                     | `fromMember, toMember, amountCents, date`                                                       |
+| `meta`        | `name`                   | il nome del gruppo, condiviso: rinominarlo raggiunge l'altro telefono                           |
+
+Il nome del gruppo sta **dentro** il vault e non nel registro locale proprio perché va sincronizzato
+come tutto il resto. Il registro ne tiene una copia per disegnare la lista dei gruppi senza aprire
+ogni documento; quando le due divergono, è la copia ad aggiornarsi.
 
 ### Due regole ferree
 

@@ -1,8 +1,8 @@
 import { useCallback, useRef, useState } from 'react';
+import { router } from 'expo-router';
 import { Alert } from 'react-native';
 import { describePairingError, deriveVaultKeys, parsePairingUri } from '@jutrack/core';
-import { expoKeyStore } from '@/platform';
-import { adoptVaultKey, useAppData, useVaultRuntime } from '@/state';
+import { useGroups } from '@/state';
 
 interface AdoptPairing {
   /** Interpreta un URI (scansionato, incollato o arrivato per deep link) e chiede conferma. */
@@ -13,15 +13,20 @@ interface AdoptPairing {
 }
 
 /**
- * Dal codice grezzo alla chiave adottata, passando per una conferma esplicita.
+ * Dal codice grezzo al gruppo aperto, passando per una conferma esplicita.
  *
  * Condiviso fra la scansione con la fotocamera e l'apertura del link `jutrack://pair`
  * fatta dal lettore QR di sistema: le due strade devono chiedere la stessa conferma e
  * mostrare gli stessi avvisi, altrimenti la più silenziosa diventa quella comoda.
+ *
+ * **Dallo Step 12 il collegamento aggiunge un gruppo invece di sostituire quello che
+ * c'era.** Prima esisteva un solo slot per la chiave, quindi entrare in un vault
+ * significava uscire dal precedente e rendersi illeggibili i propri dati: la conferma
+ * doveva avvisare di una perdita. Ora non c'è più nulla da perdere, e nemmeno un riavvio
+ * da chiedere — il runtime si rimonta sul gruppo nuovo da solo.
  */
 export function useAdoptPairing(): AdoptPairing {
-  const { keys } = useVaultRuntime();
-  const { meta } = useAppData();
+  const { groups, join, select } = useGroups();
   const [error, setError] = useState<string | null>(null);
   const [adopting, setAdopting] = useState(false);
   // La fotocamera continua a emettere finché il codice resta inquadrato: senza freno
@@ -31,14 +36,13 @@ export function useAdoptPairing(): AdoptPairing {
   const adopt = useCallback(
     (key: Uint8Array): void => {
       setAdopting(true);
-      void adoptVaultKey(expoKeyStore, meta, key)
-        .then(() => {
-          // Il motore di sync viene costruito all'avvio con le chiavi di allora: il
-          // riavvio è il modo più prevedibile per farlo ripartire su quelle nuove.
+      void join(key, 'Gruppo condiviso')
+        .then((group) => {
+          router.replace(`/groups/${group.vaultId}`);
           Alert.alert(
-            'Dispositivo collegato',
-            "Riavvia l'app: le spese di questo telefono e quelle dell'altro verranno unite nello stesso vault. " +
-              'Comparirai fra le persone del vault con il tuo nome.',
+            'Sei nel gruppo',
+            'Le spese di questo telefono e quelle dell’altro si uniscono qui. ' +
+              'Comparirai fra le persone del gruppo con il tuo nome.',
           );
         })
         .catch((cause: unknown) => {
@@ -47,7 +51,7 @@ export function useAdoptPairing(): AdoptPairing {
         })
         .finally(() => setAdopting(false));
     },
-    [meta],
+    [join],
   );
 
   const submit = useCallback(
@@ -62,38 +66,34 @@ export function useAdoptPairing(): AdoptPairing {
       }
 
       const incoming = deriveVaultKeys(result.key).vaultId;
-      if (keys !== null && keys.vaultId === incoming) {
-        setError('Questo telefono fa già parte di quel vault: non c’è niente da collegare.');
+      handled.current = true;
+
+      // Fare già parte di quel gruppo non è più un errore da segnalare: è semplicemente
+      // il gruppo che si voleva aprire. Prima era un vicolo cieco, perché l'unico slot
+      // era già occupato da quella stessa chiave.
+      const known = groups.find((group) => group.vaultId === incoming);
+      if (known !== undefined) {
+        void select(known.vaultId).then(() => router.replace(`/groups/${known.vaultId}`));
         return;
       }
 
-      handled.current = true;
-      const short = `${incoming.slice(0, 8)}…`;
-
-      // Sostituire una chiave esistente è distruttivo: senza un backup della vecchia,
-      // i dati già cifrati con essa non tornano più leggibili da questo telefono.
-      const message =
-        keys === null
-          ? `Le spese di questo telefono confluiranno nel vault ${short}, insieme a quelle dell'altro dispositivo.`
-          : `Questo telefono lascerà il vault ${keys.vaultId.slice(0, 8)}… per il vault ${short}. ` +
-            'Senza un backup della chiave attuale, i dati sincronizzati con essa non saranno più leggibili da qui.';
-
-      Alert.alert('Collegare a questo vault?', message, [
-        {
-          text: 'Annulla',
-          style: 'cancel',
-          onPress: () => {
-            handled.current = false;
+      Alert.alert(
+        'Entrare in questo gruppo?',
+        `Verrà aggiunto ai tuoi gruppi, senza toccare quelli che hai già. ` +
+          `Le spese sono cifrate end-to-end: chi ha questa chiave le legge, e nessun altro.`,
+        [
+          {
+            text: 'Annulla',
+            style: 'cancel',
+            onPress: () => {
+              handled.current = false;
+            },
           },
-        },
-        {
-          text: 'Collega',
-          style: keys === null ? 'default' : 'destructive',
-          onPress: () => adopt(result.key),
-        },
-      ]);
+          { text: 'Entra', onPress: () => adopt(result.key) },
+        ],
+      );
     },
-    [adopt, keys],
+    [adopt, groups, select],
   );
 
   return { submit, error, adopting };

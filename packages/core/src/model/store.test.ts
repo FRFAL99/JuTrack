@@ -329,6 +329,49 @@ describe('VaultStore — categorie, membri, budget, pareggi', () => {
   });
 });
 
+describe('nome del gruppo', () => {
+  it('parte da null e conserva quello che scrive', () => {
+    const store = makeStore();
+    expect(store.getGroupName()).toBeNull();
+    store.setGroupName('Casa');
+    expect(store.getGroupName()).toBe('Casa');
+  });
+
+  it('tratta il nome vuoto come assente', () => {
+    // Un gruppo con il nome «» comparirebbe nella lista come una riga senza etichetta,
+    // impossibile da distinguere dalle altre. Meglio il fallback del registro.
+    const store = makeStore();
+    store.setGroupName('');
+    expect(store.getGroupName()).toBeNull();
+  });
+
+  it('viaggia fra due documenti come qualunque altra modifica', () => {
+    // È la ragione per cui il nome sta nel vault e non nella riga di registro: rinominare
+    // un gruppo deve raggiungere l'altro telefono da solo, senza un canale a parte.
+    const qui = makeStore();
+    const là = makeStore();
+    qui.setGroupName('Viaggio in Grecia');
+
+    Y.applyUpdate(là.doc, Y.encodeStateAsUpdate(qui.doc));
+
+    expect(là.getGroupName()).toBe('Viaggio in Grecia');
+  });
+
+  it('non finisce nello snapshot delle collezioni', () => {
+    // `snapshot()` è la fotografia dei record per l'export, non delle proprietà del
+    // gruppo: aggiungerci il nome cambierebbe il formato JSON già documentato.
+    const store = makeStore();
+    store.setGroupName('Casa');
+    expect(Object.keys(store.snapshot()).sort()).toEqual([
+      'budgets',
+      'categories',
+      'expenses',
+      'members',
+      'settlements',
+    ]);
+  });
+});
+
 describe('snapshot', () => {
   it('raccoglie tutte e cinque le collezioni', () => {
     const { store, a, b } = makeCouple();

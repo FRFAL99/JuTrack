@@ -1,8 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { SqliteDatabase } from '@jutrack/core';
-import { ExpoSqliteDatabase, expoRandom, SqliteAppMeta, type KeyValueStore } from '@/platform';
+import {
+  ExpoSqliteDatabase,
+  expoKeyStore,
+  expoRandom,
+  SqliteAppMeta,
+  type KeyValueStore,
+} from '@/platform';
 import { createProfile, loadProfile, saveProfile, type Profile } from './profile';
+import { ensureSchema } from './schema';
 
 /**
  * Database e profilo, disponibili **prima** del vault.
@@ -43,6 +50,10 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
       try {
         const db = await ExpoSqliteDatabase.open();
         const meta = await SqliteAppMeta.open(db);
+        // Prima di qualunque altra cosa: se sul telefono c'è ancora lo schema a vault
+        // unico va eliminato adesso, mentre nessuno lo sta usando. Trovare quelle tabelle
+        // dopo darebbe «no such column: vault_id» a ogni scrittura di sync.
+        await ensureSchema(db, meta, expoKeyStore);
         const stored = await loadProfile(meta);
         if (cancelled) return;
         setProfile(stored);

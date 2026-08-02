@@ -3,14 +3,10 @@ import type { RandomSource } from '@jutrack/core';
 import { MemoryKeyValueStore } from '@/platform/app-meta';
 import {
   createProfile,
-  loadMyMemberId,
   loadProfile,
-  loadVaultOrigin,
-  markVaultOrigin,
   MAX_PROFILE_NAME,
   normalizeProfileName,
   saveProfile,
-  setMyMemberId,
   type Profile,
 } from './profile';
 
@@ -30,8 +26,6 @@ const random: RandomSource = (() => {
     },
   };
 })();
-
-const VAULT = 'vault-di-prova';
 
 describe('normalizeProfileName', () => {
   it('toglie gli spazi di troppo', () => {
@@ -110,50 +104,6 @@ describe('persistenza del profilo', () => {
     const meta = new MemoryKeyValueStore();
     await meta.set('profile', raw);
     expect(await loadProfile(meta)).toBeNull();
-  });
-});
-
-describe('il mio membro in un vault', () => {
-  it('di norma è il profileId', async () => {
-    const meta = new MemoryKeyValueStore();
-    expect(await loadMyMemberId(meta, VAULT, 'profilo-1')).toBe('profilo-1');
-  });
-
-  it('può essere ricollegato a un membro già esistente', async () => {
-    // Serve a chi ripristina il backup della chiave su un telefono nuovo: il profilo
-    // è nuovo, ma dentro quel vault è già qualcuno.
-    const meta = new MemoryKeyValueStore();
-    await setMyMemberId(meta, VAULT, 'membro-vecchio');
-    expect(await loadMyMemberId(meta, VAULT, 'profilo-1')).toBe('membro-vecchio');
-  });
-
-  it('resta separato fra vault diversi', async () => {
-    const meta = new MemoryKeyValueStore();
-    await setMyMemberId(meta, VAULT, 'membro-vecchio');
-    expect(await loadMyMemberId(meta, 'altro-vault', 'profilo-1')).toBe('profilo-1');
-  });
-});
-
-describe('origine del vault', () => {
-  it('distingue chi ha creato da chi è entrato', async () => {
-    const meta = new MemoryKeyValueStore();
-    await markVaultOrigin(meta, VAULT, 'created');
-    await markVaultOrigin(meta, 'altro-vault', 'joined');
-
-    expect(await loadVaultOrigin(meta, VAULT)).toBe('created');
-    expect(await loadVaultOrigin(meta, 'altro-vault')).toBe('joined');
-  });
-
-  it('restituisce null se non risulta nulla', async () => {
-    // È il caso di chi usa l'app senza vault: nel dubbio si semina, perché un tracker
-    // locale senza categorie sarebbe inutilizzabile.
-    expect(await loadVaultOrigin(new MemoryKeyValueStore(), VAULT)).toBeNull();
-  });
-
-  it('ignora un valore che non riconosce', async () => {
-    const meta = new MemoryKeyValueStore();
-    await meta.set(`vault_origin:${VAULT}`, 'qualcosaltro');
-    expect(await loadVaultOrigin(meta, VAULT)).toBeNull();
   });
 });
 

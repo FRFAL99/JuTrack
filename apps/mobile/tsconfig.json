@@ -5,6 +5,10 @@
     "noUncheckedIndexedAccess": true,
     "noImplicitOverride": true,
     "exactOptionalPropertyTypes": true,
+    // Per `node:sqlite`, usato dal solo adattatore di test in `src/testing/`. Porta con
+    // sé i global di Node, che su Hermes non esistono tutti: la regola
+    // `no-restricted-globals` in eslint.config.mjs li rimette fuori dal codice dell'app.
+    "types": ["node"],
     "paths": {
       "@/*": ["./src/*"]
     }

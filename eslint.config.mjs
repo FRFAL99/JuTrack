@@ -96,6 +96,44 @@ export default tseslint.config(
       ],
     },
   },
+  // L'app gira su **Hermes**, non su Node. Finché `apps/mobile/tsconfig.json` non ha
+  // avuto bisogno di `types: ["node"]` — per `node:sqlite`, usato dal solo adattatore di
+  // test — era il typecheck a rifiutare `Buffer` e compagnia, senza che nessuno lo avesse
+  // deciso. Ora che i global di Node sono visibili, la guardia va scritta: altrimenti un
+  // `Buffer` in una schermata compilerebbe e fallirebbe sul telefono.
+  //
+  // `TextEncoder` è nell'elenco per esperienza diretta: Expo installa `TextDecoder` ma
+  // non `TextEncoder`, e la sua assenza ha già causato un crash all'avvio (devlog Step 3).
+  {
+    files: ['apps/mobile/src/**/*.{ts,tsx}'],
+    ignores: ['apps/mobile/src/testing/**', 'apps/mobile/src/**/*.test.ts'],
+    rules: {
+      'no-restricted-globals': [
+        'error',
+        { name: 'Buffer', message: 'Buffer non esiste su Hermes. Usa Uint8Array.' },
+        {
+          name: 'TextEncoder',
+          message: 'Assente su Hermes. Usa utf8ToBytes da @jutrack/core.',
+        },
+        {
+          name: '__dirname',
+          message: 'Non esiste nel bundle React Native.',
+        },
+      ],
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['node:*'],
+              message:
+                'I moduli di Node non esistono su Hermes. Sono ammessi solo in src/testing/ e nei test.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // In fondo di proposito: nella flat config vince l'ultima regola che corrisponde al
   // file, quindi un override piazzato prima del blocco generale non avrebbe effetto.
   //

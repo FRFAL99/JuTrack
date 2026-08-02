@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
+import { router } from 'expo-router';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { deriveVaultKeys, exportBackup, importBackup } from '@jutrack/core';
 import { Button } from '@/components/Button';
@@ -8,12 +9,12 @@ import { ModalScreen } from '@/components/ModalScreen';
 import { assessPassphrase } from '@/features/backup/passphrase';
 import { exportFileName } from '@/features/export/filenames';
 import { isFileSharingAvailable, shareTextFile } from '@/features/export/share';
-import { expoKeyStore, expoRandom } from '@/platform';
-import { adoptVaultKey, loadVaultKeyBytes, useAppData, useVaultRuntime } from '@/state';
+import { expoRandom } from '@/platform';
+import { useCurrentGroup, useGroups } from '@/state';
 import { useTheme } from '@/theme';
 
 /**
- * Backup e ripristino della chiave del vault.
+ * Backup e ripristino della chiave di un gruppo.
  *
  * È l'unica via di recupero che esiste: il relay conserva blob che non sa leggere, quindi
  * non c'è nessun «password dimenticata» da nessuna parte. Persa la chiave senza backup, i
@@ -22,11 +23,15 @@ import { useTheme } from '@/theme';
  * Il file esportato è cifrato con la passphrase (scrypt + XChaCha20-Poly1305, vedi
  * `crypto/backup.ts`). Contiene **solo** la chiave: le spese stanno nell'export dati, che
  * è un'altra schermata e viaggia in chiaro.
+ *
+ * **Una chiave per gruppo, quindi un backup per gruppo.** Si salva quella del gruppo
+ * aperto; ripristinarne una **aggiunge** un gruppo invece di sostituire quello corrente,
+ * che dallo Step 12 non ha più alcuna ragione di essere abbandonato.
  */
 export default function BackupScreen() {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
-  const { keys } = useVaultRuntime();
-  const { meta } = useAppData();
+  const { registry, groups, join, select } = useGroups();
+  const group = useCurrentGroup();
 
   const [passphrase, setPassphrase] = useState('');
   const [confirmation, setConfirmation] = useState('');
@@ -39,8 +44,7 @@ export default function BackupScreen() {
 
   const assessment = assessPassphrase(passphrase);
   const mismatch = confirmation !== '' && confirmation !== passphrase;
-  const canExport =
-    keys !== null && assessment.acceptable && confirmation === passphrase && !exporting;
+  const canExport = assessment.acceptable && confirmation === passphrase && !exporting;
 
   const fieldStyle = {
     color: colors.text,
@@ -59,9 +63,12 @@ export default function BackupScreen() {
     // finale, così si sa se vada alzato o abbassato.
     const startedAt = Date.now();
 
-    void loadVaultKeyBytes(expoKeyStore)
+    void registry
+      .keyBytes(group.vaultId)
       .then(async (key) => {
-        if (key === null) throw new Error('Chiave del vault non leggibile su questo dispositivo.');
+        if (key === null) {
+          throw new Error('La chiave di questo gruppo non è leggibile su questo dispositivo.');
+        }
         const blob = await exportBackup(key, passphrase, expoRandom);
         const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
         const name = exportFileName('chiave', 'txt', new Date());
@@ -108,43 +115,47 @@ export default function BackupScreen() {
     void importBackup(restoreBlob, restorePassphrase)
       .then((key) => {
         const incoming = deriveVaultKeys(key).vaultId;
-        if (keys !== null && keys.vaultId === incoming) {
-          setRestoreError('Questo telefono usa già quella chiave: non c’è niente da ripristinare.');
+        const known = groups.find((g) => g.vaultId === incoming);
+        if (known !== undefined) {
+          // Non è più un errore, ed è la ragione per cui il messaggio è cambiato: il
+          // gruppo c'è già, quindi ripristinarlo significa semplicemente aprirlo.
+          setRestoreBlob('');
+          setRestorePassphrase('');
+          void select(known.vaultId).then(() =>
+            Alert.alert('Gruppo già presente', `«${known.name}» è di nuovo il gruppo aperto.`),
+          );
           return;
         }
 
-        // Sostituire una chiave esistente è distruttivo, esattamente come nel pairing:
-        // senza un backup di quella attuale, ciò che è stato cifrato con essa resta
-        // illeggibile da qui. Vedi features/pairing/useAdoptPairing.ts.
-        const message =
-          keys === null
-            ? `Questo telefono entrerà nel vault ${incoming.slice(0, 8)}….`
-            : `Questo telefono lascerà il vault ${keys.vaultId.slice(0, 8)}… per il vault ` +
-              `${incoming.slice(0, 8)}…. Senza un backup della chiave attuale, i dati cifrati ` +
-              'con essa non saranno più leggibili da qui.';
-
-        Alert.alert('Ripristinare questa chiave?', message, [
-          { text: 'Annulla', style: 'cancel' },
-          {
-            text: 'Ripristina',
-            style: keys === null ? 'default' : 'destructive',
-            onPress: () => {
-              // Come per il pairing: si sta **entrando** in un vault che esiste già, e
-              // le sue categorie arriveranno col primo sync. Seminare le proprie
-              // significherebbe raddoppiarle.
-              void adoptVaultKey(expoKeyStore, meta, key)
-                .then(() => {
-                  setRestoreBlob('');
-                  setRestorePassphrase('');
-                  // Il motore di sync è costruito all'avvio con le chiavi di allora.
-                  Alert.alert('Chiave ripristinata', "Riavvia l'app per rileggere i dati.");
-                })
-                .catch((error: unknown) => {
-                  setRestoreError(error instanceof Error ? error.message : String(error));
-                });
+        // Non c'è più nulla di distruttivo da confermare: il ripristino **aggiunge** un
+        // gruppo, e quelli che c'erano restano dove sono. Prima esisteva un solo slot per
+        // la chiave, quindi ripristinarne una significava rendersi illeggibili i dati
+        // dell'altro vault — ed era per quello che l'avviso parlava di una perdita.
+        Alert.alert(
+          'Ripristinare questo gruppo?',
+          `Verrà aggiunto ai tuoi gruppi, senza toccare quelli che hai già. ` +
+            'Le spese arriveranno col primo sync, se il gruppo è ancora sul relay.',
+          [
+            { text: 'Annulla', style: 'cancel' },
+            {
+              text: 'Ripristina',
+              onPress: () => {
+                // Si sta **entrando** in un vault che esiste già, e le sue categorie
+                // arriveranno col primo sync: `join` lo registra come `joined`, così
+                // seminare le proprie — e ritrovarsene sedici — non è possibile.
+                void join(key, 'Gruppo ripristinato')
+                  .then((restored) => {
+                    setRestoreBlob('');
+                    setRestorePassphrase('');
+                    router.replace(`/groups/${restored.vaultId}`);
+                  })
+                  .catch((error: unknown) => {
+                    setRestoreError(error instanceof Error ? error.message : String(error));
+                  });
+              },
             },
-          },
-        ]);
+          ],
+        );
       })
       .catch((error: unknown) => {
         setRestoreError(error instanceof Error ? error.message : String(error));
@@ -153,7 +164,7 @@ export default function BackupScreen() {
   };
 
   return (
-    <ModalScreen title="Backup della chiave">
+    <ModalScreen title={`Backup di «${group.name}»`}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
         <Card style={{ gap: spacing.xs, borderColor: colors.danger }}>
           <Text
@@ -176,67 +187,62 @@ export default function BackupScreen() {
               Crea un backup
             </Text>
             <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-              {keys === null
-                ? 'Su questo telefono non c’è ancora un vault: non c’è nessuna chiave da salvare.'
-                : 'Un file cifrato con la passphrase che scegli. Da solo non serve a niente, e ' +
-                  'nemmeno la passphrase da sola: servono entrambi.'}
+              La chiave di «{group.name}», in un file cifrato con la passphrase che scegli. Da solo
+              non serve a niente, e nemmeno la passphrase da sola: servono entrambi. Ogni gruppo ha
+              la sua chiave, quindi va salvato uno per uno.
             </Text>
           </View>
 
-          {keys !== null && (
-            <>
-              <TextInput
-                value={passphrase}
-                onChangeText={setPassphrase}
-                placeholder="Passphrase"
-                placeholderTextColor={colors.textMuted}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                accessibilityLabel="Passphrase per il backup"
-                style={fieldStyle}
-              />
-              {passphrase !== '' && (
-                <Text
-                  style={{
-                    color: assessment.acceptable ? colors.textMuted : colors.danger,
-                    fontSize: fontSize.xs,
-                    lineHeight: 18,
-                  }}
-                >
-                  {assessment.message}
-                </Text>
-              )}
-
-              <TextInput
-                value={confirmation}
-                onChangeText={setConfirmation}
-                placeholder="Ripeti la passphrase"
-                placeholderTextColor={colors.textMuted}
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                accessibilityLabel="Conferma della passphrase"
-                style={fieldStyle}
-              />
-              {mismatch && (
-                <Text style={{ color: colors.danger, fontSize: fontSize.xs }}>
-                  Le due passphrase non coincidono.
-                </Text>
-              )}
-
-              <Button
-                label={exporting ? 'Cifratura…' : 'Crea il backup'}
-                onPress={handleExport}
-                loading={exporting}
-                disabled={!canExport}
-              />
-              <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
-                La cifratura richiede qualche secondo: è voluto. Rende costoso provare le passphrase
-                a tappeto su un file rubato.
-              </Text>
-            </>
+          <TextInput
+            value={passphrase}
+            onChangeText={setPassphrase}
+            placeholder="Passphrase"
+            placeholderTextColor={colors.textMuted}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            accessibilityLabel="Passphrase per il backup"
+            style={fieldStyle}
+          />
+          {passphrase !== '' && (
+            <Text
+              style={{
+                color: assessment.acceptable ? colors.textMuted : colors.danger,
+                fontSize: fontSize.xs,
+                lineHeight: 18,
+              }}
+            >
+              {assessment.message}
+            </Text>
           )}
+
+          <TextInput
+            value={confirmation}
+            onChangeText={setConfirmation}
+            placeholder="Ripeti la passphrase"
+            placeholderTextColor={colors.textMuted}
+            secureTextEntry
+            autoCapitalize="none"
+            autoCorrect={false}
+            accessibilityLabel="Conferma della passphrase"
+            style={fieldStyle}
+          />
+          {mismatch && (
+            <Text style={{ color: colors.danger, fontSize: fontSize.xs }}>
+              Le due passphrase non coincidono.
+            </Text>
+          )}
+
+          <Button
+            label={exporting ? 'Cifratura…' : 'Crea il backup'}
+            onPress={handleExport}
+            loading={exporting}
+            disabled={!canExport}
+          />
+          <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
+            La cifratura richiede qualche secondo: è voluto. Rende costoso provare le passphrase a
+            tappeto su un file rubato.
+          </Text>
         </Card>
 
         <Card style={{ gap: spacing.md }}>

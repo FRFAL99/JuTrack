@@ -4,6 +4,101 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-02 — Step 12: più gruppi sullo stesso telefono
+
+**Fatto**
+
+«Casa» e «Viaggio in Grecia» convivono sullo stesso telefono, con spese, persone e saldi
+separati, e si passa dall'uno all'altro **senza riavviare l'app**. Il vault unico non era una
+convenzione: era cablato in quattro punti — lo slot fisso in SecureStore, il `useEffect([])` che
+montava il runtime una volta per vita del processo, le tabelle di sync senza colonna vault, e
+`adoptVaultKey` che sovrascriveva la chiave. Entrare in un vault significava uscire dal precedente.
+
+**Il punto pericoloso, e il test che lo tiene fermo**
+
+`setPending` faceva `DELETE FROM sync_pending` senza `WHERE`. Con due gruppi attivi avrebbe
+cancellato la coda offline dell'altro: spese registrate in aereo sparite perché nel frattempo si è
+scritto in un altro gruppo, senza che nulla lo segnalasse. Era l'unico punto dell'intero piano dove
+un errore distrugge dati.
+
+Il test gira su **SQLite vero** (`node:sqlite`, builtin di Node 22, nessuna dipendenza nuova) e non
+su `MemoryDatabase`, che riconosce le istruzioni per espressione regolare: un finto motore che
+ignora il `WHERE` avrebbe lasciato passare proprio il bug che quel `WHERE` esiste per evitare.
+Verificato togliendolo: 2 test su 9 diventano rossi. Una guardia che non si verifica non è una
+guardia.
+
+**Non esiste più «nessun vault»**
+
+Prima l'app ammetteva lo stato «nessuna chiave», con un ramo condizionale in mezza dozzina di
+schermate. Ora **c'è sempre almeno un gruppo**: al primissimo avvio, dopo l'onboarding del profilo,
+ne nasce uno chiamato «Le mie spese». Costa 32 byte casuali e nessuna richiesta di rete — il relay
+scopre il vault alla prima scrittura. In cambio `VaultRuntime.keys` non è più nullable e una intera
+categoria di stati intermedi sparisce.
+
+**«Chi sei in questo gruppo?», chiesto prima di scrivere**
+
+È la parte rinviata dallo Step 11, e la forma trovata è diversa da quella immaginata allora. Il
+piano prevedeva di chiedere _dopo_ il primo sync, a membro già scritto — ma i membri non hanno
+tombstone, quindi quello creato per sbaglio sarebbe rimasto lì per sempre. Invertito l'ordine: per
+chi **entra** in un gruppo altrui il membro **non viene scritto affatto** finché non ha risposto.
+La schermata elenca i membri che arrivano col sync e offre come azione principale «sono nuovo».
+Chi _crea_ un gruppo non vede nulla: è nuovo per definizione.
+
+**Il nome del gruppo sta dentro il vault**
+
+Una `Y.Map` `meta` con `name`, quindi rinominare raggiunge l'altro telefono come qualunque altra
+modifica. Il registro locale ne tiene una **copia**, per disegnare la lista senza aprire e
+ricostruire ogni documento Yjs: quando divergono è la copia ad aggiornarsi. L'allineamento è
+iscritto al documento e non eseguito una volta al montaggio — altrimenti una rinomina fatta
+dall'altro telefono comparirebbe solo al cambio di gruppo successivo.
+
+**Ripartenza pulita, non migrazione**
+
+`schema_version` in `app_meta`. Se all'avvio si trovano le tabelle vecchie si eliminano, insieme
+alla chiave nello slot unico e alle chiavi di `app_meta` riferite a quel vault. Il profilo
+sopravvive: non ha nulla a che vedere con lo schema, e azzerarlo costringerebbe a rifare
+l'onboarding per nulla. Idempotente, e su un'installazione nuova non fa nulla.
+
+**Effetto collaterale voluto: risolve a mano ciò che andava fatto a mano.** STATO.md prescriveva di
+cancellare i dati dell'app su entrambi i telefoni prima di provare gli Step 10 e 11. Adesso lo fa
+l'app da sola, al primo avvio.
+
+Il vecchio vault sul relay non viene toccato: per cancellarlo servirebbe la chiave che stiamo
+eliminando, e una richiesta di rete durante l'avvio può fallire proprio mentre l'app parte. Scade
+col TTL di 30 giorni, e nel frattempo nessuno ha più la chiave per leggerlo.
+
+**Sparisce il «riavvia l'app»**
+
+Dopo il pairing e dopo la creazione di un gruppo. Il motore non è più costruito una volta per vita
+del processo con le chiavi di quel momento: l'effetto dipende da `vaultId`, e cambiare gruppo
+smonta engine e persistenza e ne monta altri. Un solo motore attivo per volta, quello del gruppo
+aperto — tenerne due accesi raddoppierebbe le richieste al relay per un gruppo che nessuno sta
+guardando.
+
+**Gli hook non cambiano firma**, quindi le undici schermate che consumano dati non sono state
+toccate. È la ragione per cui questo step era fattibile senza riscrivere l'app.
+
+**Una guardia riguadagnata invece che persa**
+
+`node:sqlite` nel solo adattatore di test ha richiesto `types: ["node"]` in
+`apps/mobile/tsconfig.json`. Quello però rende visibili i global di Node a tutto il codice
+dell'app, e su Hermes `Buffer` non esiste: fino a ieri era il typecheck a rifiutarlo, senza che
+nessuno lo avesse deciso. Aggiunta una `no-restricted-globals` su `apps/mobile/src/**` per
+`Buffer`, `TextEncoder` e `__dirname`, più il divieto di importare `node:*` fuori da `src/testing/`
+e dai test. Verificata scrivendo un file con le tre violazioni: 3 errori, come atteso.
+
+**Verifica:** 491 test verdi (345 core + 111 app + 35 relay), typecheck, lint e `format:check`
+puliti, bundle Android esportato.
+
+**Ancora da vedere sul telefono.** Niente di questo step è stato provato su hardware, e le cose che
+contano sono tre: che due gruppi tengano le spese davvero separate, che il cambio di gruppo non
+lasci appesi engine o persistenza, e che la ripartenza pulita non cancelli più del dovuto. Insieme
+restano da confermare gli Step 10 e 11, mai riprovati sul campo.
+
+**Prossimo:** Step 13 — inviti via link, con la pagina `/j` sul Worker.
+
+---
+
 ## 2026-08-01 — Step 11: chi sono io
 
 **Fatto**

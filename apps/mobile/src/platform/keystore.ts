@@ -19,5 +19,4 @@ export const expoKeyStore: SecureKeyStore = {
   delete: (key) => SecureStore.deleteItemAsync(key),
 };
 
-/** Chiave sotto cui è memorizzata la vaultKey. */
-export const VAULT_KEY_STORAGE_KEY = 'jutrack.vaultKey';
+export { groupKeyStorageKey, LEGACY_VAULT_KEY_STORAGE_KEY } from './key-names';

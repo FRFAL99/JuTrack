@@ -1,11 +1,21 @@
 export {
   VaultProvider,
+  useGroupIdentity,
+  useMyMemberId,
   useSyncState,
   useVaultRuntime,
   useVaultStatus,
   useVaultStore,
+  type GroupIdentity,
   type VaultRuntime,
 } from './VaultProvider';
+export {
+  GroupsProvider,
+  useCurrentGroup,
+  useGroups,
+  useGroupsStatus,
+  type GroupsData,
+} from './GroupsProvider';
 export {
   ProfileProvider,
   useAppData,
@@ -16,24 +26,22 @@ export {
 export {
   createProfile,
   loadProfile,
-  loadMyMemberId,
-  loadVaultOrigin,
-  markVaultOrigin,
   normalizeProfileName,
   saveProfile,
-  setMyMemberId,
   MAX_PROFILE_NAME,
   PROFILE_COLORS,
   type Profile,
   type VaultOrigin,
 } from './profile';
 export {
-  adoptVaultKey,
-  createVault,
-  forgetVault,
-  loadVaultKeyBytes,
-  loadVaultKeys,
-} from './vault-key';
+  GroupRegistry,
+  normalizeGroupName,
+  updatesTableName,
+  FIRST_GROUP_NAME,
+  MAX_GROUP_NAME,
+  type GroupRecord,
+} from './groups';
+export { ensureSchema } from './schema';
 export {
   useBudgets,
   useCategories,

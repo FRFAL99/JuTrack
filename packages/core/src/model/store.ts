@@ -12,6 +12,7 @@ import {
   categoriesMap,
   expensesMap,
   membersMap,
+  metaMap,
   readBudget,
   readCategory,
   readExpense,
@@ -135,6 +136,27 @@ export class VaultStore {
    */
   transact<T>(fn: () => T): T {
     return this.doc.transact(fn);
+  }
+
+  /* ---------------------------- Il gruppo ------------------------------- */
+
+  /**
+   * Il nome del gruppo, `null` finché nessuno gliene ha dato uno.
+   *
+   * Sta dentro il vault, quindi rinominare raggiunge l'altro telefono da solo. Il
+   * registro locale ne tiene una copia per disegnare la lista dei gruppi senza aprire
+   * ogni documento, ma è questa la versione autorevole: in caso di divergenza è la copia
+   * a doversi aggiornare.
+   */
+  getGroupName(): string | null {
+    const value = metaMap(this.doc).get('name');
+    return typeof value === 'string' && value !== '' ? value : null;
+  }
+
+  setGroupName(name: string): void {
+    this.transact(() => {
+      metaMap(this.doc).set('name', name);
+    });
   }
 
   /* ------------------------------- Spese -------------------------------- */

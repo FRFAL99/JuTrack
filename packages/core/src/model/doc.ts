@@ -1,9 +1,10 @@
 /**
  * Struttura del documento Yjs e accessori tipati.
  *
- * Cinque `Y.Map` top-level. Ogni record è a sua volta una `Y.Map`, così due modifiche a
- * **campi diversi** dello stesso record si fondono invece di sovrascriversi: se io cambio
- * la nota mentre tu cambi la categoria, sopravvivono entrambe.
+ * Cinque `Y.Map` top-level di record, più una `meta` per le proprietà del gruppo. Ogni
+ * record è a sua volta una `Y.Map`, così due modifiche a **campi diversi** dello stesso
+ * record si fondono invece di sovrascriversi: se io cambio la nota mentre tu cambi la
+ * categoria, sopravvivono entrambe.
  *
  * Eccezione deliberata: `split` è memorizzato come valore unico e non come `Y.Map`
  * annidata. Vedi `readExpense` per il motivo.
@@ -17,6 +18,7 @@ export const CATEGORIES = 'categories';
 export const MEMBERS = 'members';
 export const BUDGETS = 'budgets';
 export const SETTLEMENTS = 'settlements';
+export const META = 'meta';
 
 export type RecordMap = Y.Map<unknown>;
 
@@ -34,6 +36,21 @@ export function budgetsMap(doc: Y.Doc): Y.Map<RecordMap> {
 }
 export function settlementsMap(doc: Y.Doc): Y.Map<RecordMap> {
   return doc.getMap<RecordMap>(SETTLEMENTS);
+}
+
+/**
+ * Proprietà del gruppo, non dei suoi record. Per ora solo `name`.
+ *
+ * Il nome sta **qui dentro** e non nel registro locale del telefono perché è condiviso:
+ * rinominare un gruppo deve raggiungere l'altro dispositivo come qualunque altra
+ * modifica. Il registro ne tiene una copia, ma solo per disegnare la lista dei gruppi
+ * senza dover aprire tutti i documenti — la copia insegue, non decide.
+ *
+ * Mappa piatta e non di record: `name` è un valore singolo, e annidare una `Y.Map` per
+ * un campo solo aggiungerebbe una struttura da fondere senza nulla in cambio.
+ */
+export function metaMap(doc: Y.Doc): Y.Map<unknown> {
+  return doc.getMap<unknown>(META);
 }
 
 /* -------------------------------------------------------------------------- */

@@ -1,8 +1,8 @@
 # JuTrack — Piano v2: profili, gruppi, inviti, sync veloce
 
-> **Avanzamento al 2026-08-01.**
-> Completati: **Step 0–9** (il piano originale) e gli **Step 10 e 11** di questo documento. Restano
-> gli **Step 12–14**.
+> **Avanzamento al 2026-08-02.**
+> Completati: **Step 0–9** (il piano originale) e gli **Step 10, 11 e 12** di questo documento.
+> Restano gli **Step 13 e 14**.
 >
 > Nasce dalla prima prova reale con **due dispositivi**, che ha fatto emergere due bug con
 > conseguenze sui numeri e tre limiti di prodotto che il piano originale non copriva.
@@ -250,7 +250,22 @@ a un membro esistente. Tutte le spese già registrate restano riferite correttam
 _Verifica:_ due dispositivi con profili distinti producono **due** membri e un saldo corretto, non
 quattro membri. Chi entra in un gruppo non risemina le categorie: 8, non 16.
 
-### Step 12 — Più gruppi sullo stesso telefono
+### Step 12 — Più gruppi sullo stesso telefono ✅
+
+**Fatto**, con tre scostamenti dichiarati.
+
+1. **Non esiste più lo stato «nessun vault».** Al primo avvio nasce un gruppo da solo («Le mie
+   spese»): costa 32 byte casuali e nessuna richiesta di rete, e in cambio `keys` smette di essere
+   nullable in tutta l'app. Il piano lo dava per scontato senza dirlo.
+2. **Il ricollegamento al membro esistente si chiede _prima_ di scrivere il membro, non dopo.** Lo
+   Step 11 prevedeva la domanda dopo il primo sync, ma i membri non hanno tombstone: quello scritto
+   nel frattempo sarebbe rimasto lì per sempre. Per chi _entra_ in un gruppo altrui non viene scritto
+   alcun membro finché non ha risposto.
+3. **«Esci dal gruppo» è già qui**, non allo Step 14: `GroupRegistry.forget` cancella chiave, righe
+   di sync, tabella del documento e riga di registro, ed era la controparte naturale del registro. Ciò
+   che resta allo Step 14 è l'eliminazione dal relay e la rigenerazione del gruppo.
+
+Il resoconto è nel [devlog](devlog.md). Sotto, il piano com'era stato scritto.
 
 Il core è già pronto: `seal`/`open` prendono il `vaultId`, `VaultStore` riceve il `Doc` per
 iniezione, e `SqliteYPersistence` **supporta già** `tableName`
@@ -403,14 +418,14 @@ Restano da confermare anche i punti mai verificati su hardware elencati in
 
 ## Rischi noti
 
-| Rischio                                                                   | Mitigazione                                                                                                        |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
-| `setPending` senza `WHERE` cancella la coda offline dell'altro gruppo     | È il punto più pericoloso del piano: colonna `vault_id` e test dedicato **prima** di attivare il secondo gruppo    |
-| Un link di invito inoltrato resta valido per sempre                       | Chiave nel fragment, scadenza nell'URI, avviso esplicito nella UI, threat model aggiornato. Revoca = rigenerazione |
-| Poll a 3 s che moltiplica le richieste                                    | Solo in finestra attiva e in foreground; a riposo 30 s, in background sospeso. Due ordini sotto il limite free     |
-| Il ripristino del backup su un telefono nuovo ricrea il bug dei duplicati | `groups.my_member_id` e la domanda «sei già in questo gruppo con un altro nome?» (Step 11)                         |
-| Cambiare gruppo a runtime lascia engine o persistenza appesi              | Lo smontaggio passa da `engine.stop()` e `persistence.destroy()`, già esistenti; test sul ciclo monta/smonta       |
-| Il log del relay cresce: la compattazione server documentata non esiste   | `docs/architecture.md` la promette ma non c'è codice che la faccia. Per ora regge il TTL di 30 giorni              |
+| Rischio                                                                       | Mitigazione                                                                                                                       |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| ~~`setPending` senza `WHERE` cancella la coda offline dell'altro gruppo~~     | **Chiuso allo Step 12**: colonna `vault_id` ovunque, e un test su SQLite vero — con un finto motore sarebbe passato comunque      |
+| Un link di invito inoltrato resta valido per sempre                           | Chiave nel fragment, scadenza nell'URI, avviso esplicito nella UI, threat model aggiornato. Revoca = rigenerazione                |
+| Poll a 3 s che moltiplica le richieste                                        | Solo in finestra attiva e in foreground; a riposo 30 s, in background sospeso. Due ordini sotto il limite free                    |
+| ~~Il ripristino del backup su un telefono nuovo ricrea il bug dei duplicati~~ | **Chiuso allo Step 12**: `groups.my_member_id`, e la domanda posta **prima** di scrivere il membro — i membri non hanno tombstone |
+| Cambiare gruppo a runtime lascia engine o persistenza appesi                  | Lo smontaggio passa da `engine.stop()` e `persistence.destroy()`, già esistenti; test sul ciclo monta/smonta                      |
+| Il log del relay cresce: la compattazione server documentata non esiste       | `docs/architecture.md` la promette ma non c'è codice che la faccia. Per ora regge il TTL di 30 giorni                             |
 
 ---
 

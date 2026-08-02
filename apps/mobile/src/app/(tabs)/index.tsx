@@ -7,7 +7,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { ExpenseRow } from '@/features/expenses/ExpenseRow';
 import { groupByDay } from '@/features/expenses/grouping';
-import { useCategories, useExpenses, useMembers } from '@/state';
+import { useCategories, useCurrentGroup, useExpenses, useMembers } from '@/state';
 import { useTheme } from '@/theme';
 
 export default function ExpensesScreen() {
@@ -16,6 +16,7 @@ export default function ExpensesScreen() {
   const expenses = useExpenses();
   const categories = useCategories(true);
   const members = useMembers();
+  const group = useCurrentGroup();
 
   // Mappe invece di `find` dentro la riga: con N spese ed M categorie il rendering
   // passa da N×M confronti a N accessi diretti.
@@ -27,6 +28,32 @@ export default function ExpensesScreen() {
 
   return (
     <Screen title="Spese">
+      {/* Il gruppo aperto va detto sempre, non solo quando ce n'è più d'uno: senza,
+          registrare una spesa nel gruppo sbagliato è un errore che non dà alcun segnale
+          finché non si guarda il saldo. */}
+      <Pressable
+        onPress={() => router.push('/groups')}
+        accessibilityRole="button"
+        accessibilityLabel={`Gruppo ${group.name}. Tocca per cambiare gruppo`}
+        style={({ pressed }) => ({
+          alignSelf: 'flex-start',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: spacing.xs,
+          marginHorizontal: spacing.lg,
+          marginBottom: spacing.md,
+          paddingVertical: spacing.xs,
+          paddingHorizontal: spacing.sm,
+          borderRadius: radius.pill,
+          backgroundColor: pressed ? colors.surfacePressed : colors.surface,
+        })}
+      >
+        <Text style={{ color: colors.text, fontSize: fontSize.sm, fontWeight: fontWeight.medium }}>
+          {group.name}
+        </Text>
+        <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>▾</Text>
+      </Pressable>
+
       {expenses.length === 0 ? (
         <EmptyState
           icon="🧾"

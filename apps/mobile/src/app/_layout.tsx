@@ -2,8 +2,17 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GroupIdentityGate } from '@/features/groups/GroupIdentityGate';
 import { ProfileOnboarding } from '@/features/profile/ProfileOnboarding';
-import { ProfileProvider, VaultProvider, useAppDataStatus, useVaultStatus } from '@/state';
+import {
+  GroupsProvider,
+  ProfileProvider,
+  VaultProvider,
+  useAppDataStatus,
+  useGroupIdentity,
+  useGroupsStatus,
+  useVaultStatus,
+} from '@/state';
 import { useTheme } from '@/theme';
 
 /** Schermata di attesa e schermata di guasto, identiche per i due gate. */
@@ -63,18 +72,43 @@ function ProfileGate({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Blocca il rendering delle schermate finché il vault non è caricato.
+ * Attende il registro dei gruppi, che al primo avvio ne crea uno.
  *
- * Senza, la lista spese comparirebbe vuota per un istante prima di popolarsi — e in
- * caso di errore sembrerebbe semplicemente un vault senza dati, nascondendo il guasto.
+ * Sta fra il profilo e il vault: il gruppo corrente è ciò su cui il runtime si monta, e
+ * dev'essere già scelto quando quello parte.
  */
-function VaultGate({ children }: { children: React.ReactNode }) {
-  const status = useVaultStatus();
+function GroupsGate({ children }: { children: React.ReactNode }) {
+  const status = useGroupsStatus();
 
   if (status.phase === 'loading') return <Waiting />;
   if (status.phase === 'error') {
-    return <Broken title="Impossibile aprire i dati locali" message={status.message} />;
+    return <Broken title="Impossibile aprire i gruppi" message={status.message} />;
   }
+
+  return <>{children}</>;
+}
+
+/**
+ * Blocca il rendering delle schermate finché il gruppo aperto non è caricato.
+ *
+ * Senza, la lista spese comparirebbe vuota per un istante prima di popolarsi — e in
+ * caso di errore sembrerebbe semplicemente un gruppo senza dati, nascondendo il guasto.
+ *
+ * Copre anche il cambio di gruppo: il runtime torna in `loading` mentre smonta l'uno e
+ * monta l'altro, e per quella frazione di secondo le schermate non devono leggere lo
+ * store di un gruppo che non è più quello aperto.
+ */
+function VaultGate({ children }: { children: React.ReactNode }) {
+  const status = useVaultStatus();
+  const identity = useGroupIdentity();
+
+  if (status.phase === 'loading') return <Waiting />;
+  if (status.phase === 'error') {
+    return <Broken title="Impossibile aprire questo gruppo" message={status.message} />;
+  }
+  // Chi è appena entrato in un gruppo altrui risponde prima a una domanda: nuovo, o già
+  // dentro con un altro telefono? Finché non risponde non viene scritto alcun membro.
+  if (identity?.status === 'pending') return <GroupIdentityGate identity={identity} />;
 
   return <>{children}</>;
 }
@@ -85,16 +119,20 @@ function Shell() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <ProfileGate>
-        <VaultProvider>
-          <VaultGate>
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: colors.background },
-              }}
-            />
-          </VaultGate>
-        </VaultProvider>
+        <GroupsProvider>
+          <GroupsGate>
+            <VaultProvider>
+              <VaultGate>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: colors.background },
+                  }}
+                />
+              </VaultGate>
+            </VaultProvider>
+          </GroupsGate>
+        </GroupsProvider>
       </ProfileGate>
     </View>
   );

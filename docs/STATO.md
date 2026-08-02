@@ -1,6 +1,6 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-01, a Step 11 chiuso.
+Aggiornato: 2026-08-02, a Step 12 chiuso.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -21,16 +21,16 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 9 — CI, export, backup della chiave | ✅    | GitHub Actions, export CSV/JSON, backup cifrato della chiave |
 | 10 — Sync: correttezza e velocità   | ✅    | Catch-up al boot, push immediato, poll adattivo, `AppState`  |
 | 11 — Profili                        | ✅    | Un profilo per persona, il membro nasce da lì                |
-| 12 — Più gruppi per telefono        | ⬜    | Registro gruppi, tabelle per vault, runtime rimontabile      |
+| 12 — Più gruppi per telefono        | ✅    | Registro gruppi, tabelle per vault, runtime rimontabile      |
 | 13 — Inviti via link                | ⬜    | Link condivisibile, pagina `/j` sul Worker                   |
 | 14 — Uscire da un gruppo            | ⬜    | Abbandono, wipe sul relay, rigenerazione della chiave        |
 
-**463 test verdi** (341 core + 87 app + 35 relay), typecheck, lint e `format:check` puliti.
+**491 test verdi** (345 core + 111 app + 35 relay), typecheck, lint e `format:check` puliti.
 
 **Il piano originale (Step 0–9) è chiuso.** La prima prova con **due dispositivi** ha fatto emergere
 due bug con conseguenze sui numeri e tre limiti di prodotto: da lì nasce un secondo piano,
 [piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md), che copre gli **Step 10–14**.
-Chiusi il **10** e l'**11**; restano il 12, il 13 e il 14.
+Chiusi il **10**, l'**11** e il **12**; restano il 13 e il 14.
 
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
@@ -48,11 +48,11 @@ telefoni veri** — è la verifica che manca, e va fatta in entrambe le direzion
   stesso su tutti i gruppi e non cambia mai. Le categorie di default non vengono più seminate da chi
   **entra** in un vault esistente — era la ragione delle sedici invece di otto.
 
-> **Prima di provare su un telefono che ha già dei dati, vanno cancellati.** Non c'è migrazione, per
-> scelta: un'installazione esistente si ritroverebbe il vecchio membro «Io» accanto al proprio
-> profilo, con le spese ancora riferite a quello — e il saldo resterebbe sbagliato. Impostazioni
-> Android → App → JuTrack → Archiviazione → **Cancella dati**, su entrambi i telefoni, poi si rifà il
-> pairing. La ripartenza pulita automatica arriva con lo Step 12.
+> **Non serve più cancellare i dati a mano.** Lo faceva prescrivere l'assenza di migrazione; dallo
+> Step 12 la **ripartenza pulita è automatica**: al primo avvio l'app trova lo schema a vault unico,
+> elimina quelle tabelle e la vecchia chiave, e riparte. Il profilo sopravvive. Il pairing va rifatto,
+> perché la vecchia chiave è stata eliminata insieme ai dati che il vecchio membro «Io» rendeva
+> sbagliati.
 
 ## Riferimenti operativi
 
@@ -115,29 +115,34 @@ la lista si è accorciata parecchio, ma non è vuota:
   impiegato: basta un backup reale per avere il numero
 - Il **foglio di condivisione** e la scrittura del file in cache: richiedono una build che contenga
   `expo-file-system` ed `expo-sharing`, aggiunti allo Step 9
+- **Tutto lo Step 12**, che è nuovo di oggi: due gruppi che tengono le spese davvero separate, il
+  cambio di gruppo che non lascia appesi engine o persistenza, la **ripartenza pulita** che non
+  cancelli più del dovuto, e la domanda «chi sei in questo gruppo?» a chi entra
 
 > **La development build installata sul telefono non contiene i due moduli nuovi.** È stata
 > compilata prima che venissero aggiunti. L'app si apre lo stesso — sono caricati con `require` in
 > `try/catch` proprio per questo — e l'export ripiega sugli appunti, dichiarandolo nell'interfaccia.
 > Il foglio di condivisione comparirà solo dopo una build aggiornata.
 
-Tutto il resto è verificato: 463 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 491 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 ## Trappole già risolte — da non riscoprire
 
-| Trappola                                                                                   | Soluzione adottata                                                             |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| `TextEncoder` non esiste su Hermes                                                         | UTF-8 scritta in `crypto/encoding.ts`; vietato l'import da noble               |
-| Yjs non fa il bundle su RN (`lib0` → `isomorphic-webcrypto`, fermo al 2022)                | Alias in `metro.config.js` verso uno shim su `expo-crypto`                     |
-| `storage.deleteAll()` su Durable Object SQLite cancella anche le tabelle                   | `ensureSchema()` subito dopo, con test di regressione                          |
-| Un blob corrotto blocca **tutti** gli update successivi di quel device                     | Ripubblicazione dello stato completo al rilevamento                            |
-| TypeScript bloccato a 6.x                                                                  | `typescript-eslint` dichiara peer `typescript <6.1.0`                          |
-| Nella flat config ESLint vince l'ultima regola                                             | Gli override vanno **dopo** il blocco generale                                 |
-| Metro annunciava `127.0.0.1` come host del bundle                                          | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                                      |
-| expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera | `expo-camera`, `expo-file-system`, `expo-sharing` con `require` in `try/catch` |
-| **`expo start` dalla root del monorepo**: 404 su ogni bundle, app muta                     | Avviarlo **sempre** da `apps/mobile`; è costato giorni                         |
-| Due copie di React (`expo-*` dichiara `"react": "*"`)                                      | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede                |
+| Trappola                                                                                     | Soluzione adottata                                                                             |
+| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `TextEncoder` non esiste su Hermes                                                           | UTF-8 scritta in `crypto/encoding.ts`; vietato l'import da noble                               |
+| Yjs non fa il bundle su RN (`lib0` → `isomorphic-webcrypto`, fermo al 2022)                  | Alias in `metro.config.js` verso uno shim su `expo-crypto`                                     |
+| `storage.deleteAll()` su Durable Object SQLite cancella anche le tabelle                     | `ensureSchema()` subito dopo, con test di regressione                                          |
+| Un blob corrotto blocca **tutti** gli update successivi di quel device                       | Ripubblicazione dello stato completo al rilevamento                                            |
+| TypeScript bloccato a 6.x                                                                    | `typescript-eslint` dichiara peer `typescript <6.1.0`                                          |
+| Nella flat config ESLint vince l'ultima regola                                               | Gli override vanno **dopo** il blocco generale                                                 |
+| Metro annunciava `127.0.0.1` come host del bundle                                            | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                                                      |
+| expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera   | `expo-camera`, `expo-file-system`, `expo-sharing` con `require` in `try/catch`                 |
+| **`expo start` dalla root del monorepo**: 404 su ogni bundle, app muta                       | Avviarlo **sempre** da `apps/mobile`; è costato giorni                                         |
+| Due copie di React (`expo-*` dichiara `"react": "*"`)                                        | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede                                |
+| `DELETE FROM sync_pending` senza `WHERE`: con due gruppi cancella la coda offline dell'altro | Colonna `vault_id` ovunque, e un test su SQLite vero — con un finto motore passerebbe comunque |
+| I tipi delle rotte expo-router non li rigenera `expo export`, ma `expo start`                | Sono in `.expo/types/`, gitignorato: in CI non esistono e il typecheck passa lo stesso         |
 
 ## Com'è fatto il pairing (Step 7)
 
@@ -177,9 +182,43 @@ che resta riservato al materiale crittografico. `{ profileId, name, color, ident
   una spesa né vedere il saldo: l'elenco è in sola lettura, e ognuno si aggiunge collegando il
   proprio telefono.
 
-Non ancora fatto, e voluto: il ricollegamento a un membro esistente per chi ripristina il backup
-della chiave su un telefono nuovo. Il posto dove scriverlo c'è (`my_member_id` per vault), ma la
-domanda va fatta **dopo** il primo sync, e il momento giusto è l'apertura di un gruppo — Step 12.
+Il ricollegamento a un membro esistente è arrivato allo **Step 12**, in una forma diversa da quella
+prevista qui: la domanda si fa **prima** di scrivere il membro, non dopo. Vedi sotto.
+
+## I gruppi (Step 12)
+
+**Un gruppo = un vault = una `vaultKey` = un `vaultId` = un Durable Object = un documento Yjs.**
+«Casa» e «Viaggio in Grecia» convivono sullo stesso telefono e non si mescolano.
+
+- **Registro locale:** una chiave per gruppo in SecureStore (`jutrack.groupKey.<vaultId>`), una riga
+  per gruppo nella tabella `groups`, e un `y_updates_<vaultId>` per documento. Il `vaultId` è 32
+  caratteri esadecimali **derivati dalla chiave**, quindi è un identificatore SQL valido per
+  costruzione: nessun testo scelto dall'utente finisce in un nome di tabella.
+- **Il nome autorevole sta dentro il vault** (`Y.Map` `meta`), così rinominare raggiunge l'altro
+  telefono da solo. Il registro ne tiene una copia per disegnare la lista senza aprire ogni
+  documento; quando divergono, è la copia ad aggiornarsi.
+- **Il `WHERE vault_id` di `setPending` è il punto pericoloso di tutto il piano.** Senza, una
+  scrittura in un gruppo cancellerebbe la coda offline dell'altro: spese registrate in aereo perse
+  in silenzio. Il test gira su **SQLite vero**, perché un finto motore che ignori il `WHERE` farebbe
+  passare esattamente quel bug.
+- **C'è sempre almeno un gruppo.** Al primo avvio ne nasce uno («Le mie spese»): costa 32 byte
+  casuali e nessuna richiesta di rete. Sparisce così lo stato «nessun vault», che era un ramo
+  condizionale in mezza dozzina di schermate.
+- **Il runtime è rimontabile:** l'effetto dipende da `vaultId`, non da `[]`. Cambiare gruppo smonta
+  engine e persistenza e ne monta altri — ed è questo che fa sparire il «riavvia l'app» dopo il
+  pairing. Un solo motore attivo per volta, sul gruppo aperto.
+- **Gli hook di `state/hooks.ts` non hanno cambiato firma**, quindi le undici schermate che consumano
+  dati non sono state toccate. È la ragione per cui lo step era fattibile senza riscrivere l'app.
+
+**«Chi sei in questo gruppo?»** Chi **entra** in un gruppo altrui risponde a una domanda prima che
+gli venga scritto un membro: è nuovo, oppure è già dentro con un altro telefono e ha appena
+ripristinato la chiave. La domanda si fa **prima**, non dopo, perché i membri non hanno tombstone e
+quello creato per sbaglio resterebbe lì per sempre. Chi **crea** un gruppo non vede nulla.
+
+**Ripartenza pulita, non migrazione.** `schema_version` in `app_meta`: trovando lo schema a vault
+unico si eliminano quelle tabelle, la vecchia chiave e le chiavi di `app_meta` che la riferivano. Il
+profilo sopravvive. Il vault vecchio sul relay resta e scade col TTL di 30 giorni — cancellarlo
+richiederebbe la chiave che si sta eliminando, e una richiesta di rete durante l'avvio.
 
 ## Come funziona il sync (Step 10)
 

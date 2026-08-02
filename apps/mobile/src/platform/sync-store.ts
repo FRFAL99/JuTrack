@@ -1,25 +1,39 @@
 import type { SqliteDatabase, SyncCursorStore } from '@jutrack/core';
 
 /**
- * Cursore e coda di invio su SQLite.
+ * Cursore e coda di invio su SQLite, **separati per vault**.
  *
  * Devono sopravvivere alla chiusura dell'app: un cursore perso farebbe riscaricare
  * l'intero log, e una coda persa farebbe **sparire le spese registrate offline** senza
  * che nulla lo segnali.
+ *
+ * Ogni riga porta il `vault_id` del gruppo a cui appartiene. Con più gruppi sullo stesso
+ * telefono la separazione non è cosmetica: due gruppi hanno cursori diversi sul proprio
+ * log, e code di invio che non devono vedersi. Ogni istruzione qui dentro filtra per
+ * `vault_id` — e quella che conta davvero è il DELETE di `setPending`.
  */
 export class SqliteSyncStore implements SyncCursorStore {
-  private constructor(private readonly db: SqliteDatabase) {}
+  private constructor(
+    private readonly db: SqliteDatabase,
+    private readonly vaultId: string,
+  ) {}
 
-  static async open(db: SqliteDatabase): Promise<SqliteSyncStore> {
+  static async open(db: SqliteDatabase, vaultId: string): Promise<SqliteSyncStore> {
+    // Chiave primaria composta: la stessa chiave logica (`cursor`) esiste una volta per
+    // gruppo. Con la sola `key` il secondo gruppo sovrascriverebbe il cursore del primo,
+    // che poi riscaricherebbe il log dall'inizio o, peggio, ne salterebbe un pezzo.
     await db.execute(
       `CREATE TABLE IF NOT EXISTS sync_state (
-         key TEXT PRIMARY KEY,
-         value TEXT NOT NULL
+         vault_id TEXT NOT NULL,
+         key TEXT NOT NULL,
+         value TEXT NOT NULL,
+         PRIMARY KEY (vault_id, key)
        )`,
     );
     await db.execute(
       `CREATE TABLE IF NOT EXISTS sync_pending (
          id INTEGER PRIMARY KEY AUTOINCREMENT,
+         vault_id TEXT NOT NULL,
          data BLOB NOT NULL
        )`,
     );
@@ -28,17 +42,31 @@ export class SqliteSyncStore implements SyncCursorStore {
     // conversioni in più e un formato da sbagliare.
     await db.execute(
       `CREATE TABLE IF NOT EXISTS sync_meta (
-         key TEXT PRIMARY KEY,
-         data BLOB NOT NULL
+         vault_id TEXT NOT NULL,
+         key TEXT NOT NULL,
+         data BLOB NOT NULL,
+         PRIMARY KEY (vault_id, key)
        )`,
     );
-    return new SqliteSyncStore(db);
+    return new SqliteSyncStore(db, vaultId);
+  }
+
+  /**
+   * Cancella ogni traccia di sync di un vault.
+   *
+   * Serve a chi esce da un gruppo e alla ripartenza pulita. Statica perché si usa quando
+   * di quel vault non resta nulla di aperto.
+   */
+  static async forget(db: SqliteDatabase, vaultId: string): Promise<void> {
+    await db.execute('DELETE FROM sync_state WHERE vault_id = ?', [vaultId]);
+    await db.execute('DELETE FROM sync_pending WHERE vault_id = ?', [vaultId]);
+    await db.execute('DELETE FROM sync_meta WHERE vault_id = ?', [vaultId]);
   }
 
   async getCursor(): Promise<number> {
     const rows = await this.db.query<{ value: string }>(
-      'SELECT value FROM sync_state WHERE key = ?',
-      ['cursor'],
+      'SELECT value FROM sync_state WHERE vault_id = ? AND key = ?',
+      [this.vaultId, 'cursor'],
     );
     const raw = rows[0]?.value;
     const parsed = raw === undefined ? 0 : Number(raw);
@@ -49,14 +77,16 @@ export class SqliteSyncStore implements SyncCursorStore {
 
   async setCursor(seq: number): Promise<void> {
     await this.db.execute(
-      'INSERT INTO sync_state (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = ?',
-      ['cursor', String(seq), String(seq)],
+      `INSERT INTO sync_state (vault_id, key, value) VALUES (?, ?, ?)
+         ON CONFLICT(vault_id, key) DO UPDATE SET value = ?`,
+      [this.vaultId, 'cursor', String(seq), String(seq)],
     );
   }
 
   async getPending(): Promise<Uint8Array[]> {
     const rows = await this.db.query<{ data: Uint8Array }>(
-      'SELECT data FROM sync_pending ORDER BY id ASC',
+      'SELECT data FROM sync_pending WHERE vault_id = ? ORDER BY id ASC',
+      [this.vaultId],
     );
     return rows.map((row) => toBytes(row.data));
   }
@@ -66,15 +96,24 @@ export class SqliteSyncStore implements SyncCursorStore {
     // update) e la logica incrementale introdurrebbe stati intermedi in cui un crash
     // lascerebbe la coda incoerente.
     //
+    // **Il `WHERE vault_id` non è un dettaglio.** Senza, questo DELETE svuoterebbe anche
+    // la coda degli altri gruppi: le spese registrate offline in un gruppo sparirebbero
+    // perché nel frattempo si è scritto in un altro, e nulla lo segnalerebbe. È il solo
+    // punto di tutto lo Step 12 dove un errore distrugge dati, ed è coperto da un test
+    // che gira su SQLite vero.
+    //
     // In transazione, però: fuori da una, la finestra fra il DELETE e l'ultimo INSERT è
     // una coda **vuota** su disco. Un crash lì dentro — o la chiusura dell'app da parte
     // del sistema — farebbe sparire le spese registrate offline senza che nulla lo
     // segnali. È anche molto più veloce: un solo fsync invece di uno per riga.
     await this.db.execute('BEGIN');
     try {
-      await this.db.execute('DELETE FROM sync_pending');
+      await this.db.execute('DELETE FROM sync_pending WHERE vault_id = ?', [this.vaultId]);
       for (const update of updates) {
-        await this.db.execute('INSERT INTO sync_pending (data) VALUES (?)', [update]);
+        await this.db.execute('INSERT INTO sync_pending (vault_id, data) VALUES (?, ?)', [
+          this.vaultId,
+          update,
+        ]);
       }
       await this.db.execute('COMMIT');
     } catch (error) {
@@ -87,8 +126,8 @@ export class SqliteSyncStore implements SyncCursorStore {
 
   async getPushedStateVector(): Promise<Uint8Array | null> {
     const rows = await this.db.query<{ data: Uint8Array }>(
-      'SELECT data FROM sync_meta WHERE key = ?',
-      ['pushed_state_vector'],
+      'SELECT data FROM sync_meta WHERE vault_id = ? AND key = ?',
+      [this.vaultId, 'pushed_state_vector'],
     );
     const raw = rows[0]?.data;
     return raw === undefined ? null : toBytes(raw);
@@ -96,8 +135,9 @@ export class SqliteSyncStore implements SyncCursorStore {
 
   async setPushedStateVector(stateVector: Uint8Array): Promise<void> {
     await this.db.execute(
-      'INSERT INTO sync_meta (key, data) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET data = ?',
-      ['pushed_state_vector', stateVector, stateVector],
+      `INSERT INTO sync_meta (vault_id, key, data) VALUES (?, ?, ?)
+         ON CONFLICT(vault_id, key) DO UPDATE SET data = ?`,
+      [this.vaultId, 'pushed_state_vector', stateVector, stateVector],
     );
   }
 }

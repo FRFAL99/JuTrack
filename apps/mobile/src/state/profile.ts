@@ -51,16 +51,17 @@ export const PROFILE_COLORS = [
 export const MAX_PROFILE_NAME = 24;
 
 const PROFILE_KEY = 'profile';
-/** Un membro per vault: di norma è il `profileId`, ma può essere stato ricollegato. */
-const myMemberKey = (vaultId: string): string => `my_member_id:${vaultId}`;
-const vaultOriginKey = (vaultId: string): string => `vault_origin:${vaultId}`;
 
 /**
- * Il vault è nato qui o si è entrati in quello di qualcun altro?
+ * Il gruppo è nato qui o si è entrati in quello di qualcun altro?
  *
  * Determina una cosa sola, ma che si vede: chi entra **non semina** le categorie di
  * default, le riceve col primo sync. Seminarle comunque significa ritrovarsene sedici
  * invece di otto, ed è successo davvero.
+ *
+ * Vive nella riga del gruppo (`GroupRecord.origin`), scritta quando la chiave viene
+ * creata o adottata: dopo, guardando un documento pieno di dati sincronizzati, i due casi
+ * sono indistinguibili.
  */
 export type VaultOrigin = 'created' | 'joined';
 
@@ -120,53 +121,6 @@ export async function loadProfile(meta: KeyValueStore): Promise<Profile | null> 
 
 export async function saveProfile(meta: KeyValueStore, profile: Profile): Promise<void> {
   await meta.set(PROFILE_KEY, JSON.stringify(profile));
-}
-
-/**
- * Il membro che rappresenta me in questo vault.
- *
- * Di norma è il `profileId`. Esiste separato perché non lo sarà sempre: ripristinare il
- * backup della chiave su un telefono nuovo genera un `profileId` nuovo, e servirà poter
- * dire «in questo gruppo sono già io, con quell'altro nome» invece di comparire due
- * volte. Il ricollegamento arriva con i gruppi (Step 12); qui c'è già il posto dove
- * scriverlo, così le spese non dovranno essere riscritte allora.
- */
-export async function loadMyMemberId(
-  meta: KeyValueStore,
-  vaultId: string,
-  profileId: string,
-): Promise<string> {
-  return (await meta.get(myMemberKey(vaultId))) ?? profileId;
-}
-
-export async function setMyMemberId(
-  meta: KeyValueStore,
-  vaultId: string,
-  memberId: string,
-): Promise<void> {
-  await meta.set(myMemberKey(vaultId), memberId);
-}
-
-export async function markVaultOrigin(
-  meta: KeyValueStore,
-  vaultId: string,
-  origin: VaultOrigin,
-): Promise<void> {
-  await meta.set(vaultOriginKey(vaultId), origin);
-}
-
-/**
- * `null` se non risulta nulla — che è il caso di chi usa l'app senza vault.
- *
- * Nel dubbio si semina: un tracker locale senza categorie sarebbe inutilizzabile, mentre
- * il costo di sbagliare è qualche categoria doppia da archiviare.
- */
-export async function loadVaultOrigin(
-  meta: KeyValueStore,
-  vaultId: string,
-): Promise<VaultOrigin | null> {
-  const raw = await meta.get(vaultOriginKey(vaultId));
-  return raw === 'created' || raw === 'joined' ? raw : null;
 }
 
 function isIdentity(value: unknown): value is { provider: string; subject: string } {

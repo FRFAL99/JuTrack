@@ -19,7 +19,7 @@ import {
   type SplitMode,
 } from '@jutrack/core';
 import { Button } from '@/components/Button';
-import { useCategories, useMembers, useVaultRuntime } from '@/state';
+import { useCategories, useMembers, useMyMemberId } from '@/state';
 import { useTheme } from '@/theme';
 import { todayIso } from './grouping';
 
@@ -50,7 +50,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const categories = useCategories();
   const members = useMembers();
-  const { myMemberId } = useVaultRuntime();
+  const myMemberId = useMyMemberId();
 
   const [amountText, setAmountText] = useState(
     initial === undefined ? '' : formatCents(initial.amountCents).replace(/\./g, ''),
