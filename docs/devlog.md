@@ -74,9 +74,11 @@ essere — una cortesia verso un link dimenticato, non una difesa.
 **Verifica:** 520 test verdi (366 core + 111 app + 43 relay), typecheck, lint e `format:check`
 puliti, bundle Android esportato.
 
-**Non ancora in produzione.** La pagina `/j` esiste nel repo, non sul Worker: finché non gira
-`npm run deploy` in `services/relay`, il relay risponde 404 e un link aperto dal browser non porta
-da nessuna parte. QR e incolla manuale funzionano comunque — non passano dal relay.
+**In produzione.** Deploy del Worker (versione `b351a959`) subito dopo il commit: `/j` risponde 200
+con gli header attesi e l'HTML del repo, senza risorse esterne. La prima richiesta subito dopo il
+deploy ha ancora dato 404 — l'edge non aveva finito di propagare la versione nuova; dopo qualche
+secondo cinque richieste su cinque sono 200. Vale la pena saperlo: al prossimo deploy, un 404
+immediato non è un guasto.
 
 **Ancora da vedere sul telefono.** I due punti dove può rompersi in silenzio: che Android consegni
 `jutrack://join#…` alla rotta `/join` **col fragment**, e che il foglio di `Share.share` compaia

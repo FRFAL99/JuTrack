@@ -32,10 +32,9 @@ due bug con conseguenze sui numeri e tre limiti di prodotto: da lì nasce un sec
 [piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md), che copre gli **Step 10–14**.
 Chiusi dal **10** al **13**; resta il 14.
 
-> **La pagina `/j` non è ancora in produzione.** Il codice c'è ed è testato, ma finché non gira
-> `npm run deploy` in `services/relay` il relay in produzione risponde 404 a `/j`, e un link
-> d'invito aperto dal browser non porta da nessuna parte. Il QR e l'incolla manuale funzionano
-> comunque: non passano dal relay.
+**La pagina `/j` è in produzione** (deploy del 2026-08-02, versione `b351a959`): risponde 200 con
+gli header attesi — `Referrer-Policy: no-referrer`, CSP `default-src 'none'`, `noindex` — e l'HTML
+servito è quello del repo, senza risorse esterne. Resta da provare col telefono in mano.
 
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
@@ -126,8 +125,8 @@ la lista si è accorciata parecchio, ma non è vuota:
 - **Tutto lo Step 13**, anch'esso di oggi, e in particolare i due punti dove può fallire in
   silenzio: che Android consegni il link `jutrack://join#…` **con il fragment** alla rotta `/join`
   (se lo perdesse per strada, l'app riceverebbe un invito senza chiave), e che il foglio di
-  `Share.share` compaia davvero nella build installata. Prima serve però un `deploy` del relay,
-  altrimenti la pagina `/j` non esiste
+  `Share.share` compaia davvero nella build installata. La pagina `/j` è già in produzione e
+  risponde: quello che manca è il giro completo, dal link mandato in chat al gruppo aperto
 
 > **La development build installata sul telefono non contiene i due moduli nuovi.** È stata
 > compilata prima che venissero aggiunti. L'app si apre lo stesso — sono caricati con `require` in
