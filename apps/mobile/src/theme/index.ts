@@ -4,12 +4,14 @@ import {
   fontSize,
   fontWeight,
   lightPalette,
+  numeric,
   radius,
   spacing,
+  tightTitle,
   type Palette,
 } from './tokens';
 
-export { spacing, radius, fontSize, fontWeight };
+export { spacing, radius, fontSize, fontWeight, numeric, tightTitle };
 export type { Palette };
 
 export interface Theme {

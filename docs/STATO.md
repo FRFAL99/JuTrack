@@ -1,6 +1,7 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-02, a Step 22 chiuso — **il piano v3 è finito: non resta codice da scrivere, resta la prova sul campo**.
+Aggiornato: 2026-08-02 — **i tre piani funzionali sono finiti** (resta la prova sul campo) ed è
+cominciato il **redesign visivo**, che ha un documento suo: [visualdesign.md](visualdesign.md).
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -33,7 +34,19 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 21 — Nessun gruppo al primo avvio   | ✅    | Fase `absent`, l'utente crea o entra con un invito           |
 | 22 — Azzera questo telefono         | ✅    | Wipe totale e ritorno all'onboarding, senza riavvio          |
 
-**577 test verdi** (387 core + 147 app + 43 relay), typecheck, lint e `format:check` puliti.
+Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette passi:
+
+| Passo                      | Stato | Cosa contiene                                                   |
+| -------------------------- | ----- | --------------------------------------------------------------- |
+| 1 — Token                  | ✅    | Grigi scuri più profondi, `surfaceRaised`/`divider`/`textFaint` |
+| 2 — Icone                  | ⬜    | Feather al posto delle emoji, mappa emoji→icona in `seed.ts`    |
+| 3 — Componenti nuovi       | ⬜    | `SectionLabel`, `ListRow`, `AvatarStack`, `Card` a varianti     |
+| 4 — Tu                     | ⬜    | Fusione profilo + impostazioni, da quattro tab a tre            |
+| 5 — Grafici                | ⬜    | Riscrittura in forma registro, barre ritoccate                  |
+| 6 — Spese home + selettore | ⬜    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
+| 7 — Nuova spesa            | ⬜    | Riscrittura del form: importo → chi/come → categoria → dettagli |
+
+**581 test verdi** (387 core + 151 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 **I piani chiusi sono due.** Il piano originale (Step 0–9), e
 [piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md) (**Step 10–14**), nato dalla prima
@@ -47,7 +60,9 @@ pure** — erano i due step più delicati del piano, quelli che potevano rompere
 da un invito, e sono chiusi entrambi con gli URL intatti (vedi sotto) — la riorganizzazione dei tab
 anche, il gruppo di default non c'è più, e «Azzera questo telefono» adesso azzera davvero.
 
-**Da qui in avanti non c'è un piano v4 approvato.** Il seguito naturale è
+**Il lavoro in corso è il redesign visivo**, non un piano v4 funzionale: vedi
+[visualdesign.md](visualdesign.md) e la sezione [Redesign visivo](#redesign-visivo) qui sotto. Il
+seguito naturale sul fronte funzionale resta
 [la prova sui due telefoni](piano-v3-tab-gruppi-azzeramento-sync.md#criterio-di-fatto-end-to-end),
 che è ciò che manca a tutti e tre i piani; le WebSocket sul Durable Object restano una possibilità
 dichiarata fuori perimetro, **da valutare solo dopo** aver provato sul campo la taratura degli Step
@@ -70,6 +85,31 @@ dichiarata fuori perimetro, **da valutare solo dopo** aver provato sul campo la 
 **La pagina `/j` è in produzione** (deploy del 2026-08-02, versione `b351a959`): risponde 200 con
 gli header attesi — `Referrer-Policy: no-referrer`, CSP `default-src 'none'`, `noindex` — e l'HTML
 servito è quello del repo, senza risorse esterne. Resta da provare col telefono in mano.
+
+## Redesign visivo
+
+Documento: [visualdesign.md](visualdesign.md). Direzione **2a**: card dove si agisce e c'è un numero
+da mettere al centro (spese, nuova spesa), registro — liste a tutta larghezza, filetti, etichette
+maiuscoletta — dove si legge (grafici, selettore gruppi, Tu). Regola unica: **una sola card per
+schermata**. Il redesign passa da quattro tab a tre, e non tocca `packages/core`, lo schema Yjs,
+sync, crypto, relay, backup, export né azzeramento.
+
+**Un passo per sessione**, come per i piani precedenti. Il passo 1 (token) è chiuso.
+
+**Quattro punti in cui il documento va corretto**, verificati contro il repo prima di cominciare —
+sono nel documento come sono stati scritti, quindi vanno letti da qui:
+
+1. **`@expo/vector-icons` non è installato** e non è transitivo di Expo SDK 57, contrariamente a
+   quanto dice §3. Va aggiunto al passo 2 con `npx expo install`. È JS più asset font ed `expo-font`
+   c'è già: **niente build EAS**.
+2. **`Card variant` non può avere `flat` come default** (§2.1): oggi `Card` ha sempre bordo e
+   padding, e ci sono 46 usi in 15 file, molti fuori scope. Il default resta la forma attuale.
+3. **La quota per riga di `ExpenseRow` non passa da `computeBalances`** (§2.1): è
+   `amountCents - split.shares[me]` se ho pagato io, `-split.shares[me]` altrimenti. O(1), niente
+   prop da propagare.
+4. **Togliere il tab Impostazioni richiede `href: null`** nelle options (§4.1): cancellare il file
+   non basta finché sta in `(tabs)/`. E `profile.tsx` → `tu.tsx` cambia l'URL, quindi al passo 4 va
+   rifatta la procedura dei tipi di rotta dello Step 18.
 
 ## I due bug che rendevano sbagliati i numeri sono corretti
 

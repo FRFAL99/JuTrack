@@ -20,16 +20,22 @@ export const radius = {
   sm: 6,
   md: 10,
   lg: 16,
+  /** Card eroe e card di sezione: più morbido di `lg`, si legge come un blocco a sé. */
+  xl: 20,
   pill: 999,
 } as const;
 
 export const fontSize = {
+  /** Etichette maiuscoletta, metadati di riga, tab bar. */
+  xxs: 11,
   xs: 12,
   sm: 14,
   md: 16,
   lg: 20,
   xl: 28,
   xxl: 34,
+  /** Importo eroe: il solo numero grande di una schermata. */
+  display: 46,
 } as const;
 
 export const fontWeight = {
@@ -38,6 +44,21 @@ export const fontWeight = {
   semibold: '600',
   bold: '700',
 } as const;
+
+/**
+ * Cifre a larghezza fissa. Va su ogni Text che mostra denaro o una data numerica.
+ *
+ * Senza, le cifre cambiano larghezza fra una riga e l'altra di una lista e le colonne
+ * di importi ballano: è il difetto più visibile di un elenco di spese. Supportato da
+ * React Native sia su Android sia su iOS.
+ */
+export const numeric = { fontVariant: ['tabular-nums'] } as const;
+
+/**
+ * Crenatura dei titoli grandi (da 28 in su): a quella scala l'aria di default è troppa
+ * e le parole si sfilacciano. Sotto i 28 non serve e stringerebbe troppo.
+ */
+export const tightTitle = { letterSpacing: -0.6 } as const;
 
 /**
  * Palette semantica: i nomi dicono a cosa serve il colore, non che colore è.
@@ -49,12 +70,25 @@ export interface Palette {
   background: string;
   /** Sfondo di superfici sopraelevate (card, modali) */
   surface: string;
+  /**
+   * Superficie della card eroe: **una sola per schermata**.
+   *
+   * Se la usassero due blocchi della stessa schermata, nessuno dei due sarebbe più il
+   * centro: è un token che vale per la regola che porta con sé, non per il colore. Sul
+   * tema scuro stacca da `surface`; su quello chiaro coincide, e a distinguerla restano
+   * bordo e raggio.
+   */
+  surfaceRaised: string;
   /** Superficie in stato premuto */
   surfacePressed: string;
+  /** Separatore fra le righe di una stessa lista: più tenue di `border`, che contorna. */
+  divider: string;
   /** Testo principale */
   text: string;
   /** Testo secondario, didascalie */
   textMuted: string;
+  /** Testo terziario: metadati, piè di pagina, identificativi. Mai per il contenuto. */
+  textFaint: string;
   /** Testo su sfondo accent */
   textOnAccent: string;
   /** Colore d'accento per azioni primarie */
@@ -76,9 +110,12 @@ export interface Palette {
 export const lightPalette: Palette = {
   background: '#F7F7F9',
   surface: '#FFFFFF',
+  surfaceRaised: '#FFFFFF',
   surfacePressed: '#EFEFF3',
+  divider: '#EDEDF1',
   text: '#14141B',
   textMuted: '#6B6B76',
+  textFaint: '#9A9AA6',
   textOnAccent: '#FFFFFF',
   accent: '#3B5BDB',
   accentPressed: '#2F49AF',
@@ -89,12 +126,20 @@ export const lightPalette: Palette = {
   warning: '#C77700',
 };
 
+/**
+ * I grigi scuri sono una scala, non quattro valori scelti a occhio: il fondo è più scuro
+ * di ogni superficie, altrimenti card e sfondo si leggono uguali e la gerarchia sparisce.
+ * Accento, semantici e colori di categoria non sono toccati.
+ */
 export const darkPalette: Palette = {
-  background: '#111116',
-  surface: '#1B1B22',
-  surfacePressed: '#25252E',
+  background: '#0B0B10',
+  surface: '#15151C',
+  surfaceRaised: '#171722',
+  surfacePressed: '#1F1F28',
+  divider: '#1F1F28',
   text: '#F2F2F5',
   textMuted: '#9A9AA6',
+  textFaint: '#4A4A56',
   textOnAccent: '#FFFFFF',
   accent: '#748FFC',
   accentPressed: '#5C7CFA',

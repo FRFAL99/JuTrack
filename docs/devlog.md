@@ -4,6 +4,61 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-02 — Redesign, passo 1: i token, e quattro cose che il documento dava per vere
+
+Comincia il redesign visivo, descritto in [visualdesign.md](visualdesign.md): direzione **2a**, mix
+fra card e registro — card dove si agisce e c'è un numero al centro (spese, nuova spesa), registro
+dove si legge (grafici, selettore gruppi, Tu). La regola che tiene insieme le due forme è **una sola
+card per schermata**. Sette passi, ciascuno lascia l'app funzionante; questo è il primo e non cambia
+la forma di nessuna schermata, solo i grigi del tema scuro.
+
+**Cosa è entrato in `theme/tokens.ts`.** Fondo `#0B0B10` (era `#111116`), superficie `#15151C` (era
+`#1B1B22`), premuto `#1F1F28`. Accento, semantici e colori di categoria non sono toccati: non è una
+palette nuova, è la stessa con più stacco fra i livelli. Tre token che mancavano — `surfaceRaised`
+(la card eroe), `divider` (separatore _dentro_ una lista, distinto da `border` che contorna),
+`textFaint` (metadati e piè di pagina) — più `radius.xl`, `fontSize.xxs` e `fontSize.display`, e i
+due frammenti di stile `numeric` (`fontVariant: ['tabular-nums']`) e `tightTitle`.
+
+Sul tema scuro `surfacePressed` e `divider` valgono **lo stesso colore**, e restano due token: uno è
+uno stato, l'altro è una linea, e il giorno in cui il premuto va scurito non si trascina dietro i
+separatori di ogni lista. È la stessa ragione per cui il file esiste.
+
+**Il test dei token ordina per luminanza, non per stringa.** `#0B0B10 < #15151C` come testo è vero
+per caso: appena un token smette di essere un grigio puro il confronto mente. Con la luminanza WCAG
+si può affermare la cosa che conta davvero — il fondo è più scuro di ogni superficie, che è
+_l'intero motivo_ dei grigi nuovi — e i tre livelli di testo restano ordinati in entrambi i temi, in
+direzioni opposte. C'è anche il controllo che le due palette abbiano le stesse chiavi: un token
+aggiunto a una sola passerebbe il typecheck finché nessuno tocca l'altra.
+
+**Quattro affermazioni del documento non reggevano contro il repo**, verificate prima di scrivere:
+
+1. **`@expo/vector-icons` non è installato.** Il documento lo dà per dipendenza transitiva di Expo:
+   non è in `node_modules`, non è in `apps/mobile/node_modules`, `npm ls` è vuoto. SDK 57 non lo
+   tira più dentro. Va installato al passo 2 — ma è JS più asset font, ed `expo-font@57.0.1` c'è già
+   come transitivo, quindi **non serve una build EAS**.
+2. **`Card` con default `variant="flat"` sarebbe una regressione silenziosa.** Oggi `Card` ha sempre
+   bordo, `radius.lg` e `padding: spacing.lg`; `flat` è senza bordo e senza padding. Ci sono **46
+   usi in 15 file**, molti fuori dallo scope del redesign (backup, join, pair, azzera). Il default
+   deve restare la forma attuale.
+3. **La quota per riga non passa da `computeBalances`.** Sta già dentro la spesa: se `paidBy` sono
+   io il credito su quella riga è `amountCents - split.shares[me]`, altrimenti il debito è
+   `-split.shares[me]`. Torna coi numeri del mockup (50 − 25 = +25,00; −34,50 su 69,00). È O(1), non
+   serve la prop `yourShareCents` che il documento prevedeva per le liste lunghe, e il core non si
+   tocca.
+4. **Togliere il tab Impostazioni non è cancellare il file.** Finché `settings.tsx` sta in `(tabs)/`
+   la voce resta nella tab bar: serve `href: null` nelle options. E `profile.tsx` → `tu.tsx` cambia
+   l'URL, quindi al passo 4 va rifatta la procedura dei tipi di rotta dello Step 18.
+
+**Verifica:** 151 test app verdi (147 + 4 nuovi), **581 in totale**; typecheck, lint e
+`format:check` puliti; `expo export --platform android` completato — il passo tocca solo costanti,
+ma la trappola lib0 non era visibile né al typecheck né ai test e la regola vale sempre.
+
+**Prossimo:** passo 2 — icone Feather al posto delle emoji in tab bar e categorie, con la mappa
+emoji→Feather in `seed.ts` e il fallback a pallino colorato per le categorie create a mano. Richiede
+`npx expo install @expo/vector-icons`.
+
+---
+
 ## 2026-08-02 — Step 22: azzera questo telefono (e il piano v3 finisce qui)
 
 L'ultimo step del piano v3, e l'unico gesto dell'app che **non si può annullare**. La schermata
