@@ -21,6 +21,7 @@ import { BudgetRows } from '@/features/stats/BudgetRows';
 import { CategoryBars } from '@/features/stats/CategoryBars';
 import { describeChange } from '@/features/stats/format';
 import { MonthlyBars } from '@/features/stats/MonthlyBars';
+import { useEngineActivity } from '@/features/sync/useEngineActivity';
 import { useBudgets, useCategories, useExpenses, useMembers, useSettlements } from '@/state';
 import { useTheme } from '@/theme';
 
@@ -30,6 +31,8 @@ const TREND_MONTHS = 6;
 export default function StatsScreen() {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const [month, setMonth] = useState(currentMonth);
+  // Saldi e pareggi dipendono da quello che ha scritto l'altro telefono, non solo da noi.
+  useEngineActivity();
 
   const bounds = monthBounds(month);
   const monthExpenses = useExpenses({ from: bounds.from, to: bounds.to });

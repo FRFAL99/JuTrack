@@ -60,13 +60,42 @@ export interface HttpClient {
   ): Promise<{ status: number; text: () => Promise<string> }>;
 }
 
+/**
+ * Un gradino della scala di poll: da `afterMs` di inattività in poi, si interroga il
+ * relay ogni `pollMs`.
+ *
+ * È una tabella e non una formula esponenziale perché si vuole poter rispondere a «dopo
+ * un minuto ogni quanto chiede?» leggendo quattro righe, e perché una tabella si prova
+ * con `it.each`.
+ */
+export interface PollStep {
+  /** Inattività dalla quale questo gradino vale. Il primo deve essere `0`. */
+  afterMs: number;
+  /** Intervallo fra due cicli dentro il gradino. */
+  pollMs: number;
+}
+
 export interface SyncEngineOptions {
+  /**
+   * Scala del poll, per soglie crescenti di inattività.
+   *
+   * Default: 2 s subito, 5 s dopo 15 s di inattività, 15 s dopo un minuto, 60 s dopo
+   * cinque. Sostituisce il gradino binario `activePollMs`/`idlePollMs`, che resta
+   * accettato e vince se passato.
+   *
+   * Il primo gradino deve partire da `0`, le soglie devono crescere e gli intervalli
+   * essere positivi: una scala malformata viene rifiutata dal costruttore.
+   */
+  pollSchedule?: readonly PollStep[];
   /**
    * Intervallo fra due cicli quando c'è attività recente. Default 3 s.
    *
    * È il ritmo che si vede: una spesa creata sull'altro telefono compare entro questo
    * tempo. Vale solo dentro la finestra attiva, altrimenti sarebbe una richiesta ogni
    * tre secondi tutto il giorno.
+   *
+   * Forma precedente alla scala: se ne arriva anche una sola delle tre, la scala viene
+   * costruita da queste e `pollSchedule` è ignorata.
    */
   activePollMs?: number;
   /** Intervallo fra due cicli a riposo. Default 30 s. */

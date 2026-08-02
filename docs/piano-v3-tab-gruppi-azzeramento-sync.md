@@ -2,7 +2,7 @@
 
 > **Avanzamento al 2026-08-02.**
 > Completati: **Step 0–9** (piano originale), **Step 10–14** ([piano v2](piano-v2-profili-gruppi-sync.md)),
-> e lo **Step 15** — questo documento. Da fare: **Step 16–22**, uno per sessione.
+> lo **Step 15** — questo documento — e lo **Step 16**. Da fare: **Step 17–22**, uno per sessione.
 >
 > Nasce dalla prova a mano delle funzionalità già scritte: la gestione dei gruppi non è intuitiva, il
 > gruppo di default al primo avvio genera duplicati e confusione, e il relay sembra interrogato in
@@ -138,7 +138,7 @@ cd apps/mobile && npx expo export --platform android
 
 > **Gli Step 16 e 17 sono indipendenti da tutti gli altri.** Stanno in `packages/core/src/sync/` e non
 > toccano una sola schermata. Se una sessione ha tempo per una cosa sola, sono quelle: rischio nullo
-> sull'app e guadagno immediato su batteria e traffico.
+> sull'app e guadagno immediato su batteria e traffico. **Il 16 è fatto**, il 17 resta.
 
 > **Gli Step 18 e 19 sono spostamenti di file, e sono i due più delicati del piano** — non per la
 > logica, che non cambia, ma perché rompono rotte in silenzio. Vanno fatti uno per commit, con
@@ -150,7 +150,13 @@ Il piano nel repo, e la tabella di avanzamento di [STATO.md](STATO.md) estesa al
 stesso ruolo che `piano-v2` ha avuto per gli Step 10–14: è il documento da cui riprende ogni sessione
 successiva. Senza, «uno step per sessione» non funziona.
 
-### Step 16 — Il poll diventa una scala, e l'app dichiara quando qualcuno guarda
+### Step 16 — Il poll diventa una scala, e l'app dichiara quando qualcuno guarda ✅
+
+> **Fatto il 2026-08-02**, come descritto qui salvo un dettaglio: `useEngineActivity()` legge
+> `useVaultStatus()` invece di `useVaultRuntime()`, che solleva se il gruppo non è pronto — una
+> schermata a fuoco mentre il vault si monta è normale. `pollIntervalFor` e il tipo `PollStep` sono
+> esportati dal barrel di `@jutrack/core`. Il test `rallenta il poll fuori dalla finestra attiva` è
+> verde senza essere stato toccato.
 
 Sostituire il gradino binario 3 s/30 s con una scala progressiva, e dare al motore un modo esplicito
 di sapere che una schermata di dati condivisi è a fuoco.

@@ -4,6 +4,70 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-02 — Step 16: il poll diventa una scala, e l'app dice quando qualcuno guarda
+
+**Fatto**
+
+Il gradino binario 3 s / 30 s dentro una finestra attiva di due minuti è sostituito da una scala per
+soglie di inattività, e il motore ha un modo esplicito di sapere che una schermata di dati condivisi
+è a fuoco. Solo `packages/core/src/sync/` e due schermate: nessuna rotta toccata, nessun modulo
+nativo, nessuna build EAS.
+
+| Inattività | Poll |
+| ---------- | ---- |
+| 0          | 2 s  |
+| 15 s       | 5 s  |
+| 60 s       | 15 s |
+| 5 min      | 60 s |
+
+**Una tabella, non una formula esponenziale.** Si vuole poter rispondere a «dopo un minuto ogni
+quanto chiede?» leggendo quattro righe — e una tabella si prova con `it.each`, che è il primo test
+dello step: otto casi, tutti sui confini (14 999 → 2 000, 15 000 → 5 000).
+
+Il primo tratto è **più veloce** di prima (2 s invece di 3): a schermo acceso la latenza percepita
+migliora, e il risparmio arriva dal fatto che il ritmo stretto dura quindici secondi invece di due
+minuti. Stimate ~400 richieste al giorno contro le ~1.500 misurate allo Step 15.
+
+**Le decisioni che valeva la pena prendere qui**
+
+- **`activePollMs` / `idlePollMs` / `activeWindowMs` restano e vincono se passate**, riscritte come
+  scala a due gradini `[{0, active}, {activeWindow + 1, idle}]` — il `+ 1` perché la finestra attiva
+  includeva il proprio ultimo istante (`idleFor <= window`). Serviva perché il test
+  `rallenta il poll fuori dalla finestra attiva` restasse **identico parola per parola**: riscrivere
+  un test insieme al comportamento che verifica è il modo classico di perdere copertura senza
+  accorgersene. È verde senza essere stato toccato.
+- **Validazione nel costruttore, non al primo uso.** Scala vuota, primo `afterMs ≠ 0`, soglie non
+  crescenti, `pollMs <= 0` → `throw`. Scoperta dentro `pollIntervalMs`, una scala malformata
+  diventerebbe un `undefined` passato a `sleep`: un ciclo che martella il relay a piena velocità
+  senza che nulla lo segnali.
+- **`pollIntervalFor(schedule, idleForMs)` è pura ed esportata.** `pollIntervalMs()` è una riga, e la
+  logica della scala si prova senza costruire motore, relay e documento.
+- **Nel ramo `paused` si dorme l'ultimo gradino** invece di `idlePollMs`: è un sonno che non tocca la
+  rete, tanto vale il più largo.
+
+**`markActive()`, e perché non il suo opposto.** Due righe nel motore (`lastActivityAt = now()`,
+`wake()`), e un hook `useEngineActivity()` che lo chiama in `useFocusEffect` **solo** dalle due
+schermate che mostrano dati condivisi: la lista spese e i Grafici. Sospendere il ciclo quando nessuna
+schermata di dati è a fuoco passerebbe da `pause()`, che ferma anche il **push**: una pausa rimasta
+appesa sarebbe una spesa scritta che non parte, in silenzio — la classe di guasto che questo progetto
+ha già pagato due volte. Dimenticare un `markActive` produce invece solo un poll più lento.
+
+Il `wake()` non è un di più: senza, chi apre la lista spese dopo cinque minuti di inattività
+aspetterebbe comunque la fine del sonno da un minuto già in corso. C'è un test apposta.
+
+L'hook legge `useVaultStatus()` e non `useVaultRuntime()`, che solleva: una schermata a fuoco mentre
+il vault si sta montando è normale.
+
+**Verifica:** 548 test verdi (383 core + 122 app + 43 relay), da 536. Typecheck, lint e
+`format:check` puliti, `expo export --platform android` a posto. **Sul telefono non è ancora stato
+visto**: il punto 5 del criterio di «fatto» del piano v3 — una spesa che arriva entro un minuto dopo
+cinque minuti di fermo — resta da provare.
+
+**Prossimo:** Step 17 — `offlineRetryMs`, state vector riscritto solo se cambia, scritture della coda
+serializzate. Anch'esso tutto dentro `packages/core/src/sync/` più `platform/sync-store.ts`.
+
+---
+
 ## 2026-08-02 — Step 15: il piano v3, dalla prova a mano dell'app
 
 **Fatto**

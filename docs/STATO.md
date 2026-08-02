@@ -1,6 +1,6 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-02, a Step 15 chiuso — **il piano v3 è scritto, gli Step 16–22 sono da fare**.
+Aggiornato: 2026-08-02, a Step 16 chiuso — **piano v3 in corso, restano gli Step 17–22**.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -25,7 +25,7 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 13 — Inviti via link                | ✅    | Link condivisibile, pagina `/j` sul Worker                   |
 | 14 — Uscire da un gruppo            | ✅    | Cancellazione dal relay, rigenerazione con chiave nuova      |
 | 15 — Piano v3 scritto               | ✅    | Quattro tab, gruppo come luogo, azzeramento, sync tarato     |
-| 16 — Poll a scala, `markActive`     | ⬜    | Scala 2→5→15→60 s invece del gradino 3 s/30 s                |
+| 16 — Poll a scala, `markActive`     | ✅    | Scala 2→5→15→60 s invece del gradino 3 s/30 s                |
 | 17 — Offline ≠ errore del relay     | ⬜    | `offlineRetryMs`, state vector scritto solo se cambia        |
 | 18 — Tab Gruppi: elenco → gruppo    | ⬜    | Le spese diventano il dettaglio del gruppo, URL invariati    |
 | 19 — Tutto il gruppo nel gruppo     | ⬜    | Categorie, budget, pareggi, export dietro un'unica guardia   |
@@ -33,17 +33,17 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 21 — Nessun gruppo al primo avvio   | ⬜    | Fase `absent`, l'utente crea o entra con un invito           |
 | 22 — Azzera questo telefono         | ⬜    | Wipe totale e ritorno all'onboarding, senza riavvio          |
 
-**536 test verdi** (371 core + 122 app + 43 relay), typecheck, lint e `format:check` puliti.
+**548 test verdi** (383 core + 122 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 **I piani chiusi sono due.** Il piano originale (Step 0–9), e
 [piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md) (**Step 10–14**), nato dalla prima
 prova con due dispositivi che aveva fatto emergere due bug sui numeri e tre limiti di prodotto.
 
-**Il terzo è appena stato scritto e va eseguito:**
-[piano-v3-tab-gruppi-azzeramento-sync.md](piano-v3-tab-gruppi-azzeramento-sync.md), **Step 16–22**.
-Nasce dalla prova a mano delle funzionalità: la gestione dei gruppi non è intuitiva, il gruppo di
-default al primo avvio genera confusione, e il poll del relay va tarato. **Uno step per sessione**, e
-gli Step 16 e 17 sono indipendenti da tutti gli altri.
+**Il terzo è in corso:** [piano-v3-tab-gruppi-azzeramento-sync.md](piano-v3-tab-gruppi-azzeramento-sync.md),
+**Step 16–22**, di cui il 16 è fatto. Nasce dalla prova a mano delle funzionalità: la gestione dei
+gruppi non è intuitiva, il gruppo di default al primo avvio genera confusione, e il poll del relay va
+tarato. **Uno step per sessione**, e lo Step 17 — l'ultimo che non tocca una sola schermata — è ancora
+indipendente da tutti gli altri.
 
 > **Non resta codice da scrivere per i piani v1 e v2, resta la prova sul campo.** Dallo Step 10 in poi
 > nulla è mai stato visto funzionare su un telefono: quello che manca è il [criterio di «fatto»
@@ -146,6 +146,9 @@ la lista si è accorciata parecchio, ma non è vuota:
   (se lo perdesse per strada, l'app riceverebbe un invito senza chiave), e che il foglio di
   `Share.share` compaia davvero nella build installata. La pagina `/j` è già in produzione e
   risponde: quello che manca è il giro completo, dal link mandato in chat al gruppo aperto
+- La **scala del poll** dello Step 16: che una spesa scritta sull'altro telefono compaia entro pochi
+  secondi mentre entrambi sono aperti, e ancora entro un minuto dopo che uno è rimasto fermo cinque
+  minuti. È il punto 5 del criterio di «fatto» del piano v3, e a occhio si vede subito
 - **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
   rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
   l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima
@@ -312,8 +315,12 @@ caricherebbe la propria storia prima di conoscere quella dell'altro.
 - **Il cursore avanza all'ultimo `seq` visto**, non all'ultimo applicato e mai a `head`: un blob
   illeggibile non deve essere riletto in eterno, ma nemmeno far saltare quelli validi che seguono.
 - **Il sonno è interrompibile.** Una modifica locale sveglia il ciclo dopo 400 ms di debounce, così
-  una raffica di scritture produce una richiesta sola. Poll a 3 s in finestra attiva (due minuti),
-  30 s a riposo, sospeso in background via `AppState`.
+  una raffica di scritture produce una richiesta sola. In background è sospeso via `AppState`.
+- **Il poll è una scala** (Step 16), non un gradino: 2 s subito, 5 s dopo 15 s di inattività, 15 s
+  dopo un minuto, 60 s dopo cinque. `markActive()` riporta al gradino stretto **e** sveglia l'attesa
+  in corso; lo chiama `useEngineActivity()` dalle sole schermate che mostrano dati condivisi. Le
+  vecchie `activePollMs`/`idlePollMs`/`activeWindowMs` restano accettate e vincono se passate. Stima:
+  ~400 richieste al giorno contro le ~1.500 di prima.
 - **Tre esiti distinti, non uno solo.** `offline` (il relay non è stato raggiunto), `error` (il relay
   ha risposto male, si riprova col backoff), `blocked` (403: la chiave non apre quel vault — il ciclo
   si ferma, perché ritentare darebbe lo stesso esito per sempre).

@@ -11,10 +11,10 @@ import * as Y from 'yjs';
 import { deriveVaultKeys, generateVaultKey } from '../crypto/keys';
 import { testRandom } from '../crypto/testing';
 import { buildSplit, VaultStore } from '../model/store';
-import { SyncEngine } from './engine';
+import { SyncEngine, pollIntervalFor } from './engine';
 import { RelayClient, RelayError } from './relay-client';
 import { FakeRelay, MemoryCursorStore } from './testing';
-import type { HttpClient, SyncEngineOptions } from './types';
+import type { HttpClient, PollStep, SyncEngineOptions } from './types';
 
 const ME = 'membro-a';
 const YOU = 'membro-b';
@@ -682,6 +682,115 @@ describe('ciclo continuo', () => {
     await settle();
 
     expect(clock.waited).toEqual([4_000, 8_000, 16_000, 4_000]);
+    a.engine.stop();
+  });
+});
+
+describe('la scala del poll', () => {
+  const SCHEDULE: readonly PollStep[] = [
+    { afterMs: 0, pollMs: 2_000 },
+    { afterMs: 15_000, pollMs: 5_000 },
+    { afterMs: 60_000, pollMs: 15_000 },
+    { afterMs: 300_000, pollMs: 60_000 },
+  ];
+
+  // La scala è una tabella, e si prova come una tabella: sono i confini a contare, non
+  // i valori comodi in mezzo.
+  it.each([
+    [0, 2_000],
+    [14_999, 2_000],
+    [15_000, 5_000],
+    [59_999, 5_000],
+    [60_000, 15_000],
+    [299_999, 15_000],
+    [300_000, 60_000],
+    [86_400_000, 60_000],
+  ])('dopo %i ms di inattività il poll è %i ms', (idleFor, expected) => {
+    expect(pollIntervalFor(SCHEDULE, idleFor)).toBe(expected);
+  });
+
+  it('la scala allunga il poll man mano che l attività si allontana', async () => {
+    const relay = new FakeRelay();
+    const clock = frozenSleep();
+    let now = 1_000_000;
+    const a = makeDevice(relay, SHARED_KEYS, { sleep: clock.sleep, now: () => now });
+    await a.engine.start();
+
+    void a.engine.runForever();
+    await settle();
+    // Il motore nasce quando l'app si apre: è per definizione un momento attivo.
+    expect(clock.waited).toEqual([2_000]);
+
+    for (const idleFor of [15_000, 60_000, 300_000]) {
+      now = 1_000_000 + idleFor;
+      a.engine.wake();
+      await settle();
+    }
+
+    expect(clock.waited).toEqual([2_000, 5_000, 15_000, 60_000]);
+    a.engine.stop();
+  });
+
+  it('una scala malformata viene rifiutata alla costruzione', () => {
+    // Scoperta al primo uso, diventerebbe un `undefined` passato a `sleep`: un ciclo che
+    // martella il relay a piena velocità, senza che nulla lo segnali.
+    const relay = new FakeRelay();
+    expect(() => makeDevice(relay, SHARED_KEYS, { pollSchedule: [] })).toThrow(/vuota/);
+    expect(() =>
+      makeDevice(relay, SHARED_KEYS, { pollSchedule: [{ afterMs: 5_000, pollMs: 2_000 }] }),
+    ).toThrow(/afterMs 0/);
+    expect(() =>
+      makeDevice(relay, SHARED_KEYS, {
+        pollSchedule: [
+          { afterMs: 0, pollMs: 2_000 },
+          { afterMs: 0, pollMs: 5_000 },
+        ],
+      }),
+    ).toThrow(/crescere/);
+    expect(() =>
+      makeDevice(relay, SHARED_KEYS, { pollSchedule: [{ afterMs: 0, pollMs: 0 }] }),
+    ).toThrow(/positivo/);
+  });
+
+  it('markActive riporta il poll al gradino più stretto', async () => {
+    const relay = new FakeRelay();
+    const clock = frozenSleep();
+    let now = 1_000_000;
+    const a = makeDevice(relay, SHARED_KEYS, { sleep: clock.sleep, now: () => now });
+    await a.engine.start();
+
+    void a.engine.runForever();
+    await settle();
+
+    now += 400_000;
+    a.engine.wake();
+    await settle();
+    expect(clock.waited).toEqual([2_000, 60_000]);
+
+    // Una schermata di dati condivisi è tornata a fuoco: si ricomincia da due secondi.
+    a.engine.markActive();
+    await settle();
+    expect(clock.waited).toEqual([2_000, 60_000, 2_000]);
+
+    a.engine.stop();
+  });
+
+  it('markActive sveglia un attesa in corso', async () => {
+    // Non basta cambiare il ritmo del prossimo giro: chi apre la lista spese dopo cinque
+    // minuti di inattività aspetterebbe comunque la fine del sonno da un minuto.
+    const relay = new FakeRelay();
+    const clock = frozenSleep();
+    const a = makeDevice(relay, SHARED_KEYS, { sleep: clock.sleep });
+    await a.engine.start();
+
+    void a.engine.runForever();
+    await settle();
+    const before = relay.requests.length;
+
+    a.engine.markActive();
+    await settle();
+
+    expect(relay.requests.length).toBeGreaterThan(before);
     a.engine.stop();
   });
 });

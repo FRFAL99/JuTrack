@@ -20,8 +20,22 @@
  */
 import * as Y from 'yjs';
 import { RelayError, type RelayClient } from './relay-client';
-import type { SyncCursorStore, SyncEngineOptions, SyncState } from './types';
+import type { PollStep, SyncCursorStore, SyncEngineOptions, SyncState } from './types';
 
+/**
+ * Scala di default: stretta finché qualcuno guarda, larga man mano che si allontana.
+ *
+ * Il gradino binario di prima (3 s dentro due minuti, 30 s fuori) pagava il ritmo più
+ * caro per l'intera finestra attiva anche a schermo fermo. Con la scala il primo tratto
+ * è più veloce di prima — due secondi, non tre — e il costo complessivo di una giornata
+ * cala comunque di circa tre quarti.
+ */
+const DEFAULT_POLL_SCHEDULE: readonly PollStep[] = [
+  { afterMs: 0, pollMs: 2_000 },
+  { afterMs: 15_000, pollMs: 5_000 },
+  { afterMs: 60_000, pollMs: 15_000 },
+  { afterMs: 300_000, pollMs: 60_000 },
+];
 /** Poll quando c'è stata attività di recente: è il ritmo che l'utente percepisce. */
 const DEFAULT_ACTIVE_POLL_MS = 3_000;
 /** Poll a riposo: nessuno sta guardando, basta non restare indietro. */
@@ -41,6 +55,66 @@ const DEFAULT_MAX_BACKOFF_MS = 300_000;
  */
 const EMPTY_UPDATE_BYTES = 2;
 
+/**
+ * Intervallo di poll dopo `idleForMs` di inattività: l'ultima soglia superata.
+ *
+ * Pura ed esportata apposta — è la sola logica della scala, e provarla non deve
+ * richiedere di costruire un motore, un relay e un documento.
+ */
+export function pollIntervalFor(schedule: readonly PollStep[], idleForMs: number): number {
+  let interval = schedule[0]!.pollMs;
+  for (const step of schedule) {
+    if (idleForMs < step.afterMs) break;
+    interval = step.pollMs;
+  }
+  return interval;
+}
+
+/**
+ * Costruisce la scala dalle opzioni, e la rifiuta se è malformata.
+ *
+ * La validazione sta **nel costruttore** e non al primo uso: una scala vuota scoperta
+ * dentro `pollIntervalMs` diventerebbe un `undefined` passato a `sleep`, cioè un ciclo
+ * che gira a piena velocità contro il relay senza che nulla lo segnali.
+ */
+function resolvePollSchedule(options: SyncEngineOptions): readonly PollStep[] {
+  // Le tre opzioni della forma precedente vincono se ne arriva anche una sola: chi le
+  // passa sta chiedendo esattamente due gradini, e riscriverle come scala qui evita di
+  // avere due percorsi di calcolo nel motore.
+  const legacy =
+    options.activePollMs !== undefined ||
+    options.idlePollMs !== undefined ||
+    options.activeWindowMs !== undefined;
+
+  if (legacy) {
+    const activeWindowMs = options.activeWindowMs ?? DEFAULT_ACTIVE_WINDOW_MS;
+    return [
+      { afterMs: 0, pollMs: options.activePollMs ?? DEFAULT_ACTIVE_POLL_MS },
+      // `+ 1`: la finestra attiva includeva il suo ultimo istante (`idleFor <= window`).
+      { afterMs: activeWindowMs + 1, pollMs: options.idlePollMs ?? DEFAULT_IDLE_POLL_MS },
+    ];
+  }
+
+  const schedule = options.pollSchedule ?? DEFAULT_POLL_SCHEDULE;
+
+  if (schedule.length === 0) throw new Error('pollSchedule non può essere vuota');
+  if (schedule[0]!.afterMs !== 0) {
+    throw new Error('pollSchedule deve iniziare da afterMs 0: senza, non c’è un gradino iniziale');
+  }
+  for (const [i, step] of schedule.entries()) {
+    if (!(step.pollMs > 0)) {
+      throw new Error(`pollSchedule: pollMs deve essere positivo (gradino ${i}: ${step.pollMs})`);
+    }
+    const previous = schedule[i - 1];
+    if (previous !== undefined && !(step.afterMs > previous.afterMs)) {
+      throw new Error(
+        `pollSchedule: le soglie devono crescere (gradino ${i}: ${step.afterMs} dopo ${previous.afterMs})`,
+      );
+    }
+  }
+  return schedule;
+}
+
 export interface SyncOutcome {
   pulled: number;
   pushed: number;
@@ -53,9 +127,7 @@ export class SyncEngine {
   private readonly doc: Y.Doc;
   private readonly client: RelayClient;
   private readonly store: SyncCursorStore;
-  private readonly activePollMs: number;
-  private readonly idlePollMs: number;
-  private readonly activeWindowMs: number;
+  private readonly pollSchedule: readonly PollStep[];
   private readonly debounceMs: number;
   private readonly initialBackoffMs: number;
   private readonly maxBackoffMs: number;
@@ -105,9 +177,7 @@ export class SyncEngine {
     this.doc = doc;
     this.client = client;
     this.store = store;
-    this.activePollMs = options.activePollMs ?? DEFAULT_ACTIVE_POLL_MS;
-    this.idlePollMs = options.idlePollMs ?? DEFAULT_IDLE_POLL_MS;
-    this.activeWindowMs = options.activeWindowMs ?? DEFAULT_ACTIVE_WINDOW_MS;
+    this.pollSchedule = resolvePollSchedule(options);
     this.debounceMs = options.debounceMs ?? DEFAULT_DEBOUNCE_MS;
     this.initialBackoffMs = options.initialBackoffMs ?? DEFAULT_INITIAL_BACKOFF_MS;
     this.maxBackoffMs = options.maxBackoffMs ?? DEFAULT_MAX_BACKOFF_MS;
@@ -192,6 +262,20 @@ export class SyncEngine {
   resume(): void {
     this.paused = false;
     this.backoffMs = this.initialBackoffMs;
+    this.lastActivityAt = this.now();
+    this.wake();
+  }
+
+  /**
+   * Dichiara che qualcuno sta guardando dati condivisi: riporta il poll al gradino più
+   * stretto e sveglia l'attesa in corso.
+   *
+   * È il verso giusto della cosa. L'opposto — sospendere il ciclo quando nessuna
+   * schermata di dati è a fuoco — passerebbe da `pause()`, che ferma anche il **push**:
+   * una pausa rimasta appesa sarebbe una spesa scritta che non parte, in silenzio.
+   * Dimenticare un `markActive` produce invece soltanto un poll più lento.
+   */
+  markActive(): void {
     this.lastActivityAt = this.now();
     this.wake();
   }
@@ -367,8 +451,9 @@ export class SyncEngine {
 
     while (!this.stopped && !this.blocked) {
       if (this.paused) {
-        // In background non si interroga il relay. `resume()` sveglia il sonno.
-        await this.interruptibleSleep(this.idlePollMs);
+        // In background non si interroga il relay: è un sonno senza rete, quindi tanto
+        // vale il gradino più largo della scala. `resume()` lo sveglia.
+        await this.interruptibleSleep(this.pollSchedule[this.pollSchedule.length - 1]!.pollMs);
         continue;
       }
 
@@ -381,15 +466,15 @@ export class SyncEngine {
   }
 
   /**
-   * Intervallo corrente fra due giri.
+   * Intervallo corrente fra due giri: il gradino della scala corrispondente a quanto
+   * tempo è passato dall'ultima attività.
    *
-   * Tre secondi mentre si sta usando l'app, trenta a riposo. Il poll fisso costringeva a
-   * scegliere fra latenza e consumo: qui la finestra attiva paga i tre secondi solo
-   * quando servono davvero.
+   * Il poll fisso costringeva a scegliere fra latenza e consumo. La scala paga il ritmo
+   * stretto solo finché serve davvero, e si allarga da sé man mano che l'attività si
+   * allontana — senza mai fermarsi, perché un push in coda deve poter partire.
    */
   private pollIntervalMs(): number {
-    const idleFor = this.now() - this.lastActivityAt;
-    return idleFor <= this.activeWindowMs ? this.activePollMs : this.idlePollMs;
+    return pollIntervalFor(this.pollSchedule, this.now() - this.lastActivityAt);
   }
 
   /** Attende `ms`, o meno se qualcuno chiama `wake()`. */

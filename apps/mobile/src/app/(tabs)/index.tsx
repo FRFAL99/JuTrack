@@ -7,12 +7,15 @@ import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { ExpenseRow } from '@/features/expenses/ExpenseRow';
 import { groupByDay } from '@/features/expenses/grouping';
+import { useEngineActivity } from '@/features/sync/useEngineActivity';
 import { useCategories, useCurrentGroup, useExpenses, useMembers } from '@/state';
 import { useTheme } from '@/theme';
 
 export default function ExpensesScreen() {
   const { colors, spacing, fontSize, fontWeight, radius } = useTheme();
   const insets = useSafeAreaInsets();
+  // Qui si guardano le spese dell'altro: è il posto in cui il poll deve essere stretto.
+  useEngineActivity();
   const expenses = useExpenses();
   const categories = useCategories(true);
   const members = useMembers();
