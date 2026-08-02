@@ -42,7 +42,7 @@ export function Button({
         styles.base,
         {
           backgroundColor: background(pressed),
-          borderRadius: radius.md,
+          borderRadius: radius.lg,
           paddingVertical: spacing.md,
           paddingHorizontal: spacing.lg,
           borderWidth: variant === 'secondary' ? StyleSheet.hairlineWidth : 0,
@@ -67,7 +67,9 @@ const styles = StyleSheet.create({
   base: {
     alignItems: 'center',
     justifyContent: 'center',
-    // Altezza minima per un target tattile comodo anche con label corte.
-    minHeight: 48,
+    // Altezza minima per un target tattile comodo anche con label corte. Alzata a 52 col
+    // redesign: il primario a piena larghezza è spesso l'unica azione della schermata e sta
+    // in fondo, dove lo raggiunge il pollice.
+    minHeight: 52,
   },
 });

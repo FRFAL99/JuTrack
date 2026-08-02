@@ -4,6 +4,74 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-02 — Redesign, passo 3: i componenti del registro, e un default che non si tocca
+
+Tre componenti nuovi, due modificati, uno esteso. Nessuna schermata li usa ancora: li useranno i
+passi 4-6. Le icone del passo 2 sono state **viste sul telefono** — era l'unica parte non
+verificabile da qui, perché il font di `@expo/vector-icons` si carica a runtime da un asset e
+avrebbe fallito come quadratini vuoti.
+
+**`Card` prende tre varianti, e il default resta la forma di sempre.** Il documento di design
+proponeva `flat` come default: sarebbe stata una regressione silenziosa su 46 usi in 15 file, molti
+fuori dal redesign — backup, invito, azzeramento — che sarebbero stati ridisegnati tutti insieme
+senza comparire in un diff. Quindi `default` è la forma attuale (superficie, bordo, padding),
+`flat` è il contenitore di lista (niente bordo, **niente padding**, che lo mettono le righe dentro
+così i loro stati di pressione arrivano al bordo) e `raised` è la card eroe. Quando i passi 4-7
+avranno spostato tutte le chiamate, `default` resterà senza usi e si potrà togliere: è un ponte,
+scritto per essere smontato.
+
+`flat` porta `overflow: 'hidden'`, che le altre due non hanno bisogno di avere: senza padding, lo
+sfondo pieno di una riga premuta arriva fino all'angolo e lo squadra. È il tipo di dettaglio che si
+scopre a schermata finita e si paga rifacendo il contenitore.
+
+**`Screen` guadagna `header`, esclusivo con `title`.** Nel redesign il titolo da 34px sparisce da
+tre schermate su cinque — le spese usano la pill del gruppo, i grafici lo stepper del mese, Tu il
+blocco identità — ma non da tutte, e le modali lo tengono. Un componente con due modi, invece di due
+componenti che divergono. Il nodo si riceve **senza padding orizzontale**: quelle intestazioni hanno
+spaziature proprie e alcune arrivano a filo dello schermo.
+
+**`AvatarStack` ha due funzioni pure sotto**, ed è lì che stanno le uniche cose che potevano essere
+sbagliate:
+
+- `initialOf` taglia con `Array.from` e non con `name[0]`. Il secondo restituisce **mezza coppia
+  surrogata** se il nome comincia fuori dal piano base — un'emoji, o parecchi alfabeti non latini —
+  e a schermo si vedrebbe il rombo col punto interrogativo. Il ripiego per il nome vuoto è `?`:
+  succede davvero, perché il nome del profilo si salva sul blur e fra il campo svuotato e il rientro
+  il membro si chiama «».
+- `splitAvatars` decide chi entra nei cerchi e chi finisce nel `+N`. Quando serve il conteggio si
+  mostra **un cerchio in meno**: con `max` cerchi pieni e un `+1` accanto si occuperebbe lo spazio di
+  `max + 1` cerchi dicendo una cosa in meno. Il test lo fissa con `visible.length + overflow` uguale
+  al totale.
+
+Il `+N` non usa `textOnAccent`: il suo fondo è `surfacePressed`, una superficie del tema e non un
+colore di membro, e il bianco sparirebbe sul tema chiaro. I cerchi delle persone sì, perché i colori
+del profilo sono saturi e già validati per contrasto.
+
+**`ListRow` non disegna separatori**, di proposito. A comporre la sezione è la schermata, che sa
+quale riga è l'ultima e di quanto rientrare il filetto: una riga che si porta dietro il proprio bordo
+inferiore ne lascia sempre uno di troppo in fondo all'elenco. `NavCard` **resta** per i due casi in
+cui la frase di spiegazione è l'informazione e non decorazione (Diagnostica, Ripristina da backup).
+
+**`Button`**: `radius.md` → `radius.lg`, `minHeight` 48 → 52. Sono due numeri, ma cambiano l'aspetto
+di ogni schermata dell'app da subito — a differenza dei tre componenti nuovi. Il documento li mette
+fra le modifiche ai componenti senza assegnarli a un passo: farli qui è l'unico posto in cui non si
+perdono.
+
+**Quello che questo passo non può verificare.** I tre componenti nuovi non sono importati da nessuna
+parte, quindi Metro non li raggiunge e `expo export` **non li copre**. Non è una supposizione: nel
+bundle esportato `Sincronizza adesso` (da una schermata montata) c'è, `e altre` di `AvatarStack` no.
+Restano coperti dai test le due funzioni pure, che sono la sola parte che poteva essere logicamente
+sbagliata; il resto è JSX che il passo 4 monterà per primo.
+
+**Verifica:** 593 test verdi (387 core + 163 app + 43 relay), typecheck, lint e `format:check`
+puliti, `expo export --platform android` completato.
+
+**Prossimo:** passo 4 — Tu, cioè la fusione di `profile.tsx` e `settings.tsx`, la riduzione a tre
+tab e il redirect di `/settings`. Serve `href: null` per togliere la voce dalla tab bar, e
+`profile.tsx` → `tu.tsx` cambia l'URL: va rifatta la procedura dei tipi di rotta dello Step 18.
+
+---
+
 ## 2026-08-02 — Redesign, passo 2: icone vettoriali, senza toccare i dati sincronizzati
 
 Le emoji spariscono da tab bar e categorie. Restano dove sono parte di una frase e non un'icona —

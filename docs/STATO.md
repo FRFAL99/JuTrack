@@ -40,13 +40,13 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | -------------------------- | ----- | --------------------------------------------------------------- |
 | 1 — Token                  | ✅    | Grigi scuri più profondi, `surfaceRaised`/`divider`/`textFaint` |
 | 2 — Icone                  | ✅    | Feather al posto delle emoji, mappa emoji→icona in `seed.ts`    |
-| 3 — Componenti nuovi       | ⬜    | `SectionLabel`, `ListRow`, `AvatarStack`, `Card` a varianti     |
+| 3 — Componenti nuovi       | ✅    | `SectionLabel`, `ListRow`, `AvatarStack`, `Card` a varianti     |
 | 4 — Tu                     | ⬜    | Fusione profilo + impostazioni, da quattro tab a tre            |
 | 5 — Grafici                | ⬜    | Riscrittura in forma registro, barre ritoccate                  |
 | 6 — Spese home + selettore | ⬜    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ⬜    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**585 test verdi** (387 core + 155 app + 43 relay), typecheck, lint e `format:check` puliti.
+**593 test verdi** (387 core + 163 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 **I piani chiusi sono due.** Il piano originale (Step 0–9), e
 [piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md) (**Step 10–14**), nato dalla prima
@@ -94,7 +94,12 @@ maiuscoletta — dove si legge (grafici, selettore gruppi, Tu). Regola unica: **
 schermata**. Il redesign passa da quattro tab a tre, e non tocca `packages/core`, lo schema Yjs,
 sync, crypto, relay, backup, export né azzeramento.
 
-**Un passo per sessione**, come per i piani precedenti. Passi 1 (token) e 2 (icone) chiusi.
+**Un passo per sessione**, come per i piani precedenti. Passi 1 (token), 2 (icone) e 3 (componenti)
+chiusi.
+
+**Il default di `Card` resta la forma di sempre.** Le varianti nuove sono `flat` (contenitore di
+lista: niente bordo, niente padding) e `raised` (card eroe, una per schermata); `default` è un ponte
+scritto per essere smontato quando i passi 4-7 avranno spostato tutte le chiamate.
 
 **Le icone delle categorie non migrano i dati.** Il campo `icon` nel documento Yjs resta com'è —
 è sincronizzato, riscriverlo genererebbe un update per ogni categoria su ogni telefono — e la
