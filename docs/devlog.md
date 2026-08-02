@@ -4,6 +4,79 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-02 — Step 14: uscire da un gruppo, rigenerarlo
+
+**Fatto**
+
+Uscire da un gruppo ora può portarsi dietro anche la copia sul relay, e il gruppo si può
+**rigenerare**: chiave nuova, `vaultId` nuovo, tutta la storia dentro, e chi resta da reinvitare. È
+l'ultimo step del piano v2.
+
+**Cancellare non è revocare, e questo step serve a dirlo bene**
+
+`DELETE /v1/vault/:id/vault` esisteva dallo Step 5, con i suoi test dentro workerd; mancava tutto il
+lato client. Ma è una richiesta che va raccontata per quello che è: cancella la copia sul relay, non
+quelle già scaricate sugli altri telefoni. E poiché azzera anche il token registrato al primo
+accesso, il `vaultId` torna perfino libero — chi conserva la chiave può ricominciare a scriverci, in
+un vault che però nessun altro sta più leggendo. Il relay finto dei test **replica anche questo**:
+dopo un `DELETE` accetta di nuovo scritture, così un test non può concludere che cancellare
+escluda qualcuno.
+
+L'unica esclusione possibile è spostare il gruppo su una chiave che l'escluso non ha. `regenerate`
+crea la chiave nuova, copia lo stato Yjs (`VaultStore.encodeState()` → un documento vuoto con la sua
+persistenza), porta dietro il ricollegamento a un membro esistente, e lascia il gruppo vecchio **in
+piedi**: uscirne è una chiamata separata, così un'interruzione a metà lascia due gruppi leggibili
+invece di nessuno.
+
+**I membri restano tutti, escluso compreso.** Non è una dimenticanza: le spese riferiscono i membri
+con `paidBy` e con le quote, e togliere una persona dall'elenco cambierebbe i saldi già calcolati.
+Chi è escluso resta nella storia; quello che smette è il flusso di aggiornamenti. C'è il test.
+
+**L'ordine della cancellazione remota**
+
+Prima il relay, poi il locale. La richiesta va autenticata con il token derivato dalla chiave, e la
+chiave sta per essere cancellata da questo telefono: cancellando prima in locale, un guasto di rete
+lascerebbe sul relay un vault che nessuno può più eliminare. Se la rete non risponde non si tocca
+nulla — meglio un gruppo ancora in elenco, da cui riprovare a uscire.
+
+**Due difetti trovati mentre si scriveva, entrambi dello Step 12**
+
+- **Uscire da un gruppo mai sincronizzato falliva** con `no such table: sync_state`. Le tabelle di
+  sync nascono all'avvio del motore, e `SqliteSyncStore.forget` le dava per esistenti: un gruppo
+  creato e abbandonato prima che il motore fosse mai partito non si poteva lasciare. Ora `forget`
+  passa dallo stesso `ensureSchema` di `open`.
+- **La schermata del gruppo poteva bloccare l'app sul caricamento.** L'effetto che rende corrente il
+  gruppo della rotta scattava anche dopo averlo abbandonato — il corrente era già un altro, e la
+  schermata chiedeva di tornare su una riga che non esiste più: gruppo corrente senza riga, e l'app
+  ferma sul caricamento fino al riavvio. Chiuso in due punti, perché uno solo si aggira: la
+  schermata non chiede più un gruppo sparito, e `select` rifiuta un `vaultId` che non è nel
+  registro.
+
+Entrambi erano raggiungibili anche senza lo Step 14 — «esci dal gruppo» c'è dallo Step 12 — e
+nessuno dei due si vede dai test di allora: il primo perché i test aprivano sempre uno store di sync
+prima di uscire, il secondo perché vive nella navigazione.
+
+**Nell'interfaccia**
+
+La cancellazione dal relay è un interruttore, **spento di default**: è irreversibile e vale per
+tutti, non solo per questo telefono, e vale sia per l'uscita sia per la rigenerazione — la stessa
+domanda posta due volte sembrerebbe due cose diverse. La rigenerazione ha una card propria
+(«Escludere qualcuno»), il testo dice cosa fa e cosa **non** fa, e al termine porta dritti alla
+schermata d'invito: un gruppo rigenerato senza reinvitare nessuno è un gruppo da soli.
+
+**Verifica:** 536 test verdi (371 core + 122 app + 43 relay), typecheck, lint e `format:check`
+puliti, bundle Android esportato.
+
+**Ancora da vedere sul telefono**, come tutto il piano v2 da metà in poi. Qui in particolare: che la
+cancellazione dal relay risponda davvero (è la prima richiesta di rete che parte da un gesto
+dell'utente e non dal motore), e che dopo una rigenerazione l'altro telefono entri nel gruppo nuovo
+col link e ritrovi le spese di prima.
+
+**Prossimo:** il piano v2 è finito. Resta la verifica sui due telefoni fisici, che è il criterio di
+«fatto» dell'intero piano.
+
+---
+
 ## 2026-08-02 — Step 13: inviti via link
 
 **Fatto**

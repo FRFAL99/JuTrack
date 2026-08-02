@@ -1,8 +1,15 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import { expoKeyStore, expoRandom } from '@/platform';
+import { RELAY_URL } from '@/config';
+import { expoHttp, expoKeyStore, expoRandom } from '@/platform';
 import { useAppData } from './ProfileProvider';
-import { FIRST_GROUP_NAME, GroupRegistry, normalizeGroupName, type GroupRecord } from './groups';
+import {
+  FIRST_GROUP_NAME,
+  GroupRegistry,
+  httpRelayGateway,
+  normalizeGroupName,
+  type GroupRecord,
+} from './groups';
 
 /**
  * I gruppi di questo telefono, e quale è aperto adesso.
@@ -31,8 +38,22 @@ export interface GroupsData {
   rename(vaultId: string, name: string): Promise<void>;
   /** Registra a quale membro ci si è ricollegati in questo gruppo. */
   setMyMemberId(vaultId: string, memberId: string): Promise<void>;
-  /** Esce da un gruppo. Se era il corrente, ne apre un altro. */
-  leave(vaultId: string): Promise<void>;
+  /**
+   * Esce da un gruppo. Se era il corrente, ne apre un altro.
+   *
+   * Con `wipeRelay` cancella anche la copia sul relay — che non toglie nulla a chi ha
+   * già la chiave, e infatti non è una revoca: per quella serve `regenerate`.
+   */
+  leave(vaultId: string, options?: { wipeRelay?: boolean }): Promise<void>;
+  /**
+   * Sposta il gruppo su una chiave nuova, portandosi dietro la storia, e lascia quello
+   * vecchio. È l'unico modo di escludere qualcuno; chi resta va reinvitato.
+   */
+  regenerate(
+    vaultId: string,
+    state: Uint8Array,
+    options?: { wipeRelay?: boolean },
+  ): Promise<GroupRecord>;
 }
 
 type GroupsStatus =
@@ -54,7 +75,12 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
 
     async function boot(): Promise<void> {
       try {
-        const opened = await GroupRegistry.open({ db, keyStore: expoKeyStore, random: expoRandom });
+        const opened = await GroupRegistry.open({
+          db,
+          keyStore: expoKeyStore,
+          random: expoRandom,
+          relay: httpRelayGateway(RELAY_URL, expoHttp, expoRandom),
+        });
         let list = await opened.list();
 
         // Il primo gruppo nasce da solo. Chiederlo nell'onboarding significherebbe far
@@ -100,6 +126,12 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
   const select = useCallback(
     async (vaultId: string): Promise<void> => {
       if (registry === null) return;
+      // Un gruppo che non c'è più non si apre. Capita quando si è appena usciti o si è
+      // appena rigenerato: la schermata del gruppo vede il corrente cambiare sotto di sé
+      // e chiede di tornare a quello della propria rotta, che nel frattempo è sparito.
+      // Senza questo controllo il gruppo corrente diventerebbe un id senza riga, e
+      // l'intera app resterebbe sul caricamento fino al riavvio.
+      if ((await registry.get(vaultId)) === null) return;
       await registry.touch(vaultId);
       await meta.set(CURRENT_GROUP_KEY, vaultId);
       setCurrentId(vaultId);
@@ -149,15 +181,36 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
   );
 
   const leave = useCallback(
-    async (vaultId: string): Promise<void> => {
+    async (vaultId: string, { wipeRelay = false } = {}): Promise<void> => {
       if (registry === null) return;
-      await registry.forget(vaultId);
+      await registry.forget(vaultId, { wipeRelay });
       const list = await refresh();
       // Non si resta mai senza gruppo: se si è appena usciti dall'ultimo, se ne crea uno
       // nuovo e vuoto, esattamente come al primo avvio.
       const next = list[0] ?? (await registry.create(FIRST_GROUP_NAME));
       await refresh();
       await select(next.vaultId);
+    },
+    [refresh, registry, select],
+  );
+
+  const regenerate = useCallback(
+    async (
+      vaultId: string,
+      state: Uint8Array,
+      { wipeRelay = false } = {},
+    ): Promise<GroupRecord> => {
+      if (registry === null) throw new Error('registro dei gruppi non ancora pronto');
+      // Il gruppo nuovo per primo, e con i dati già dentro. All'inverso, un'interruzione
+      // fra le due lascerebbe questo telefono senza né il vecchio né il nuovo.
+      const fresh = await registry.regenerate(vaultId, state);
+      await refresh();
+      await select(fresh.vaultId);
+      // Solo ora si esce dal vecchio: il runtime si è già spostato altrove, quindi non
+      // c'è più un motore che scrive sulle tabelle che stiamo per eliminare.
+      await registry.forget(vaultId, { wipeRelay });
+      await refresh();
+      return fresh;
     },
     [refresh, registry, select],
   );
@@ -169,9 +222,32 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
     if (current === undefined) return { phase: 'loading' };
     return {
       phase: 'ready',
-      data: { registry, groups, current, create, join, select, rename, setMyMemberId, leave },
+      data: {
+        registry,
+        groups,
+        current,
+        create,
+        join,
+        select,
+        rename,
+        setMyMemberId,
+        leave,
+        regenerate,
+      },
     };
-  }, [create, currentId, error, groups, join, leave, registry, rename, select, setMyMemberId]);
+  }, [
+    create,
+    currentId,
+    error,
+    groups,
+    join,
+    leave,
+    regenerate,
+    registry,
+    rename,
+    select,
+    setMyMemberId,
+  ]);
 
   return <GroupsContext.Provider value={status}>{children}</GroupsContext.Provider>;
 }

@@ -5,6 +5,7 @@ import {
   Alert,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   View,
@@ -35,13 +36,18 @@ import { useTheme } from '@/theme';
 export default function GroupDetailScreen() {
   const params = useLocalSearchParams<{ vaultId?: string }>();
   const vaultId = Array.isArray(params.vaultId) ? params.vaultId[0] : params.vaultId;
-  const { current, select } = useGroups();
+  const { current, groups, select } = useGroups();
+  const stillExists = groups.some((group) => group.vaultId === vaultId);
 
   // Il cambio di gruppo smonta e rimonta il runtime: finché non è finito, i dati sotto
   // sono ancora quelli del gruppo di prima e mostrarli sarebbe una bugia.
+  //
+  // `stillExists` copre il caso in cui il gruppo di questa rotta sia stato appena
+  // abbandonato o rigenerato: il corrente è già un altro, e senza il controllo questa
+  // schermata chiederebbe di tornare su un gruppo che non c'è più.
   useEffect(() => {
-    if (vaultId !== undefined && vaultId !== current.vaultId) void select(vaultId);
-  }, [current.vaultId, select, vaultId]);
+    if (vaultId !== undefined && stillExists && vaultId !== current.vaultId) void select(vaultId);
+  }, [current.vaultId, select, stillExists, vaultId]);
 
   if (vaultId === undefined || vaultId !== current.vaultId) return <Switching />;
   return <GroupDetail />;
@@ -60,7 +66,7 @@ function Switching() {
 
 function GroupDetail() {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
-  const { current, groups, rename, leave } = useGroups();
+  const { current, groups, rename, leave, regenerate } = useGroups();
   const { store, keys } = useVaultRuntime();
   const myMemberId = useMyMemberId();
   const members = useMembers();
@@ -68,6 +74,13 @@ function GroupDetail() {
 
   const [draft, setDraft] = useState(current.name);
   const [leaving, setLeaving] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+  /**
+   * Spento di default: cancellare dal relay è irreversibile e vale per **tutti**, non
+   * solo per questo telefono. Chi esce da un gruppo che gli altri continuano a usare non
+   * deve poterlo svuotare per distrazione.
+   */
+  const [wipeRelay, setWipeRelay] = useState(false);
 
   // Il nome si salva quando il campo perde il fuoco, non a ogni tasto: scrivendo, ogni
   // lettera produrrebbe un update Yjs, e quindi una riga nel log del relay.
@@ -91,8 +104,12 @@ function GroupDetail() {
       'Le spese di questo gruppo spariscono da questo telefono. Senza un backup della chiave ' +
         'non tornano più: non esiste un reset lato server. ' +
         (last
-          ? 'Essendo il tuo unico gruppo, al suo posto ne verrà creato uno vuoto.'
-          : 'Chi altro ne fa parte non se ne accorge e continua a usarlo.'),
+          ? 'Essendo il tuo unico gruppo, al suo posto ne verrà creato uno vuoto. '
+          : 'Chi altro ne fa parte non se ne accorge e continua a usarlo. ') +
+        (wipeRelay
+          ? 'La copia sul relay verrà cancellata: chi resta non riceverà più aggiornamenti, ' +
+            'ma tiene ciò che ha già scaricato.'
+          : 'La copia sul relay resta e scade da sola dopo trenta giorni.'),
       [
         { text: 'Annulla', style: 'cancel' },
         {
@@ -100,7 +117,7 @@ function GroupDetail() {
           style: 'destructive',
           onPress: () => {
             setLeaving(true);
-            void leave(current.vaultId)
+            void leave(current.vaultId, { wipeRelay })
               .then(() => router.replace('/(tabs)'))
               .catch((cause: unknown) => {
                 Alert.alert(
@@ -114,6 +131,40 @@ function GroupDetail() {
       ],
     );
   };
+
+  const handleRegenerate = (): void => {
+    Alert.alert(
+      `Rigenerare «${current.name}»?`,
+      'Il gruppo riparte con una chiave nuova, portandosi dietro spese, categorie e saldi. ' +
+        'Da questo telefono sparisce quello vecchio, e chi vuoi tenere va reinvitato: ' +
+        'finché non accetta, resta fuori. Chi era nel gruppo continua a vedere ciò che ' +
+        'aveva già; quello che smette è il flusso di aggiornamenti.',
+      [
+        { text: 'Annulla', style: 'cancel' },
+        {
+          text: 'Rigenera',
+          style: 'destructive',
+          onPress: () => {
+            setRegenerating(true);
+            // Lo stato si legge **adesso**, dal documento aperto: dopo lo spostamento il
+            // runtime è già quello del gruppo nuovo, e non ci sarebbe più niente da copiare.
+            const state = store.encodeState();
+            void regenerate(current.vaultId, state, { wipeRelay })
+              .then(() => router.replace('/pair/invite'))
+              .catch((cause: unknown) => {
+                Alert.alert(
+                  'Rigenerazione fallita',
+                  cause instanceof Error ? cause.message : String(cause),
+                );
+                setRegenerating(false);
+              });
+          },
+        },
+      ],
+    );
+  };
+
+  const busy = leaving || regenerating;
 
   return (
     <ModalScreen title={current.name}>
@@ -199,6 +250,26 @@ function GroupDetail() {
           />
         </Card>
 
+        <Card style={{ gap: spacing.sm }}>
+          <Text
+            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
+          >
+            Escludere qualcuno
+          </Text>
+          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
+            Non esiste un modo di togliere la chiave a chi ce l&apos;ha: rigenerare il gruppo la
+            cambia per tutti. Le spese e i saldi vengono con te; chi vuoi tenere lo reinviti subito
+            dopo, dalla schermata che si apre da sé.
+          </Text>
+          <Button
+            label={regenerating ? 'Rigenerazione…' : 'Rigenera con una chiave nuova'}
+            variant="secondary"
+            onPress={handleRegenerate}
+            disabled={busy}
+            loading={regenerating}
+          />
+        </Card>
+
         <Card style={{ gap: spacing.sm, borderColor: colors.danger }}>
           <Text
             style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
@@ -210,10 +281,32 @@ function GroupDetail() {
             altro: chi ha la chiave continua a leggere, perché in un sistema così la chiave *è* il
             diritto di accesso.
           </Text>
+
+          {/* Vale anche per la rigenerazione, che del gruppo vecchio esce comunque: è la
+              stessa domanda, e ripeterla in due punti la farebbe sembrare due cose diverse. */}
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
+                Cancella anche la copia sul relay
+              </Text>
+              <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
+                {wipeRelay
+                  ? 'Chi resta smette di ricevere aggiornamenti, ma tiene ciò che ha già scaricato.'
+                  : 'Lasciandola, scade da sola dopo trenta giorni.'}
+              </Text>
+            </View>
+            <Switch
+              value={wipeRelay}
+              onValueChange={setWipeRelay}
+              accessibilityLabel="Cancella anche la copia sul relay"
+            />
+          </View>
+
           <Button
             label={leaving ? 'Uscita…' : 'Esci dal gruppo'}
             variant="danger"
             onPress={handleLeave}
+            disabled={busy}
             loading={leaving}
           />
         </Card>

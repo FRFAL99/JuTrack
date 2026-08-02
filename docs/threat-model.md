@@ -82,8 +82,8 @@ mostra: per catturarlo bisogna essere presenti o avere una foto. Un link invece:
 - sopravvive nei backup di quella conversazione.
 
 Chiunque abbia il link entra nel gruppo. La schermata d'invito lo dichiara **prima** di generarlo,
-non dopo, e nomina l'unico rimedio reale a un invito finito nelle mani sbagliate: uscire dal gruppo
-e rifarlo con una chiave nuova. La scadenza di cinque minuti resta ciò che era già dichiarata di
+non dopo, e nomina l'unico rimedio reale a un invito finito nelle mani sbagliate: **rigenerare il
+gruppo** con una chiave nuova, che dallo Step 14 è un'azione dell'interfaccia e non perde i dati. La scadenza di cinque minuti resta ciò che era già dichiarata di
 essere — una cortesia verso un link dimenticato in chat, non una difesa: sta dentro l'URL, quindi è
 rimovibile, e la chiave che contiene non scade mai.
 
@@ -143,8 +143,21 @@ Non c'è modo di espellere un dispositivo compromesso. La chiave del vault è co
 chi ce l'ha, ce l'ha.
 
 L'unico rimedio è **ruotare il vault**: nuova chiave, nuovo `vaultId`, ri-pairing dei dispositivi
-legittimi. Il vecchio vault va abbandonato. Procedura manuale in v1: è ciò che lo Step 14 renderà
-un'azione dell'interfaccia, e vale allo stesso modo per un link d'invito finito dove non doveva.
+legittimi. Dallo Step 14 è un'azione dell'interfaccia — «Rigenera con una chiave nuova», nella
+schermata del gruppo — che porta con sé spese, categorie e saldi e finisce sulla schermata d'invito
+per chi resta. Vale allo stesso modo per un link d'invito finito dove non doveva.
+
+Va detto con precisione cosa **non** ottiene, perché l'interfaccia lo dice e questo documento non
+può dire meno:
+
+- **Non toglie a nessuno ciò che ha già scaricato.** I dati del gruppo vecchio restano sui telefoni
+  che li hanno, leggibili con la chiave che hanno. Quello che si interrompe è il flusso di
+  aggiornamenti.
+- **Cancellare il vault dal relay non è una revoca.** Svuota la copia sul server, e poiché elimina
+  anche il token registrato al primo accesso, il `vaultId` torna disponibile: chi conserva la chiave
+  può ricominciare a scriverci, in un vault che però nessun altro sta più leggendo.
+- **I membri restano tutti nel gruppo rigenerato**, escluso compreso. Le spese li riferiscono con
+  `paidBy` e con le quote: rimuoverli cambierebbe i saldi già calcolati.
 
 ### Il relay può negare il servizio
 

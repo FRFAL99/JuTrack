@@ -1,6 +1,6 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-02, a Step 13 chiuso.
+Aggiornato: 2026-08-02, a Step 14 chiuso — **tutti gli step del piano sono fatti**.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -23,14 +23,19 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 11 — Profili                        | ✅    | Un profilo per persona, il membro nasce da lì                |
 | 12 — Più gruppi per telefono        | ✅    | Registro gruppi, tabelle per vault, runtime rimontabile      |
 | 13 — Inviti via link                | ✅    | Link condivisibile, pagina `/j` sul Worker                   |
-| 14 — Uscire da un gruppo            | ⬜    | Wipe sul relay, rigenerazione della chiave                   |
+| 14 — Uscire da un gruppo            | ✅    | Cancellazione dal relay, rigenerazione con chiave nuova      |
 
-**520 test verdi** (366 core + 111 app + 43 relay), typecheck, lint e `format:check` puliti.
+**536 test verdi** (371 core + 122 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 **Il piano originale (Step 0–9) è chiuso.** La prima prova con **due dispositivi** ha fatto emergere
 due bug con conseguenze sui numeri e tre limiti di prodotto: da lì nasce un secondo piano,
 [piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md), che copre gli **Step 10–14**.
-Chiusi dal **10** al **13**; resta il 14.
+**Anche quello è chiuso.**
+
+> **Non resta codice da scrivere, resta la prova sul campo.** Dallo Step 10 in poi nulla è mai stato
+> visto funzionare su un telefono: quello che manca è il [criterio di «fatto»
+> end-to-end](piano-v2-profili-gruppi-sync.md#criterio-di-fatto-end-to-end) su due dispositivi
+> fisici. Finché non è stato fatto, «i test passano» e «funziona» restano due frasi diverse.
 
 **La pagina `/j` è in produzione** (deploy del 2026-08-02, versione `b351a959`): risponde 200 con
 gli header attesi — `Referrer-Policy: no-referrer`, CSP `default-src 'none'`, `noindex` — e l'HTML
@@ -127,32 +132,37 @@ la lista si è accorciata parecchio, ma non è vuota:
   (se lo perdesse per strada, l'app riceverebbe un invito senza chiave), e che il foglio di
   `Share.share` compaia davvero nella build installata. La pagina `/j` è già in produzione e
   risponde: quello che manca è il giro completo, dal link mandato in chat al gruppo aperto
+- **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
+  rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
+  l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima
 
 > **La development build installata sul telefono non contiene i due moduli nuovi.** È stata
 > compilata prima che venissero aggiunti. L'app si apre lo stesso — sono caricati con `require` in
 > `try/catch` proprio per questo — e l'export ripiega sugli appunti, dichiarandolo nell'interfaccia.
 > Il foglio di condivisione comparirà solo dopo una build aggiornata.
 
-Tutto il resto è verificato: 491 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 536 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 ## Trappole già risolte — da non riscoprire
 
-| Trappola                                                                                     | Soluzione adottata                                                                             |
-| -------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `TextEncoder` non esiste su Hermes                                                           | UTF-8 scritta in `crypto/encoding.ts`; vietato l'import da noble                               |
-| Yjs non fa il bundle su RN (`lib0` → `isomorphic-webcrypto`, fermo al 2022)                  | Alias in `metro.config.js` verso uno shim su `expo-crypto`                                     |
-| `storage.deleteAll()` su Durable Object SQLite cancella anche le tabelle                     | `ensureSchema()` subito dopo, con test di regressione                                          |
-| Un blob corrotto blocca **tutti** gli update successivi di quel device                       | Ripubblicazione dello stato completo al rilevamento                                            |
-| TypeScript bloccato a 6.x                                                                    | `typescript-eslint` dichiara peer `typescript <6.1.0`                                          |
-| Nella flat config ESLint vince l'ultima regola                                               | Gli override vanno **dopo** il blocco generale                                                 |
-| Metro annunciava `127.0.0.1` come host del bundle                                            | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                                                      |
-| expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera   | `expo-camera`, `expo-file-system`, `expo-sharing` con `require` in `try/catch`                 |
-| **`expo start` dalla root del monorepo**: 404 su ogni bundle, app muta                       | Avviarlo **sempre** da `apps/mobile`; è costato giorni                                         |
-| Due copie di React (`expo-*` dichiara `"react": "*"`)                                        | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede                                |
-| `DELETE FROM sync_pending` senza `WHERE`: con due gruppi cancella la coda offline dell'altro | Colonna `vault_id` ovunque, e un test su SQLite vero — con un finto motore passerebbe comunque |
-| I tipi delle rotte expo-router non li rigenera `expo export`, ma `expo start`                | Sono in `.expo/types/`, gitignorato: in CI non esistono e il typecheck passa lo stesso         |
-| **expo-router non espone il fragment**: `useLocalSearchParams` vede il percorso e la query   | La rotta `/join` legge il link grezzo con `Linking.useLinkingURL()`                            |
+| Trappola                                                                                          | Soluzione adottata                                                                             |
+| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `TextEncoder` non esiste su Hermes                                                                | UTF-8 scritta in `crypto/encoding.ts`; vietato l'import da noble                               |
+| Yjs non fa il bundle su RN (`lib0` → `isomorphic-webcrypto`, fermo al 2022)                       | Alias in `metro.config.js` verso uno shim su `expo-crypto`                                     |
+| `storage.deleteAll()` su Durable Object SQLite cancella anche le tabelle                          | `ensureSchema()` subito dopo, con test di regressione                                          |
+| Un blob corrotto blocca **tutti** gli update successivi di quel device                            | Ripubblicazione dello stato completo al rilevamento                                            |
+| TypeScript bloccato a 6.x                                                                         | `typescript-eslint` dichiara peer `typescript <6.1.0`                                          |
+| Nella flat config ESLint vince l'ultima regola                                                    | Gli override vanno **dopo** il blocco generale                                                 |
+| Metro annunciava `127.0.0.1` come host del bundle                                                 | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                                                      |
+| expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera        | `expo-camera`, `expo-file-system`, `expo-sharing` con `require` in `try/catch`                 |
+| **`expo start` dalla root del monorepo**: 404 su ogni bundle, app muta                            | Avviarlo **sempre** da `apps/mobile`; è costato giorni                                         |
+| Due copie di React (`expo-*` dichiara `"react": "*"`)                                             | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede                                |
+| `DELETE FROM sync_pending` senza `WHERE`: con due gruppi cancella la coda offline dell'altro      | Colonna `vault_id` ovunque, e un test su SQLite vero — con un finto motore passerebbe comunque |
+| I tipi delle rotte expo-router non li rigenera `expo export`, ma `expo start`                     | Sono in `.expo/types/`, gitignorato: in CI non esistono e il typecheck passa lo stesso         |
+| **expo-router non espone il fragment**: `useLocalSearchParams` vede il percorso e la query        | La rotta `/join` legge il link grezzo con `Linking.useLinkingURL()`                            |
+| Uscire da un gruppo **mai sincronizzato**: `no such table: sync_state`                            | `SqliteSyncStore.forget` passa dallo stesso `ensureSchema` di `open`                           |
+| La schermata del gruppo riselezionava il gruppo **appena abbandonato**: app ferma sul caricamento | Guardia nella schermata **e** in `select`, che rifiuta un `vaultId` non nel registro           |
 
 ## Come si entra in un gruppo (Step 7 e 13)
 
@@ -184,9 +194,9 @@ con `Linking.useLinkingURL()`. È il punto in cui questo pezzo poteva fallire in
 **Chiunque abbia il link o il QR entra nel gruppo.** Rischio accettato, dichiarato
 nell'interfaccia **prima** di generare l'invito e ampliato nel threat model: un link inoltrabile è
 più esposto di un QR mostrato a schermo per cinque minuti. La scadenza è una cortesia, non una
-difesa: sta dentro l'URL, quindi è rimovibile. Il rimedio a un invito finito male è uscire dal
-gruppo e rifarlo; un protocollo autenticato (SAS/PAKE) toglierebbe il segreto dal trasporto, ed è
-fra i miglioramenti futuri.
+difesa: sta dentro l'URL, quindi è rimovibile. Il rimedio a un invito finito male è **rigenerare il
+gruppo** (Step 14): chiave nuova, storia intatta, chi resta reinvitato. Un protocollo autenticato
+(SAS/PAKE) toglierebbe il segreto dal trasporto, ed è fra i miglioramenti futuri.
 
 ## Chi sono io (Step 11)
 
@@ -246,6 +256,34 @@ quello creato per sbaglio resterebbe lì per sempre. Chi **crea** un gruppo non 
 unico si eliminano quelle tabelle, la vecchia chiave e le chiavi di `app_meta` che la riferivano. Il
 profilo sopravvive. Il vault vecchio sul relay resta e scade col TTL di 30 giorni — cancellarlo
 richiederebbe la chiave che si sta eliminando, e una richiesta di rete durante l'avvio.
+
+## Uscire da un gruppo, e rigenerarlo (Step 14)
+
+Sono due gesti diversi, e la differenza è l'unica cosa che conta capire.
+
+| Gesto                  | Cosa fa                                                      | Chi resta fuori                          |
+| ---------------------- | ------------------------------------------------------------ | ---------------------------------------- |
+| **Esci dal gruppo**    | Cancella da **questo telefono** chiave, spese e coda di sync | Nessuno: solo tu esci                    |
+| + cancella dal relay   | Svuota anche la copia sul server                             | Nessuno, ma si fermano gli aggiornamenti |
+| **Rigenera il gruppo** | Chiave nuova, `vaultId` nuovo, tutta la storia dentro        | Chiunque non venga reinvitato            |
+
+- **Cancellare dal relay non è revocare.** Non toglie a nessuno ciò che ha già scaricato, e poiché
+  la cancellazione azzera anche il token registrato al primo accesso, il `vaultId` torna libero: chi
+  conserva la chiave può ricominciare a scriverci, in un vault che però nessun altro legge. Il relay
+  finto dei test replica anche questo, così nessun test può concludere che cancellare escluda
+  qualcuno.
+- **L'interruttore «cancella anche dal relay» è spento di default**, e vale per entrambi i gesti:
+  è irreversibile e vale per tutti, non solo per chi lo tocca.
+- **Prima il relay, poi il locale.** La cancellazione remota si autentica con il token derivato
+  dalla chiave, che sta per essere eliminata da questo telefono. Se la rete non risponde non si
+  tocca nulla: meglio un gruppo ancora in elenco, da cui riprovare, che un vault orfano sul relay
+  che nessuno può più cancellare.
+- **La rigenerazione tiene tutti i membri, escluso compreso.** Le spese li riferiscono con `paidBy`
+  e con le quote: toglierne uno cambierebbe i saldi già calcolati. Chi è escluso resta nella storia,
+  e smette solo di ricevere aggiornamenti.
+- **Il gruppo vecchio non viene toccato dalla rigenerazione**: uscirne è una chiamata separata, così
+  un'interruzione a metà lascia due gruppi leggibili invece di nessuno. Al termine si arriva alla
+  schermata d'invito, perché un gruppo rigenerato e non reinviato a nessuno è un gruppo da soli.
 
 ## Come funziona il sync (Step 10)
 

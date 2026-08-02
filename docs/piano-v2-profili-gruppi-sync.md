@@ -1,8 +1,9 @@
 # JuTrack — Piano v2: profili, gruppi, inviti, sync veloce
 
 > **Avanzamento al 2026-08-02.**
-> Completati: **Step 0–9** (il piano originale) e gli **Step 10, 11, 12 e 13** di questo documento.
-> Resta lo **Step 14**.
+> Completati: **Step 0–9** (il piano originale) e **tutti** gli step di questo documento, dal 10 al 14. Non resta codice da scrivere: resta il [criterio di «fatto»
+> end-to-end](#criterio-di-fatto-end-to-end) sui due telefoni fisici, che nessuno degli step dal 10
+> in poi ha mai superato.
 >
 > Nasce dalla prima prova reale con **due dispositivi**, che ha fatto emergere due bug con
 > conseguenze sui numeri e tre limiti di prodotto che il piano originale non copriva.
@@ -390,7 +391,21 @@ quello che era già dichiarata di essere — una cortesia, non una difesa.
 _Verifica:_ il link generato su A, mandato in chat e aperto su B, fa entrare B nel gruppo **senza**
 fargli perdere i gruppi che aveva già. Un test verifica che `/j` non tocchi il Durable Object.
 
-### Step 14 — Uscire da un gruppo, rigenerare
+### Step 14 — Uscire da un gruppo, rigenerare ✅
+
+**Fatto**, con tre aggiunte emerse strada facendo, tutte raccontate nel [devlog](devlog.md):
+
+1. **L'ordine della cancellazione remota è vincolante**, e il piano non lo diceva: prima il relay,
+   poi il locale, perché la richiesta si autentica con la chiave che sta per essere cancellata. Se
+   la rete non risponde non si tocca nulla.
+2. **Il relay finto dei test ora accetta scritture dopo un `DELETE`**, come quello vero: la
+   cancellazione azzera il token registrato al primo accesso, quindi il `vaultId` torna libero. Un
+   fake più severo avrebbe lasciato credere che cancellare basti a escludere qualcuno.
+3. **Due difetti dello Step 12 trovati scrivendo questo**: uscire da un gruppo mai sincronizzato
+   falliva con `no such table`, e la schermata del gruppo poteva bloccare l'app sul caricamento
+   riselezionando il gruppo appena abbandonato.
+
+Sotto, il piano com'era stato scritto.
 
 - **«Esci dal gruppo»**: cancella la chiave da SecureStore, elimina `y_updates_<vaultId>` e le righe
   di sync di quel vault, rimuove la voce dal registro. Con conferma esplicita — senza backup della

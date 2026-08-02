@@ -163,6 +163,32 @@ export class RelayClient {
 
     return { updates, head: body.head, hasMore: body.hasMore, undecryptable, lastSeq };
   }
+
+  /**
+   * Cancella dal relay tutto ciò che riguarda questo vault.
+   *
+   * **Non è una revoca.** Cancella la copia sul relay, non quelle già scaricate sugli
+   * altri telefoni: chi ha la chiave conserva i suoi dati e continua a leggerli. E
+   * poiché la cancellazione azzera anche il token registrato al primo accesso, il
+   * `vaultId` torna libero — chi ha ancora la chiave può ricominciare a scriverci, in un
+   * vault che però nessun altro sta più leggendo. Per escludere davvero qualcuno serve
+   * **rigenerare il gruppo**: chiave nuova, `vaultId` nuovo, invito nuovo a chi resta.
+   *
+   * Richiede comunque il token: senza la chiave nessuno può cancellare il vault altrui.
+   */
+  async deleteVault(): Promise<void> {
+    const res = await this.http.request(this.url('/vault'), {
+      method: 'DELETE',
+      headers: this.headers,
+    });
+
+    if (res.status !== 200) {
+      throw new RelayError(
+        res.status,
+        `cancellazione del vault fallita: HTTP ${res.status} ${await safeText(res)}`,
+      );
+    }
+  }
 }
 
 async function safeText(res: { text: () => Promise<string> }): Promise<string> {

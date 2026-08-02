@@ -1,9 +1,13 @@
+import * as Y from 'yjs';
 import {
   assertVaultKey,
   bytesToHex,
   deriveVaultKeys,
   generateVaultKey,
   hexToBytes,
+  RelayClient,
+  SqliteYPersistence,
+  type HttpClient,
   type RandomSource,
   type SecureKeyStore,
   type SqliteDatabase,
@@ -66,10 +70,35 @@ interface GroupRow {
   last_opened_at: string | null;
 }
 
+/**
+ * Ciò che il registro sa fare **sul relay**, ridotto al minimo.
+ *
+ * Un'interfaccia invece del `RelayClient` diretto per una ragione pratica: i test del
+ * registro girano su SQLite vero ma senza rete, e devono poter osservare che la
+ * cancellazione remota sia stata chiesta — e con quali chiavi — senza inventarsi un
+ * server finto.
+ */
+export interface RelayGateway {
+  deleteVault(keys: VaultKeys): Promise<void>;
+}
+
+/** Il gateway vero: un `RelayClient` costruito sulle chiavi del gruppo da cancellare. */
+export function httpRelayGateway(
+  baseUrl: string,
+  http: HttpClient,
+  random: RandomSource,
+): RelayGateway {
+  return {
+    deleteVault: (keys) => new RelayClient(baseUrl, keys, http, random).deleteVault(),
+  };
+}
+
 export interface GroupRegistryDeps {
   db: SqliteDatabase;
   keyStore: SecureKeyStore;
   random: RandomSource;
+  /** Assente nei test di sola logica locale: senza, `forget` rifiuta `wipeRelay`. */
+  relay?: RelayGateway;
   /** Iniettabile per rendere i test deterministici. */
   now?: () => Date;
 }
@@ -91,12 +120,14 @@ export class GroupRegistry {
   private readonly db: SqliteDatabase;
   private readonly keyStore: SecureKeyStore;
   private readonly random: RandomSource;
+  private readonly relay: RelayGateway | null;
   private readonly now: () => Date;
 
   private constructor(deps: GroupRegistryDeps) {
     this.db = deps.db;
     this.keyStore = deps.keyStore;
     this.random = deps.random;
+    this.relay = deps.relay ?? null;
     this.now = deps.now ?? (() => new Date());
   }
 
@@ -205,15 +236,85 @@ export class GroupRegistry {
    * Esce da un gruppo: chiave, righe di sync, log del documento, riga di registro.
    *
    * Senza un backup della chiave i dati di quel gruppo diventano irrecuperabili da questo
-   * telefono — chi chiama deve aver chiesto conferma. I dati sul relay restano, e chi ha
-   * ancora la chiave continua a leggerli: la revoca non esiste in un sistema dove la
-   * chiave *è* il diritto di accesso.
+   * telefono — chi chiama deve aver chiesto conferma. Chi ha ancora la chiave continua a
+   * leggere: la revoca non esiste in un sistema dove la chiave *è* il diritto di accesso.
+   *
+   * Con `wipeRelay` si cancella prima anche la copia sul relay. **In quest'ordine**: la
+   * richiesta va autenticata con il token derivato dalla chiave, e la chiave sta per
+   * essere cancellata da questo telefono. Se la rete non risponde non si tocca nulla di
+   * locale — meglio un gruppo ancora in elenco, da cui riprovare a uscire, che un vault
+   * orfano sul relay senza più nessuno che possieda la chiave per cancellarlo.
    */
-  async forget(vaultId: string): Promise<void> {
+  async forget(vaultId: string, { wipeRelay = false } = {}): Promise<void> {
+    if (wipeRelay) {
+      if (this.relay === null) {
+        throw new Error('cancellazione dal relay non disponibile: nessun gateway configurato');
+      }
+      const keys = await this.keys(vaultId);
+      if (keys === null) {
+        throw new Error(
+          'La chiave di questo gruppo non è leggibile: senza, il relay non accetta la ' +
+            'cancellazione. Si può comunque uscire lasciando la copia sul relay, che scade da sé.',
+        );
+      }
+      await this.relay.deleteVault(keys);
+    }
+
     await this.keyStore.delete(groupKeyStorageKey(vaultId));
     await SqliteSyncStore.forget(this.db, vaultId);
     await this.db.execute(`DROP TABLE IF EXISTS ${updatesTableName(vaultId)}`);
     await this.db.execute('DELETE FROM groups WHERE vault_id = ?', [vaultId]);
+  }
+
+  /**
+   * Ricrea il gruppo con una chiave nuova, portandosi dietro tutta la sua storia.
+   *
+   * È l'unica forma di esclusione possibile. Cancellare il vault dal relay non toglie a
+   * nessuno ciò che ha già scaricato, e il `vaultId` torna perfino disponibile a chi
+   * conserva la chiave: l'unico modo di lasciare qualcuno fuori è spostare il gruppo su
+   * una chiave che quel qualcuno non ha, e reinvitare chi resta.
+   *
+   * **I membri restano tutti**, escluso compreso. Non è una dimenticanza: le spese
+   * puntano ai membri con `paidBy` e con le quote, e togliere una persona dall'elenco
+   * cambierebbe i saldi già calcolati — che è esattamente ciò che il gruppo non deve
+   * fare. Chi è stato escluso resta nella storia; semplicemente non riceve più nulla.
+   *
+   * Il gruppo vecchio **non** viene toccato qui: uscirne è una decisione a parte, e
+   * separarla significa che un'interruzione fra le due lascia due gruppi leggibili
+   * invece di nessuno.
+   */
+  async regenerate(vaultId: string, state: Uint8Array, name?: string): Promise<GroupRecord> {
+    const source = await this.get(vaultId);
+    if (source === null) throw new Error('gruppo da rigenerare non trovato nel registro');
+
+    const fresh = await this.register(
+      generateVaultKey(this.random),
+      name ?? source.name,
+      // `created`: la chiave nasce qui, e nel gruppo nuovo si è per definizione
+      // quello che l'ha creato. Il seed delle categorie che ne discende è comunque
+      // inerte — il documento copiato le contiene già.
+      'created',
+    );
+
+    // Il ricollegamento va portato dietro: lo stato copiato conserva gli id dei membri,
+    // quindi chi in questo gruppo non era il proprio `profileId` — un ripristino da
+    // backup — tornerebbe a esserlo, e comparirebbe due volte accanto a sé stesso.
+    if (source.myMemberId !== null) {
+      await this.setMyMemberId(fresh.vaultId, source.myMemberId);
+    }
+
+    const doc = new Y.Doc();
+    const persistence = new SqliteYPersistence(this.db, doc, {
+      tableName: updatesTableName(fresh.vaultId),
+    });
+    // `load()` crea la tabella (vuota) e si mette in ascolto: l'update applicato dopo
+    // viene scritto come qualunque altro. `destroy()` attende che sia davvero su disco,
+    // prima che qualcuno apra il gruppo nuovo e lo trovi ancora senza dati.
+    await persistence.load();
+    Y.applyUpdate(doc, state);
+    await persistence.destroy();
+
+    return { ...fresh, myMemberId: source.myMemberId };
   }
 
   /** Le chiavi d'uso di un gruppo, `null` se la chiave manca o è illeggibile. */

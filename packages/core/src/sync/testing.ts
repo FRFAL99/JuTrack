@@ -38,7 +38,7 @@ export class MemoryCursorStore implements SyncCursorStore {
  * server vero darebbe test verdi e sincronizzazione rotta in produzione.
  */
 export class FakeRelay implements HttpClient {
-  private readonly blobs: string[] = [];
+  private blobs: string[] = [];
 
   /**
    * Limiti allineati a quelli del relay reale.
@@ -59,7 +59,7 @@ export class FakeRelay implements HttpClient {
 
   async request(
     url: string,
-    init: { method: 'GET' | 'POST'; headers: Record<string, string>; body?: string },
+    init: { method: 'GET' | 'POST' | 'DELETE'; headers: Record<string, string>; body?: string },
   ): Promise<{ status: number; text: () => Promise<string> }> {
     this.requests.push({ method: init.method, url });
 
@@ -71,6 +71,14 @@ export class FakeRelay implements HttpClient {
 
     if (!init.headers.authorization?.startsWith('Bearer ')) {
       return respond(401, JSON.stringify({ error: 'token mancante' }));
+    }
+
+    if (init.method === 'DELETE') {
+      // Come il relay vero: sparisce anche il token registrato al primo accesso, quindi
+      // il vault resta utilizzabile da chi ha ancora la chiave. Un fake che rifiutasse
+      // le richieste successive nasconderebbe che cancellare **non** è revocare.
+      this.blobs = [];
+      return respond(200, JSON.stringify({ deleted: true }));
     }
 
     if (init.method === 'POST') {

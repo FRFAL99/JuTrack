@@ -19,6 +19,18 @@ export class SqliteSyncStore implements SyncCursorStore {
   ) {}
 
   static async open(db: SqliteDatabase, vaultId: string): Promise<SqliteSyncStore> {
+    await SqliteSyncStore.ensureSchema(db);
+    return new SqliteSyncStore(db, vaultId);
+  }
+
+  /**
+   * Crea le tabelle se mancano.
+   *
+   * Chiamata anche da `forget`: uscire da un gruppo mai sincronizzato — creato e
+   * abbandonato senza che il motore sia mai partito — altrimenti fallirebbe con
+   * `no such table`, e l'utente resterebbe nel gruppo senza capire perché.
+   */
+  private static async ensureSchema(db: SqliteDatabase): Promise<void> {
     // Chiave primaria composta: la stessa chiave logica (`cursor`) esiste una volta per
     // gruppo. Con la sola `key` il secondo gruppo sovrascriverebbe il cursore del primo,
     // che poi riscaricherebbe il log dall'inizio o, peggio, ne salterebbe un pezzo.
@@ -48,7 +60,6 @@ export class SqliteSyncStore implements SyncCursorStore {
          PRIMARY KEY (vault_id, key)
        )`,
     );
-    return new SqliteSyncStore(db, vaultId);
   }
 
   /**
@@ -58,6 +69,7 @@ export class SqliteSyncStore implements SyncCursorStore {
    * di quel vault non resta nulla di aperto.
    */
   static async forget(db: SqliteDatabase, vaultId: string): Promise<void> {
+    await SqliteSyncStore.ensureSchema(db);
     await db.execute('DELETE FROM sync_state WHERE vault_id = ?', [vaultId]);
     await db.execute('DELETE FROM sync_pending WHERE vault_id = ?', [vaultId]);
     await db.execute('DELETE FROM sync_meta WHERE vault_id = ?', [vaultId]);

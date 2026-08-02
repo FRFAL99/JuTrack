@@ -56,7 +56,7 @@ export interface SyncCursorStore {
 export interface HttpClient {
   request(
     url: string,
-    init: { method: 'GET' | 'POST'; headers: Record<string, string>; body?: string },
+    init: { method: 'GET' | 'POST' | 'DELETE'; headers: Record<string, string>; body?: string },
   ): Promise<{ status: number; text: () => Promise<string> }>;
 }
 

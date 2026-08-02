@@ -4,7 +4,7 @@
  * La UI non tocca mai direttamente le `Y.Map`: passa da qui, dove vivono le invarianti
  * (importi interi, quote che sommano al totale, tombstone invece di cancellazioni).
  */
-import type * as Y from 'yjs';
+import * as Y from 'yjs';
 import type { RandomSource } from '../crypto/types';
 import {
   budgetsMap,
@@ -157,6 +157,21 @@ export class VaultStore {
     this.transact(() => {
       metaMap(this.doc).set('name', name);
     });
+  }
+
+  /**
+   * L'intero stato del documento come update Yjs, da applicare a un documento vuoto.
+   *
+   * Serve a **rigenerare un gruppo**: si copia lo stato in un vault con una chiave nuova,
+   * perché non esiste altro modo di escludere qualcuno da un sistema in cui la chiave *è*
+   * il diritto di accesso.
+   *
+   * Diverso da `snapshot()`, che produce dati leggibili per l'export: qui i byte sono
+   * quelli di Yjs, tombstone e struttura CRDT compresi, ed è esattamente ciò che serve
+   * perché il gruppo nuovo continui la storia di quello vecchio invece di ricominciarla.
+   */
+  encodeState(): Uint8Array {
+    return Y.encodeStateAsUpdate(this.doc);
   }
 
   /* ------------------------------- Spese -------------------------------- */
