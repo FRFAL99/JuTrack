@@ -8,7 +8,7 @@ import { Screen } from '@/components/Screen';
 import { ExpenseRow } from '@/features/expenses/ExpenseRow';
 import { groupByDay } from '@/features/expenses/grouping';
 import { useEngineActivity } from '@/features/sync/useEngineActivity';
-import { useCategories, useCurrentGroup, useExpenses, useMembers } from '@/state';
+import { useCategories, useCurrentGroup, useExpenses, useMembers, type GroupRecord } from '@/state';
 import { useTheme } from '@/theme';
 
 /**
@@ -17,8 +17,22 @@ import { useTheme } from '@/theme';
  * Il gruppo non è più un parametro implicito da leggere in una pill: è il **titolo**
  * della schermata, e toccarlo porta a gestirlo. Che sia il gruppo giusto lo garantisce la
  * guardia in `[vaultId]/_layout.tsx`, che l'ha reso corrente prima di montare questo.
+ *
+ * **Quella stessa guardia rende `null` impossibile qui**, ma il compilatore non lo sa, e
+ * la risposta non è un `!`: è un componente sopra. Tutti gli hook di sotto leggono il
+ * vault, quindi un `return` anticipato in mezzo a loro sarebbe illegale — le chiamate
+ * devono venire prima di ogni uscita, e il loro numero non può cambiare fra un render e
+ * l'altro. È lo stesso motivo di `PairInviteScreen` → `InviteToGroup`.
  */
 export default function ExpensesScreen() {
+  const group = useCurrentGroup();
+  // Irraggiungibile: il layout mostra il proprio caricamento finché il gruppo dell'URL non
+  // è quello corrente, quindi qui non si arriva mai senza. Niente stato vuoto da disegnare.
+  if (group === null) return null;
+  return <ExpensesOfGroup group={group} />;
+}
+
+function ExpensesOfGroup({ group }: { group: GroupRecord }) {
   const { colors, spacing, fontSize, fontWeight, radius } = useTheme();
   const insets = useSafeAreaInsets();
   // Qui si guardano le spese dell'altro: è il posto in cui il poll deve essere stretto.
@@ -26,7 +40,6 @@ export default function ExpensesScreen() {
   const expenses = useExpenses();
   const categories = useCategories(true);
   const members = useMembers();
-  const group = useCurrentGroup();
 
   // Mappe invece di `find` dentro la riga: con N spese ed M categorie il rendering
   // passa da N×M confronti a N accessi diretti.

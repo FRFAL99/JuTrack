@@ -1,6 +1,6 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-02, a Step 20 chiuso — **piano v3 in corso, restano gli Step 21–22**.
+Aggiornato: 2026-08-02, a Step 21 chiuso — **piano v3 in corso, resta lo Step 22**.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -30,23 +30,24 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 18 — Tab Gruppi: elenco → gruppo    | ✅    | Le spese diventano il dettaglio del gruppo, URL invariati    |
 | 19 — Tutto il gruppo nel gruppo     | ✅    | Categorie, budget, pareggi, export dietro un'unica guardia   |
 | 20 — Quattro tab                    | ✅    | Gruppi, Grafici, Impostazioni, Profilo                       |
-| 21 — Nessun gruppo al primo avvio   | ⬜    | Fase `absent`, l'utente crea o entra con un invito           |
+| 21 — Nessun gruppo al primo avvio   | ✅    | Fase `absent`, l'utente crea o entra con un invito           |
 | 22 — Azzera questo telefono         | ⬜    | Wipe totale e ritorno all'onboarding, senza riavvio          |
 
-**563 test verdi** (387 core + 133 app + 43 relay), typecheck, lint e `format:check` puliti.
+**570 test verdi** (387 core + 140 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 **I piani chiusi sono due.** Il piano originale (Step 0–9), e
 [piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md) (**Step 10–14**), nato dalla prima
 prova con due dispositivi che aveva fatto emergere due bug sui numeri e tre limiti di prodotto.
 
 **Il terzo è in corso:** [piano-v3-tab-gruppi-azzeramento-sync.md](piano-v3-tab-gruppi-azzeramento-sync.md),
-**Step 16–22**, di cui **16, 17, 18, 19 e 20 sono fatti**. Nasce dalla prova a mano delle
+**Step 16–22**, di cui **16, 17, 18, 19, 20 e 21 sono fatti**. Nasce dalla prova a mano delle
 funzionalità: la gestione dei gruppi non è intuitiva, il gruppo di default al primo avvio genera
 confusione, e il poll del relay va tarato. **Uno step per sessione.** La taratura del motore è
 finita, **gli spostamenti di rotte pure** — erano i due step più delicati del piano, quelli che
 potevano rompere in silenzio l'ingresso da un invito, e sono chiusi entrambi con gli URL intatti
-(vedi sotto) — e la riorganizzazione dei tab è finita anche lei. Restano i due step che toccano lo
-stato dell'app e non la sua forma: togliere il gruppo di default (21) e scrivere l'azzeramento (22).
+(vedi sotto) — la riorganizzazione dei tab anche, e il gruppo di default non c'è più. **Resta lo
+Step 22**, «Azzera questo telefono»: la schermata che spiega è già in piedi dallo Step 20, quindi
+è tutto codice distruttivo e niente impaginazione.
 
 > **Non resta codice da scrivere per i piani v1 e v2, resta la prova sul campo.** Dallo Step 10 in poi
 > nulla è mai stato visto funzionare su un telefono: quello che manca è il [criterio di «fatto»
@@ -176,6 +177,12 @@ la lista si è accorciata parecchio, ma non è vuota:
 - **Lo Step 20**: che quattro etichette stiano nella tab bar senza troncarsi («Impostazioni» è la
   lunga), che il tab Profilo salvi il nome **sul blur** e che il cambio si veda subito nel gruppo, e
   che `/azzera` si apra e si chiuda
+- **Lo Step 21, ed è quello che conta di più**: che al primo avvio da azzerato si arrivi
+  all'onboarding del profilo e poi a **zero gruppi**, con i tre ingressi funzionanti; che creare il
+  primo gruppo **non azzeri la pila di navigazione** (è la ragione della fase `absent`); che uscire
+  dall'ultimo gruppo riporti all'elenco vuoto senza spinner appesi; e soprattutto che **chi ha già
+  dei dati non si accorga di nulla** — nessuna migrazione, quindi l'unico modo di saperlo è aprirla
+  su un telefono che i gruppi ce li ha già
 - **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
   rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
   l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima
@@ -252,9 +259,9 @@ app/azzera.tsx                                     "/azzera"               fuori
 - `unstable_settings = { initialRouteName: 'index' }` in entrambi i layout: senza, chi arriva a
   `/groups/<id>` da un link non ha nulla sotto nello stack, e «indietro» esce dall'app.
 - **`app/(gruppo)/` è una guardia, non un tab.** Il suo layout controlla che un gruppo aperto esista
-  e altrimenti mostra `GroupRequired`. Oggi la condizione è sempre vera; dallo **Step 21**, in cui al
-  primo avvio non esiste alcun gruppo, sarà il **solo** punto dell'app in cui quel ramo vive — ed è
-  per questo che la guardia è stata scritta prima dello stato vuoto che la attiva.
+  e altrimenti mostra `GroupRequired`. Dallo **Step 21** quel ramo è vivo — al primo avvio non esiste
+  alcun gruppo — ed è il **solo** punto dell'app in cui vive, invece delle condizioni sparse che lo
+  Step 12 aveva eliminato apposta. La guardia è stata scritta prima dello stato vuoto che la attiva.
 - **Due schermate ne restano fuori di proposito.** `backup.tsx`, perché è l'unica da cui si
   **ripristina** una chiave, cioè ciò che serve a chi un gruppo non ce l'ha; e `pair/invite.tsx`,
   perché `app/(gruppo)/pair/` e `app/pair/` convergerebbero sullo stesso segmento `/pair` — usa
@@ -269,12 +276,42 @@ app/azzera.tsx                                     "/azzera"               fuori
   una preferenza dell'app: è l'unica cosa che attraversa tutti i gruppi, ed è il `profileId` a
   rendermi la stessa persona in ognuno.
 - **Impostazioni legge il motore con `useVaultStatus()`, che non solleva** — non con
-  `useVaultRuntime()`, che solleva — e non tocca `useGroups().current`: allo Step 21 dovrà funzionare
-  con zero gruppi, e «Sincronizza adesso» sarà semplicemente disabilitato. È l'unica condizione che
-  quel tab avrà mai.
+  `useVaultRuntime()`, che solleva — e non tocca `useGroups().current`: con zero gruppi (Step 21)
+  funziona, e «Sincronizza adesso» è semplicemente disabilitato. È l'unica condizione che quel tab
+  avrà mai.
 - **`/azzera` esiste ma spiega e basta**: elenca che cosa sparisce e che cosa no, e lo dichiara sulla
   schermata stessa. La doppia conferma e `wipeDevice` sono lo Step 22, che resta così tutto codice
   distruttivo e niente impaginazione.
+
+## Nessun gruppo è uno stato normale (Step 21)
+
+Al primo avvio non esiste alcun gruppo, e uscire dall'ultimo non ne crea più uno vuoto. Lo Step 12
+aveva fatto il contrario apposta — per togliere un ramo condizionale da mezza dozzina di schermate —
+e il prezzo si è visto provando l'app a mano: ci si trovava dentro un gruppo chiamato «Le mie spese»
+mai chiesto, senza capire se fosse quello condiviso.
+
+- **Fase `absent` dentro `VaultProvider`, mai `<VaultProvider>` montato condizionalmente.** Montarlo
+  solo quando c'è un gruppo cambierebbe il tipo di un antenato dello `Stack`: React rimonterebbe
+  l'**intero navigatore** proprio nell'istante in cui si crea il primo gruppo. Con la fase, l'albero
+  dei provider è stabile per tutta la vita del processo e `VaultRuntime.keys` resta non nullable.
+- **`absent` è derivato dal gruppo corrente, non uno stato scritto dall'effetto** (lo vieta
+  `react-hooks/set-state-in-effect`, a ragione). Nel derivarlo si è chiusa anche una finestra che
+  c'era già: un runtime `ready` il cui `vaultId` non è più quello corrente vale `loading`, altrimenti
+  fra il cambio di gruppo e il rimontaggio del motore le schermate leggono lo store di prima.
+- **`VaultGate` lascia passare `absent`**: non c'è niente da attendere. Le schermate che vogliono il
+  vault sono già dietro `app/(gruppo)/` o dentro lo stack `[vaultId]`, irraggiungibile senza gruppi.
+- **`useCurrentGroup()` è nullabile e non ha un gemello che solleva**: due hook quasi uguali sarebbero
+  il posto in cui qualcuno usa quello sbagliato. Cambiarne la firma è ciò che ha fatto trovare al
+  compilatore tutti i chiamanti da sistemare.
+- **La logica è in `state/current-group.ts`** (`chooseCurrentGroup`, `nextAfterLeave`), fuori dal
+  provider perché è l'unica parte provabile senza React Native. **Si tocca solo il ramo
+  `list.length === 0`**: nessuna migrazione, nessun bump di `CURRENT_SCHEMA_VERSION` — alzarlo
+  farebbe scattare `ensureSchema`, che è scritto per **cancellare**. Il test che protegge chi ha già
+  dei dati è `stored === null` con lista piena → il primo.
+- **Tre stati vuoti, e nessun altro**: l'elenco gruppi (crea · invito · ripristina da un backup), i
+  Grafici, e `app/(gruppo)/_layout.tsx`.
+- **`backup.tsx` senza gruppo mostra solo il ripristino**, e si intitola «Ripristina una chiave». È
+  la conferma pratica della scelta dello Step 19 di tenerla fuori da `(gruppo)`.
 
 ## Come si entra in un gruppo (Step 7 e 13)
 

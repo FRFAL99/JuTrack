@@ -27,6 +27,12 @@ import { useTheme } from '@/theme';
  * **Una chiave per gruppo, quindi un backup per gruppo.** Si salva quella del gruppo
  * aperto; ripristinarne una **aggiunge** un gruppo invece di sostituire quello corrente,
  * che dallo Step 12 non ha più alcuna ragione di essere abbandonato.
+ *
+ * **È l'unica schermata che deve funzionare con zero gruppi**, ed è per questo che è
+ * rimasta fuori da `app/(gruppo)/`: il ripristino serve proprio a chi un gruppo non ce
+ * l'ha — al primo avvio, dopo un azzeramento, o su un telefono nuovo. Senza gruppo aperto
+ * sparisce la metà «crea un backup», che senza una chiave non ha nulla da cifrare, e resta
+ * la metà che ne rimette una dentro.
  */
 export default function BackupScreen() {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
@@ -57,6 +63,9 @@ export default function BackupScreen() {
   };
 
   const handleExport = (): void => {
+    // Il bottone non esiste senza un gruppo aperto: la guardia è qui perché il compilatore
+    // non può sapere che le due condizioni sono la stessa.
+    if (group === null) return;
     setExporting(true);
     // Il tempo di scrypt su questo telefono è ignoto finché non lo si misura qui: il
     // costo di default (logN=16) è tarato su desktop. Il valore finisce nel messaggio
@@ -164,7 +173,7 @@ export default function BackupScreen() {
   };
 
   return (
-    <ModalScreen title={`Backup di «${group.name}»`}>
+    <ModalScreen title={group === null ? 'Ripristina una chiave' : `Backup di «${group.name}»`}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
         <Card style={{ gap: spacing.xs, borderColor: colors.danger }}>
           <Text
@@ -179,71 +188,80 @@ export default function BackupScreen() {
           </Text>
         </Card>
 
-        <Card style={{ gap: spacing.md }}>
-          <View style={{ gap: 2 }}>
-            <Text
-              style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-            >
-              Crea un backup
-            </Text>
-            <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-              La chiave di «{group.name}», in un file cifrato con la passphrase che scegli. Da solo
-              non serve a niente, e nemmeno la passphrase da sola: servono entrambi. Ogni gruppo ha
-              la sua chiave, quindi va salvato uno per uno.
-            </Text>
-          </View>
+        {/* Senza un gruppo aperto non c'è nessuna chiave da salvare, e un modulo che
+            chiede una passphrase per cifrare il nulla sarebbe solo un modo di far
+            sbagliare. Resta il ripristino, che è ciò per cui si arriva qui da zero. */}
+        {group !== null && (
+          <Card style={{ gap: spacing.md }}>
+            <View style={{ gap: 2 }}>
+              <Text
+                style={{
+                  color: colors.text,
+                  fontSize: fontSize.md,
+                  fontWeight: fontWeight.semibold,
+                }}
+              >
+                Crea un backup
+              </Text>
+              <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
+                La chiave di «{group.name}», in un file cifrato con la passphrase che scegli. Da
+                solo non serve a niente, e nemmeno la passphrase da sola: servono entrambi. Ogni
+                gruppo ha la sua chiave, quindi va salvato uno per uno.
+              </Text>
+            </View>
 
-          <TextInput
-            value={passphrase}
-            onChangeText={setPassphrase}
-            placeholder="Passphrase"
-            placeholderTextColor={colors.textMuted}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            accessibilityLabel="Passphrase per il backup"
-            style={fieldStyle}
-          />
-          {passphrase !== '' && (
-            <Text
-              style={{
-                color: assessment.acceptable ? colors.textMuted : colors.danger,
-                fontSize: fontSize.xs,
-                lineHeight: 18,
-              }}
-            >
-              {assessment.message}
-            </Text>
-          )}
+            <TextInput
+              value={passphrase}
+              onChangeText={setPassphrase}
+              placeholder="Passphrase"
+              placeholderTextColor={colors.textMuted}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              accessibilityLabel="Passphrase per il backup"
+              style={fieldStyle}
+            />
+            {passphrase !== '' && (
+              <Text
+                style={{
+                  color: assessment.acceptable ? colors.textMuted : colors.danger,
+                  fontSize: fontSize.xs,
+                  lineHeight: 18,
+                }}
+              >
+                {assessment.message}
+              </Text>
+            )}
 
-          <TextInput
-            value={confirmation}
-            onChangeText={setConfirmation}
-            placeholder="Ripeti la passphrase"
-            placeholderTextColor={colors.textMuted}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            accessibilityLabel="Conferma della passphrase"
-            style={fieldStyle}
-          />
-          {mismatch && (
-            <Text style={{ color: colors.danger, fontSize: fontSize.xs }}>
-              Le due passphrase non coincidono.
-            </Text>
-          )}
+            <TextInput
+              value={confirmation}
+              onChangeText={setConfirmation}
+              placeholder="Ripeti la passphrase"
+              placeholderTextColor={colors.textMuted}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              accessibilityLabel="Conferma della passphrase"
+              style={fieldStyle}
+            />
+            {mismatch && (
+              <Text style={{ color: colors.danger, fontSize: fontSize.xs }}>
+                Le due passphrase non coincidono.
+              </Text>
+            )}
 
-          <Button
-            label={exporting ? 'Cifratura…' : 'Crea il backup'}
-            onPress={handleExport}
-            loading={exporting}
-            disabled={!canExport}
-          />
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
-            La cifratura richiede qualche secondo: è voluto. Rende costoso provare le passphrase a
-            tappeto su un file rubato.
-          </Text>
-        </Card>
+            <Button
+              label={exporting ? 'Cifratura…' : 'Crea il backup'}
+              onPress={handleExport}
+              loading={exporting}
+              disabled={!canExport}
+            />
+            <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
+              La cifratura richiede qualche secondo: è voluto. Rende costoso provare le passphrase a
+              tappeto su un file rubato.
+            </Text>
+          </Card>
+        )}
 
         <Card style={{ gap: spacing.md }}>
           <View style={{ gap: 2 }}>

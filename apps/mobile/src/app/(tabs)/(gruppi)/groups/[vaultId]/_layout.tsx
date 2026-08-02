@@ -28,10 +28,12 @@ export default function GroupLayout() {
   // abbandonato o rigenerato: il corrente è già un altro, e senza il controllo questo
   // layout chiederebbe di tornare su un gruppo che non c'è più.
   useEffect(() => {
-    if (vaultId !== undefined && stillExists && vaultId !== current.vaultId) void select(vaultId);
-  }, [current.vaultId, select, stillExists, vaultId]);
+    if (vaultId !== undefined && stillExists && vaultId !== current?.vaultId) void select(vaultId);
+  }, [current?.vaultId, select, stillExists, vaultId]);
 
-  if (vaultId === undefined || vaultId !== current.vaultId) {
+  // Vale anche per «nessun gruppo aperto» (Step 21): senza un corrente non c'è modo che
+  // sia quello di questa rotta, quindi sotto non si monta nulla.
+  if (vaultId === undefined || vaultId !== current?.vaultId) {
     return (
       <View
         style={{

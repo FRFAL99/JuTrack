@@ -90,15 +90,17 @@ export default function ProfileScreen() {
             I tuoi gruppi
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            {groups.length === 1
-              ? 'Uno solo, per ora. Ogni gruppo è un insieme di spese a sé, con le sue persone.'
-              : `Sono ${groups.length}. Le spese non si mescolano fra l’uno e l’altro, e il colore e il nome qui sopra sono gli stessi in tutti.`}
+            {groups.length === 0
+              ? 'Nessuno, per ora. Nome e colore qui sopra varranno in quelli in cui entrerai: il profilo esiste anche senza gruppi.'
+              : groups.length === 1
+                ? 'Uno solo, per ora. Ogni gruppo è un insieme di spese a sé, con le sue persone.'
+                : `Sono ${groups.length}. Le spese non si mescolano fra l’uno e l’altro, e il colore e il nome qui sopra sono gli stessi in tutti.`}
           </Text>
           {groups.map((group) => (
             <GroupRow
               key={group.vaultId}
               group={group}
-              currentVaultId={current.vaultId}
+              currentVaultId={current?.vaultId ?? null}
               onPress={() => router.push(`/groups/${group.vaultId}`)}
             />
           ))}

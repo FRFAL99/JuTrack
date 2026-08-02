@@ -4,6 +4,96 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-02 — Step 21: al primo avvio non esiste nessun gruppo
+
+Lo Step 12 aveva eliminato lo stato «non c'è ancora un vault» creando un primo gruppo d'ufficio:
+faceva sparire un ramo condizionale da mezza dozzina di schermate, e costava 32 byte casuali. Alla
+prova a mano è emerso il prezzo: chi apre l'app si trova dentro un gruppo chiamato «Le mie spese» che
+non ha chiesto, e non capisce se sia quello condiviso; e chi esce dall'ultimo gruppo si ritrova in un
+gruppo vuoto nuovo che sembra il suo appena svuotato.
+
+Lo stato torna, ma **in un punto solo**: il ramo condizionale vive nella guardia
+`app/(gruppo)/_layout.tsx` (scritta apposta allo Step 19, prima dello stato vuoto che la attiva) e in
+tre stati vuoti dichiarati.
+
+**Il rischio dello step era distruggere i dati di chi ne ha già.** Si tocca **solo** il ramo
+`list.length === 0`: nessuna migrazione, nessun bump di `CURRENT_SCHEMA_VERSION` — alzarlo avrebbe
+fatto scattare `ensureSchema`, che è scritto per **cancellare** — e `schema.ts` non è stato aperto.
+
+**La logica pura, estratta e provata** (`state/current-group.ts`, 7 test): `chooseCurrentGroup(list,
+stored)` e `nextAfterLeave(list, leftVaultId)`, entrambe `string | null`. Sono l'unica parte dello
+step che si possa provare senza montare React Native. Il test che conta non è quello della lista
+vuota ma **`stored === null` con lista piena → il primo**: è il caso di chi aggiorna avendo già «Le
+mie spese» piena di spese, e deve continuare ad aprirla come sempre.
+
+**La fase `absent`, non un provider montato condizionalmente**
+
+`VaultStatus` guadagna `{ phase: 'absent' }`. `<VaultProvider>` resta montato sempre: montarlo solo
+quando c'è un gruppo cambierebbe il tipo di un antenato dello `Stack`, e React smonterebbe e
+rimonterebbe l'**intero navigatore** nell'istante in cui si crea il primo gruppo — azzerando la pila
+di navigazione proprio durante il gesto in cui l'utente ha appena creato qualcosa. Con la fase,
+l'albero dei provider è stabile per tutta la vita del processo e `VaultRuntime.keys` resta non
+nullable: il runtime o esiste intero, o non esiste affatto.
+
+**`absent` è derivato, non uno stato scritto dall'effetto.** Il primo tentativo faceva
+`setStatus({phase:'absent'})` nel ramo d'uscita dell'effetto, e la regola `react-hooks/set-state-in-effect`
+l'ha bocciato — a ragione, ed è stata una segnalazione utile: lo stato pubblicato ora si calcola dal
+gruppo corrente, e nel farlo ha chiuso **una finestra che esisteva già**. Un runtime `ready` il cui
+`vaultId` non è più quello corrente vale `loading`: fra il render in cui il gruppo cambia e il giro
+dell'effetto che rimonta il motore, le schermate leggevano lo store del gruppo di prima credendolo
+quello nuovo.
+
+`useSyncState()` con `absent` risponde `idle`, non l'ultimo stato del gruppo di prima: un badge che
+dice «sincronizzato» quando non c'è niente da sincronizzare risponde a una domanda che nessuno ha
+fatto. La costante `IDLE_SYNC` è condivisa, perché un oggetto nuovo a ogni render farebbe ridisegnare
+tutti gli iscritti al contesto.
+
+Trappola risolta come prevista dal piano: `VaultProvider` destrutturava `current` in un colpo solo.
+Ora estrae `vaultId`, `origin`, `myMemberId` e `name` campo per campo, perché le dipendenze
+dell'effetto devono restare **primitive** — con l'oggetto, ogni `refresh()` del registro rimonterebbe
+il motore. E dentro la `boot` annidata servono due locali non nullabili (`openVaultId`, `openOrigin`):
+il narrowing di TypeScript non attraversa una funzione annidata, e la risposta non è un `!`, che
+sarebbe la promessa implicita che il caso non capiti mai — cioè proprio ciò che questo step rende
+falso.
+
+**`useCurrentGroup(): GroupRecord | null`**, senza un gemello che solleva. Due hook quasi uguali
+diventano il posto in cui qualcuno usa quello sbagliato, e lo userebbe nella schermata che deve
+funzionare senza gruppi. Cambiare la firma ha fatto trovare al compilatore tutti i chiamanti:
+
+- **`backup.tsx`**: sparisce la metà «crea un backup» — senza chiave non c'è nulla da cifrare — e
+  resta il ripristino, che è ciò per cui si arriva qui da zero. Il titolo diventa «Ripristina una
+  chiave». È la conferma pratica della scelta dello Step 19 di tenerla fuori da `(gruppo)`.
+- **`[vaultId]/index.tsx` e `manage.tsx`**: guardia in un componente **sopra** quello che lavora, mai
+  un `return` in mezzo agli hook — sotto ce ne sono cinque che leggono il vault, e le chiamate devono
+  venire prima di ogni uscita. Stesso schema di `PairInviteScreen` → `InviteToGroup`. In pratica sono
+  irraggiungibili: il layout `[vaultId]` non li monta finché il gruppo dell'URL non è quello corrente.
+- **`pair/invite.tsx`**: era già pronta dallo Step 19.
+
+**I tre stati vuoti**
+
+L'elenco gruppi («Non hai ancora nessun gruppo», con le tre strade: crea, invito, **ripristina da un
+backup** — quest'ultima solo qui, perché chi ha già dei gruppi ripristina dalla gestione del gruppo,
+dove sa di quale chiave si parla); i Grafici («Nessun gruppo aperto», con la via d'uscita verso
+l'elenco: aggregarli su più gruppi vorrebbe dire montare più `Y.Doc` insieme, che è la scelta
+architetturale evitata dall'inizio); e `(gruppo)/_layout.tsx`, già scritto.
+
+**Uscire dall'ultimo gruppo** non ne crea più uno vuoto: `nextAfterLeave` risponde `null`, il ricordo
+in `app_meta` viene **cancellato** invece di restare a puntare a un vault che non esiste più, e la
+schermata torna a `/`. Il testo dell'Alert lo dice: non più «al suo posto ne verrà creato uno vuoto»
+ma «resterai senza, e potrai crearne uno o entrare con un invito».
+
+**Verifica:** `format:check`, `lint`, `typecheck` puliti; **570 test** (140 app + 387 core + 43
+relay), sette nuovi tutti su `current-group.ts`; `expo export --platform android` riuscito; nessuna
+rotta aggiunta o spostata, quindi i tipi di expo-router non cambiano.
+
+**Non provato sul telefono**, ed è lo step in cui conta di più: che al primo avvio da azzerato si
+arrivi all'onboarding del profilo e poi a **zero gruppi**, e che i tre ingressi funzionino tutti e
+tre; che creare il primo gruppo **non azzeri la pila di navigazione**; che uscire dall'ultimo gruppo
+riporti all'elenco vuoto senza spinner appesi; e soprattutto che **chi ha già dei dati non si accorga
+di nulla**.
+
+---
+
 ## 2026-08-02 — Step 20: quattro tab, e ogni cosa al suo posto
 
 Il primo step del piano v3 che non sposta file: sposta **significati**. Le impostazioni contenevano

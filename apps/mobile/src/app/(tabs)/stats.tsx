@@ -22,13 +22,52 @@ import { CategoryBars } from '@/features/stats/CategoryBars';
 import { describeChange } from '@/features/stats/format';
 import { MonthlyBars } from '@/features/stats/MonthlyBars';
 import { useEngineActivity } from '@/features/sync/useEngineActivity';
-import { useBudgets, useCategories, useExpenses, useMembers, useSettlements } from '@/state';
+import {
+  useBudgets,
+  useCategories,
+  useCurrentGroup,
+  useExpenses,
+  useMembers,
+  useSettlements,
+} from '@/state';
 import { useTheme } from '@/theme';
 
 /** Quanti mesi mostra l'andamento: mezzo anno sta in larghezza senza comprimere le barre. */
 const TREND_MONTHS = 6;
 
+/**
+ * I Grafici sono di **un** gruppo, e questo tab sta fuori da `app/(gruppo)/`.
+ *
+ * Aggregarli su più gruppi richiederebbe di montare più `Y.Doc` insieme, che è la scelta
+ * architetturale che il progetto ha evitato dall'inizio: qui si guarda il gruppo aperto, e
+ * se non ce n'è nessuno (Step 21) si dice così invece di mostrare zeri, che sarebbero una
+ * risposta sbagliata a una domanda che non è stata posta.
+ *
+ * La guardia sta sopra il componente che lavora: tutti i suoi hook leggono il vault.
+ */
 export default function StatsScreen() {
+  const { spacing } = useTheme();
+  const group = useCurrentGroup();
+
+  if (group === null) {
+    return (
+      <Screen title="Grafici">
+        <EmptyState
+          icon="📊"
+          title="Nessun gruppo aperto"
+          hint="I grafici raccontano le spese di un gruppo. Aprine uno, o creane uno, e qui compariranno andamento, categorie e saldo."
+        />
+        <View style={{ padding: spacing.lg }}>
+          <Button label="I tuoi gruppi" onPress={() => router.push('/')} />
+        </View>
+      </Screen>
+    );
+  }
+
+  return <StatsOfGroup />;
+}
+
+function StatsOfGroup() {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const [month, setMonth] = useState(currentMonth);
   // Saldi e pareggi dipendono da quello che ha scritto l'altro telefono, non solo da noi.

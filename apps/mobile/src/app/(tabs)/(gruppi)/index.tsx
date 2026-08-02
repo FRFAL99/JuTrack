@@ -53,16 +53,35 @@ export default function GroupsScreen() {
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}
       >
-        <Card style={{ gap: spacing.xs }}>
-          {groups.map((group) => (
-            <GroupRow
-              key={group.vaultId}
-              group={group}
-              currentVaultId={current.vaultId}
-              onPress={() => router.push(`/groups/${group.vaultId}`)}
-            />
-          ))}
-        </Card>
+        {/* Il primo dei tre stati vuoti dello Step 21, e l'unico con cui l'app comincia:
+            al primo avvio non esiste alcun gruppo. Non è un errore né un'attesa, quindi
+            non c'è nulla da segnalare — c'è da dire cosa si può fare, e le tre strade
+            stanno tutte qui sotto. */}
+        {groups.length === 0 ? (
+          <Card style={{ gap: spacing.sm }}>
+            <Text
+              style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
+            >
+              Non hai ancora nessun gruppo
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
+              Un gruppo è dove finiscono le spese da dividere, con le persone che le dividono. Puoi
+              crearne uno adesso, entrare in quello di qualcun altro con un invito, oppure
+              ripristinare una chiave che avevi messo da parte.
+            </Text>
+          </Card>
+        ) : (
+          <Card style={{ gap: spacing.xs }}>
+            {groups.map((group) => (
+              <GroupRow
+                key={group.vaultId}
+                group={group}
+                currentVaultId={current?.vaultId ?? null}
+                onPress={() => router.push(`/groups/${group.vaultId}`)}
+              />
+            ))}
+          </Card>
+        )}
 
         <Card style={{ gap: spacing.sm }}>
           <Text
@@ -116,6 +135,29 @@ export default function GroupsScreen() {
             onPress={() => router.push('/pair/scan')}
           />
         </Card>
+
+        {/* La terza strada, e solo quando non ce ne sono altre: chi ha già dei gruppi
+            ripristina una chiave dalla gestione del gruppo, dove sa di quale chiave si
+            parla. Chi non ne ha nessuno non ha nessun gruppo da cui passare — ed è
+            esattamente il caso per cui `backup.tsx` è rimasta fuori da `(gruppo)`. */}
+        {groups.length === 0 && (
+          <Card style={{ gap: spacing.sm }}>
+            <Text
+              style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
+            >
+              Ripristina da un backup
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
+              Se hai salvato la chiave di un gruppo e la sua passphrase, il gruppo torna qui. Le
+              spese arrivano col primo sync, se è ancora sul relay.
+            </Text>
+            <Button
+              label="Ripristina una chiave"
+              variant="secondary"
+              onPress={() => router.push('/backup')}
+            />
+          </Card>
+        )}
       </ScrollView>
     </Screen>
   );

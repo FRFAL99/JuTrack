@@ -11,11 +11,13 @@ import {
   MAX_GROUP_NAME,
   normalizeGroupName,
   useCategories,
+  useCurrentGroup,
   useGroups,
   useMembers,
   useMyMemberId,
   useSyncState,
   useVaultRuntime,
+  type GroupRecord,
 } from '@/state';
 import { useTheme } from '@/theme';
 
@@ -28,10 +30,22 @@ import { useTheme } from '@/theme';
  *
  * È spinta dentro lo stack del tab, non sulla radice: mantiene la tab bar, e il pulsante
  * in alto a destra dice «Indietro» invece di «Chiudi».
+ *
+ * Il gruppo si legge in un componente **sopra** quello che lavora: sotto ci sono hook che
+ * leggono il vault, e un `return` anticipato in mezzo a loro violerebbe le regole degli
+ * hook. Vale come per la lista delle spese.
  */
 export default function GroupManageScreen() {
+  const group = useCurrentGroup();
+  // Irraggiungibile: il layout non monta questa schermata finché il gruppo dell'URL non è
+  // quello corrente.
+  if (group === null) return null;
+  return <ManageGroup current={group} />;
+}
+
+function ManageGroup({ current }: { current: GroupRecord }) {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
-  const { current, groups, rename, leave, regenerate } = useGroups();
+  const { groups, rename, leave, regenerate } = useGroups();
   const { store, keys } = useVaultRuntime();
   const myMemberId = useMyMemberId();
   const members = useMembers();
@@ -70,7 +84,7 @@ export default function GroupManageScreen() {
       'Le spese di questo gruppo spariscono da questo telefono. Senza un backup della chiave ' +
         'non tornano più: non esiste un reset lato server. ' +
         (last
-          ? 'Essendo il tuo unico gruppo, al suo posto ne verrà creato uno vuoto. '
+          ? 'È il tuo unico gruppo: resterai senza, e potrai crearne uno o entrare con un invito. '
           : 'Chi altro ne fa parte non se ne accorge e continua a usarlo. ') +
         (wipeRelay
           ? 'La copia sul relay verrà cancellata: chi resta non riceverà più aggiornamenti, ' +

@@ -72,10 +72,12 @@ function ProfileGate({ children }: { children: React.ReactNode }) {
 }
 
 /**
- * Attende il registro dei gruppi, che al primo avvio ne crea uno.
+ * Attende il registro dei gruppi.
  *
  * Sta fra il profilo e il vault: il gruppo corrente è ciò su cui il runtime si monta, e
- * dev'essere già scelto quando quello parte.
+ * dev'essere già scelto quando quello parte. **Che ce ne sia uno non è più garantito**
+ * (Step 21): finita l'attesa, l'elenco può essere vuoto, e allora il vault sotto pubblica
+ * la fase `absent`.
  */
 function GroupsGate({ children }: { children: React.ReactNode }) {
   const status = useGroupsStatus();
@@ -97,6 +99,12 @@ function GroupsGate({ children }: { children: React.ReactNode }) {
  * Copre anche il cambio di gruppo: il runtime torna in `loading` mentre smonta l'uno e
  * monta l'altro, e per quella frazione di secondo le schermate non devono leggere lo
  * store di un gruppo che non è più quello aperto.
+ *
+ * **`absent` invece passa** (Step 21). Non c'è niente da attendere: non esiste un gruppo,
+ * e bloccare qui l'intera app significherebbe uno spinner eterno al primo avvio. Le
+ * schermate che il vault lo vogliono davvero sono già tutte dietro la guardia di
+ * `app/(gruppo)/` (Step 19), o dentro lo stack `[vaultId]`, che senza gruppi non è
+ * raggiungibile.
  */
 function VaultGate({ children }: { children: React.ReactNode }) {
   const status = useVaultStatus();

@@ -36,11 +36,13 @@ export default function WipeDeviceScreen() {
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
         {/* In cima, non in fondo: è l'unica cosa che rende reversibile il gesto, e va
             letta prima di decidere, non dopo. */}
-        <NavCard
-          title="Fai prima un backup della chiave"
-          subtitle="La chiave del gruppo aperto, cifrata con una passphrase che scegli tu. È l'unico modo di ritrovare queste spese dopo un azzeramento."
-          onPress={() => router.push('/backup')}
-        />
+        {groups.length > 0 && (
+          <NavCard
+            title="Fai prima un backup della chiave"
+            subtitle="La chiave del gruppo aperto, cifrata con una passphrase che scegli tu. È l'unico modo di ritrovare queste spese dopo un azzeramento."
+            onPress={() => router.push('/backup')}
+          />
+        )}
 
         <Card style={{ gap: spacing.sm, borderColor: colors.danger }}>
           <Text style={heading}>Che cosa sparisce</Text>
@@ -50,20 +52,26 @@ export default function WipeDeviceScreen() {
             il tuo profilo, «{profile.name}», con il suo identificativo: quello che registrerai dopo
             sarà una persona diversa per chi divide le spese con te
           </Bullet>
-          <Bullet>
-            {groups.length === 1
-              ? 'il tuo gruppo, con tutte le sue spese, categorie, budget e pareggi'
-              : `i tuoi ${groups.length} gruppi, con tutte le loro spese, categorie, budget e pareggi`}
-          </Bullet>
-          <Bullet>le chiavi con cui quei dati sono cifrati</Bullet>
+          {groups.length > 0 && (
+            <>
+              <Bullet>
+                {groups.length === 1
+                  ? 'il tuo gruppo, con tutte le sue spese, categorie, budget e pareggi'
+                  : `i tuoi ${groups.length} gruppi, con tutte le loro spese, categorie, budget e pareggi`}
+              </Bullet>
+              <Bullet>le chiavi con cui quei dati sono cifrati</Bullet>
+            </>
+          )}
 
-          <View style={{ paddingLeft: spacing.md, paddingTop: spacing.xs, gap: 2 }}>
-            {groups.map((group) => (
-              <Text key={group.vaultId} style={{ color: colors.text, fontSize: fontSize.sm }}>
-                · {group.name}
-              </Text>
-            ))}
-          </View>
+          {groups.length > 0 && (
+            <View style={{ paddingLeft: spacing.md, paddingTop: spacing.xs, gap: 2 }}>
+              {groups.map((group) => (
+                <Text key={group.vaultId} style={{ color: colors.text, fontSize: fontSize.sm }}>
+                  · {group.name}
+                </Text>
+              ))}
+            </View>
+          )}
 
           <Text style={[body, { paddingTop: spacing.xs }]}>
             I dati sono cifrati end-to-end: senza la chiave non li può recuperare nessuno, noi
@@ -71,19 +79,23 @@ export default function WipeDeviceScreen() {
           </Text>
         </Card>
 
-        <Card style={{ gap: spacing.sm }}>
-          <Text style={heading}>Che cosa invece resta</Text>
-          <Text style={body}>
-            Le copie sul relay. Sono cifrate e illeggibili senza la chiave, e scadono da sole dopo
-            trenta giorni. Se vuoi cancellarle subito, esci da ogni gruppo con l&apos;interruttore{' '}
-            <Text style={{ color: colors.text }}>Cancella anche la copia sul relay</Text> prima di
-            azzerare.
-          </Text>
-          <Text style={body}>
-            E resta ciò che gli altri hanno già scaricato: azzerare il proprio telefono non toglie
-            niente a nessun altro.
-          </Text>
-        </Card>
+        {/* Senza gruppi non c'è nessuna copia sul relay di cui parlare: dirlo lo stesso
+            farebbe cercare all'utente qualcosa che non esiste. */}
+        {groups.length > 0 && (
+          <Card style={{ gap: spacing.sm }}>
+            <Text style={heading}>Che cosa invece resta</Text>
+            <Text style={body}>
+              Le copie sul relay. Sono cifrate e illeggibili senza la chiave, e scadono da sole dopo
+              trenta giorni. Se vuoi cancellarle subito, esci da ogni gruppo con l&apos;interruttore{' '}
+              <Text style={{ color: colors.text }}>Cancella anche la copia sul relay</Text> prima di
+              azzerare.
+            </Text>
+            <Text style={body}>
+              E resta ciò che gli altri hanno già scaricato: azzerare il proprio telefono non toglie
+              niente a nessun altro.
+            </Text>
+          </Card>
+        )}
 
         {/* Detto qui e non taciuto: una schermata che elenca disastri e non ha un pulsante
             sembra rotta. Lo Step 22 aggiunge l'interruttore «Ho capito» e il bottone. */}

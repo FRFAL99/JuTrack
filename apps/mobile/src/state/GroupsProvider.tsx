@@ -2,14 +2,9 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import { RELAY_URL } from '@/config';
 import { expoHttp, expoKeyStore, expoRandom } from '@/platform';
+import { chooseCurrentGroup, nextAfterLeave } from './current-group';
 import { useAppData } from './ProfileProvider';
-import {
-  FIRST_GROUP_NAME,
-  GroupRegistry,
-  httpRelayGateway,
-  normalizeGroupName,
-  type GroupRecord,
-} from './groups';
+import { GroupRegistry, httpRelayGateway, normalizeGroupName, type GroupRecord } from './groups';
 
 /**
  * I gruppi di questo telefono, e quale è aperto adesso.
@@ -17,17 +12,25 @@ import {
  * Sta fra il profilo e il vault: il profilo deve esistere prima (il membro nasce da lì),
  * e il runtime del vault sotto si monta sul gruppo che questo provider dichiara corrente.
  *
- * **C'è sempre almeno un gruppo.** Se l'elenco è vuoto — cioè al primissimo avvio, subito
- * dopo l'onboarding — ne viene creato uno. Costa 32 byte casuali e nessuna richiesta di
- * rete: il relay scopre il vault alla prima scrittura. In cambio sparisce da tutta l'app
- * lo stato «non c'è ancora un vault», che era un ramo condizionale in mezza dozzina di
- * schermate e un'intera categoria di stati intermedi da gestire.
+ * **Può non esserci alcun gruppo** (Step 21): al primo avvio l'elenco è vuoto, e uscire
+ * dall'ultimo gruppo non ne fa più nascere uno al suo posto. Le due ragioni, in ordine:
+ *
+ * - **Lo Step 12 creava un primo gruppo d'ufficio** per far sparire da tutta l'app lo
+ *   stato «non c'è ancora un vault», che era un ramo condizionale in mezza dozzina di
+ *   schermate. Costava 32 byte casuali e nessuna richiesta di rete.
+ * - **Lo Step 21 lo rimette**, ma in **un punto solo**: chi apre l'app per la prima volta
+ *   si trovava dentro un gruppo che non aveva chiesto, chiamato «Le mie spese», e non
+ *   capiva se fosse quello condiviso o no; e chi usciva dall'ultimo gruppo si ritrovava
+ *   dentro un gruppo vuoto nuovo, che sembrava il suo svuotato. Il ramo condizionale ora
+ *   vive in `app/(gruppo)/_layout.tsx` (Step 19) e in tre stati vuoti dichiarati, non
+ *   sparso per le schermate.
  */
 export interface GroupsData {
   registry: GroupRegistry;
-  /** Dall'ultimo aperto. Mai vuoto. */
+  /** Dall'ultimo aperto. Vuoto al primo avvio e dopo essere usciti dall'ultimo gruppo. */
   groups: GroupRecord[];
-  current: GroupRecord;
+  /** `null` quando non ne esiste nessuno: è l'unico caso, e vale solo quando `groups` è vuoto. */
+  current: GroupRecord | null;
   /** Crea un gruppo nuovo e lo apre. */
   create(name: string): Promise<GroupRecord>;
   /** Entra in un gruppo esistente e lo apre. Se c'è già, lo apre e basta. */
@@ -39,7 +42,7 @@ export interface GroupsData {
   /** Registra a quale membro ci si è ricollegati in questo gruppo. */
   setMyMemberId(vaultId: string, memberId: string): Promise<void>;
   /**
-   * Esce da un gruppo. Se era il corrente, ne apre un altro.
+   * Esce da un gruppo. Se era il corrente, ne apre un altro — o nessuno, se era l'ultimo.
    *
    * Con `wipeRelay` cancella anche la copia sul relay — che non toglie nulla a chi ha
    * già la chiave, e infatti non è una revoca: per quella serve `regenerate`.
@@ -81,29 +84,22 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
           random: expoRandom,
           relay: httpRelayGateway(RELAY_URL, expoHttp, expoRandom),
         });
-        let list = await opened.list();
-
-        // Il primo gruppo nasce da solo. Chiederlo nell'onboarding significherebbe far
-        // rispondere «come si chiama il gruppo?» a chi non ha ancora visto l'app: il nome
-        // si cambia in due tocchi, e nel frattempo si è già dentro.
-        if (list.length === 0) {
-          await opened.create(FIRST_GROUP_NAME);
-          list = await opened.list();
-        }
-
+        const list = await opened.list();
         const stored = await meta.get(CURRENT_GROUP_KEY);
-        // Se il gruppo ricordato non c'è più — è stato abbandonato, o il database è stato
-        // azzerato dalla ripartenza pulita — si apre il primo della lista invece di
-        // restare senza gruppo corrente.
-        const chosen = list.find((g) => g.vaultId === stored) ?? list[0];
-        if (cancelled || chosen === undefined) return;
+        // Con la lista piena si comporta come ha sempre fatto, `stored` assente compreso:
+        // è ciò che protegge chi ha già dei gruppi con dentro delle spese. Risponde `null`
+        // in un caso solo, quello nuovo — nessun gruppo.
+        const chosen = chooseCurrentGroup(list, stored);
+        if (cancelled) return;
 
-        await opened.touch(chosen.vaultId);
-        await meta.set(CURRENT_GROUP_KEY, chosen.vaultId);
+        if (chosen !== null) {
+          await opened.touch(chosen);
+          await meta.set(CURRENT_GROUP_KEY, chosen);
+        }
 
         setRegistry(opened);
         setGroups(await opened.list());
-        setCurrentId(chosen.vaultId);
+        setCurrentId(chosen);
       } catch (cause) {
         if (cancelled) return;
         setError(cause instanceof Error ? cause.message : String(cause));
@@ -185,13 +181,18 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
       if (registry === null) return;
       await registry.forget(vaultId, { wipeRelay });
       const list = await refresh();
-      // Non si resta mai senza gruppo: se si è appena usciti dall'ultimo, se ne crea uno
-      // nuovo e vuoto, esattamente come al primo avvio.
-      const next = list[0] ?? (await registry.create(FIRST_GROUP_NAME));
-      await refresh();
-      await select(next.vaultId);
+      const next = nextAfterLeave(list, vaultId);
+      // Uscendo dall'ultimo gruppo si resta **senza**, invece di ritrovarsi dentro uno
+      // nuovo e vuoto che sembrava il proprio appena svuotato. Il ricordo va cancellato,
+      // non lasciato a puntare a un vault che non esiste più.
+      if (next === null) {
+        await meta.delete(CURRENT_GROUP_KEY);
+        setCurrentId(null);
+        return;
+      }
+      await select(next);
     },
-    [refresh, registry, select],
+    [meta, refresh, registry, select],
   );
 
   const regenerate = useCallback(
@@ -217,9 +218,13 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
 
   const status = useMemo((): GroupsStatus => {
     if (error !== null) return { phase: 'error', message: error };
-    if (registry === null || currentId === null) return { phase: 'loading' };
-    const current = groups.find((g) => g.vaultId === currentId);
-    if (current === undefined) return { phase: 'loading' };
+    if (registry === null) return { phase: 'loading' };
+    // `currentId === null` non è più un'attesa: è lo stato «nessun gruppo». Resta invece
+    // un'attesa il caso in cui l'id ci sia ma la riga non sia ancora stata riletta — è la
+    // finestra fra `setCurrentId` e `setGroups` durante un cambio di gruppo.
+    const current =
+      currentId === null ? null : (groups.find((g) => g.vaultId === currentId) ?? null);
+    if (currentId !== null && current === null) return { phase: 'loading' };
     return {
       phase: 'ready',
       data: {
@@ -273,7 +278,14 @@ export function useGroups(): GroupsData {
   return status.data;
 }
 
-/** Il gruppo aperto adesso. */
-export function useCurrentGroup(): GroupRecord {
+/**
+ * Il gruppo aperto adesso, o `null` se non ce n'è nessuno.
+ *
+ * Nullabile e senza un gemello che solleva: due hook quasi uguali diventerebbero il posto
+ * in cui qualcuno usa quello sbagliato, e lo userebbe proprio nella schermata che deve
+ * funzionare senza gruppi. Cambiare questa firma è ciò che ha fatto trovare al
+ * compilatore tutti i chiamanti da sistemare.
+ */
+export function useCurrentGroup(): GroupRecord | null {
   return useGroups().current;
 }
