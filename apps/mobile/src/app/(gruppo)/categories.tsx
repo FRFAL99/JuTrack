@@ -1,10 +1,30 @@
 import { useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ModalScreen } from '@/components/ModalScreen';
+import { CategoryIcon } from '@/features/categories/CategoryIcon';
 import { useCategories, useExpenses, useVaultStore } from '@/state';
 import { useTheme } from '@/theme';
 
-const ICONS = ['🛒', '🏠', '🍕', '🚗', '💊', '🎬', '✈️', '🎁', '👕', '📱', '🐾', '📦'] as const;
+/**
+ * Nomi Feather, non più emoji: è questo il valore che finisce nel campo `icon` della
+ * categoria. Le categorie già esistenti continuano a contenere un'emoji e restano
+ * leggibili — a tradurle è `CATEGORY_ICONS`, in sola lettura — quindi non serve alcuna
+ * migrazione del documento condiviso.
+ */
+const ICONS = [
+  'shopping-cart',
+  'home',
+  'coffee',
+  'truck',
+  'thermometer',
+  'film',
+  'send',
+  'gift',
+  'tag',
+  'smartphone',
+  'heart',
+  'package',
+] as const;
 
 export default function CategoriesScreen() {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
@@ -67,7 +87,11 @@ export default function CategoriesScreen() {
                     borderColor: candidate === icon ? colors.accent : colors.border,
                   }}
                 >
-                  <Text style={{ fontSize: 18 }}>{candidate}</Text>
+                  <CategoryIcon
+                    icon={candidate}
+                    color={candidate === icon ? colors.accent : colors.textMuted}
+                    size={18}
+                  />
                 </Pressable>
               ))}
             </View>
@@ -125,7 +149,7 @@ export default function CategoriesScreen() {
               opacity: item.archived ? 0.45 : 1,
             })}
           >
-            <Text style={{ fontSize: 20 }}>{item.icon}</Text>
+            <CategoryIcon icon={item.icon} color={item.color} size={20} />
             <Text style={{ flex: 1, color: colors.text, fontSize: fontSize.md }}>{item.name}</Text>
             <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
               {item.archived ? 'Ripristina' : 'Archivia'}

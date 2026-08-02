@@ -1,13 +1,18 @@
+import type { ComponentProps } from 'react';
 import { Tabs } from 'expo-router';
-import { StyleSheet, Text } from 'react-native';
+import type { ColorValue } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import { useTheme } from '@/theme';
 
+type FeatherName = ComponentProps<typeof Feather>['name'];
+
 /**
- * Icone come emoji: nessuna dipendenza da un font di icone finché non serve davvero.
- * Se in seguito vorremo icone vettoriali, si sostituisce solo questo componente.
+ * L'icona prende il `color` che la tab bar le passa, che è già
+ * `tabBarActiveTintColor`/`tabBarInactiveTintColor`: le emoji di prima non potevano essere
+ * colorate e distinguevano il tab a fuoco per opacità, che è un segnale più debole.
  */
-function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
-  return <Text style={[styles.icon, { opacity: focused ? 1 : 0.5 }]}>{icon}</Text>;
+function TabIcon({ name, color }: { name: FeatherName; color: ColorValue }) {
+  return <Feather name={name} size={22} color={color} />;
 }
 
 export default function TabsLayout() {
@@ -35,14 +40,14 @@ export default function TabsLayout() {
         name="(gruppi)"
         options={{
           title: 'Gruppi',
-          tabBarIcon: ({ focused }) => <TabIcon icon="👥" focused={focused} />,
+          tabBarIcon: ({ color }) => <TabIcon name="users" color={color} />,
         }}
       />
       <Tabs.Screen
         name="stats"
         options={{
           title: 'Grafici',
-          tabBarIcon: ({ focused }) => <TabIcon icon="📊" focused={focused} />,
+          tabBarIcon: ({ color }) => <TabIcon name="bar-chart-2" color={color} />,
         }}
       />
       {/* Le impostazioni sono dell'**app**, non di un gruppo: da questo step non
@@ -53,7 +58,7 @@ export default function TabsLayout() {
         name="settings"
         options={{
           title: 'Impostazioni',
-          tabBarIcon: ({ focused }) => <TabIcon icon="⚙️" focused={focused} />,
+          tabBarIcon: ({ color }) => <TabIcon name="sliders" color={color} />,
         }}
       />
       {/* Per ultimo, come vuole la convenzione: è il tab di «chi sono io», non un
@@ -63,13 +68,9 @@ export default function TabsLayout() {
         name="profile"
         options={{
           title: 'Profilo',
-          tabBarIcon: ({ focused }) => <TabIcon icon="🙂" focused={focused} />,
+          tabBarIcon: ({ color }) => <TabIcon name="user" color={color} />,
         }}
       />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  icon: { fontSize: 22 },
-});

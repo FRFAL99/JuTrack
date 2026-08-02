@@ -39,14 +39,14 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | Passo                      | Stato | Cosa contiene                                                   |
 | -------------------------- | ----- | --------------------------------------------------------------- |
 | 1 — Token                  | ✅    | Grigi scuri più profondi, `surfaceRaised`/`divider`/`textFaint` |
-| 2 — Icone                  | ⬜    | Feather al posto delle emoji, mappa emoji→icona in `seed.ts`    |
+| 2 — Icone                  | ✅    | Feather al posto delle emoji, mappa emoji→icona in `seed.ts`    |
 | 3 — Componenti nuovi       | ⬜    | `SectionLabel`, `ListRow`, `AvatarStack`, `Card` a varianti     |
 | 4 — Tu                     | ⬜    | Fusione profilo + impostazioni, da quattro tab a tre            |
 | 5 — Grafici                | ⬜    | Riscrittura in forma registro, barre ritoccate                  |
 | 6 — Spese home + selettore | ⬜    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ⬜    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**581 test verdi** (387 core + 151 app + 43 relay), typecheck, lint e `format:check` puliti.
+**585 test verdi** (387 core + 155 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 **I piani chiusi sono due.** Il piano originale (Step 0–9), e
 [piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md) (**Step 10–14**), nato dalla prima
@@ -94,7 +94,20 @@ maiuscoletta — dove si legge (grafici, selettore gruppi, Tu). Regola unica: **
 schermata**. Il redesign passa da quattro tab a tre, e non tocca `packages/core`, lo schema Yjs,
 sync, crypto, relay, backup, export né azzeramento.
 
-**Un passo per sessione**, come per i piani precedenti. Il passo 1 (token) è chiuso.
+**Un passo per sessione**, come per i piani precedenti. Passi 1 (token) e 2 (icone) chiusi.
+
+**Le icone delle categorie non migrano i dati.** Il campo `icon` nel documento Yjs resta com'è —
+è sincronizzato, riscriverlo genererebbe un update per ogni categoria su ogni telefono — e la
+sostituzione avviene in sola lettura in `features/categories/icon.ts`: nome Feather → si disegna;
+emoji di default → la traduce `CATEGORY_ICONS`, derivata da `DEFAULT_CATEGORIES` in `state/seed.ts`;
+qualunque altra cosa → **pallino del colore della categoria**. Il terzo caso è ciò che permette di
+non migrare nulla, e riguarda le categorie create a mano con la vecchia schermata a emoji.
+
+**`@expo/vector-icons` non ha richiesto una build EAS**, e la ragione va ricordata: `app.json` non è
+stato toccato (nessun config plugin), il pacchetto ha zero dipendenze proprie, e il modulo nativo che
+gli serve — `expo-font` — è già dipendenza diretta di `expo`, quindi era autolinkato nella build del
+1º agosto. Il font viaggia come asset del bundle. **Importare sempre dal sottopercorso**
+(`@expo/vector-icons/Feather`): il barrel tira dentro tutti e undici i set con i rispettivi TTF.
 
 **Quattro punti in cui il documento va corretto**, verificati contro il repo prima di cominciare —
 sono nel documento come sono stati scritti, quindi vanno letti da qui:

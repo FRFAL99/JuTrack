@@ -4,6 +4,75 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-02 — Redesign, passo 2: icone vettoriali, senza toccare i dati sincronizzati
+
+Le emoji spariscono da tab bar e categorie. Restano dove sono parte di una frase e non un'icona —
+`⚠️`/`⏳`/`✓` in `describeBudget` e in `describe.ts` del sync — e negli stati vuoti, che verranno
+ridisegnati insieme alle loro schermate ai passi 4-6.
+
+**`@expo/vector-icons@15.0.2` installato, e nessuna build EAS.** Il documento lo dava per transitivo
+di Expo: non lo era. La verifica che conta non è però quella, è **perché non serve una build**:
+`app.json` non è stato toccato (nessun config plugin), `@expo/vector-icons` ha **zero dipendenze**
+proprie, e il modulo nativo che gli serve — `expo-font` — è già una dipendenza diretta del pacchetto
+`expo`, quindi era autolinkato nella build del 1º agosto. Il font arriva come asset: `expo export`
+lo conferma, `Feather.ttf` (56 KB) fra gli asset del bundle.
+
+**L'import è dal sottopercorso, non dal barrel.** `import Feather from '@expo/vector-icons/Feather'`
+e non `import { Feather } from '@expo/vector-icons'`: il barrel tira dentro tutti e undici i set di
+icone con le rispettive glyph map e i rispettivi TTF. Nel bundle esportato c'è **solo** `Feather.ttf`
+e nessun altro font di icone, che è la prova che la differenza è reale e non teorica.
+
+**Il campo `icon` delle categorie non si tocca, e questa è tutta la sostanza del passo.** È
+sincronizzato fra i telefoni: riscriverlo per togliere le emoji genererebbe un update per ogni
+categoria su ogni dispositivo, e su un documento già pieno non c'è modo di distinguere «l'ho appena
+migrata io» da «l'ha rinominata l'altro». Quindi la sostituzione è **in sola lettura**, in
+`features/categories/icon.ts`:
+
+1. il valore è il **nome di un'icona Feather** → si disegna quella (categorie create da adesso);
+2. è una delle **otto emoji di default** → la traduce `CATEGORY_ICONS` (vault esistenti);
+3. **qualunque altra cosa** → `null`, e chi disegna mette un **pallino del colore della categoria**.
+
+Il terzo caso è quello che regge tutto: senza un ripiego onesto servirebbe una migrazione del
+documento condiviso. Riguarda le categorie create a mano con la vecchia schermata a emoji.
+
+**`CATEGORY_ICONS` è derivata da `DEFAULT_CATEGORIES`**, non è una tabella parallela: la riga della
+categoria porta emoji e nome Feather affiancati, e non si può aggiungerne una dimenticando l'altra.
+Il rovescio è che la riga ha ora un campo in più, `feather`, che **non deve finire nel documento**:
+`seedDefaults` scrive i tre campi per nome invece di passare la riga intera. `store.addCategory` li
+sceglierebbe comunque uno per uno, ma affidarsi a quello significherebbe che un giorno qualcuno può
+allargare la firma del core e scrivere `feather` in ogni vault senza accorgersene.
+
+**Il risolutore è un modulo puro** che riceve i nomi validi come `ReadonlySet<string>` invece di
+importare la libreria: così si testa in Node, fuori da React Native, ed è il componente
+`CategoryIcon` — che la libreria ce l'ha in mano — a passare `Object.keys(Feather.glyphMap)`. La
+lista dei nomi validi non è mai riscritta a mano: andrebbe fuori sincrono al primo aggiornamento del
+pacchetto. Quattro test, incluso quello che verifica che **tutte e otto** le categorie seminate
+trovino la loro icona: il pallino è per le categorie fatte a mano, e se ci cadesse una di default
+ogni telefono nuovo aprirebbe l'app con dei puntini.
+
+**Tab bar:** `users`, `bar-chart-2`, `sliders`, `user` — quattro, perché la riduzione a tre è il
+passo 4. L'icona ora riceve il `color` che la tab bar le passa, cioè
+`tabBarActiveTintColor`/`tabBarInactiveTintColor` già configurati: le emoji distinguevano il tab a
+fuoco per opacità, che è un segnale più debole. Il tipo di quel `color` è `ColorValue`, non `string`
+— può essere un `PlatformColor` — ed è l'unico errore di typecheck che il passo ha prodotto.
+
+**La schermata Categorie scrive nomi Feather.** Dodici icone selezionabili al posto delle dodici
+emoji. Non è cosmesi rimandabile: lasciare il campo a emoji mentre le emoji non si vedono più da
+nessuna parte significherebbe far scegliere all'utente un simbolo che non comparirà mai.
+
+**Verifica:** 585 test verdi (387 core + 155 app + 43 relay), typecheck, lint e `format:check`
+puliti, `expo export --platform android` completato con `Feather.ttf` fra gli asset.
+
+**Da provare sul telefono:** che le icone compaiano davvero. Il font di `@expo/vector-icons` si
+carica a runtime da un asset del bundle, non è compilato nel binario: è l'unica parte di questo
+passo che non si può verificare da qui, e il modo in cui fallirebbe è quadratini vuoti o icone
+assenti, non un errore.
+
+**Prossimo:** passo 3 — `SectionLabel`, `ListRow`, `AvatarStack`, la variante di `Card` (con il
+default che **resta** la forma attuale) e la prop `header` di `Screen`.
+
+---
+
 ## 2026-08-02 — Redesign, passo 1: i token, e quattro cose che il documento dava per vere
 
 Comincia il redesign visivo, descritto in [visualdesign.md](visualdesign.md): direzione **2a**, mix

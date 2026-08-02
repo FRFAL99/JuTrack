@@ -19,6 +19,7 @@ import {
   type SplitMode,
 } from '@jutrack/core';
 import { Button } from '@/components/Button';
+import { CategoryIcon } from '@/features/categories/CategoryIcon';
 import { useCategories, useMembers, useMyMemberId } from '@/state';
 import { useTheme } from '@/theme';
 import { todayIso } from './grouping';
@@ -226,7 +227,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
                     borderColor: selected ? category.color : colors.border,
                   }}
                 >
-                  <Text>{category.icon}</Text>
+                  <CategoryIcon icon={category.icon} color={category.color} size={14} />
                   <Text
                     style={{
                       color: selected ? colors.text : colors.textMuted,

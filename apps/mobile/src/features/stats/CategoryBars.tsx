@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { formatMoney, type Category, type CategoryTotal } from '@jutrack/core';
+import { CategoryIcon } from '@/features/categories/CategoryIcon';
 import { useTheme } from '@/theme';
 import { formatShare } from './format';
 
@@ -35,7 +36,7 @@ export function CategoryBars({ totals, categories }: CategoryBarsProps) {
         return (
           <View key={total.categoryId ?? 'none'} style={{ gap: spacing.xs }}>
             <View style={styles.row}>
-              <Text style={{ fontSize: fontSize.sm }}>{category?.icon ?? '·'}</Text>
+              <CategoryIcon icon={category?.icon} color={color} size={14} />
               <Text
                 numberOfLines={1}
                 style={{ flex: 1, color: colors.text, fontSize: fontSize.sm }}

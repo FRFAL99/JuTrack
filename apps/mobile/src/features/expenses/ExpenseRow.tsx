@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { formatMoney, type Category, type Expense, type Member } from '@jutrack/core';
+import { CategoryIcon } from '@/features/categories/CategoryIcon';
 import { useTheme } from '@/theme';
 
 interface ExpenseRowProps {
@@ -40,7 +41,7 @@ export function ExpenseRow({ expense, category, paidByMember, onPress }: Expense
           },
         ]}
       >
-        <Text style={{ fontSize: 20 }}>{category?.icon ?? '📦'}</Text>
+        <CategoryIcon icon={category?.icon} color={category?.color ?? colors.textMuted} size={20} />
       </View>
 
       <View style={styles.middle}>

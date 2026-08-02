@@ -23,16 +23,32 @@ import type { VaultStore } from '@jutrack/core';
  * «Altro» resta grigio di proposito: è il contenitore degli avanzi, e leggere come
  * neutro è esattamente ciò che deve fare.
  */
-const DEFAULT_CATEGORIES: { name: string; icon: string; color: string }[] = [
-  { name: 'Spesa', icon: '🛒', color: '#2B8A3E' },
-  { name: 'Casa', icon: '🏠', color: '#1971C2' },
-  { name: 'Ristoranti', icon: '🍕', color: '#E8590C' },
-  { name: 'Trasporti', icon: '🚗', color: '#7048E8' },
-  { name: 'Salute', icon: '💊', color: '#C2255C' },
-  { name: 'Svago', icon: '🎬', color: '#0891B2' },
-  { name: 'Viaggi', icon: '✈️', color: '#C07F10' },
-  { name: 'Altro', icon: '📦', color: '#868E96' },
+const DEFAULT_CATEGORIES: { name: string; icon: string; feather: string; color: string }[] = [
+  { name: 'Spesa', icon: '🛒', feather: 'shopping-cart', color: '#2B8A3E' },
+  { name: 'Casa', icon: '🏠', feather: 'home', color: '#1971C2' },
+  { name: 'Ristoranti', icon: '🍕', feather: 'coffee', color: '#E8590C' },
+  { name: 'Trasporti', icon: '🚗', feather: 'truck', color: '#7048E8' },
+  { name: 'Salute', icon: '💊', feather: 'thermometer', color: '#C2255C' },
+  { name: 'Svago', icon: '🎬', feather: 'film', color: '#0891B2' },
+  { name: 'Viaggi', icon: '✈️', feather: 'send', color: '#C07F10' },
+  { name: 'Altro', icon: '📦', feather: 'package', color: '#868E96' },
 ];
+
+/**
+ * Emoji delle categorie di default → nome dell'icona Feather che la sostituisce a schermo.
+ *
+ * Il campo `icon` nel documento Yjs **è sincronizzato fra i telefoni**: riscriverlo per
+ * togliere le emoji genererebbe un update per ogni categoria su ogni dispositivo, e sui
+ * documenti già pieni non c'è modo di distinguere «l'ho appena migrata io» da «l'ha
+ * rinominata l'altro». Quindi i dati non si toccano e la sostituzione avviene solo in
+ * lettura, qui.
+ *
+ * La mappa è **derivata** da `DEFAULT_CATEGORIES` invece di essere una tabella parallela:
+ * due elenchi da tenere allineati a mano divergono al primo che ne modifica uno solo.
+ */
+export const CATEGORY_ICONS: Readonly<Record<string, string>> = Object.fromEntries(
+  DEFAULT_CATEGORIES.map((category) => [category.icon, category.feather]),
+);
 
 /**
  * @param seedCategories `false` per chi è **entrato** nel vault di qualcun altro.
@@ -45,7 +61,12 @@ export function seedDefaults(store: VaultStore, { seedCategories = true } = {}):
   if (seedCategories && store.listCategories(true).length === 0) {
     // Una sola transazione: otto categorie generano un solo update invece di otto.
     store.transact(() => {
-      for (const category of DEFAULT_CATEGORIES) store.addCategory(category);
+      // I tre campi si scrivono per nome, non passando l'intera riga: `feather` serve solo
+      // a costruire `CATEGORY_ICONS` qui sul telefono e **non deve finire nel documento**,
+      // che è sincronizzato e il cui schema non cambia in questo passo.
+      for (const { name, icon, color } of DEFAULT_CATEGORIES) {
+        store.addCategory({ name, icon, color });
+      }
     });
   }
 }
