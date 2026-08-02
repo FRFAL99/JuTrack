@@ -78,7 +78,7 @@ export default function StatsScreen() {
 
   if (allExpenses.length === 0) {
     return (
-      <Screen title="Statistiche">
+      <Screen title="Grafici">
         <EmptyState
           icon="📊"
           title="Ancora nessun dato"
@@ -89,7 +89,7 @@ export default function StatsScreen() {
   }
 
   return (
-    <Screen title="Statistiche">
+    <Screen title="Grafici">
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
         <Card style={{ gap: spacing.md }}>
           <View style={styles.rowBetween}>

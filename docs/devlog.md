@@ -4,6 +4,83 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-02 — Step 20: quattro tab, e ogni cosa al suo posto
+
+Il primo step del piano v3 che non sposta file: sposta **significati**. Le impostazioni contenevano
+tre cose diverse mescolate — l'app, un gruppo, e me — e con più gruppi sullo stesso telefono la
+mescolanza era diventata ambigua.
+
+**I quattro tab**
+
+`(gruppi)` 👥 Gruppi · `stats` 📊 Grafici · `settings` ⚙️ Impostazioni · `profile` 🙂 Profilo. Le
+icone restano emoji dentro un `<Text>`: nessuna libreria di icone, nessuna build EAS nuova. Il tab
+Statistiche si chiama **Grafici** (piano v3), e la schermata sotto ha cambiato titolo con lui —
+un'etichetta che apre una schermata intitolata diversamente è un piccolo tradimento gratuito.
+
+**Il tab Profilo, nuovo**
+
+Nome (commit su `onBlur`, il `commitName` di `settings.tsx` traslocato invariato: ogni lettera
+sarebbe un update Yjs e una riga nel log del relay), `ColorChoice`, l'elenco dei gruppi in sola
+lettura, e l'**identificativo** — il `profileId`, `selectable`, con la frase che dice che è casuale,
+opaco, e che non è un account: non c'è niente a cui accedere.
+
+Non è una card dentro le impostazioni perché il profilo non è una preferenza dell'app: è l'unica
+cosa che attraversa **tutti** i gruppi. È il `profileId` a rendermi la stessa persona in ognuno, ed è
+la ragione per cui i due telefoni non contano più due persone al posto di una (Step 11).
+
+**Impostazioni, ripulite**
+
+Restano `SyncBadge` + «Sincronizza adesso», la Diagnostica e la riga di versione. Spariscono
+Categorie, Backup della chiave ed Esporta (sono del gruppo, Step 19), «Il tuo profilo» (è il tab 4) e
+la card Gruppi (è il tab 1). Le voci erano rimaste **duplicate apposta** dallo Step 19: toglierle là
+avrebbe mescolato due step e lasciato un buco fra i due commit.
+
+Il tab legge il motore con **`useVaultStatus()`, che non solleva**, invece di `useVaultRuntime()`,
+che solleva: allo Step 21 dovrà funzionare senza alcun gruppo aperto, e con il vault non pronto
+«Sincronizza adesso» è semplicemente disabilitato. È l'unica condizione che questo tab avrà mai — e
+non usa più `useGroups().current`, che allo Step 21 diventa nullable.
+
+**Due estrazioni, ciascuna perché la stessa cosa serve in due posti**
+
+- **`features/groups/GroupRow.tsx`**: l'elenco dei gruppi compare adesso nella radice del tab Gruppi
+  **e** nel Profilo. Due copie sarebbero divergute, e la prima a divergere sarebbe stata proprio
+  l'evidenziazione del gruppo aperto — cioè l'unico segnale che distingue a colpo d'occhio il gruppo
+  giusto da quello sbagliato. Prende `currentVaultId: string | null`, già pronta per lo Step 21.
+- **`NavCard` guadagna `tone="danger"`**, che colora titolo e bordo. È un **tono, non un pulsante**:
+  la riga naviga soltanto, e a chiedere conferma è la schermata che si apre. Un `Button
+variant="danger"` lì prometterebbe che il tocco cancella già qualcosa.
+
+**`/azzera`: la schermata prima del codice che distrugge**
+
+`app/azzera.tsx` è sulla radice e fuori da `(gruppo)`: chi azzera resta senza gruppi, e la schermata
+deve restare disegnabile mentre lo fa. In questo step **spiega e basta** — che cosa sparisce (il
+profilo col suo identificativo, i gruppi con i loro nomi, le spese, le chiavi) e che cosa no (le
+copie sul relay, cifrate, che scadono da sole in trenta giorni; e ciò che gli altri hanno già
+scaricato). In cima, e non in fondo, il rimando a «Fai prima un backup della chiave»: è l'unica cosa
+che rende reversibile il gesto, e va letta prima di decidere.
+
+Che non sia ancora attiva è **scritto sulla schermata**, non taciuto: una pagina che elenca disastri
+e non ha un pulsante sembra rotta. Lo Step 22 aggiunge l'interruttore «Ho capito» e il bottone, e
+resta così tutto codice distruttivo e niente impaginazione — `wipeDevice` è la parte in cui un errore
+d'ordine lascia chiavi orfane nel Keystore di sistema per sempre, e non va scritta insieme alla
+grafica.
+
+**Nessuna schermata ha perso il suo ingresso.** Era la trappola dello Step 18 (`manage` l'aveva
+perso): controllati uno per uno tutti gli href dell'app contro i tipi rigenerati. `/categories`,
+`/backup` ed `/export` — tolti dalle impostazioni — restano raggiungibili dalla gestione del gruppo,
+e `/budget` e `/settle` anche dai Grafici.
+
+**Verifica:** `format:check`, `lint`, `typecheck` puliti; **563 test** (133 app + 387 core + 43
+relay), invariati — questo step non introduce logica pura nuova; `expo export --platform android`
+riuscito; `.expo/types/router.d.ts` rigenerato contiene `/azzera` e
+`` `${'/(tabs)'}/profile` | `/profile` ``, **con tutti gli URL preesistenti invariati**, e `tsc` è
+stato rieseguito con quei tipi presenti.
+
+**Non provato sul telefono.** Restano da vedere in mano: che quattro etichette stiano nella tab bar
+senza troncarsi, che il tab Profilo salvi il nome sul blur, e che `/azzera` si apra e si chiuda.
+
+---
+
 ## 2026-08-02 — Step 19: dentro il gruppo c'è tutto il gruppo
 
 L'ultimo spostamento di file del piano v3, e il secondo dei due step «delicati». Stessa procedura

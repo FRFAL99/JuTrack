@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, TextInput } from 'react-native';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
-import { groupSubtitle } from '@/features/groups/list';
+import { GroupRow } from '@/features/groups/GroupRow';
 import { MAX_GROUP_NAME, normalizeGroupName, useGroups } from '@/state';
 import { useTheme } from '@/theme';
 
@@ -54,50 +54,14 @@ export default function GroupsScreen() {
         contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}
       >
         <Card style={{ gap: spacing.xs }}>
-          {groups.map((group) => {
-            const isCurrent = group.vaultId === current.vaultId;
-            return (
-              <Pressable
-                key={group.vaultId}
-                onPress={() => router.push(`/groups/${group.vaultId}`)}
-                accessibilityRole="button"
-                accessibilityState={{ selected: isCurrent }}
-              >
-                {({ pressed }) => (
-                  <View
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: spacing.sm,
-                      padding: spacing.md,
-                      borderRadius: radius.md,
-                      backgroundColor: pressed
-                        ? colors.surfacePressed
-                        : isCurrent
-                          ? colors.background
-                          : 'transparent',
-                    }}
-                  >
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text
-                        style={{
-                          color: colors.text,
-                          fontSize: fontSize.md,
-                          fontWeight: isCurrent ? fontWeight.semibold : fontWeight.medium,
-                        }}
-                      >
-                        {group.name}
-                      </Text>
-                      <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
-                        {groupSubtitle(group.vaultId, current.vaultId)}
-                      </Text>
-                    </View>
-                    <Text style={{ color: colors.textMuted, fontSize: fontSize.lg }}>›</Text>
-                  </View>
-                )}
-              </Pressable>
-            );
-          })}
+          {groups.map((group) => (
+            <GroupRow
+              key={group.vaultId}
+              group={group}
+              currentVaultId={current.vaultId}
+              onPress={() => router.push(`/groups/${group.vaultId}`)}
+            />
+          ))}
         </Card>
 
         <Card style={{ gap: spacing.sm }}>

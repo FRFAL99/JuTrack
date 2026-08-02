@@ -6,6 +6,15 @@ interface NavCardProps {
   title: string;
   subtitle: string;
   onPress: () => void;
+  /**
+   * `danger` colora il titolo e il bordo, per le righe che portano a un gesto che
+   * distrugge dati.
+   *
+   * È un tono, non un pulsante. La riga naviga soltanto, e a chiedere conferma è la
+   * schermata che si apre: un `Button variant="danger"` qui prometterebbe che il tocco
+   * cancella già qualcosa.
+   */
+  tone?: 'default' | 'danger';
 }
 
 /**
@@ -17,17 +26,22 @@ interface NavCardProps {
  * backup, export) si sono spostate nella gestione del gruppo e le stesse righe sono
  * servite in due posti.
  */
-export function NavCard({ title, subtitle, onPress }: NavCardProps) {
+export function NavCard({ title, subtitle, onPress, tone = 'default' }: NavCardProps) {
   const { colors, fontSize, fontWeight, spacing } = useTheme();
   return (
     <Pressable onPress={onPress} accessibilityRole="button">
       {({ pressed }) => (
-        <Card style={{ backgroundColor: pressed ? colors.surfacePressed : colors.surface }}>
+        <Card
+          style={{
+            backgroundColor: pressed ? colors.surfacePressed : colors.surface,
+            ...(tone === 'danger' && { borderColor: colors.danger }),
+          }}
+        >
           <View style={styles.rowBetween}>
             <View style={{ gap: 2, flex: 1, paddingRight: spacing.sm }}>
               <Text
                 style={{
-                  color: colors.text,
+                  color: tone === 'danger' ? colors.danger : colors.text,
                   fontSize: fontSize.md,
                   fontWeight: fontWeight.semibold,
                 }}

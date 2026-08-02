@@ -1,6 +1,6 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-02, a Step 19 chiuso — **piano v3 in corso, restano gli Step 20–22**.
+Aggiornato: 2026-08-02, a Step 20 chiuso — **piano v3 in corso, restano gli Step 21–22**.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -29,7 +29,7 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 17 — Offline ≠ errore del relay     | ✅    | `offlineRetryMs`, state vector scritto solo se cambia        |
 | 18 — Tab Gruppi: elenco → gruppo    | ✅    | Le spese diventano il dettaglio del gruppo, URL invariati    |
 | 19 — Tutto il gruppo nel gruppo     | ✅    | Categorie, budget, pareggi, export dietro un'unica guardia   |
-| 20 — Quattro tab                    | ⬜    | Gruppi, Grafici, Impostazioni, Profilo                       |
+| 20 — Quattro tab                    | ✅    | Gruppi, Grafici, Impostazioni, Profilo                       |
 | 21 — Nessun gruppo al primo avvio   | ⬜    | Fase `absent`, l'utente crea o entra con un invito           |
 | 22 — Azzera questo telefono         | ⬜    | Wipe totale e ritorno all'onboarding, senza riavvio          |
 
@@ -40,12 +40,13 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 prova con due dispositivi che aveva fatto emergere due bug sui numeri e tre limiti di prodotto.
 
 **Il terzo è in corso:** [piano-v3-tab-gruppi-azzeramento-sync.md](piano-v3-tab-gruppi-azzeramento-sync.md),
-**Step 16–22**, di cui **16, 17, 18 e 19 sono fatti**. Nasce dalla prova a mano delle funzionalità: la
-gestione dei gruppi non è intuitiva, il gruppo di default al primo avvio genera confusione, e il poll
-del relay va tarato. **Uno step per sessione.** La taratura del motore è finita, e **gli spostamenti
-di rotte pure**: erano i due step più delicati del piano — quelli che potevano rompere in silenzio
-l'ingresso da un invito — e sono chiusi entrambi con gli URL intatti (vedi sotto). Da qui in poi si
-riorganizzano i tab (20), si toglie il gruppo di default (21) e si scrive l'azzeramento (22).
+**Step 16–22**, di cui **16, 17, 18, 19 e 20 sono fatti**. Nasce dalla prova a mano delle
+funzionalità: la gestione dei gruppi non è intuitiva, il gruppo di default al primo avvio genera
+confusione, e il poll del relay va tarato. **Uno step per sessione.** La taratura del motore è
+finita, **gli spostamenti di rotte pure** — erano i due step più delicati del piano, quelli che
+potevano rompere in silenzio l'ingresso da un invito, e sono chiusi entrambi con gli URL intatti
+(vedi sotto) — e la riorganizzazione dei tab è finita anche lei. Restano i due step che toccano lo
+stato dell'app e non la sua forma: togliere il gruppo di default (21) e scrivere l'azzeramento (22).
 
 > **Non resta codice da scrivere per i piani v1 e v2, resta la prova sul campo.** Dallo Step 10 in poi
 > nulla è mai stato visto funzionare su un telefono: quello che manca è il [criterio di «fatto»
@@ -172,6 +173,9 @@ la lista si è accorciata parecchio, ma non è vuota:
   backup della chiave, export — aprano davvero le schermate giuste, e che il loro «Chiudi» riporti al
   gruppo invece di uscirne. Gli URL non sono cambiati, quindi il rischio è basso, ma è lo stesso tipo
   di rischio dello Step 18
+- **Lo Step 20**: che quattro etichette stiano nella tab bar senza troncarsi («Impostazioni» è la
+  lunga), che il tab Profilo salvi il nome **sul blur** e che il cambio si veda subito nel gruppo, e
+  che `/azzera` si apra e si chiuda
 - **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
   rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
   l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima
@@ -205,9 +209,10 @@ su un dispositivo Android reale.
 | La schermata del gruppo riselezionava il gruppo **appena abbandonato**: app ferma sul caricamento | Guardia nella schermata **e** in `select`, che rifiuta un `vaultId` non nel registro           |
 | Spostare rotte con `.expo/types/` gitignorato: gli href obsoleti passano typecheck **e** lint     | Grep sugli href, poi `expo start` per rigenerare i tipi e `tsc` **con quei tipi presenti**     |
 
-## Dove sta ogni schermata (Step 18 e 19)
+## Dove sta ogni schermata (Step 18, 19 e 20)
 
-Il primo tab non è una schermata ma uno **stack**: elenco dei gruppi → gruppo aperto.
+Quattro tab: **Gruppi** 👥 · **Grafici** 📊 · **Impostazioni** ⚙️ · **Profilo** 🙂. Il primo non è
+una schermata ma uno **stack**: elenco dei gruppi → gruppo aperto.
 
 ```
 app/(tabs)/(gruppi)/index.tsx                      "/"                     elenco dei gruppi
@@ -223,8 +228,13 @@ app/(gruppo)/export.tsx                            "/export"
 app/(gruppo)/expense/new.tsx                       "/expense/new"
 app/(gruppo)/expense/[id].tsx                      "/expense/<id>"
 
+app/(tabs)/stats.tsx                               "/stats"                Grafici del gruppo aperto
+app/(tabs)/settings.tsx                            "/settings"             solo app: sync, diagnostica, versione
+app/(tabs)/profile.tsx                             "/profile"              nome, colore, id, i tuoi gruppi
+
 app/backup.tsx                                     "/backup"               fuori: serve senza gruppo
 app/pair/invite.tsx                                "/pair/invite"          fuori: `GroupRequired` in linea
+app/azzera.tsx                                     "/azzera"               fuori: chi azzera resta senza gruppi
 ```
 
 - **Le parentesi non compaiono nell'URL**, quindi `/groups/<vaultId>` è rimasto quello di prima: è
@@ -253,7 +263,18 @@ app/pair/invite.tsx                                "/pair/invite"          fuori
 - **Tutto ciò che riguarda un gruppo si apre dal gruppo** (Step 19): categorie, budget, pareggi,
   backup della chiave ed export sono cinque `NavCard` in `manage`. Prima stavano in Impostazioni,
   dove sembravano riguardare l'app: chi apriva «Backup della chiave» non poteva sapere di **quale**
-  chiave si trattasse. Le voci restano anche in Impostazioni fino allo Step 20, che ripulisce i tab.
+  chiave si trattasse. Dallo **Step 20** non sono più duplicate in Impostazioni.
+- **Le tre cose che erano mescolate in Impostazioni sono separate** (Step 20): l'app resta lì (sync,
+  diagnostica, versione), il gruppo sta nella sua gestione, e **io** ho un tab mio. Il profilo non è
+  una preferenza dell'app: è l'unica cosa che attraversa tutti i gruppi, ed è il `profileId` a
+  rendermi la stessa persona in ognuno.
+- **Impostazioni legge il motore con `useVaultStatus()`, che non solleva** — non con
+  `useVaultRuntime()`, che solleva — e non tocca `useGroups().current`: allo Step 21 dovrà funzionare
+  con zero gruppi, e «Sincronizza adesso» sarà semplicemente disabilitato. È l'unica condizione che
+  quel tab avrà mai.
+- **`/azzera` esiste ma spiega e basta**: elenca che cosa sparisce e che cosa no, e lo dichiara sulla
+  schermata stessa. La doppia conferma e `wipeDevice` sono lo Step 22, che resta così tutto codice
+  distruttivo e niente impaginazione.
 
 ## Come si entra in un gruppo (Step 7 e 13)
 

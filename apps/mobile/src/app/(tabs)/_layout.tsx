@@ -41,15 +41,29 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="stats"
         options={{
-          title: 'Statistiche',
+          title: 'Grafici',
           tabBarIcon: ({ focused }) => <TabIcon icon="📊" focused={focused} />,
         }}
       />
+      {/* Le impostazioni sono dell'**app**, non di un gruppo: da questo step non
+          contengono più nulla che appartenga a un gruppo (categorie, backup, export sono
+          nella sua gestione) né al profilo, che ha un tab suo. È anche l'unico tab che
+          dallo Step 21 dovrà funzionare senza alcun gruppo aperto. */}
       <Tabs.Screen
         name="settings"
         options={{
           title: 'Impostazioni',
           tabBarIcon: ({ focused }) => <TabIcon icon="⚙️" focused={focused} />,
+        }}
+      />
+      {/* Per ultimo, come vuole la convenzione: è il tab di «chi sono io», non un
+          contenuto. Sta fuori dai gruppi perché il profilo è uno solo e li attraversa
+          tutti — è il `profileId` a rendermi la stessa persona in ognuno. */}
+      <Tabs.Screen
+        name="profile"
+        options={{
+          title: 'Profilo',
+          tabBarIcon: ({ focused }) => <TabIcon icon="🙂" focused={focused} />,
         }}
       />
     </Tabs>
