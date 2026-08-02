@@ -1,6 +1,6 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-02, a Step 14 chiuso — **tutti gli step del piano sono fatti**.
+Aggiornato: 2026-08-02, a Step 15 chiuso — **il piano v3 è scritto, gli Step 16–22 sono da fare**.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -24,18 +24,32 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 12 — Più gruppi per telefono        | ✅    | Registro gruppi, tabelle per vault, runtime rimontabile      |
 | 13 — Inviti via link                | ✅    | Link condivisibile, pagina `/j` sul Worker                   |
 | 14 — Uscire da un gruppo            | ✅    | Cancellazione dal relay, rigenerazione con chiave nuova      |
+| 15 — Piano v3 scritto               | ✅    | Quattro tab, gruppo come luogo, azzeramento, sync tarato     |
+| 16 — Poll a scala, `markActive`     | ⬜    | Scala 2→5→15→60 s invece del gradino 3 s/30 s                |
+| 17 — Offline ≠ errore del relay     | ⬜    | `offlineRetryMs`, state vector scritto solo se cambia        |
+| 18 — Tab Gruppi: elenco → gruppo    | ⬜    | Le spese diventano il dettaglio del gruppo, URL invariati    |
+| 19 — Tutto il gruppo nel gruppo     | ⬜    | Categorie, budget, pareggi, export dietro un'unica guardia   |
+| 20 — Quattro tab                    | ⬜    | Gruppi, Grafici, Impostazioni, Profilo                       |
+| 21 — Nessun gruppo al primo avvio   | ⬜    | Fase `absent`, l'utente crea o entra con un invito           |
+| 22 — Azzera questo telefono         | ⬜    | Wipe totale e ritorno all'onboarding, senza riavvio          |
 
 **536 test verdi** (371 core + 122 app + 43 relay), typecheck, lint e `format:check` puliti.
 
-**Il piano originale (Step 0–9) è chiuso.** La prima prova con **due dispositivi** ha fatto emergere
-due bug con conseguenze sui numeri e tre limiti di prodotto: da lì nasce un secondo piano,
-[piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md), che copre gli **Step 10–14**.
-**Anche quello è chiuso.**
+**I piani chiusi sono due.** Il piano originale (Step 0–9), e
+[piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md) (**Step 10–14**), nato dalla prima
+prova con due dispositivi che aveva fatto emergere due bug sui numeri e tre limiti di prodotto.
 
-> **Non resta codice da scrivere, resta la prova sul campo.** Dallo Step 10 in poi nulla è mai stato
-> visto funzionare su un telefono: quello che manca è il [criterio di «fatto»
+**Il terzo è appena stato scritto e va eseguito:**
+[piano-v3-tab-gruppi-azzeramento-sync.md](piano-v3-tab-gruppi-azzeramento-sync.md), **Step 16–22**.
+Nasce dalla prova a mano delle funzionalità: la gestione dei gruppi non è intuitiva, il gruppo di
+default al primo avvio genera confusione, e il poll del relay va tarato. **Uno step per sessione**, e
+gli Step 16 e 17 sono indipendenti da tutti gli altri.
+
+> **Non resta codice da scrivere per i piani v1 e v2, resta la prova sul campo.** Dallo Step 10 in poi
+> nulla è mai stato visto funzionare su un telefono: quello che manca è il [criterio di «fatto»
 > end-to-end](piano-v2-profili-gruppi-sync.md#criterio-di-fatto-end-to-end) su due dispositivi
-> fisici. Finché non è stato fatto, «i test passano» e «funziona» restano due frasi diverse.
+> fisici. Finché non è stato fatto, «i test passano» e «funziona» restano due frasi diverse. **Vale la
+> pena farlo prima di iniziare lo Step 18**, che sposta le rotte con cui si entra in un gruppo.
 
 **La pagina `/j` è in produzione** (deploy del 2026-08-02, versione `b351a959`): risponde 200 con
 gli header attesi — `Referrer-Policy: no-referrer`, CSP `default-src 'none'`, `noindex` — e l'HTML

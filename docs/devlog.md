@@ -4,6 +4,73 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-02 — Step 15: il piano v3, dalla prova a mano dell'app
+
+**Fatto**
+
+Nessun codice: `docs/piano-v3-tab-gruppi-azzeramento-sync.md`, che copre gli **Step 16–22**, più la
+tabella di avanzamento di `STATO.md` estesa. Nasce dalla prova a mano delle funzionalità già scritte.
+
+**Le tre cose che non andavano, e cosa si è deciso**
+
+1. **Il gruppo non è un luogo, è un parametro implicito.** «Categorie», «Backup della chiave» ed
+   «Esporta i dati» stanno in Impostazioni, dove sembrano riguardare l'app mentre riguardano **un**
+   gruppo solo. Si passa a **quattro tab** — Gruppi (stack elenco → gruppo), Grafici, Impostazioni,
+   Profilo — con tutto ciò che è di gruppo dentro il gruppo.
+2. **Il gruppo di default al primo avvio.** Era una scelta deliberata dello Step 12 per eliminare lo
+   stato «nessun vault», ma alla prova produce due telefoni con due gruppi diversi e nessuno dei due
+   condiviso. Si torna a «nessun gruppo», ma con la guardia in **un solo file**
+   (`(gruppo)/_layout.tsx`) invece che sparsa: è la ragione per cui lo Step 19 precede lo Step 21.
+3. **Il relay sembrava interrogato in continuazione.**
+
+**Il numero, misurato prima di decidere.** Poll a 3 s per 120 s dopo l'attività, poi 30 s in primo
+piano, **zero in background**. Un ciclo a vuoto è **una sola GET**, nessuna POST. Con due telefoni
+sono ~1.500 richieste/giorno **contro un limite free di 100.000**: non era un problema di quota, era
+batteria e traffico. Vale la pena intervenire, ma sapendo cosa si sta ottimizzando — e l'ottimizzazione
+scelta è solo lato client, il relay non si tocca.
+
+**La coda offline esisteva già** ed è durevole (`sync_pending` per vault, in transazione, svuotata
+solo dei blob accettati, con `pushedStateVector` che non avanza a coda piena). Il dubbio che ha
+originato la domanda era infondato.
+
+**Tre difetti trovati leggendo il motore, che nessun test copriva**
+
+- **`onLocalUpdate` fa `void this.store.setPending(...)` senza `await`** (`engine.ts:94`), e
+  `setPending` apre una transazione. Due update ravvicinati intrecciano due `BEGIN` sulla stessa
+  connessione: il secondo fallisce con `cannot start a transaction within a transaction`, e il suo
+  `catch` esegue un `ROLLBACK` che annulla la transazione **del primo**. Non è perdita di dati certa
+  — il catch-up dello state vector la recupera — ma quella è l'ultima rete di sicurezza.
+- **Lo state vector si riscrive a ogni ciclo** (`engine.ts:336-338`), anche a vault fermo: un `fsync`
+  ogni tre secondi, per ore.
+- **Un guasto di rete gonfia il backoff fino a cinque minuti** come se fosse un errore del relay. Ma
+  senza rete la richiesta fallisce **localmente** e non tocca il relay: ritentare presto non costa
+  nulla. Da qui `offlineRetryMs`, che è anche il sostituto del listener di connettività che non
+  possiamo avere (sarebbe un modulo nativo, quindi una build EAS nuova).
+
+**Le due decisioni di progetto che valeva la pena scrivere**
+
+- **`markActive()` invece di `pause()` quando nessuna schermata di dati è a fuoco.** `pause()` non
+  sospende solo il pull: ferma anche il **push**. Una pausa rimasta appesa sarebbe una spesa scritta
+  che non parte, in silenzio. Con `markActive` il rischio è invertito: dimenticarlo produce un poll
+  più lento, mai un sync fermo.
+- **Fase `absent` dentro `VaultProvider`, non `<VaultProvider>` montato condizionalmente.** Montarlo
+  condizionalmente cambierebbe il tipo di un antenato dello `Stack`: React rimonterebbe l'intero
+  navigatore nell'istante in cui si crea il primo gruppo, azzerando la pila di navigazione proprio
+  durante quel gesto. Con `absent` l'albero è stabile e `VaultRuntime.keys` resta non nullable.
+
+**Il punto dello Step 22 dove un errore è irreversibile.** `expo-secure-store` **non sa elencare i
+propri slot**: le chiavi si trovano solo tramite `groupKeyStorageKey(vaultId)`. Cancellare la tabella
+`groups` prima di aver letto i `vaultId` lascerebbe nel Keystore di sistema chiavi che nessuno potrà
+più nominare, per sempre. La lista va letta come primissima operazione.
+
+**Verifica:** `format:check` pulito. Nessun codice toccato, quindi i 536 test restano com'erano.
+
+**Prossimo:** Step 16 — la scala del poll e `markActive()`, tutto in `packages/core/src/sync/`.
+Indipendente da tutti gli altri step. **Prima dello Step 18** conviene fare la prova sui due telefoni
+fisici del piano v2: lo Step 18 sposta le rotte con cui si entra in un gruppo da invito.
+
+---
+
 ## 2026-08-02 — Step 14: uscire da un gruppo, rigenerarlo
 
 **Fatto**
