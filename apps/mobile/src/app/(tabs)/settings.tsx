@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CORE_VERSION } from '@jutrack/core';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { NavCard } from '@/components/NavCard';
 import { Screen } from '@/components/Screen';
 import { ColorChoice } from '@/features/profile/ColorChoice';
 import { SyncBadge } from '@/features/sync/SyncBadge';
@@ -18,49 +19,6 @@ import {
   useVaultRuntime,
 } from '@/state';
 import { useTheme } from '@/theme';
-
-/**
- * Riga che porta a un'altra schermata.
- *
- * Le impostazioni ne contengono quattro identiche: tenerle allineate a mano significava
- * che una finiva col chevron disallineato o senza stato di pressione.
- */
-function NavCard({
-  title,
-  subtitle,
-  onPress,
-}: {
-  title: string;
-  subtitle: string;
-  onPress: () => void;
-}) {
-  const { colors, fontSize, fontWeight, spacing } = useTheme();
-  return (
-    <Pressable onPress={onPress} accessibilityRole="button">
-      {({ pressed }) => (
-        <Card style={{ backgroundColor: pressed ? colors.surfacePressed : colors.surface }}>
-          <View style={styles.rowBetween}>
-            <View style={{ gap: 2, flex: 1, paddingRight: spacing.sm }}>
-              <Text
-                style={{
-                  color: colors.text,
-                  fontSize: fontSize.md,
-                  fontWeight: fontWeight.semibold,
-                }}
-              >
-                {title}
-              </Text>
-              <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-                {subtitle}
-              </Text>
-            </View>
-            <Text style={{ color: colors.textMuted, fontSize: fontSize.lg }}>›</Text>
-          </View>
-        </Card>
-      )}
-    </Pressable>
-  );
-}
 
 export default function SettingsScreen() {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
@@ -187,7 +145,3 @@ export default function SettingsScreen() {
     </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-});

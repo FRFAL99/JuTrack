@@ -2,7 +2,7 @@
 
 > **Avanzamento al 2026-08-02.**
 > Completati: **Step 0–9** (piano originale), **Step 10–14** ([piano v2](piano-v2-profili-gruppi-sync.md)),
-> lo **Step 15** — questo documento — e gli **Step 16, 17 e 18**. Da fare: **Step 19–22**, uno per
+> lo **Step 15** — questo documento — e gli **Step 16, 17, 18 e 19**. Da fare: **Step 20–22**, uno per
 > sessione.
 >
 > Nasce dalla prova a mano delle funzionalità già scritte: la gestione dei gruppi non è intuitiva, il
@@ -141,11 +141,11 @@ cd apps/mobile && npx expo export --platform android
 > toccano una sola schermata. Se una sessione ha tempo per una cosa sola, sono quelle: rischio nullo
 > sull'app e guadagno immediato su batteria e traffico. **Fatti entrambi.**
 
-> **Gli Step 18 e 19 sono spostamenti di file, e sono i due più delicati del piano** — non per la
-> logica, che non cambia, ma perché rompono rotte in silenzio. Vanno fatti uno per commit, con
-> `expo export` come giudice. **Lo Step 18 è chiuso**; resta il 19, che si fa allo stesso modo. Alla
-> fine di ognuno vale la pena rigenerare `.expo/types/router.d.ts` con `expo start` e rilanciare
-> `tsc` **con quei tipi presenti**: è l'unica verifica automatica degli href che esista.
+> **Gli Step 18 e 19 erano spostamenti di file, e i due più delicati del piano** — non per la logica,
+> che non cambia, ma perché rompono rotte in silenzio. **Sono chiusi entrambi**, uno per commit, con
+> `expo export` come giudice e i tipi delle rotte rigenerati da `expo start` prima di un `tsc` fatto
+> **con quei tipi presenti**: è l'unica verifica automatica degli href che esista. Da qui in poi la
+> struttura delle rotte non si tocca più.
 
 ### Step 15 — Questo documento ✅
 
@@ -375,7 +375,22 @@ _Verifica:_ nessuna logica pura nuova obbligatoria. Consigliato estrarre in
 `apps/mobile/src/features/groups/list.ts` l'etichettatura dell'elenco («Aperto adesso» contro
 `vault xxxxxxxx…`): è piccola, pura, e tre test la coprono.
 
-### Step 19 — Dentro il gruppo c'è tutto il gruppo
+### Step 19 — Dentro il gruppo c'è tutto il gruppo ✅
+
+> **Fatto il 2026-08-02**, come descritto qui, con gli URL intatti: `.expo/types/router.d.ts`
+> rigenerato contiene `` `${'/(gruppo)'}/categories` | `/categories` `` e le altre cinque nella
+> stessa forma, e `tsc --noEmit` gira con quei tipi presenti. Nessun `router.push` toccato.
+>
+> **Due aggiunte non previste qui:**
+>
+> - **`NavCard` è salita da `settings.tsx` a `components/NavCard.tsx`**, invariata: la stessa riga
+>   serve adesso in due schermate.
+> - **In `pair/invite.tsx` la guardia sta in un componente sopra quello che lavora**
+>   (`InviteToGroup`), non in un `return` anticipato: le regole degli hook impongono che le chiamate
+>   vengano prima di ogni uscita, e allo Step 21 sarebbero tutte a leggere un `group` nullabile.
+>
+> Le voci restano **anche** in Impostazioni: toglierle è lo Step 20, e anticiparlo qui avrebbe
+> mescolato due step.
 
 Portare categorie, budget, pareggi ed export dentro il gruppo, e mettere le rotte che richiedono un
 vault dietro **un'unica** guardia.

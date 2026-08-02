@@ -11,8 +11,9 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
 import { RELAY_URL } from '@/config';
+import { GroupRequired } from '@/features/groups/GroupRequired';
 import { PairingQr } from '@/features/pairing/PairingQr';
-import { useCurrentGroup, useGroups } from '@/state';
+import { useCurrentGroup, useGroups, type GroupRecord } from '@/state';
 import { useTheme } from '@/theme';
 
 /** L'invito al gruppo aperto, nelle tre forme in cui può viaggiare. */
@@ -38,10 +39,32 @@ interface Invite {
  * inoltra con due tocchi e sopravvive a chi l'ha mandato.
  */
 export default function PairInviteScreen() {
+  const group = useCurrentGroup();
+
+  // Questa schermata ha bisogno di un gruppo, ma **non** può stare in `app/(gruppo)/`
+  // insieme alle altre che lo richiedono: `app/(gruppo)/pair/invite.tsx` e
+  // `app/pair/index.tsx` farebbero convergere due cartelle diverse sullo stesso segmento
+  // `/pair`. Quindi la guardia è qui, in linea, con lo stesso componente del layout.
+  //
+  // La guardia sta in un componente **sopra** quello che lavora, non in un `return`
+  // anticipato dentro di esso: le regole degli hook impongono che le chiamate vengano
+  // prima di ogni uscita, e con un gruppo nullabile (Step 21) sarebbero tutte a leggere
+  // un `group` che può non esserci.
+  if (group === null) {
+    return (
+      <ModalScreen title="Invita qualcuno">
+        <GroupRequired what="Un invito" />
+      </ModalScreen>
+    );
+  }
+
+  return <InviteToGroup group={group} />;
+}
+
+function InviteToGroup({ group }: { group: GroupRecord }) {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const { width } = useWindowDimensions();
   const { registry } = useGroups();
-  const group = useCurrentGroup();
 
   const [invite, setInvite] = useState<Invite | null>(null);
   const [remaining, setRemaining] = useState(0);

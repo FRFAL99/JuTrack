@@ -1,6 +1,6 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-02, a Step 18 chiuso — **piano v3 in corso, restano gli Step 19–22**.
+Aggiornato: 2026-08-02, a Step 19 chiuso — **piano v3 in corso, restano gli Step 20–22**.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -28,7 +28,7 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 16 — Poll a scala, `markActive`     | ✅    | Scala 2→5→15→60 s invece del gradino 3 s/30 s                |
 | 17 — Offline ≠ errore del relay     | ✅    | `offlineRetryMs`, state vector scritto solo se cambia        |
 | 18 — Tab Gruppi: elenco → gruppo    | ✅    | Le spese diventano il dettaglio del gruppo, URL invariati    |
-| 19 — Tutto il gruppo nel gruppo     | ⬜    | Categorie, budget, pareggi, export dietro un'unica guardia   |
+| 19 — Tutto il gruppo nel gruppo     | ✅    | Categorie, budget, pareggi, export dietro un'unica guardia   |
 | 20 — Quattro tab                    | ⬜    | Gruppi, Grafici, Impostazioni, Profilo                       |
 | 21 — Nessun gruppo al primo avvio   | ⬜    | Fase `absent`, l'utente crea o entra con un invito           |
 | 22 — Azzera questo telefono         | ⬜    | Wipe totale e ritorno all'onboarding, senza riavvio          |
@@ -40,19 +40,20 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 prova con due dispositivi che aveva fatto emergere due bug sui numeri e tre limiti di prodotto.
 
 **Il terzo è in corso:** [piano-v3-tab-gruppi-azzeramento-sync.md](piano-v3-tab-gruppi-azzeramento-sync.md),
-**Step 16–22**, di cui **16, 17 e 18 sono fatti**. Nasce dalla prova a mano delle funzionalità: la
+**Step 16–22**, di cui **16, 17, 18 e 19 sono fatti**. Nasce dalla prova a mano delle funzionalità: la
 gestione dei gruppi non è intuitiva, il gruppo di default al primo avvio genera confusione, e il poll
-del relay va tarato. **Uno step per sessione.** La taratura del motore è finita: da qui in poi si
-spostano rotte e schermate. **Lo Step 18 era il rischio numero uno del piano** ed è stato chiuso con
-gli URL intatti (vedi sotto); lo Step 19 è l'ultimo spostamento di file.
+del relay va tarato. **Uno step per sessione.** La taratura del motore è finita, e **gli spostamenti
+di rotte pure**: erano i due step più delicati del piano — quelli che potevano rompere in silenzio
+l'ingresso da un invito — e sono chiusi entrambi con gli URL intatti (vedi sotto). Da qui in poi si
+riorganizzano i tab (20), si toglie il gruppo di default (21) e si scrive l'azzeramento (22).
 
 > **Non resta codice da scrivere per i piani v1 e v2, resta la prova sul campo.** Dallo Step 10 in poi
 > nulla è mai stato visto funzionare su un telefono: quello che manca è il [criterio di «fatto»
 > end-to-end](piano-v2-profili-gruppi-sync.md#criterio-di-fatto-end-to-end) su due dispositivi
-> fisici. Finché non è stato fatto, «i test passano» e «funziona» restano due frasi diverse. **Lo
-> Step 18 ha appena spostato le rotte con cui si entra in un gruppo**: gli URL sono rimasti quelli di
-> prima e i tipi generati da expo-router lo confermano, ma è una ragione in più per farla adesso,
-> prima che lo Step 19 sposti il resto.
+> fisici. Finché non è stato fatto, «i test passano» e «funziona» restano due frasi diverse. **Gli
+> Step 18 e 19 hanno appena spostato tutte le rotte dell'app**: gli URL sono rimasti quelli di prima
+> e i tipi generati da expo-router lo confermano, ma è una ragione in più per farla adesso. Gli
+> spostamenti di file sono finiti: da qui in poi la struttura delle rotte non si tocca più.
 >
 > **Con un telefono solo si fa quasi tutto lo stesso:** `npm run prova` esegue la checklist da sola
 > — due dispositivi senza schermo che montano **i moduli veri dell'app** su SQLite vero contro il
@@ -167,6 +168,10 @@ la lista si è accorciata parecchio, ma non è vuota:
   non esca dall'app; che la tab bar resti visibile sul gruppo e sparisca sulle schermate-foglia; e
   soprattutto che **un invito ricevuto in chat apra ancora `/groups/<id>` col gruppo giusto**. Gli URL
   sono verificati sui tipi generati da expo-router, il che è molto, ma non è il telefono
+- **Lo Step 19**: che le cinque `NavCard` della gestione del gruppo — categorie, budget, pareggi,
+  backup della chiave, export — aprano davvero le schermate giuste, e che il loro «Chiudi» riporti al
+  gruppo invece di uscirne. Gli URL non sono cambiati, quindi il rischio è basso, ma è lo stesso tipo
+  di rischio dello Step 18
 - **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
   rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
   l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima
@@ -200,7 +205,7 @@ su un dispositivo Android reale.
 | La schermata del gruppo riselezionava il gruppo **appena abbandonato**: app ferma sul caricamento | Guardia nella schermata **e** in `select`, che rifiuta un `vaultId` non nel registro           |
 | Spostare rotte con `.expo/types/` gitignorato: gli href obsoleti passano typecheck **e** lint     | Grep sugli href, poi `expo start` per rigenerare i tipi e `tsc` **con quei tipi presenti**     |
 
-## Dove sta ogni schermata (Step 18)
+## Dove sta ogni schermata (Step 18 e 19)
 
 Il primo tab non è una schermata ma uno **stack**: elenco dei gruppi → gruppo aperto.
 
@@ -209,6 +214,17 @@ app/(tabs)/(gruppi)/index.tsx                      "/"                     elenc
 app/(tabs)/(gruppi)/groups/[vaultId]/_layout.tsx                           guardia di selezione
 app/(tabs)/(gruppi)/groups/[vaultId]/index.tsx     "/groups/<id>"          le spese del gruppo
 app/(tabs)/(gruppi)/groups/[vaultId]/manage.tsx    "/groups/<id>/manage"   nome, persone, invito, uscita
+                                                                           + le cinque NavCard qui sotto
+app/(gruppo)/_layout.tsx                                                   guardia «serve un gruppo»
+app/(gruppo)/categories.tsx                        "/categories"
+app/(gruppo)/budget.tsx                            "/budget"
+app/(gruppo)/settle.tsx                            "/settle"
+app/(gruppo)/export.tsx                            "/export"
+app/(gruppo)/expense/new.tsx                       "/expense/new"
+app/(gruppo)/expense/[id].tsx                      "/expense/<id>"
+
+app/backup.tsx                                     "/backup"               fuori: serve senza gruppo
+app/pair/invite.tsx                                "/pair/invite"          fuori: `GroupRequired` in linea
 ```
 
 - **Le parentesi non compaiono nell'URL**, quindi `/groups/<vaultId>` è rimasto quello di prima: è
@@ -225,6 +241,19 @@ app/(tabs)/(gruppi)/groups/[vaultId]/manage.tsx    "/groups/<id>/manage"   nome,
   porta alla sua gestione.
 - `unstable_settings = { initialRouteName: 'index' }` in entrambi i layout: senza, chi arriva a
   `/groups/<id>` da un link non ha nulla sotto nello stack, e «indietro» esce dall'app.
+- **`app/(gruppo)/` è una guardia, non un tab.** Il suo layout controlla che un gruppo aperto esista
+  e altrimenti mostra `GroupRequired`. Oggi la condizione è sempre vera; dallo **Step 21**, in cui al
+  primo avvio non esiste alcun gruppo, sarà il **solo** punto dell'app in cui quel ramo vive — ed è
+  per questo che la guardia è stata scritta prima dello stato vuoto che la attiva.
+- **Due schermate ne restano fuori di proposito.** `backup.tsx`, perché è l'unica da cui si
+  **ripristina** una chiave, cioè ciò che serve a chi un gruppo non ce l'ha; e `pair/invite.tsx`,
+  perché `app/(gruppo)/pair/` e `app/pair/` convergerebbero sullo stesso segmento `/pair` — usa
+  `GroupRequired` in linea, in un componente sopra quello che lavora, perché gli hook vanno chiamati
+  prima di ogni uscita anticipata.
+- **Tutto ciò che riguarda un gruppo si apre dal gruppo** (Step 19): categorie, budget, pareggi,
+  backup della chiave ed export sono cinque `NavCard` in `manage`. Prima stavano in Impostazioni,
+  dove sembravano riguardare l'app: chi apriva «Backup della chiave» non poteva sapere di **quale**
+  chiave si trattasse. Le voci restano anche in Impostazioni fino allo Step 20, che ripulisce i tab.
 
 ## Come si entra in un gruppo (Step 7 e 13)
 

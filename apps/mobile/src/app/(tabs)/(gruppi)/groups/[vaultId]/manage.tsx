@@ -4,11 +4,13 @@ import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 're
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
+import { NavCard } from '@/components/NavCard';
 import { shortVaultId } from '@/features/groups/list';
 import { SyncBadge } from '@/features/sync/SyncBadge';
 import {
   MAX_GROUP_NAME,
   normalizeGroupName,
+  useCategories,
   useGroups,
   useMembers,
   useMyMemberId,
@@ -34,6 +36,7 @@ export default function GroupManageScreen() {
   const myMemberId = useMyMemberId();
   const members = useMembers();
   const syncState = useSyncState();
+  const categories = useCategories();
 
   const [draft, setDraft] = useState(current.name);
   const [leaving, setLeaving] = useState(false);
@@ -215,6 +218,38 @@ export default function GroupManageScreen() {
             onPress={() => router.push('/pair/invite')}
           />
         </Card>
+
+        {/* Tutto ciò che riguarda **questo** gruppo sta qui dentro, e non nelle
+            impostazioni dell'app. Categorie, budget e pareggi sono suoi; e soprattutto lo
+            sono la chiave del backup e i dati dell'export. Chi apriva «Backup della
+            chiave» dalle impostazioni non aveva modo di sapere di quale chiave si
+            trattasse — con più gruppi sullo stesso telefono è una domanda con più
+            risposte. */}
+        <NavCard
+          title="Categorie"
+          subtitle={`${categories.length} attive in questo gruppo. Stanno nel vault, non sul telefono: chi ne fa parte le vede uguali.`}
+          onPress={() => router.push('/categories')}
+        />
+        <NavCard
+          title="Budget"
+          subtitle="Limiti di spesa per categoria, mese per mese. Un limite deciso a gennaio non si eredita da solo a febbraio."
+          onPress={() => router.push('/budget')}
+        />
+        <NavCard
+          title="Pareggi"
+          subtitle="Registra un pagamento che salda un debito. Non tocca le spese: sposta solo il saldo."
+          onPress={() => router.push('/settle')}
+        />
+        <NavCard
+          title="Backup della chiave"
+          subtitle={`La chiave di «${current.name}», cifrata con una passphrase che scegli tu. Se la perdi non esiste un reset lato server: le spese di questo gruppo non tornano.`}
+          onPress={() => router.push('/backup')}
+        />
+        <NavCard
+          title="Esporta i dati"
+          subtitle="Le spese e i pareggi di questo gruppo in CSV, oppure il vault intero in JSON. Nessun lock-in."
+          onPress={() => router.push('/export')}
+        />
 
         <Card style={{ gap: spacing.sm }}>
           <Text

@@ -4,6 +4,79 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-02 — Step 19: dentro il gruppo c'è tutto il gruppo
+
+L'ultimo spostamento di file del piano v3, e il secondo dei due step «delicati». Stessa procedura
+dello Step 18, stesso giudice: `expo export` e i tipi delle rotte rigenerati.
+
+**Lo spostamento, in un solo commit**
+
+```
+app/(gruppo)/_layout.tsx        [nuovo]  la guardia «serve un gruppo»
+app/(gruppo)/categories.tsx     [git mv da app/categories.tsx]      "/categories"
+app/(gruppo)/budget.tsx         [git mv da app/budget.tsx]          "/budget"
+app/(gruppo)/settle.tsx         [git mv da app/settle.tsx]          "/settle"
+app/(gruppo)/export.tsx         [git mv da app/export.tsx]          "/export"
+app/(gruppo)/expense/new.tsx    [git mv da app/expense/new.tsx]     "/expense/new"
+app/(gruppo)/expense/[id].tsx   [git mv da app/expense/[id].tsx]    "/expense/<id>"
+```
+
+**Gli URL non sono cambiati, e anche stavolta è dimostrato.** Le parentesi non compaiono nell'URL:
+`.expo/types/router.d.ts` rigenerato contiene `` `${'/(gruppo)'}/categories` | `/categories` `` e le
+altre cinque nella stessa forma, e `/backup` è rimasto sulla radice. Poi `tsc --noEmit` **con quei
+tipi presenti**. Nessun `router.push` è stato toccato: il grep sugli href dà zero risultati e i
+chiamanti (`stats.tsx` verso `/settle` e `/budget`, la lista spese verso `/expense/…`) non sanno che
+i file si sono mossi.
+
+**Una guardia sola, in un file solo**
+
+`(gruppo)/_layout.tsx` controlla `useGroups().current !== null` e altrimenti mostra `GroupRequired`.
+**Oggi quella condizione è sempre vera** — c'è sempre almeno un gruppo (Step 12), quindi è una rete
+di sicurezza inerte. Allo Step 21, quando al primo avvio non esisterà più alcun gruppo, sarà il
+**solo** punto dell'app in cui quel ramo esiste, invece delle condizioni sparse che lo Step 12 aveva
+eliminato apposta. È per questo che la guardia viene prima dello stato vuoto che la attiva: quando
+arriva il ramo, il posto dove metterlo esiste già.
+
+Il layout rende uno `Stack` vero e non un `<Slot />`: con lo `Slot` si perderebbero le animazioni di
+push e la pila di ritorno di schermate che sono compiti da aprire e chiudere.
+
+**Due esclusioni deliberate, che erano la parte da non sbagliare**
+
+- **`backup.tsx` resta sulla radice.** È l'unica schermata da cui si **ripristina** una chiave, cioè
+  la cosa che serve proprio a chi non ha nessun gruppo: dopo un azzeramento, o su un telefono nuovo.
+  Dietro «serve un gruppo» il ripristino sarebbe irraggiungibile esattamente quando serve.
+- **`pair/invite.tsx` non si sposta.** Un gruppo lo richiede, ma `app/(gruppo)/pair/invite.tsx`
+  accanto ad `app/pair/index.tsx` farebbe convergere due cartelle diverse sullo stesso segmento
+  `/pair`. Usa `GroupRequired` in linea — e la guardia sta in un componente **sopra** quello che
+  lavora (`InviteToGroup`), non in un `return` anticipato: le regole degli hook impongono che le
+  chiamate vengano prima di ogni uscita, e allo Step 21 sarebbero tutte a leggere un `group` che può
+  non esserci.
+
+**Il gruppo diventa il contenitore di ciò che lo riguarda**
+
+`manage.tsx` guadagna cinque `NavCard`: Categorie, Budget, Pareggi, Backup della chiave, Esporta i
+dati. È il problema di prodotto numero 1 del piano v3: chi apriva «Backup della chiave» dalle
+impostazioni non aveva modo di sapere **di quale chiave** si parlasse — con più gruppi sullo stesso
+telefono è una domanda con più risposte. Ora il sottotitolo lo dice: «La chiave di «Casa»…».
+
+`NavCard` è salita da `settings.tsx` a `components/NavCard.tsx`, invariata: la stessa riga serve
+adesso in due schermate. Le voci restano **anche** in Impostazioni fino allo Step 20, che è quello
+che ripulisce i tab: toglierle qui avrebbe mescolato due step e lasciato un buco fra i due commit.
+
+`stats.tsx` mantiene le sue scorciatoie verso `/settle` e `/budget`: sono statistiche del gruppo
+corrente, e da lì quei due gesti sono naturali. Sono scorciatoie verso le stesse rotte, non una
+seconda casa.
+
+**Verifica:** `format:check`, `lint`, `typecheck` puliti; **563 test** (133 app + 387 core + 43
+relay), invariati — questo step non introduce logica pura nuova; `expo export --platform android`
+riuscito, nessuna rotta duplicata; tipi delle rotte rigenerati da `expo start` e ricontrollati con
+`tsc`.
+
+**Non provato sul telefono.** Restano da vedere in mano: che le cinque `NavCard` aprano davvero le
+schermate giuste dentro il gruppo, e che `Chiudi` riporti al gruppo e non fuori.
+
+---
+
 ## 2026-08-02 — Step 18: il tab Gruppi, elenco → gruppo, con gli URL intatti
 
 Lo step dichiarato «rischio numero uno» del piano v3: sposta le rotte con cui si entra in un gruppo
