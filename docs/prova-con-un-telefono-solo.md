@@ -1,36 +1,71 @@
 # Provare la sincronizzazione con un telefono solo
 
 Il criterio di «fatto» di entrambi i piani chiede **due telefoni fisici**. Quando non ci sono, il
-secondo dispositivo può essere un processo Node: `scripts/peer.mts`.
+secondo dispositivo può essere un processo Node.
 
-Non è un simulatore e non finge nulla. Usa `@jutrack/core` così com'è — stesso crypto, stesso
-`SyncEngine`, stessa scala di poll, stesso formato d'invito — contro il **relay in produzione**. Per
-il relay e per il telefono è indistinguibile da un altro telefono.
+```bash
+npm run prova                     # la checklist, eseguita da sola (~90 s)
+npm run peer -- crea "Casa"       # un dispositivo interattivo, per provare col telefono in mano
+```
 
-È possibile solo perché il core non importa nulla da react-native o da expo, per vincolo
-architetturale imposto da una regola ESLint. È la prima volta che quel vincolo si ripaga davvero.
+## Non è un simulatore
 
-## Cosa prova, e cosa no
+`apps/mobile/scripts/device.mts` monta **i moduli veri dell'app** — `ensureSchema`, il profilo,
+`GroupRegistry`, `SqliteYPersistence`, `SqliteSyncStore`, `resolveMyMemberId`, `seedDefaults` — su
+SQLite vero e contro il **relay in produzione**. È `ProfileProvider` + `GroupsProvider` +
+`VaultProvider` senza React.
 
-| Prova                                                    | Il peer basta?                                       |
-| -------------------------------------------------------- | ---------------------------------------------------- |
-| Sync **in entrambe le direzioni**                        | ✅                                                   |
-| **Due membri e non quattro** (il bug dello Step 11)      | ✅                                                   |
-| Saldo che coincide col calcolo a mano                    | ✅                                                   |
-| Entrare da un **link d'invito** (in entrambi i versi)    | ✅ per il link; la consegna del deep link Android no |
-| La **scala di poll** dello Step 16                       | ✅ con `--verbose`, e con i secondi misurati         |
-| `offlineRetryMs` dello Step 17 (aereo → rete)            | ✅ lato telefono, guardando quando arriva            |
-| Due gruppi che non si mescolano                          | ✅ con due profili                                   |
-| Uscire da un gruppo, rigenerarlo                         | ✅ per l'effetto sul relay                           |
-| Interfaccia, navigazione, stati vuoti                    | ❌ solo col telefono                                 |
-| `expo-sqlite` che persiste fra due riavvii               | ❌ solo col telefono                                 |
-| Che Android consegni `jutrack://join#…` **col fragment** | ❌ solo col telefono                                 |
-| Foglio di condivisione, scansione QR                     | ❌ solo col telefono                                 |
+**Perché la distinzione conta.** Dei due bug che rendevano sbagliati i saldi alla prima prova con due
+telefoni, uno stava nel core (`SyncEngine.start`) e uno nell'**app**: il membro nasceva da un id
+casuale per dispositivo invece che dal profilo. Un secondo dispositivo che si scrivesse da sé la
+logica dei membri farebbe la cosa giusta mentre l'app fa quella sbagliata, e direbbe **verde**.
+Questo no: chiama `resolveMyMemberId`, la funzione vera — che per questo è stata estratta da
+`VaultProvider.tsx` in `state/membership.ts`.
 
-Il peer copre la parte che riguarda **i dati e il protocollo**. Quello che resta è tutto sopra il
-core, ed è lì che serve il telefono in mano — ma uno solo basta.
+L'harness è dentro `npm run typecheck`: cambiare la firma di un modulo dell'app e non aggiornarlo
+rompe la compilazione. È ciò che gli impedisce di divergere in silenzio e continuare a dire verde.
 
-## Comandi
+## Cosa copre, e cosa no
+
+| Prova                                                    | Senza telefono?                           |
+| -------------------------------------------------------- | ----------------------------------------- |
+| Sync **in entrambe le direzioni**                        | ✅ `npm run prova`                        |
+| **Due membri e non quattro** (il bug dello Step 11)      | ✅                                        |
+| «Chi sei in questo gruppo?» prima di scrivere il membro  | ✅                                        |
+| Saldo contro il calcolo a mano                           | ✅                                        |
+| Otto categorie e non sedici (chi entra non semina)       | ✅                                        |
+| Due gruppi che non si mescolano                          | ✅                                        |
+| Aereo → rete: `offlineRetryMs` dello Step 17             | ✅ senza staccare la rete della macchina  |
+| La scala di poll dello Step 16, misurata                 | ✅                                        |
+| Chiudere e riaprire: i dati sono su disco                | ✅ (SQLite vero, non `expo-sqlite`)       |
+| Uscire da un gruppo, e cancellarlo dal relay             | ✅                                        |
+| Il **link** d'invito, in entrambi i versi                | ✅ per il link; la consegna Android no    |
+| Schermate, navigazione, stati vuoti                      | ❌ solo col telefono                      |
+| Che Android consegni `jutrack://join#…` **col fragment** | ❌ solo col telefono                      |
+| Foglio di condivisione, scansione QR                     | ❌ solo col telefono                      |
+| `expo-sqlite` e SecureStore veri                         | ❌ qui sono `node:sqlite` e un file a 600 |
+
+Quello che resta fuori è solo ciò che è **React o nativo**. Per quello basta comunque **un** telefono.
+
+## `npm run prova` — la checklist da sola
+
+Dieci sezioni, una trentina di controlli, esce con codice 1 se qualcosa è rosso. Crea due dispositivi
+in una cartella temporanea, li fa parlare dal relay vero, e alla fine cancella i vault di prova
+chiedendo la cancellazione al relay — che è anche il controllo dello Step 14.
+
+Due cose che ha già insegnato scrivendola:
+
+- **Chi entra in un gruppo altrui non ottiene un membro finché non risponde** a «chi sei in questo
+  gruppo?». Il primo scenario saltava quel gesto e il controllo sui membri falliva: non era un bug,
+  era la prova che l'harness segue l'app davvero.
+- **Una spesa divisa «fra tutti» lo è fra tutti quelli che si conoscono in quel momento.** Registrarla
+  prima che la presenza dell'altro sia arrivata la divide per uno solo, e il saldo risulta diverso da
+  quello atteso. Non è un difetto — è come funziona un CRDT — ma è la ragione per cui la prova aspetta
+  che i due si vedano **prima** di registrare qualcosa.
+
+## `npm run peer` — il dispositivo interattivo
+
+Serve per le prove che hanno bisogno di un telefono dall'altra parte.
 
 ```bash
 npm run peer -- crea "Casa"        # crea un gruppo e stampa l'invito da aprire sul telefono
@@ -39,99 +74,56 @@ npm run peer -- apri               # riapre l'ultimo gruppo e riparte da dov'era
 npm run peer -- invito             # ristampa un invito per il gruppo salvato
 ```
 
-Opzioni: `--profilo <nome>` per tenere più peer distinti (due profili = due telefoni finti),
-`--nome <nome>` per come si chiama il membro, `--verbose` per stampare **ogni** richiesta al relay
-con l'intervallo dalla precedente.
+Opzioni: `--profilo <nome>` per tenere più dispositivi distinti, `--nome <nome>` per come ti chiami,
+`--verbose` per stampare **ogni** richiesta al relay con l'intervallo dalla precedente.
 
-Una volta partito accetta comandi da tastiera: `spesa 12,30 pizza`, `stato`, `invito`, `esci`.
+Una volta partito accetta comandi da tastiera: `spesa 12,30 pizza`, `stato`, `invito`, `esci`. Ciò che
+arriva dall'altro telefono compare con `←` e l'orario.
 
-Lo stato vive in `.jutrack-peer/<profilo>.json`, gitignorato. **Contiene la chiave del vault in
-chiaro**: è uno strumento di prova su gruppi di prova, non va usato per dati veri.
+Lo stato vive in `.jutrack-peer/<profilo>/`, gitignorato. **Contiene la chiave del vault in chiaro**:
+in Node non esiste il Keystore di sistema. Solo gruppi di prova.
 
-## Le prove, in ordine
+## Le prove che restano al telefono
 
-### 1. Sync in entrambe le direzioni, e due membri
+### Il giro completo dell'invito
 
-Il criterio di «fatto» del piano v2, quello mai verificato.
-
-```bash
-npm run peer -- crea "Prova sync"
-```
-
-Copia il link stampato, aprilo sul telefono (o incollalo in **Gruppi → Incolla un invito**).
-Poi, sul telefono, registra una spesa: deve comparire nel terminale con `←` e l'orario. Dal terminale
-scrivi `spesa 20,00 dal-peer`: deve comparire sul telefono.
-
-Poi guarda i due numeri che contavano:
-
-- `stato` nel terminale deve mostrare **due membri**, non quattro. Erano quattro perché ogni
-  dispositivo generava un id casuale per sé stesso invece di usare il profilo — corretto allo Step 11
-  e mai riprovato su hardware.
-- Il **saldo** deve coincidere col calcolo a mano, e i due lati devono essere speculari.
-
-> Un ciclo che riporta `synced` non dimostra nulla: era vero anche con entrambi i bug. La prova è
-> vedere il dato comparire dall'altra parte, in **tutti e due** i versi.
-
-### 2. La scala di poll dello Step 16
+Crea un gruppo **dal telefono**, genera l'invito con «Invita qualcuno», mandalo in chat (a te stesso
+va benissimo) e aprilo. Poi incolla lo stesso link qui:
 
 ```bash
-npm run peer -- apri --verbose
+npm run peer -- entra "<link>" --profilo ospite
 ```
 
-Ogni riga `· GET al relay (n s dalla precedente)` porta l'intervallo misurato. Lasciando il peer
-fermo, la sequenza deve allargarsi da sola: **2 s → 5 s dopo 15 s → 15 s dopo un minuto → 60 s dopo
-cinque**. Scrivendo una spesa si torna subito a 2 s.
+I due punti dello Step 13 che possono fallire **in silenzio** sono proprio questi: che Android
+consegni `jutrack://join#…` alla rotta `/join` **con il fragment** (senza, l'app riceve un invito
+senza chiave), e che il foglio di `Share.share` compaia davvero nella build installata.
 
-Sul telefono la stessa cosa si guarda al contrario: lascia l'app aperta e ferma cinque minuti, poi
-scrivi una spesa dal terminale. **Deve comparire entro un minuto** — è il gradino più largo della
-scala. Toccando la lista spese (che chiama `markActive`) deve arrivare in un paio di secondi.
+### La scala di poll vista dal telefono
 
-### 3. `offlineRetryMs` dello Step 17
+Lascia l'app aperta e ferma cinque minuti, poi scrivi una spesa dal terminale. **Deve comparire entro
+un minuto** — è il gradino più largo della scala. Toccando la lista spese, che chiama `markActive`,
+deve arrivare in un paio di secondi.
 
-Questa si fa **col telefono**, e il peer serve da testimone.
+### L'aereo, dal telefono
 
-Metti il telefono in **modalità aereo**, registra due spese, poi riaccendi la rete e **non toccare
-nulla**. Devono comparire nel terminale entro ~15 secondi. È la prova che il sostituto del listener
-di connettività — che sarebbe un modulo nativo, quindi una build EAS nuova — basta.
+Modalità aereo, due spese, riaccendi la rete e **non toccare nulla**: devono comparire nel terminale
+entro ~15 secondi. `npm run prova` lo verifica già lato Node, ma qui c'è in più il congelamento dei
+timer da parte di Android e il `resume()` di `AppState`.
 
-Senza la correzione dello Step 17 il backoff sarebbe salito fino a cinque minuti, e non sarebbe
-successo niente per parecchio tempo.
+### Il resto
 
-### 4. Due gruppi che non si mescolano
-
-```bash
-npm run peer -- crea "Casa" --profilo casa
-npm run peer -- crea "Viaggio" --profilo viaggio
-```
-
-Entra in entrambi dal telefono, e scrivi una spesa in ciascuno. Ogni terminale deve vedere **solo**
-le proprie. È il punto pericoloso dello Step 12: il `WHERE vault_id` di `setPending`.
-
-### 5. L'invito nell'altro verso
-
-Crea un gruppo **dal telefono**, genera l'invito con «Invita qualcuno», mandatelo (a te stesso va
-benissimo) e incollalo:
-
-```bash
-npm run peer -- entra "<link incollato>" --profilo ospite
-```
-
-Se il peer entra e vede le spese, il link è ben formato e la chiave viaggia nel fragment come deve.
-Resta da verificare **col telefono** la parte che il peer non può vedere: che Android consegni
-`jutrack://join#…` alla rotta `/join` **con il fragment**, e che il foglio di `Share.share` compaia
-davvero. Sono i due punti dello Step 13 che possono fallire in silenzio.
+Schermate degli Step 7-9 mai toccate con un dito, onboarding del profilo, ripartenza pulita,
+persistenza di `expo-sqlite` fra due riavvii, scansione del QR.
 
 ## Se serve proprio un secondo Android
 
-Due strade senza comprare niente, utili per le prove di interfaccia che il peer non copre:
-
 - **Utenti multipli** (Impostazioni → Sistema → Utenti): il secondo utente ha dati applicativi
-  separati, quindi la stessa app installata lì è un'installazione indipendente. Limite: quando si
-  cambia utente l'altro viene congelato, quindi le prove **di tempistica** non si possono fare.
+  separati, quindi è un'installazione indipendente. Limite: cambiando utente l'altro viene congelato,
+  quindi niente prove di tempistica.
 - **Clonazione dell'app** (Dual Messenger su Samsung, Doppia app su Xiaomi): le due copie girano
   **insieme**, quindi vanno bene anche per le tempistiche. Non tutti i telefoni la offrono per
   qualunque app.
 
-L'emulatore Android è la strada peggiore qui: richiede tutto l'SDK, e la development build di EAS è
+L'emulatore è la strada peggiore: richiede tutto l'SDK Android, e la development build di EAS è
 compilata per arm64 mentre le immagini dell'emulatore sono x86_64 — servirebbe una build locale con
 Gradle.

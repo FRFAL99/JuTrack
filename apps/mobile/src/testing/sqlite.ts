@@ -16,8 +16,13 @@ import type { SqlValue, SqliteDatabase } from '@jutrack/core';
 export class NodeSqliteDatabase implements SqliteDatabase {
   private readonly db: DatabaseSync;
 
-  constructor() {
-    this.db = new DatabaseSync(':memory:');
+  /**
+   * `path` serve al dispositivo senza schermo di `scripts/device.mts`, che deve
+   * sopravvivere alla chiusura del processo come `expo-sqlite` sopravvive alla chiusura
+   * dell'app. I test restano in memoria, che è il default.
+   */
+  constructor(path = ':memory:') {
+    this.db = new DatabaseSync(path);
   }
 
   async execute(sql: string, params: readonly SqlValue[] = []): Promise<void> {

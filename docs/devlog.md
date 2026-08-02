@@ -4,7 +4,59 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
-## 2026-08-02 — Un secondo telefono che gira in un terminale
+## 2026-08-02 — Il secondo dispositivo monta i moduli veri dell'app
+
+**Il problema del peer della versione precedente**
+
+Il peer costruito poche ore prima usava il core e **si scriveva da sé** la logica dei membri e dei
+gruppi. Dei due bug che rendevano sbagliati i saldi alla prima prova con due telefoni, uno stava nel
+core (`SyncEngine.start`, corretto allo Step 10) e uno nell'**app** (`VaultProvider`: il membro
+nasceva da un id casuale per dispositivo invece che dal profilo, corretto allo Step 11). Un secondo
+dispositivo che reimplementa quella logica farebbe la cosa giusta mentre l'app fa quella sbagliata, e
+la prova direbbe **verde**. È lo stesso motivo per cui il test del `WHERE vault_id` gira su SQLite
+vero e non su un finto motore.
+
+**Cosa è stato fatto**
+
+`apps/mobile/scripts/device.mts` monta i moduli veri: `ensureSchema`, il profilo, `GroupRegistry`,
+`SqliteYPersistence`, `SqliteSyncStore`, `resolveMyMemberId`, `seedDefaults` — su SQLite vero e
+contro il relay in produzione. È `ProfileProvider` + `GroupsProvider` + `VaultProvider` senza React.
+Resta fuori solo ciò che è React o nativo.
+
+- **`resolveMyMemberId` è stata estratta** da `VaultProvider.tsx` a `state/membership.ts`, con
+  quattro test. Dentro un componente React era verificabile **solo** su un telefono; è la funzione
+  del bug dei membri duplicati, e lasciarla lì significava non poterla provare.
+- **`NodeSqliteDatabase` accetta un path**, così il dispositivo sopravvive alla chiusura del processo
+  come `expo-sqlite` sopravvive alla chiusura dell'app. I test restano in memoria.
+- **`apps/mobile/tsconfig.json` include ora `**/*.mts`**: l'harness è dentro `npm run typecheck`, e
+  cambiare la firma di un modulo dell'app senza aggiornarlo rompe la compilazione. È l'unica cosa che
+  gli impedisce di divergere in silenzio e continuare a dire verde.
+- `npm run prova` esegue la checklist da sola: dieci sezioni, ~30 controlli, ~90 s, uscita 1 se
+  qualcosa è rosso. `npm run peer` resta la versione interattiva, per le prove che hanno bisogno del
+  telefono dall'altra parte.
+
+**Due cose imparate scrivendo lo scenario, entrambe da un rosso**
+
+- **Chi entra in un gruppo altrui non ottiene un membro finché non risponde** a «chi sei in questo
+  gruppo?». Il primo scenario saltava quel gesto e il controllo sui membri falliva. Non era un bug:
+  era la prova che l'harness segue l'app davvero — un peer che si scrive la logica da sé non avrebbe
+  mai fatto quella domanda. Da lì `chooseIdentity`, che è il bottone di `GroupIdentityGate`.
+- **Una spesa divisa «fra tutti» lo è fra tutti quelli che si conoscono in quel momento.** Il saldo
+  risultava −3,75 invece di +6,25 perché A aveva registrato prima che la presenza di B gli arrivasse:
+  divisa per uno solo. Il codice era giusto, sbagliata era l'attesa dello scenario. Adesso la prova
+  aspetta che i due si vedano **prima** di registrare, e il commento dice perché.
+
+**Esito: trenta controlli verdi** contro il relay in produzione — sync in entrambe le direzioni (2,0 s
+e 0,8 s), due membri, saldo +6,25/−6,25 verificato a mano, otto categorie e non sedici, due gruppi
+separati, aereo → rete in 11,0 s senza toccare nulla, poll che rallenta a 5 s a riposo, `markActive`
+che sveglia in 0,1 s, dati ritrovati dopo la chiusura, e il relay che accetta la cancellazione.
+
+**È la prima volta che il criterio di «fatto» del piano v2 viene esercitato fuori dai test** — con i
+moduli dell'app, anche se non ancora con un telefono in mezzo.
+
+---
+
+## 2026-08-02 — Un secondo telefono che gira in un terminale (prima versione)
 
 **Perché**
 

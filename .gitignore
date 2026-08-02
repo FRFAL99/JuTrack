@@ -24,8 +24,9 @@ apps/*/ios/
 .dev.vars.*
 
 # Segreti — MAI committare
-# `scripts/peer.mts` salva qui la chiave del vault in chiaro: è uno strumento di prova,
-# ma resta una chiave che apre un gruppo.
+# `apps/mobile/scripts/peer.mts` salva qui le chiavi dei vault in chiaro: in Node non
+# esiste il Keystore di sistema. È uno strumento di prova, ma restano chiavi che aprono
+# un gruppo.
 .jutrack-peer/
 .env
 .env.*

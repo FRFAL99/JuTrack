@@ -14,6 +14,7 @@ import { RELAY_URL } from '@/config';
 import { expoHttp, expoRandom, SqliteSyncStore } from '@/platform';
 import { useGroups } from './GroupsProvider';
 import { updatesTableName } from './groups';
+import { resolveMyMemberId } from './membership';
 import { useAppData, useProfile } from './ProfileProvider';
 import { seedDefaults } from './seed';
 
@@ -254,34 +255,6 @@ export function VaultProvider({ children }: { children: ReactNode }) {
       </SyncContext.Provider>
     </VaultContext.Provider>
   );
-}
-
-/**
- * Chi sono io in questo gruppo, deciso al momento del montaggio.
- *
- * - Un ricollegamento già registrato vince su tutto: è una risposta che l'utente ha dato.
- * - In un gruppo **creato qui** sono per definizione una persona nuova.
- * - In un gruppo in cui sono **entrato**, se il mio `profileId` è già fra i membri la
- *   domanda è già stata risposta da un avvio precedente.
- * - Altrimenti resta aperta: potrei essere nuovo, oppure essere già dentro con un altro
- *   nome perché ho ripristinato il backup della chiave su un telefono nuovo. Scegliere da
- *   soli qui è ciò che, allo Step 11, produceva due membri e un saldo sbagliato.
- */
-function resolveMyMemberId({
-  store,
-  origin,
-  linkedMemberId,
-  profileId,
-}: {
-  store: VaultStore;
-  origin: 'created' | 'joined';
-  linkedMemberId: string | null;
-  profileId: string;
-}): string | null {
-  if (linkedMemberId !== null) return linkedMemberId;
-  if (origin === 'created') return profileId;
-  if (store.getMember(profileId) !== null) return profileId;
-  return null;
 }
 
 /** Stato di caricamento del gruppo aperto, inclusi gli errori. */

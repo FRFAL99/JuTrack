@@ -19,7 +19,8 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "npm run test --workspaces --if-present",
-    "peer": "tsx scripts/peer.mts"
+    "peer": "npm run peer --workspace @jutrack/mobile --",
+    "prova": "npm run prova --workspace @jutrack/mobile"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

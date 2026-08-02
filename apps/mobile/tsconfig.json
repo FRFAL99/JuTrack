@@ -9,10 +9,14 @@
     // sé i global di Node, che su Hermes non esistono tutti: la regola
     // `no-restricted-globals` in eslint.config.mjs li rimette fuori dal codice dell'app.
     "types": ["node"],
+    // Per gli import fra i file di `scripts/`, che sono `.mts` eseguiti da `tsx` e
+    // devono portare l'estensione. Innocuo per l'app: qui `tsc` non emette nulla — il
+    // bundle lo fa Metro — e nessun file di `src/` importa con l'estensione.
+    "allowImportingTsExtensions": true,
     "paths": {
       "@/*": ["./src/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
+  "include": ["**/*.ts", "**/*.mts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"],
   "exclude": ["node_modules"]
 }
