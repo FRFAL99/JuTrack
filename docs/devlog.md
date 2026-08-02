@@ -4,6 +4,88 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-02 — Step 13: inviti via link
+
+**Fatto**
+
+Un invito a un gruppo si manda in chat. `Share.share` dalla schermata d'invito produce
+`https://<relay>/j#v=1&k=<chiave>&n=<nome>&e=<scadenza>`; chi lo apre trova una pagina statica
+servita dal Worker con un bottone che riporta l'invito dentro l'app, e ci entra **senza perdere i
+gruppi che aveva già**. Le due persone non devono più essere nella stessa stanza.
+
+**La chiave sta nel fragment, ed è l'intero punto**
+
+Dopo il `#` i browser non trasmettono nulla: la chiave non arriva al Worker, non entra nei log di
+Cloudflare e non finisce nelle anteprime che le chat generano visitando l'URL. Il relay resta
+ignorante com'era.
+
+Perché regga, la pagina `/j` non deve avere **alcun** modo di rimandare indietro quel fragment: né
+`fetch`, né `<form>`, né redirect, né una sola risorsa esterna — basterebbe un
+`<img src="https://…">` perché la chiave finisse in un log altrui. È una proprietà del codice, e i
+test la trattano come tale: cinque asserzioni sull'HTML servito (nessuna delle stringhe proibite,
+nessun `src`/`href` verso http) più gli header (`Referrer-Policy: no-referrer`, CSP
+`default-src 'none'`, `noindex`).
+
+**«/j non tocca il Durable Object», in una forma verificabile**
+
+Il vincolo del piano era questo, ma «non ha toccato un DO» non si osserva dall'esterno. Girato in
+qualcosa che si può affermare: la pagina è una **funzione senza argomenti** in un modulo che non
+importa nulla — niente `env`, niente binding, niente richiesta — e il test confronta la risposta del
+Worker con quella della funzione chiamata a vuoto. Se un domani qualcuno vi infilasse un dato preso
+da un vault, l'uguaglianza cadrebbe. Il controllo sta anche prima dell'instradamento verso i vault,
+quindi `/j` non arriva mai al `match` che istanzia il DO.
+
+**Una grammatica sola per tre forme**
+
+`parseInvite` legge il link, `jutrack://join#…` e il vecchio `jutrack://pair?…` dei QR già in
+circolazione. Non tre funzioni: chi incolla un codice non sa in quale forma sia, e tre strade
+separate sarebbero divergute — la query di un `pair?…` e il fragment di un `/j#…` hanno la stessa
+grammatica, e ora la validano con lo stesso `readInvite`. `parsePairingUri` resta come caso
+particolare, con i suoi test invariati.
+
+Il link porta anche il **nome del gruppo**, così chi riceve legge «Entrare in «Casa»?» invece di
+«Entrare in questo gruppo?». È un suggerimento, non una verità: l'autorevole sta dentro il vault e
+lo sovrascrive al primo sync. Ed è testo scelto dall'utente che finisce dentro un URL — senza
+`encodeURIComponent`, un `&k=` scritto nel nome del gruppo sostituirebbe la chiave dell'invito. C'è
+il test.
+
+**Il fragment non passa da expo-router**
+
+È il punto in cui questo step poteva fallire in silenzio, e non se ne accorge nessun typecheck: il
+router instrada sul percorso e trasforma la query in parametri, ma ciò che sta dopo il `#` non è né
+l'uno né l'altra. `useLocalSearchParams` non lo vede. La rotta `/join` legge quindi il link
+**grezzo** con `Linking.useLinkingURL()` — che copre sia l'app aperta dal link sia l'app già viva
+che ne riceve uno.
+
+**Il QR non è stato cambiato**, e continua a portare `jutrack://pair?…`. Codificare l'https
+allungherebbe il codice di una cinquantina di caratteri senza guadagno: chi inquadra col lettore
+interno arriva allo stesso posto, e i codici già generati restano validi. Nella schermata è ora
+ripiegato sotto il link, con l'incolla manuale, per quando i due telefoni sono uno di fronte
+all'altro e non si vuole far passare la chiave da una chat.
+
+**Il threat model si allarga, e la UI lo dice prima**
+
+Un link è più esposto di un QR: resta nella cronologia della conversazione, si inoltra con due
+tocchi senza che chi l'ha creato lo sappia, attraversa i server della chat e sopravvive nei suoi
+backup. La schermata lo dichiara **prima** di generare l'invito, e nomina l'unico rimedio vero a un
+invito finito male: uscire dal gruppo e rifarlo. La scadenza resta ciò che era già dichiarata di
+essere — una cortesia verso un link dimenticato, non una difesa.
+
+**Verifica:** 520 test verdi (366 core + 111 app + 43 relay), typecheck, lint e `format:check`
+puliti, bundle Android esportato.
+
+**Non ancora in produzione.** La pagina `/j` esiste nel repo, non sul Worker: finché non gira
+`npm run deploy` in `services/relay`, il relay risponde 404 e un link aperto dal browser non porta
+da nessuna parte. QR e incolla manuale funzionano comunque — non passano dal relay.
+
+**Ancora da vedere sul telefono.** I due punti dove può rompersi in silenzio: che Android consegni
+`jutrack://join#…` alla rotta `/join` **col fragment**, e che il foglio di `Share.share` compaia
+nella build installata.
+
+**Prossimo:** Step 14 — eliminazione dal relay e rigenerazione del gruppo.
+
+---
+
 ## 2026-08-02 — Step 12: più gruppi sullo stesso telefono
 
 **Fatto**

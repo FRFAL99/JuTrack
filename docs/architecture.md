@@ -165,6 +165,18 @@ Ciclo client:
 
 Riordini e duplicati sono innocui per costruzione.
 
+### La pagina degli inviti — l'unica cosa che il relay serve a un browser
+
+`GET /j` restituisce HTML statico, e non tocca alcun Durable Object. Esiste perché un link
+`https://` si manda in chat e un `jutrack://` no: la pagina legge il fragment e costruisce il
+bottone che riporta l'invito dentro l'app.
+
+**Non riceve nulla dell'invito.** La chiave sta dopo il `#`, che i browser non trasmettono: non
+arriva al Worker, non entra nei log e non compare nelle anteprime generate dalle chat. Perché resti
+vero, la pagina non fa richieste di rete di alcun tipo e non carica risorse esterne — è una
+proprietà verificata dai test, non una promessa. Il principio non negoziabile vale anche qui: il
+relay non sa nulla di chi entra in quale gruppo.
+
 ### Compattazione
 
 Il log cresce indefinitamente. Due contromisure:

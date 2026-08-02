@@ -1,10 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
+  createInviteLink,
   createPairingInvite,
   DEFAULT_PAIRING_TTL_MS,
   describePairingError,
+  INVITE_NAME_MAX_CHARS,
+  INVITE_PATH,
+  JOIN_URI_PREFIX,
   PAIRING_CLOCK_SKEW_MS,
   PAIRING_URI_PREFIX,
+  parseInvite,
   parsePairingUri,
   type PairingErrorReason,
 } from './uri';
@@ -129,6 +134,162 @@ describe('parsePairingUri', () => {
   it('non esplode su percent-encoding malformata', () => {
     const result = parsePairingUri(`${PAIRING_URI_PREFIX}?v=1&k=%E0%A4%A`, NOW);
     expect(result).toEqual({ ok: false, reason: 'malformed-key' });
+  });
+});
+
+const RELAY = 'https://relay.example.workers.dev';
+
+describe('createInviteLink', () => {
+  it('mette la chiave nel fragment, mai nel percorso o nella query', () => {
+    // È l'intera ragione per cui il link ha questa forma: il fragment non lascia il
+    // browser, quindi non finisce nei log del relay né nelle anteprime delle chat.
+    const { url } = createInviteLink(key, { baseUrl: RELAY, now: NOW });
+    const [address, fragment] = url.split('#');
+
+    expect(address).toBe(`${RELAY}${INVITE_PATH}`);
+    expect(address).not.toContain(bytesToBase64url(key));
+    expect(fragment).toContain(`k=${bytesToBase64url(key)}`);
+  });
+
+  it('offre lo stesso invito nello schema dell’app', () => {
+    // La pagina di atterraggio costruisce esattamente questo per riaprire l'invito
+    // dentro JuTrack: il fragment passa da un URL all'altro senza essere rielaborato.
+    const { url, joinUri } = createInviteLink(key, { baseUrl: RELAY, now: NOW });
+    expect(joinUri).toBe(`${JOIN_URI_PREFIX}#${url.split('#')[1] ?? ''}`);
+  });
+
+  it('non raddoppia la barra se il relay è configurato con quella finale', () => {
+    const { url } = createInviteLink(key, { baseUrl: `${RELAY}/`, now: NOW });
+    expect(url.startsWith(`${RELAY}${INVITE_PATH}#`)).toBe(true);
+  });
+
+  it('porta il nome del gruppo, così chi riceve sa dove sta entrando', () => {
+    const { url } = createInviteLink(key, { baseUrl: RELAY, name: 'Casa', now: NOW });
+    const result = parseInvite(url, NOW);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.name).toBe('Casa');
+  });
+
+  it('non lascia che un nome inietti parametri nel fragment', () => {
+    // Il nome è testo scelto dall'utente e finisce in un URL: senza codifica, un `&k=`
+    // dentro il nome sostituirebbe la chiave dell'invito.
+    const intruder = generateVaultKey(fixedRandom(0x99));
+    const { url } = createInviteLink(key, {
+      baseUrl: RELAY,
+      name: `Casa&k=${bytesToBase64url(intruder)}`,
+      now: NOW,
+    });
+    const result = parseInvite(url, NOW);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.key).toEqual(key);
+  });
+
+  it('taglia un nome lunghissimo invece di trasportarlo tutto', () => {
+    const { url } = createInviteLink(key, { baseUrl: RELAY, name: 'x'.repeat(500), now: NOW });
+    const result = parseInvite(url, NOW);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.name).toHaveLength(INVITE_NAME_MAX_CHARS);
+  });
+
+  it('omette il nome quando non c’è nulla da dire', () => {
+    const { url } = createInviteLink(key, { baseUrl: RELAY, name: '   ', now: NOW });
+    expect(url).not.toContain('n=');
+    expect(parseInvite(url, NOW)).toMatchObject({ ok: true, name: null });
+  });
+
+  it('rifiuta una chiave di lunghezza sbagliata', () => {
+    expect(() => createInviteLink(new Uint8Array(16), { baseUrl: RELAY, now: NOW })).toThrow(/16/);
+  });
+});
+
+describe('parseInvite', () => {
+  it('recupera la chiave dal link condivisibile', () => {
+    const { url } = createInviteLink(key, { baseUrl: RELAY, now: NOW });
+    const result = parseInvite(url, NOW);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.key).toEqual(key);
+    expect(deriveVaultKeys(result.key).vaultId).toBe(deriveVaultKeys(key).vaultId);
+  });
+
+  it('recupera la chiave dallo stesso invito riaperto nello schema dell’app', () => {
+    const { joinUri } = createInviteLink(key, { baseUrl: RELAY, now: NOW });
+    expect(parseInvite(joinUri, NOW)).toMatchObject({ ok: true, key });
+  });
+
+  it('accetta ancora i QR generati prima degli inviti via link', () => {
+    // I codici già in circolazione devono continuare a valere: chi aggiorna l'app non
+    // deve trovarsi un invito mostrato sull'altro telefono improvvisamente illeggibile.
+    const { uri, expiresAt } = createPairingInvite(key, { now: NOW });
+    expect(parseInvite(uri, NOW)).toEqual({ ok: true, key, name: null, expiresAt });
+  });
+
+  it('accetta un relay diverso da quello che ha generato il link', () => {
+    // Il relay non è un'autorità: non decide chi entra in un gruppo, e la pagina `/j`
+    // non vede nemmeno passare l'invito. Legare il parsing a un host lo trasformerebbe
+    // in un permesso.
+    const { url } = createInviteLink(key, { baseUrl: 'https://un-altro-relay.example', now: NOW });
+    expect(parseInvite(url, NOW).ok).toBe(true);
+  });
+
+  it('ignora spazi e a capo di un link incollato da una chat', () => {
+    const { url } = createInviteLink(key, { baseUrl: RELAY, now: NOW });
+    expect(parseInvite(`  ${url}\n`, NOW).ok).toBe(true);
+  });
+
+  it('rifiuta un invito scaduto', () => {
+    const { url, expiresAt } = createInviteLink(key, { baseUrl: RELAY, now: NOW, ttlMs: 60_000 });
+    expect(parseInvite(url, expiresAt + PAIRING_CLOCK_SKEW_MS + 1)).toEqual({
+      ok: false,
+      reason: 'expired',
+    });
+  });
+
+  it('chiama «incompleto» un link a cui la chat ha tolto il fragment', () => {
+    // Succede: alcune anteprime riscrivono l'URL. Dire «non è un invito di JuTrack»
+    // manderebbe l'utente a cercare il problema dalla parte sbagliata.
+    expect(parseInvite(`${RELAY}${INVITE_PATH}`, NOW)).toEqual({
+      ok: false,
+      reason: 'missing-key',
+    });
+    expect(parseInvite(JOIN_URI_PREFIX, NOW)).toEqual({ ok: false, reason: 'missing-key' });
+  });
+
+  const linkRejections: Array<[string, string, PairingErrorReason]> = [
+    ['una pagina qualsiasi con un fragment', 'https://example.com/x#v=1', 'not-pairing-uri'],
+    ['un percorso diverso sullo stesso relay', `${RELAY}/altro#v=1`, 'not-pairing-uri'],
+    [
+      'versione futura',
+      `${RELAY}${INVITE_PATH}#v=2&k=${bytesToBase64url(key)}`,
+      'unsupported-version',
+    ],
+    ['chiave assente', `${RELAY}${INVITE_PATH}#v=1&n=Casa`, 'missing-key'],
+    [
+      'chiave troncata',
+      `${RELAY}${INVITE_PATH}#v=1&k=${bytesToBase64url(key.slice(0, 16))}`,
+      'malformed-key',
+    ],
+  ];
+
+  it.each(linkRejections)('rifiuta %s', (_label, uri, reason) => {
+    expect(parseInvite(uri, NOW)).toEqual({ ok: false, reason });
+  });
+
+  it('non si lascia dirottare da un parametro ripetuto nel fragment', () => {
+    const intruder = generateVaultKey(fixedRandom(0x99));
+    const { url } = createInviteLink(key, { baseUrl: RELAY, now: NOW });
+    const result = parseInvite(`${url}&k=${bytesToBase64url(intruder)}`, NOW);
+
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.key).toEqual(key);
   });
 });
 

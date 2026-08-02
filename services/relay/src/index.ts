@@ -10,7 +10,9 @@
  *   GET    /v1/vault/:vaultId/updates?since=N  → { updates, head, hasMore }
  *   DELETE /v1/vault/:vaultId/vault            → { deleted: true }
  *   GET    /health                             → { ok: true }
+ *   GET    /j                                  → pagina di atterraggio degli inviti
  */
+import { INVITE_PATH, invitePage } from './invite-page';
 import { VAULT_ID_PATTERN } from './protocol';
 
 export { VaultRoom } from './vault-room';
@@ -24,6 +26,16 @@ export default {
 
     if (url.pathname === '/health') {
       return json({ ok: true }, 200);
+    }
+
+    // Prima di qualunque instradamento verso un vault, e senza toccare `env`: la pagina
+    // degli inviti è statica, e l'invito che la porta qui vive tutto nel fragment — che
+    // il browser non ha mandato. Non c'è alcun vault da aprire per servirla.
+    if (url.pathname === INVITE_PATH || url.pathname === `${INVITE_PATH}/`) {
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        return json({ error: 'metodo non consentito' }, 405);
+      }
+      return invitePage();
     }
 
     const match = /^\/v1\/vault\/([^/]+)\/(updates|vault)$/.exec(url.pathname);

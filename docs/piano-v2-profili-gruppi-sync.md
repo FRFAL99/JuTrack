@@ -1,8 +1,8 @@
 # JuTrack — Piano v2: profili, gruppi, inviti, sync veloce
 
 > **Avanzamento al 2026-08-02.**
-> Completati: **Step 0–9** (il piano originale) e gli **Step 10, 11 e 12** di questo documento.
-> Restano gli **Step 13 e 14**.
+> Completati: **Step 0–9** (il piano originale) e gli **Step 10, 11, 12 e 13** di questo documento.
+> Resta lo **Step 14**.
 >
 > Nasce dalla prima prova reale con **due dispositivi**, che ha fatto emergere due bug con
 > conseguenze sui numeri e tre limiti di prodotto che il piano originale non copriva.
@@ -330,7 +330,23 @@ fattibile senza riscrivere l'app.
 _Verifica:_ due gruppi sullo stesso telefono con spese separate; si cambia gruppo **senza riavviare
 l'app**; una spesa registrata offline in un gruppo sopravvive a una scrittura nell'altro.
 
-### Step 13 — Inviti via link
+### Step 13 — Inviti via link ✅
+
+**Fatto**, con tre scostamenti dichiarati.
+
+1. **Il QR continua a portare il vecchio `jutrack://pair?…`**, non il link nuovo. Codificare
+   l'https allungherebbe il codice di una cinquantina di caratteri per un guadagno nullo: chi
+   inquadra col lettore interno arriva allo stesso posto, e chi lo fa col lettore di sistema
+   passerebbe da un giro in più nel browser. I QR già in circolazione restano validi.
+2. **`parseInvite` non è una terza funzione accanto alle due esistenti**, ma quella che l'app usa
+   ovunque: query di `jutrack://pair?…` e fragment di `https://…/j#…` hanno la stessa grammatica, e
+   tenerne due significherebbe lasciare che una diventi più permissiva dell'altra senza accorgersene.
+   `parsePairingUri` resta come caso particolare, con i suoi test.
+3. **La rotta `/join` legge il link grezzo, non i parametri di expo-router.** Il router instrada sul
+   percorso e trasforma la query in parametri, ma il fragment non è né l'uno né l'altra: si legge
+   con `Linking.useLinkingURL()`. È il punto in cui questo step poteva fallire in silenzio.
+
+Il resoconto è nel [devlog](devlog.md). Sotto, il piano com'era stato scritto.
 
 **Formato**
 

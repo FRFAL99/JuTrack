@@ -1,11 +1,14 @@
 import { useCallback, useRef, useState } from 'react';
 import { router } from 'expo-router';
 import { Alert } from 'react-native';
-import { describePairingError, deriveVaultKeys, parsePairingUri } from '@jutrack/core';
+import { describePairingError, deriveVaultKeys, parseInvite } from '@jutrack/core';
 import { useGroups } from '@/state';
 
+/** Come si chiama un gruppo di cui l'invito non porta il nome. */
+const UNNAMED_GROUP = 'Gruppo condiviso';
+
 interface AdoptPairing {
-  /** Interpreta un URI (scansionato, incollato o arrivato per deep link) e chiede conferma. */
+  /** Interpreta un invito (scansionato, incollato o arrivato per link) e chiede conferma. */
   submit(raw: string): void;
   /** Messaggio da mostrare all'utente, `null` se non c'è nulla da segnalare. */
   error: string | null;
@@ -13,11 +16,11 @@ interface AdoptPairing {
 }
 
 /**
- * Dal codice grezzo al gruppo aperto, passando per una conferma esplicita.
+ * Dall'invito grezzo al gruppo aperto, passando per una conferma esplicita.
  *
- * Condiviso fra la scansione con la fotocamera e l'apertura del link `jutrack://pair`
- * fatta dal lettore QR di sistema: le due strade devono chiedere la stessa conferma e
- * mostrare gli stessi avvisi, altrimenti la più silenziosa diventa quella comoda.
+ * Condiviso da tutte le strade con cui un invito può arrivare — QR scansionato, link
+ * aperto da una chat, codice incollato a mano — perché devono chiedere la stessa conferma
+ * e mostrare gli stessi avvisi: se una fosse più silenziosa, diventerebbe quella comoda.
  *
  * **Dallo Step 12 il collegamento aggiunge un gruppo invece di sostituire quello che
  * c'era.** Prima esisteva un solo slot per la chiave, quindi entrare in un vault
@@ -34,9 +37,11 @@ export function useAdoptPairing(): AdoptPairing {
   const handled = useRef(false);
 
   const adopt = useCallback(
-    (key: Uint8Array): void => {
+    (key: Uint8Array, name: string | null): void => {
       setAdopting(true);
-      void join(key, 'Gruppo condiviso')
+      // Il nome dell'invito è solo un suggerimento per la riga del registro: l'autorevole
+      // sta dentro il vault e arriva col primo sync, sovrascrivendo questo.
+      void join(key, name ?? UNNAMED_GROUP)
         .then((group) => {
           router.replace(`/groups/${group.vaultId}`);
           Alert.alert(
@@ -59,7 +64,7 @@ export function useAdoptPairing(): AdoptPairing {
       if (handled.current) return;
       setError(null);
 
-      const result = parsePairingUri(raw, Date.now());
+      const result = parseInvite(raw, Date.now());
       if (!result.ok) {
         setError(describePairingError(result.reason));
         return;
@@ -78,7 +83,7 @@ export function useAdoptPairing(): AdoptPairing {
       }
 
       Alert.alert(
-        'Entrare in questo gruppo?',
+        result.name === null ? 'Entrare in questo gruppo?' : `Entrare in «${result.name}»?`,
         `Verrà aggiunto ai tuoi gruppi, senza toccare quelli che hai già. ` +
           `Le spese sono cifrate end-to-end: chi ha questa chiave le legge, e nessun altro.`,
         [
@@ -89,7 +94,7 @@ export function useAdoptPairing(): AdoptPairing {
               handled.current = false;
             },
           },
-          { text: 'Entra', onPress: () => adopt(result.key) },
+          { text: 'Entra', onPress: () => adopt(result.key, result.name) },
         ],
       );
     },

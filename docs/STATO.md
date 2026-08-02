@@ -1,6 +1,6 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-02, a Step 12 chiuso.
+Aggiornato: 2026-08-02, a Step 13 chiuso.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -22,15 +22,20 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 10 — Sync: correttezza e velocità   | ✅    | Catch-up al boot, push immediato, poll adattivo, `AppState`  |
 | 11 — Profili                        | ✅    | Un profilo per persona, il membro nasce da lì                |
 | 12 — Più gruppi per telefono        | ✅    | Registro gruppi, tabelle per vault, runtime rimontabile      |
-| 13 — Inviti via link                | ⬜    | Link condivisibile, pagina `/j` sul Worker                   |
-| 14 — Uscire da un gruppo            | ⬜    | Abbandono, wipe sul relay, rigenerazione della chiave        |
+| 13 — Inviti via link                | ✅    | Link condivisibile, pagina `/j` sul Worker                   |
+| 14 — Uscire da un gruppo            | ⬜    | Wipe sul relay, rigenerazione della chiave                   |
 
-**491 test verdi** (345 core + 111 app + 35 relay), typecheck, lint e `format:check` puliti.
+**520 test verdi** (366 core + 111 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 **Il piano originale (Step 0–9) è chiuso.** La prima prova con **due dispositivi** ha fatto emergere
 due bug con conseguenze sui numeri e tre limiti di prodotto: da lì nasce un secondo piano,
 [piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md), che copre gli **Step 10–14**.
-Chiusi il **10**, l'**11** e il **12**; restano il 13 e il 14.
+Chiusi dal **10** al **13**; resta il 14.
+
+> **La pagina `/j` non è ancora in produzione.** Il codice c'è ed è testato, ma finché non gira
+> `npm run deploy` in `services/relay` il relay in produzione risponde 404 a `/j`, e un link
+> d'invito aperto dal browser non porta da nessuna parte. Il QR e l'incolla manuale funzionano
+> comunque: non passano dal relay.
 
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
@@ -118,6 +123,11 @@ la lista si è accorciata parecchio, ma non è vuota:
 - **Tutto lo Step 12**, che è nuovo di oggi: due gruppi che tengono le spese davvero separate, il
   cambio di gruppo che non lascia appesi engine o persistenza, la **ripartenza pulita** che non
   cancelli più del dovuto, e la domanda «chi sei in questo gruppo?» a chi entra
+- **Tutto lo Step 13**, anch'esso di oggi, e in particolare i due punti dove può fallire in
+  silenzio: che Android consegni il link `jutrack://join#…` **con il fragment** alla rotta `/join`
+  (se lo perdesse per strada, l'app riceverebbe un invito senza chiave), e che il foglio di
+  `Share.share` compaia davvero nella build installata. Prima serve però un `deploy` del relay,
+  altrimenti la pagina `/j` non esiste
 
 > **La development build installata sul telefono non contiene i due moduli nuovi.** È stata
 > compilata prima che venissero aggiunti. L'app si apre lo stesso — sono caricati con `require` in
@@ -143,23 +153,41 @@ su un dispositivo Android reale.
 | Due copie di React (`expo-*` dichiara `"react": "*"`)                                        | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede                                |
 | `DELETE FROM sync_pending` senza `WHERE`: con due gruppi cancella la coda offline dell'altro | Colonna `vault_id` ovunque, e un test su SQLite vero — con un finto motore passerebbe comunque |
 | I tipi delle rotte expo-router non li rigenera `expo export`, ma `expo start`                | Sono in `.expo/types/`, gitignorato: in CI non esistono e il typecheck passa lo stesso         |
+| **expo-router non espone il fragment**: `useLocalSearchParams` vede il percorso e la query   | La rotta `/join` legge il link grezzo con `Linking.useLinkingURL()`                            |
 
-## Com'è fatto il pairing (Step 7)
+## Come si entra in un gruppo (Step 7 e 13)
 
-Tre strade portano alla stessa conferma, in `useAdoptPairing`:
+Quattro strade, una sola conferma — quella di `useAdoptPairing`:
 
-1. **Scanner interno** — Impostazioni → «Ho già un vault sull'altro telefono»
-2. **Lettore QR di sistema** — apre `jutrack://pair?…`, raccolto dalla rotta `/pair`
-3. **Incolla il codice** — sempre disponibile, unica via se la fotocamera non c'è
+1. **Link condiviso** — `Share.share` dalla schermata d'invito, aperto dall'altro su `/j` e
+   riportato nell'app dalla rotta `/join`
+2. **Scanner interno** — Gruppi → «Incolla un invito o scansiona»
+3. **Lettore QR di sistema** — apre `jutrack://pair?…`, raccolto dalla rotta `/pair`
+4. **Incolla** — link o URI, sempre disponibile, unica via se la fotocamera non c'è
 
-L'URI trasporta **solo la chiave** (`jutrack://pair?v=1&k=<base64url>&e=<scadenza>`): `vaultId`,
-`contentKey` e `authKey` sono derivate. Dopo `adoptVaultKey()` serve un **riavvio dell'app**: il
-motore di sync viene costruito all'avvio con le chiavi di allora.
+Tutte trasportano **solo la chiave**: `vaultId`, `contentKey` e `authKey` sono derivate. Dallo Step
+12 non serve più alcun riavvio, e l'ingresso **aggiunge** un gruppo invece di sostituirlo.
 
-**Il QR contiene la chiave in chiaro: chi lo fotografa entra nel vault.** Rischio accettato e
-documentato nel threat model — l'interfaccia lo dichiara. La scadenza di cinque minuti è una
-cortesia, non una difesa: sta dentro l'URI, quindi è rimovibile. Un protocollo autenticato
-(SAS/PAKE) risolverebbe, ed è fra i miglioramenti futuri.
+**Il link mette la chiave nel fragment**
+(`https://<relay>/j#v=1&k=<base64url>&n=<nome>&e=<scadenza>`): è la parte dell'indirizzo che i
+browser non trasmettono, quindi non arriva al Worker, non entra nei log di Cloudflare e non compare
+nelle anteprime generate dalle chat. La pagina `/j` è statica, non fa richieste di rete e non
+istanzia alcun Durable Object — con i test che lo verificano.
+
+`parseInvite` legge **tre forme**: il link, `jutrack://join#…` e il vecchio `jutrack://pair?…` dei
+QR già in circolazione. Una funzione sola, perché chi incolla un codice non sa in quale forma sia, e
+tre grammatiche separate divergerebbero.
+
+**Il fragment non passa da expo-router.** Il router instrada sul percorso e trasforma la query in
+parametri; ciò che sta dopo il `#` non è né l'uno né l'altra. La rotta `/join` legge il link grezzo
+con `Linking.useLinkingURL()`. È il punto in cui questo pezzo poteva fallire in silenzio.
+
+**Chiunque abbia il link o il QR entra nel gruppo.** Rischio accettato, dichiarato
+nell'interfaccia **prima** di generare l'invito e ampliato nel threat model: un link inoltrabile è
+più esposto di un QR mostrato a schermo per cinque minuti. La scadenza è una cortesia, non una
+difesa: sta dentro l'URL, quindi è rimovibile. Il rimedio a un invito finito male è uscire dal
+gruppo e rifarlo; un protocollo autenticato (SAS/PAKE) toglierebbe il segreto dal trasporto, ed è
+fra i miglioramenti futuri.
 
 ## Chi sono io (Step 11)
 

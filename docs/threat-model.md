@@ -20,6 +20,7 @@ che rivelano abitudini, luoghi frequentati, relazioni e situazione economica.
 | Chi intercetta la rete                            | Legge il traffico                                | ✅ Sì (TLS + payload già cifrato) |
 | Chi ruba un telefono **sbloccato**                | Accesso all'app                                  | ❌ **No**                         |
 | Chi fotografa il QR di pairing                    | Ottiene la chiave del vault                      | ❌ **No**                         |
+| Chi riceve un link d'invito inoltrato             | Ottiene la chiave del gruppo                     | ❌ **No**                         |
 | Chi compromette il sistema operativo del telefono | Root/jailbreak, malware                          | ❌ No                             |
 
 ## Garanzie
@@ -59,6 +60,35 @@ problema; non è in v1 ed è tracciato tra i miglioramenti futuri.
 La scadenza scritta nell'URI (`e=`, cinque minuti) **non è una difesa crittografica**: è dentro il
 codice, quindi chi ne ha copiato il contenuto può rimuoverla. Limita la finestra in cui uno
 screenshot dimenticato viene ancora accettato da un'app onesta, niente di più.
+
+### Il link d'invito è più esposto del QR, e va detto
+
+Dallo Step 13 un invito viaggia anche come link:
+`https://<relay>/j#v=1&k=<chiave>&n=<nome>&e=<scadenza>`.
+
+**Cosa il link migliora.** La chiave sta nel **fragment**, la parte dell'indirizzo che i browser non
+trasmettono: non arriva al Worker, non finisce nei log di Cloudflare e non compare nelle anteprime
+che le chat generano visitando l'URL. La pagina `/j` è statica, non fa alcuna richiesta di rete e
+non istanzia alcun Durable Object — proprietà verificate da test, non promesse. Il relay resta
+esattamente ignorante com'era.
+
+**Cosa il link peggiora, ed è la parte che conta.** Un QR vive cinque minuti sullo schermo di chi lo
+mostra: per catturarlo bisogna essere presenti o avere una foto. Un link invece:
+
+- resta nella cronologia della conversazione in cui è stato mandato, e in quella di chi lo riceve;
+- si inoltra a un terzo con due tocchi, senza che chi l'ha creato lo sappia mai;
+- attraversa i server della chat usata, dove è leggibile da chiunque li amministri se quella chat
+  non è cifrata end-to-end;
+- sopravvive nei backup di quella conversazione.
+
+Chiunque abbia il link entra nel gruppo. La schermata d'invito lo dichiara **prima** di generarlo,
+non dopo, e nomina l'unico rimedio reale a un invito finito nelle mani sbagliate: uscire dal gruppo
+e rifarlo con una chiave nuova. La scadenza di cinque minuti resta ciò che era già dichiarata di
+essere — una cortesia verso un link dimenticato in chat, non una difesa: sta dentro l'URL, quindi è
+rimovibile, e la chiave che contiene non scade mai.
+
+Il QR e l'incolla manuale restano disponibili nella stessa schermata: quando i due telefoni sono uno
+di fronte all'altro, sono la scelta migliore e non fanno passare la chiave da una chat.
 
 ### Il codice di pairing incollato passa dagli appunti
 
@@ -113,7 +143,8 @@ Non c'è modo di espellere un dispositivo compromesso. La chiave del vault è co
 chi ce l'ha, ce l'ha.
 
 L'unico rimedio è **ruotare il vault**: nuova chiave, nuovo `vaultId`, ri-pairing dei dispositivi
-legittimi. Il vecchio vault va abbandonato. Procedura manuale in v1.
+legittimi. Il vecchio vault va abbandonato. Procedura manuale in v1: è ciò che lo Step 14 renderà
+un'azione dell'interfaccia, e vale allo stesso modo per un link d'invito finito dove non doveva.
 
 ### Il relay può negare il servizio
 

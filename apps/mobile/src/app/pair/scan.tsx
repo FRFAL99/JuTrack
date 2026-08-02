@@ -15,12 +15,12 @@ import { useTheme } from '@/theme';
 type PermissionPhase = CameraPermission | 'unknown';
 
 /**
- * Adotta la chiave di un vault già esistente sull'altro telefono.
+ * Entra in un gruppo che esiste già su un altro telefono.
  *
- * La fotocamera è la strada normale, ma non l'unica: il campo per incollare il codice
- * resta sempre disponibile. Se il modulo nativo manca o il permesso viene negato il
- * pairing deve restare possibile, altrimenti il secondo telefono non entra nel vault e
- * l'app smette di avere senso in coppia.
+ * Tre strade, un solo esito: inquadrare il QR, incollare il link arrivato in chat,
+ * incollare l'URI del vecchio pairing. Il campo di testo resta sempre disponibile perché
+ * se il modulo nativo della fotocamera manca o il permesso viene negato l'ingresso deve
+ * restare possibile, altrimenti l'app smette di avere senso in coppia.
  */
 export default function PairScanScreen() {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
@@ -66,7 +66,7 @@ export default function PairScanScreen() {
   const shown = error ?? clipboardError;
 
   return (
-    <ModalScreen title="Scansiona un codice">
+    <ModalScreen title="Entra in un gruppo">
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
         {permission === 'granted' && CameraView !== undefined ? (
           <View
@@ -103,18 +103,18 @@ export default function PairScanScreen() {
           <Text
             style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
           >
-            Oppure incolla il codice
+            Oppure incolla l&apos;invito
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            L&apos;indirizzo che comincia con{' '}
-            <Text style={{ color: colors.text }}>jutrack://pair</Text>. Contiene la chiave del vault
-            in chiaro: non va inoltrato in chat né conservato altrove.
+            Va bene sia il link che ti hanno mandato in chat, sia un indirizzo che comincia con{' '}
+            <Text style={{ color: colors.text }}>jutrack://</Text>. Contiene la chiave del gruppo in
+            chiaro: dopo averlo usato, non lasciarlo in giro.
           </Text>
           <TextInput
             value={manual}
             onChangeText={setManual}
             onSubmitEditing={() => submit(manual)}
-            placeholder="jutrack://pair?v=1&k=…"
+            placeholder="https://…/j#v=1&k=…"
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             autoCorrect={false}

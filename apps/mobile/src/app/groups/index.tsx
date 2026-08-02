@@ -136,11 +136,11 @@ export default function GroupsScreen() {
             Entra in un gruppo
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            Serve il codice mostrato dall&apos;altro telefono. I gruppi che hai già restano dove
-            sono.
+            Serve un invito: il link che ti hanno mandato, o il codice mostrato dall&apos;altro
+            telefono. I gruppi che hai già restano dove sono.
           </Text>
           <Button
-            label="Scansiona un codice"
+            label="Incolla un invito o scansiona"
             variant="secondary"
             onPress={() => router.push('/pair/scan')}
           />

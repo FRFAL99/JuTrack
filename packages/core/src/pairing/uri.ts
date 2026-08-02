@@ -13,12 +13,52 @@
  * È un rischio accettato e documentato nel threat model: l'interfaccia deve dichiararlo,
  * non nasconderlo. Un protocollo autenticato (SAS o PAKE) lo eliminerebbe ed è tracciato
  * fra i miglioramenti futuri.
+ *
+ * ## Due forme, una grammatica
+ *
+ * Dallo Step 13 lo stesso invito viaggia anche come **link condivisibile**:
+ *
+ * ```
+ * https://<relay>/j#v=1&k=<base64url>&n=<nome>&e=<epoch>
+ *                    ▲
+ *                    fragment: i browser non lo trasmettono mai al server
+ * ```
+ *
+ * La chiave sta nel fragment di proposito: non finisce nei log del relay, né nelle
+ * anteprime che le chat generano visitando il link. Il relay continua a non poter leggere
+ * nulla, e la pagina che serve è statica.
+ *
+ * Un link inoltrabile in chat però **allarga il modello di minaccia** rispetto a un QR
+ * mostrato a schermo: si copia, si inoltra e resta nella cronologia della conversazione.
+ * La scadenza resta ciò che era già dichiarata di essere — una cortesia, non una difesa.
  */
 import { assertVaultKey, VAULT_KEY_BYTES } from '../crypto/keys';
 import { base64urlToBytes, bytesToBase64url } from '../crypto/encoding';
 
 /** Schema dell'app, dichiarato in `app.json`. */
 export const PAIRING_URI_PREFIX = 'jutrack://pair';
+
+/**
+ * Schema con cui la pagina di atterraggio del relay riapre l'invito dentro l'app.
+ *
+ * Distinto da `PAIRING_URI_PREFIX` perché la forma è diversa — chiave nel **fragment** e
+ * non nella query — e perché i QR già in circolazione continuano a portare il vecchio
+ * URI: due rotte separate evitano che una schermata debba indovinare quale delle due
+ * grammatiche ha davanti.
+ */
+export const JOIN_URI_PREFIX = 'jutrack://join';
+
+/** Percorso della pagina di atterraggio degli inviti, servita dal relay. */
+export const INVITE_PATH = '/j';
+
+/**
+ * Quanti caratteri del nome del gruppo viaggiano nel link.
+ *
+ * Il nome serve solo a far vedere a chi riceve *dove* sta entrando prima di accettare:
+ * l'autorevole sta dentro il vault e arriva col primo sync. Tagliarlo tiene corto un
+ * link che finirà incollato in chat, dove le anteprime troncano.
+ */
+export const INVITE_NAME_MAX_CHARS = 64;
 
 /**
  * Versione del formato di pairing.
@@ -103,8 +143,19 @@ export function parsePairingUri(uri: string, now: number): PairingParseResult {
   const prefix = separator === -1 ? trimmed : trimmed.slice(0, separator);
   if (prefix.toLowerCase() !== PAIRING_URI_PREFIX) return { ok: false, reason: 'not-pairing-uri' };
 
-  const params = parseQuery(separator === -1 ? '' : trimmed.slice(separator + 1));
+  const result = readInvite(parseQuery(separator === -1 ? '' : trimmed.slice(separator + 1)), now);
+  if (!result.ok) return result;
+  return { ok: true, key: result.key, expiresAt: result.expiresAt };
+}
 
+/**
+ * Valida i parametri comuni alle tre forme di invito.
+ *
+ * Query di un `jutrack://pair?…` e fragment di un `https://…/j#…` hanno la stessa
+ * grammatica: tenerne una sola evita che una delle due strade diventi più permissiva
+ * dell'altra senza che nessuno se ne accorga.
+ */
+function readInvite(params: Map<string, string>, now: number): InviteParseResult {
   const version = params.get('v');
   if (version !== String(PAIRING_VERSION)) return { ok: false, reason: 'unsupported-version' };
 
@@ -124,7 +175,122 @@ export function parsePairingUri(uri: string, now: number): PairingParseResult {
     return { ok: false, reason: 'expired' };
   }
 
-  return { ok: true, key, expiresAt };
+  return { ok: true, key, name: normalizeInviteName(params.get('n')), expiresAt };
+}
+
+/**
+ * Riconosce l'indirizzo che precede il fragment.
+ *
+ * Il confronto è sull'host **libero**: il link può essere stato generato da un relay
+ * diverso da quello configurato su questo telefono, e rifiutarlo per questo bloccherebbe
+ * l'ingresso in un gruppo la cui chiave è lì davanti. Il relay non è un'autorità: non
+ * decide chi entra, e la pagina `/j` non vede nemmeno passare l'invito.
+ */
+function isInviteTarget(target: string): boolean {
+  const withoutQuery = target.split('?')[0] ?? '';
+  const lower = withoutQuery.toLowerCase().replace(/\/+$/, '');
+  return lower === JOIN_URI_PREFIX || /^https?:\/\/[^/]+\/j$/.test(lower);
+}
+
+/**
+ * Il nome del gruppo come arriva dal link: ripulito, tagliato, o assente.
+ *
+ * Non ci si può fidare: lo scrive chi ha generato l'invito. Vale come **suggerimento** per
+ * la riga del registro locale, mai come verità — l'autorevole sta dentro il vault e
+ * sovrascrive questo alla prima sincronizzazione.
+ */
+function normalizeInviteName(raw: string | undefined): string | null {
+  if (raw === undefined) return null;
+  // I caratteri di controllo non appartengono a un nome e in una riga di lista
+  // produrrebbero effetti che non si vedono nel testo ma si vedono a schermo.
+  const cleaned = raw
+    .replace(/[\p{Cc}\p{Cf}]/gu, ' ')
+    .trim()
+    .replace(/\s+/g, ' ');
+  return cleaned === '' ? null : cleaned.slice(0, INVITE_NAME_MAX_CHARS);
+}
+
+/**
+ * Un invito condivisibile come link.
+ *
+ * `url` è quello da mandare in chat; `joinUri` è la stessa cosa nello schema dell'app, ed
+ * è ciò che la pagina di atterraggio costruisce per riaprire l'invito qui dentro. Averlo
+ * già pronto serve anche a chi incolla a mano quando i due telefoni non hanno modo di
+ * scambiarsi un link.
+ */
+export interface InviteLink {
+  url: string;
+  joinUri: string;
+  expiresAt: number;
+}
+
+/** Ciò che un invito trasporta, qualunque sia la forma da cui è stato letto. */
+export type InviteParseResult =
+  | { ok: true; key: Uint8Array; name: string | null; expiresAt: number | null }
+  | { ok: false; reason: PairingErrorReason };
+
+/**
+ * Crea il link da condividere per far entrare qualcuno nel gruppo.
+ *
+ * `baseUrl` è l'origine del relay: la pagina `/j` è servita da lì perché è l'unico
+ * indirizzo pubblico che il progetto possiede, non perché il relay partecipi all'invito.
+ * Non riceve nulla — il fragment resta nel browser di chi apre il link.
+ *
+ * Il nome del gruppo viaggia in chiaro accanto alla chiave. Non è un peggioramento: chi
+ * legge il fragment ha già la chiave, quindi il nome lo leggerebbe comunque entrando.
+ */
+export function createInviteLink(
+  key: Uint8Array,
+  options: { baseUrl: string; name?: string; now: number; ttlMs?: number },
+): InviteLink {
+  assertVaultKey(key);
+  const ttlMs = options.ttlMs ?? DEFAULT_PAIRING_TTL_MS;
+  const expiresAt = options.now + ttlMs;
+
+  const params = [`v=${PAIRING_VERSION}`, `k=${bytesToBase64url(key)}`];
+  const name = normalizeInviteName(options.name);
+  // `encodeURIComponent` codifica anche `&` e `#`: è ciò che impedisce a un nome di
+  // gruppo — testo scelto dall'utente — di iniettare parametri nel fragment.
+  if (name !== null) params.push(`n=${encodeURIComponent(name)}`);
+  params.push(`e=${Math.floor(expiresAt / 1000)}`);
+
+  const fragment = params.join('&');
+  return {
+    url: `${options.baseUrl.replace(/\/+$/, '')}${INVITE_PATH}#${fragment}`,
+    joinUri: `${JOIN_URI_PREFIX}#${fragment}`,
+    expiresAt,
+  };
+}
+
+/**
+ * Interpreta un invito in una qualunque delle tre forme in circolazione.
+ *
+ * 1. `https://<relay>/j#…` — il link condivisibile;
+ * 2. `jutrack://join#…` — lo stesso invito riaperto dentro l'app;
+ * 3. `jutrack://pair?…` — i QR generati prima dello Step 13, che continuano a valere.
+ *
+ * Una funzione sola e non tre: chi incolla un codice non sa in quale forma sia, e tre
+ * campi distinti sarebbero un rompicapo per l'utente e tre strade da tenere allineate
+ * per noi.
+ */
+export function parseInvite(uri: string, now: number): InviteParseResult {
+  const trimmed = uri.trim();
+  const hash = trimmed.indexOf('#');
+
+  if (hash === -1) {
+    // Un link arrivato senza fragment non è «non è un invito»: è un invito **mutilato**,
+    // di solito da una chat che ha riscritto l'URL. Distinguerlo cambia il consiglio che
+    // si può dare a chi lo guarda: rifallo generare, non «non è roba nostra».
+    if (isInviteTarget(trimmed)) return { ok: false, reason: 'missing-key' };
+
+    const legacy = parsePairingUri(trimmed, now);
+    return legacy.ok
+      ? { ok: true, key: legacy.key, name: null, expiresAt: legacy.expiresAt }
+      : legacy;
+  }
+
+  if (!isInviteTarget(trimmed.slice(0, hash))) return { ok: false, reason: 'not-pairing-uri' };
+  return readInvite(parseQuery(trimmed.slice(hash + 1)), now);
 }
 
 /** Messaggio da mostrare all'utente per un pairing fallito. */
