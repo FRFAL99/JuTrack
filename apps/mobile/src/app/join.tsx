@@ -72,11 +72,7 @@ export default function JoinScreen() {
           label="Incolla o scansiona un codice"
           onPress={() => router.replace('/pair/scan')}
         />
-        <Button
-          label="Torna ai gruppi"
-          variant="secondary"
-          onPress={() => router.replace('/groups')}
-        />
+        <Button label="Torna ai gruppi" variant="secondary" onPress={() => router.replace('/')} />
       </ScrollView>
     </ModalScreen>
   );

@@ -2,7 +2,7 @@
 
 > **Avanzamento al 2026-08-02.**
 > Completati: **Step 0–9** (piano originale), **Step 10–14** ([piano v2](piano-v2-profili-gruppi-sync.md)),
-> lo **Step 15** — questo documento — e gli **Step 16 e 17**. Da fare: **Step 18–22**, uno per
+> lo **Step 15** — questo documento — e gli **Step 16, 17 e 18**. Da fare: **Step 19–22**, uno per
 > sessione.
 >
 > Nasce dalla prova a mano delle funzionalità già scritte: la gestione dei gruppi non è intuitiva, il
@@ -143,7 +143,9 @@ cd apps/mobile && npx expo export --platform android
 
 > **Gli Step 18 e 19 sono spostamenti di file, e sono i due più delicati del piano** — non per la
 > logica, che non cambia, ma perché rompono rotte in silenzio. Vanno fatti uno per commit, con
-> `expo export` come giudice.
+> `expo export` come giudice. **Lo Step 18 è chiuso**; resta il 19, che si fa allo stesso modo. Alla
+> fine di ognuno vale la pena rigenerare `.expo/types/router.d.ts` con `expo start` e rilanciare
+> `tsc` **con quei tipi presenti**: è l'unica verifica automatica degli href che esista.
 
 ### Step 15 — Questo documento ✅
 
@@ -286,7 +288,29 @@ vector non viene riscritto se il documento non è cambiato` (tre giri a vuoto �
 test esistente `il ritorno in primo piano azzera il backoff` (scala `[4000, 8000, 16000]`) resta
 identico.
 
-### Step 18 — Il tab Gruppi: elenco → gruppo, con le spese dentro
+### Step 18 — Il tab Gruppi: elenco → gruppo, con le spese dentro ✅
+
+> **Fatto il 2026-08-02**, con gli URL intatti — verificati non a ragionamento ma sul
+> `.expo/types/router.d.ts` rigenerato da `expo start`, seguito da un `tsc --noEmit` con quei tipi
+> presenti. Il grep prescritto dà zero risultati; `expo export --platform android` riesce.
+>
+> **Tre aggiunte non previste qui, e servivano tutte:**
+>
+> - **L'elenco dei gruppi non è più una `ModalScreen` ma una `Screen`.** È la radice del tab, cioè
+>   ciò che risponde a `/`: un «Chiudi» che chiama `router.back()` non avrebbe nulla da chiudere.
+> - **`Screen` ha guadagnato `onTitlePress`** (e `titleHint` per lo screen reader). Da quando
+>   l'elenco apre le **spese** invece della scheda del gruppo, `manage` non avrebbe più avuto un
+>   ingresso: il titolo **è** il nome del gruppo e porta a `/groups/<id>/manage` — la stessa forma
+>   che lo Step 19 dà per scontata.
+> - **Il tab si chiama «Gruppi» 👥 già da adesso**, non dallo Step 20: la sua radice è l'elenco dei
+>   gruppi, e «Spese» sarebbe stato falso.
+>
+> Inoltre `create` fa `push` e non più `replace`: l'elenco è la radice dello stack, e sostituirlo
+> lascerebbe il gruppo appena creato senza nulla sotto.
+>
+> Estratti in `features/groups/list.ts` sia `groupSubtitle` sia **`shortVaultId`**, che serviva anche
+> a `manage.tsx` — cinque test. `groupSubtitle` prende già `currentVaultId: string | null`, quindi il
+> caso «nessun gruppo aperto» dello Step 21 è coperto da adesso.
 
 Il primo tab diventa uno stack «elenco dei gruppi → gruppo aperto», **senza cambiare gli URL già in
 uso**.

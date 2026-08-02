@@ -11,6 +11,13 @@ import { useEngineActivity } from '@/features/sync/useEngineActivity';
 import { useCategories, useCurrentGroup, useExpenses, useMembers } from '@/state';
 import { useTheme } from '@/theme';
 
+/**
+ * Le spese del gruppo aperto: il dettaglio del gruppo, non più il primo tab.
+ *
+ * Il gruppo non è più un parametro implicito da leggere in una pill: è il **titolo**
+ * della schermata, e toccarlo porta a gestirlo. Che sia il gruppo giusto lo garantisce la
+ * guardia in `[vaultId]/_layout.tsx`, che l'ha reso corrente prima di montare questo.
+ */
 export default function ExpensesScreen() {
   const { colors, spacing, fontSize, fontWeight, radius } = useTheme();
   const insets = useSafeAreaInsets();
@@ -30,33 +37,11 @@ export default function ExpensesScreen() {
   const total = useMemo(() => expenses.reduce((sum, e) => sum + e.amountCents, 0), [expenses]);
 
   return (
-    <Screen title="Spese">
-      {/* Il gruppo aperto va detto sempre, non solo quando ce n'è più d'uno: senza,
-          registrare una spesa nel gruppo sbagliato è un errore che non dà alcun segnale
-          finché non si guarda il saldo. */}
-      <Pressable
-        onPress={() => router.push('/groups')}
-        accessibilityRole="button"
-        accessibilityLabel={`Gruppo ${group.name}. Tocca per cambiare gruppo`}
-        style={({ pressed }) => ({
-          alignSelf: 'flex-start',
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: spacing.xs,
-          marginHorizontal: spacing.lg,
-          marginBottom: spacing.md,
-          paddingVertical: spacing.xs,
-          paddingHorizontal: spacing.sm,
-          borderRadius: radius.pill,
-          backgroundColor: pressed ? colors.surfacePressed : colors.surface,
-        })}
-      >
-        <Text style={{ color: colors.text, fontSize: fontSize.sm, fontWeight: fontWeight.medium }}>
-          {group.name}
-        </Text>
-        <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>▾</Text>
-      </Pressable>
-
+    <Screen
+      title={group.name}
+      onTitlePress={() => router.push(`/groups/${group.vaultId}/manage`)}
+      titleHint="Apre la gestione del gruppo: nome, persone, invito"
+    >
       {expenses.length === 0 ? (
         <EmptyState
           icon="🧾"

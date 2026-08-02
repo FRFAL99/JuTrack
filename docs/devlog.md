@@ -4,6 +4,84 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-02 — Step 18: il tab Gruppi, elenco → gruppo, con gli URL intatti
+
+Lo step dichiarato «rischio numero uno» del piano v3: sposta le rotte con cui si entra in un gruppo
+dopo un invito, e può romperle **in silenzio**. Nessuna logica cambia — cambia dove stanno i file.
+
+**Lo spostamento, in un solo commit**
+
+```
+app/(tabs)/(gruppi)/_layout.tsx                    [nuovo]  stack del tab 1
+app/(tabs)/(gruppi)/index.tsx                      [git mv da app/groups/index.tsx]           "/"
+app/(tabs)/(gruppi)/groups/[vaultId]/_layout.tsx   [nuovo]  guardia di selezione + Stack
+app/(tabs)/(gruppi)/groups/[vaultId]/index.tsx     [git mv da app/(tabs)/index.tsx]           "/groups/<id>"
+app/(tabs)/(gruppi)/groups/[vaultId]/manage.tsx    [git mv da app/groups/[vaultId].tsx]       "/groups/<id>/manage"
+```
+
+Un solo commit perché nell'istante in cui esistono sia `app/groups/index.tsx` sia
+`(tabs)/(gruppi)/index.tsx` expo-router protesta per rotte duplicate, e in CI se ne accorge solo
+`expo export`.
+
+**Gli URL non sono cambiati, e stavolta è dimostrato invece che sperato**
+
+Le parentesi non compaiono nell'URL, quindi `/groups/<vaultId>` è rimasto esattamente dov'era:
+`useAdoptPairing`, `backup.tsx` e la lista non sono stati toccati. La prova non è un ragionamento ma
+il file dei tipi che genera expo-router: cancellato `.expo/types/router.d.ts`, riavviato `expo start`
+da `apps/mobile`, e il file rigenerato contiene `` `${'/(tabs)'}${'/(gruppi)'}` | `/` ``,
+`/groups/[vaultId]` e `/groups/[vaultId]/manage`. Poi `tsc --noEmit` **con quei tipi presenti**: è
+l'unico momento in cui gli href vengono verificati davvero, perché `.expo/types/` è gitignorato e in
+CI il typecheck passa comunque.
+
+Il grep prescritto dal piano — `grep -rn "'/groups'\|'/(tabs)'" apps/mobile/src` — dà zero risultati.
+Tre href riscritti: la pill delle spese (sparita del tutto), `settings.tsx:153` e `join.tsx:78` a
+`/`, e il `router.replace('/(tabs)')` dopo l'uscita da un gruppo, anch'esso a `/`.
+
+**La guardia di selezione è salita nel layout**
+
+Tutto il blocco di `groups/[vaultId].tsx` — l'effetto che chiama `select`, il controllo `stillExists`,
+lo spinner — sta ora in `[vaultId]/_layout.tsx`: gira una volta per gruppo invece che una per
+schermata, e le spese e la gestione la ereditano. `manage.tsx` si è ridotta al solo contenuto e può
+leggere il runtime del vault dando per scontato che sia il suo.
+
+**Tre cose che il piano non prevedeva, e che servivano**
+
+- **L'elenco dei gruppi non è più una `ModalScreen`.** È la radice del tab, cioè ciò che risponde a
+  `/`: un pulsante «Chiudi» che chiama `router.back()` non avrebbe nulla da chiudere. È diventato
+  `Screen`.
+- **`Screen` ha guadagnato `onTitlePress`.** Da quando l'elenco apre le **spese** invece della scheda
+  del gruppo, la gestione non avrebbe più avuto un ingresso. Il titolo della schermata **è** il nome
+  del gruppo e toccarlo porta a `/groups/<id>/manage` — che è anche la forma prevista dallo Step 19.
+- **Il tab si chiama «Gruppi» 👥 già da adesso**, non dallo Step 20: la sua radice è l'elenco dei
+  gruppi, e chiamarlo ancora «Spese» sarebbe stato falso.
+
+Inoltre `create` fa `push` e non più `replace`: l'elenco è la radice dello stack, e sostituirlo
+lascerebbe il gruppo appena creato senza nulla sotto — «indietro» uscirebbe dall'app. Per la stessa
+ragione entrambi i layout dichiarano `unstable_settings = { initialRouteName: 'index' }`, che è ciò
+che mette l'elenco sotto a chi arriva a `/groups/<id>` da un link.
+
+`ModalScreen` ha una prop `closeLabel` (default `'Chiudi'`): `manage.tsx` usa `'‹ Indietro'`, perché
+è spinta dentro lo stack del tab e la tab bar resta visibile.
+
+**Logica pura estratta:** `features/groups/list.ts` con `shortVaultId` e `groupSubtitle`, cinque
+test. `groupSubtitle` prende già `currentVaultId: string | null` — allo Step 21 «nessun gruppo
+aperto» sarà uno stato reale, e il caso è coperto da adesso.
+
+**Il conteggio dei test in `STATO.md` era sbagliato**: diceva 124 app / 554 totali, ma la baseline
+misurata prima di toccare nulla era **128 app / 558 totali**. Corretto insieme al resto.
+
+**Verifica:** `format:check`, `lint`, `typecheck` puliti; **563 test** (133 app + 387 core + 43
+relay); `expo export --platform android` riuscito (1560 moduli, nessuna rotta duplicata); tipi delle
+rotte rigenerati e ricontrollati con `tsc`.
+
+**Non provato sul telefono.** Il punto 2 del criterio di «fatto» (indietro dentro il tab, tab bar
+visibile sul gruppo e assente sulle schermate-foglia) e il punto 3 (un invito in chat che apre ancora
+`/groups/<id>`) si vedono solo con l'app in mano.
+
+**Prossimo:** Step 19 — dentro il gruppo c'è tutto il gruppo, e la guardia in un file solo.
+
+---
+
 ## 2026-08-02 — Il secondo dispositivo monta i moduli veri dell'app
 
 **Il problema del peer della versione precedente**

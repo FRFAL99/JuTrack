@@ -29,11 +29,13 @@ export default function TabsLayout() {
         },
       }}
     >
+      {/* Per primo, perché l'ordine dei tab è l'ordine di dichiarazione. Non è una
+          schermata ma uno stack: elenco dei gruppi → gruppo aperto. */}
       <Tabs.Screen
-        name="index"
+        name="(gruppi)"
         options={{
-          title: 'Spese',
-          tabBarIcon: ({ focused }) => <TabIcon icon="🧾" focused={focused} />,
+          title: 'Gruppi',
+          tabBarIcon: ({ focused }) => <TabIcon icon="👥" focused={focused} />,
         }}
       />
       <Tabs.Screen

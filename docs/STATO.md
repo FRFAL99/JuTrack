@@ -1,6 +1,6 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-02, a Step 17 chiuso — **piano v3 in corso, restano gli Step 18–22**.
+Aggiornato: 2026-08-02, a Step 18 chiuso — **piano v3 in corso, restano gli Step 19–22**.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -27,29 +27,32 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 15 — Piano v3 scritto               | ✅    | Quattro tab, gruppo come luogo, azzeramento, sync tarato     |
 | 16 — Poll a scala, `markActive`     | ✅    | Scala 2→5→15→60 s invece del gradino 3 s/30 s                |
 | 17 — Offline ≠ errore del relay     | ✅    | `offlineRetryMs`, state vector scritto solo se cambia        |
-| 18 — Tab Gruppi: elenco → gruppo    | ⬜    | Le spese diventano il dettaglio del gruppo, URL invariati    |
+| 18 — Tab Gruppi: elenco → gruppo    | ✅    | Le spese diventano il dettaglio del gruppo, URL invariati    |
 | 19 — Tutto il gruppo nel gruppo     | ⬜    | Categorie, budget, pareggi, export dietro un'unica guardia   |
 | 20 — Quattro tab                    | ⬜    | Gruppi, Grafici, Impostazioni, Profilo                       |
 | 21 — Nessun gruppo al primo avvio   | ⬜    | Fase `absent`, l'utente crea o entra con un invito           |
 | 22 — Azzera questo telefono         | ⬜    | Wipe totale e ritorno all'onboarding, senza riavvio          |
 
-**554 test verdi** (387 core + 124 app + 43 relay), typecheck, lint e `format:check` puliti.
+**563 test verdi** (387 core + 133 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 **I piani chiusi sono due.** Il piano originale (Step 0–9), e
 [piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md) (**Step 10–14**), nato dalla prima
 prova con due dispositivi che aveva fatto emergere due bug sui numeri e tre limiti di prodotto.
 
 **Il terzo è in corso:** [piano-v3-tab-gruppi-azzeramento-sync.md](piano-v3-tab-gruppi-azzeramento-sync.md),
-**Step 16–22**, di cui **16 e 17 sono fatti**. Nasce dalla prova a mano delle funzionalità: la
+**Step 16–22**, di cui **16, 17 e 18 sono fatti**. Nasce dalla prova a mano delle funzionalità: la
 gestione dei gruppi non è intuitiva, il gruppo di default al primo avvio genera confusione, e il poll
 del relay va tarato. **Uno step per sessione.** La taratura del motore è finita: da qui in poi si
-spostano rotte e schermate, e **lo Step 18 è il rischio numero uno del piano**.
+spostano rotte e schermate. **Lo Step 18 era il rischio numero uno del piano** ed è stato chiuso con
+gli URL intatti (vedi sotto); lo Step 19 è l'ultimo spostamento di file.
 
 > **Non resta codice da scrivere per i piani v1 e v2, resta la prova sul campo.** Dallo Step 10 in poi
 > nulla è mai stato visto funzionare su un telefono: quello che manca è il [criterio di «fatto»
 > end-to-end](piano-v2-profili-gruppi-sync.md#criterio-di-fatto-end-to-end) su due dispositivi
-> fisici. Finché non è stato fatto, «i test passano» e «funziona» restano due frasi diverse. **Vale la
-> pena farlo prima di iniziare lo Step 18**, che sposta le rotte con cui si entra in un gruppo.
+> fisici. Finché non è stato fatto, «i test passano» e «funziona» restano due frasi diverse. **Lo
+> Step 18 ha appena spostato le rotte con cui si entra in un gruppo**: gli URL sono rimasti quelli di
+> prima e i tipi generati da expo-router lo confermano, ma è una ragione in più per farla adesso,
+> prima che lo Step 19 sposti il resto.
 >
 > **Con un telefono solo si fa quasi tutto lo stesso:** `npm run prova` esegue la checklist da sola
 > — due dispositivi senza schermo che montano **i moduli veri dell'app** su SQLite vero contro il
@@ -160,6 +163,10 @@ la lista si è accorciata parecchio, ma non è vuota:
 - L'**`offlineRetryMs`** dello Step 17: telefono in aereo, due spese, rete riaccesa → devono partire
   entro ~15 s senza toccare nulla. È il sostituto del listener di connettività, quindi è la prova che
   quel sostituto basta
+- **La navigazione dello Step 18**: che il gesto «indietro» dentro il tab Gruppi torni all'elenco e
+  non esca dall'app; che la tab bar resti visibile sul gruppo e sparisca sulle schermate-foglia; e
+  soprattutto che **un invito ricevuto in chat apra ancora `/groups/<id>` col gruppo giusto**. Gli URL
+  sono verificati sui tipi generati da expo-router, il che è molto, ma non è il telefono
 - **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
   rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
   l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima
@@ -169,7 +176,7 @@ la lista si è accorciata parecchio, ma non è vuota:
 > `try/catch` proprio per questo — e l'export ripiega sugli appunti, dichiarandolo nell'interfaccia.
 > Il foglio di condivisione comparirà solo dopo una build aggiornata.
 
-Tutto il resto è verificato: 536 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 563 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 ## Trappole già risolte — da non riscoprire
@@ -191,6 +198,33 @@ su un dispositivo Android reale.
 | **expo-router non espone il fragment**: `useLocalSearchParams` vede il percorso e la query        | La rotta `/join` legge il link grezzo con `Linking.useLinkingURL()`                            |
 | Uscire da un gruppo **mai sincronizzato**: `no such table: sync_state`                            | `SqliteSyncStore.forget` passa dallo stesso `ensureSchema` di `open`                           |
 | La schermata del gruppo riselezionava il gruppo **appena abbandonato**: app ferma sul caricamento | Guardia nella schermata **e** in `select`, che rifiuta un `vaultId` non nel registro           |
+| Spostare rotte con `.expo/types/` gitignorato: gli href obsoleti passano typecheck **e** lint     | Grep sugli href, poi `expo start` per rigenerare i tipi e `tsc` **con quei tipi presenti**     |
+
+## Dove sta ogni schermata (Step 18)
+
+Il primo tab non è una schermata ma uno **stack**: elenco dei gruppi → gruppo aperto.
+
+```
+app/(tabs)/(gruppi)/index.tsx                      "/"                     elenco dei gruppi
+app/(tabs)/(gruppi)/groups/[vaultId]/_layout.tsx                           guardia di selezione
+app/(tabs)/(gruppi)/groups/[vaultId]/index.tsx     "/groups/<id>"          le spese del gruppo
+app/(tabs)/(gruppi)/groups/[vaultId]/manage.tsx    "/groups/<id>/manage"   nome, persone, invito, uscita
+```
+
+- **Le parentesi non compaiono nell'URL**, quindi `/groups/<vaultId>` è rimasto quello di prima: è
+  l'indirizzo su cui atterra chi entra da un invito, e cambiarlo lo avrebbe rotto in silenzio. Il
+  controllo che conta non è il ragionamento ma `.expo/types/router.d.ts` rigenerato da `expo start`,
+  seguito da un `tsc` con quei tipi presenti — in CI non esistono e il typecheck passa comunque.
+- **Lo stack sta dentro il tab, non sulla radice.** Il gruppo aperto è la schermata principale: da lì
+  si va a Grafici e Impostazioni, quindi la tab bar deve restare. Le schermate-foglia (categorie,
+  budget, pareggi, form spesa) restano invece sulla radice, dove coprire la tab bar è **giusto**.
+- **La guardia che rende corrente il gruppo sta nel layout**, non nelle schermate: gira una volta per
+  gruppo, e spese e gestione la ereditano. Sotto di essa il runtime del vault è per costruzione quello
+  del `vaultId` nell'URL.
+- **Il gruppo non è più una pill da leggere**: è il **titolo** della schermata delle spese, e toccarlo
+  porta alla sua gestione.
+- `unstable_settings = { initialRouteName: 'index' }` in entrambi i layout: senza, chi arriva a
+  `/groups/<id>` da un link non ha nulla sotto nello stack, e «indietro» esce dall'app.
 
 ## Come si entra in un gruppo (Step 7 e 13)
 

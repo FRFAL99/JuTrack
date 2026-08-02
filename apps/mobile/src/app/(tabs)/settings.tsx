@@ -147,11 +147,7 @@ export default function SettingsScreen() {
             </View>
           </View>
 
-          <Button
-            label="I tuoi gruppi"
-            variant="secondary"
-            onPress={() => router.push('/groups')}
-          />
+          <Button label="I tuoi gruppi" variant="secondary" onPress={() => router.push('/')} />
           <Button
             label={`Apri «${current.name}»`}
             variant="secondary"

@@ -3,12 +3,13 @@ import { router } from 'expo-router';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
-import { ModalScreen } from '@/components/ModalScreen';
+import { Screen } from '@/components/Screen';
+import { groupSubtitle } from '@/features/groups/list';
 import { MAX_GROUP_NAME, normalizeGroupName, useGroups } from '@/state';
 import { useTheme } from '@/theme';
 
 /**
- * I gruppi di questo telefono.
+ * I gruppi di questo telefono: la radice del primo tab.
  *
  * Un gruppo è un vault a sé: chiave propria, spese proprie, persone proprie. «Casa» e
  * «Viaggio in Grecia» non si mescolano, e non serve più un telefono per ciascuno.
@@ -16,6 +17,9 @@ import { useTheme } from '@/theme';
  * Aprire un gruppo lo rende quello corrente: il motore di sync si sposta lì, perché
  * tenerne due accesi raddoppierebbe le richieste al relay per un gruppo che nessuno sta
  * guardando. Gli altri si riallineano appena li si apre.
+ *
+ * Non è più una modale: è la schermata a cui risponde `/`, cioè l'URL iniziale su nativo.
+ * Quindi niente «Chiudi» — non c'è nulla sotto da scoprire.
  */
 export default function GroupsScreen() {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
@@ -32,7 +36,10 @@ export default function GroupsScreen() {
     void create(normalized)
       .then((group) => {
         setDraft('');
-        router.replace(`/groups/${group.vaultId}`);
+        // `push` e non `replace`: l'elenco è la radice di questo stack, e sostituirlo
+        // lascerebbe il gruppo appena creato senza nulla sotto — «indietro» uscirebbe
+        // dall'app invece di tornare qui.
+        router.push(`/groups/${group.vaultId}`);
       })
       .catch((cause: unknown) => {
         Alert.alert('Creazione fallita', cause instanceof Error ? cause.message : String(cause));
@@ -41,7 +48,7 @@ export default function GroupsScreen() {
   };
 
   return (
-    <ModalScreen title="I tuoi gruppi">
+    <Screen title="I tuoi gruppi">
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}
@@ -82,7 +89,7 @@ export default function GroupsScreen() {
                         {group.name}
                       </Text>
                       <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
-                        {isCurrent ? 'Aperto adesso' : `vault ${group.vaultId.slice(0, 8)}…`}
+                        {groupSubtitle(group.vaultId, current.vaultId)}
                       </Text>
                     </View>
                     <Text style={{ color: colors.textMuted, fontSize: fontSize.lg }}>›</Text>
@@ -146,6 +153,6 @@ export default function GroupsScreen() {
           />
         </Card>
       </ScrollView>
-    </ModalScreen>
+    </Screen>
   );
 }

@@ -1,18 +1,10 @@
-import { useEffect, useState } from 'react';
-import { router, useLocalSearchParams } from 'expo-router';
-import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { useState } from 'react';
+import { router } from 'expo-router';
+import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
+import { shortVaultId } from '@/features/groups/list';
 import { SyncBadge } from '@/features/sync/SyncBadge';
 import {
   MAX_GROUP_NAME,
@@ -26,45 +18,16 @@ import {
 import { useTheme } from '@/theme';
 
 /**
- * Un gruppo: come si chiama, chi ne fa parte, come invitare, come uscirne.
+ * Gestione di un gruppo: come si chiama, chi ne fa parte, come invitare, come uscirne.
  *
- * Aprire questa schermata **rende corrente il gruppo**, invece di montarne il documento
- * accanto a quello già aperto. È la ragione per cui nome e persone si possono leggere e
- * scrivere qui senza un secondo runtime: sono quelli del gruppo aperto, e basta
- * attendere che il cambio sia avvenuto.
+ * **La guardia di selezione non è più qui**: sta in `[vaultId]/_layout.tsx`, che rende
+ * corrente il gruppo dell'URL prima di montare questa schermata e quella delle spese. Qui
+ * si può quindi leggere e scrivere il runtime del vault dando per scontato che sia il suo.
+ *
+ * È spinta dentro lo stack del tab, non sulla radice: mantiene la tab bar, e il pulsante
+ * in alto a destra dice «Indietro» invece di «Chiudi».
  */
-export default function GroupDetailScreen() {
-  const params = useLocalSearchParams<{ vaultId?: string }>();
-  const vaultId = Array.isArray(params.vaultId) ? params.vaultId[0] : params.vaultId;
-  const { current, groups, select } = useGroups();
-  const stillExists = groups.some((group) => group.vaultId === vaultId);
-
-  // Il cambio di gruppo smonta e rimonta il runtime: finché non è finito, i dati sotto
-  // sono ancora quelli del gruppo di prima e mostrarli sarebbe una bugia.
-  //
-  // `stillExists` copre il caso in cui il gruppo di questa rotta sia stato appena
-  // abbandonato o rigenerato: il corrente è già un altro, e senza il controllo questa
-  // schermata chiederebbe di tornare su un gruppo che non c'è più.
-  useEffect(() => {
-    if (vaultId !== undefined && stillExists && vaultId !== current.vaultId) void select(vaultId);
-  }, [current.vaultId, select, stillExists, vaultId]);
-
-  if (vaultId === undefined || vaultId !== current.vaultId) return <Switching />;
-  return <GroupDetail />;
-}
-
-function Switching() {
-  const { colors } = useTheme();
-  return (
-    <ModalScreen title="Gruppo">
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
-        <ActivityIndicator color={colors.accent} />
-      </View>
-    </ModalScreen>
-  );
-}
-
-function GroupDetail() {
+export default function GroupManageScreen() {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const { current, groups, rename, leave, regenerate } = useGroups();
   const { store, keys } = useVaultRuntime();
@@ -118,7 +81,10 @@ function GroupDetail() {
           onPress: () => {
             setLeaving(true);
             void leave(current.vaultId, { wipeRelay })
-              .then(() => router.replace('/(tabs)'))
+              // All'elenco dei gruppi, che è la radice di questo stack: il gruppo di
+              // questa rotta non esiste più, e restarci mostrerebbe lo spinner della
+              // guardia per sempre.
+              .then(() => router.replace('/'))
               .catch((cause: unknown) => {
                 Alert.alert(
                   'Uscita fallita',
@@ -167,7 +133,7 @@ function GroupDetail() {
   const busy = leaving || regenerating;
 
   return (
-    <ModalScreen title={current.name}>
+    <ModalScreen title={current.name} closeLabel="‹ Indietro">
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}
@@ -202,7 +168,7 @@ function GroupDetail() {
             }}
           />
           <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
-            vault {keys.vaultId.slice(0, 8)}…
+            vault {shortVaultId(keys.vaultId)}
           </Text>
           <SyncBadge state={syncState} />
         </Card>
