@@ -139,7 +139,7 @@ export default tseslint.config(
   //
   // Script di verifica eseguiti a mano: il loro output *è* console.log.
   {
-    files: ['services/*/scripts/**/*.mts'],
+    files: ['**/scripts/**/*.mts'],
     rules: { 'no-console': 'off' },
   },
 );

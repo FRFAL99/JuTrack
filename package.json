@@ -18,7 +18,8 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "test": "npm run test --workspaces --if-present"
+    "test": "npm run test --workspaces --if-present",
+    "peer": "tsx scripts/peer.mts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

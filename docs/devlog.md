@@ -4,6 +4,57 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-02 — Un secondo telefono che gira in un terminale
+
+**Perché**
+
+Il criterio di «fatto» di entrambi i piani chiede due telefoni fisici, e ce n'è uno solo. L'emulatore
+richiederebbe tutto l'SDK Android e una build locale con Gradle (la development build di EAS è arm64,
+le immagini dell'emulatore sono x86_64): ore di lavoro per una strada peggiore.
+
+**Cosa è stato fatto**
+
+`scripts/peer.mts` — un secondo dispositivo che gira in Node, con `npm run peer`. Non è un simulatore
+e non finge nulla: usa `@jutrack/core` così com'è — stesso crypto, stesso `SyncEngine`, stessa scala
+di poll, stesso formato d'invito — contro il **relay in produzione**. Per il relay e per il telefono è
+indistinguibile da un altro telefono.
+
+**È possibile solo perché il core non importa nulla da react-native o expo**, per vincolo
+architetturale imposto da una regola ESLint su `packages/core/src/**`. È la prima volta che quel
+vincolo si ripaga davvero, e vale la pena annotarlo: era stato scritto pensando al riuso su web.
+
+Fa il lavoro che sul telefono fanno `SqliteSyncStore` e `SqliteYPersistence` con un file JSON, e
+ricarica il documento **prima** di costruire il motore — riproducendo la situazione che rende
+necessario il catch-up di `start()`, che è il bug corretto allo Step 10.
+
+**Le due decisioni non ovvie**
+
+- **Il membro nasce da un id stabile salvato nel file**, come il `profileId` sul telefono. Generarne
+  uno nuovo a ogni avvio riprodurrebbe il bug dei membri duplicati dello Step 11 — e sarebbe il peer
+  a sbagliare, non l'app: la prova direbbe «rotto» su codice giusto.
+- **Le arrivi si distinguono per origine** (`origin === engine`): il motore applica ciò che scarica
+  con sé stesso come origine. Senza, anche le spese scritte in locale comparirebbero con la freccia
+  in entrata e la prova non direbbe più nulla.
+
+Il conteggio delle richieste (`--verbose` stampa ogni GET con l'intervallo dalla precedente) non è un
+vezzo: è il modo di **vedere** la scala dello Step 16 e l'`offlineRetryMs` dello Step 17 mentre
+lavorano, con i secondi misurati invece che dedotti dai test.
+
+**Verificato subito, con due peer sul relay vero**
+
+Sync in **entrambe le direzioni** (A→B in ~1 s, B→A in ~2 s), **due membri e non quattro**, e saldi
+speculari corretti (+3,75 / −3,75, verificati a mano). È la prima volta che il criterio di «fatto»
+del piano v2 viene esercitato fuori dai test — anche se non ancora con un telefono in mezzo.
+
+**Cosa resta al telefono:** interfaccia e navigazione, `expo-sqlite` fra due riavvii, la consegna di
+`jutrack://join#…` **col fragment** da parte di Android, il foglio di condivisione, la scansione QR.
+Tutto ciò che sta sopra il core — e per quello basta **un** telefono.
+
+Guida operativa con le cinque prove in ordine:
+[prova-con-un-telefono-solo.md](prova-con-un-telefono-solo.md).
+
+---
+
 ## 2026-08-02 — Step 17: offline non è un errore del relay
 
 **Fatto**

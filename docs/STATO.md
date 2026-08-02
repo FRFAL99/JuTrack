@@ -50,6 +50,10 @@ spostano rotte e schermate, e **lo Step 18 è il rischio numero uno del piano**.
 > end-to-end](piano-v2-profili-gruppi-sync.md#criterio-di-fatto-end-to-end) su due dispositivi
 > fisici. Finché non è stato fatto, «i test passano» e «funziona» restano due frasi diverse. **Vale la
 > pena farlo prima di iniziare lo Step 18**, che sposta le rotte con cui si entra in un gruppo.
+>
+> **Con un telefono solo si fa quasi tutto lo stesso:** `npm run peer` è un secondo dispositivo che
+> gira in un terminale, col core vero contro il relay vero. Istruzioni e limiti in
+> [prova-con-un-telefono-solo.md](prova-con-un-telefono-solo.md).
 
 **La pagina `/j` è in produzione** (deploy del 2026-08-02, versione `b351a959`): risponde 200 con
 gli header attesi — `Referrer-Policy: no-referrer`, CSP `default-src 'none'`, `noindex` — e l'HTML
@@ -87,6 +91,7 @@ telefoni veri** — è la verifica che manca, e va fatta in entrambe le direzion
 npm run format:check && npm run lint && npm run typecheck && npm test   # verifica completa
 cd services/relay && npm run e2e                       # prova cifrata contro il relay
 cd apps/mobile && npx expo export --platform android   # il bundle regge?
+npm run peer -- crea "Prova"                           # un secondo telefono, in un terminale
 ```
 
 Sono esattamente i passaggi della CI, nello stesso ordine: `.github/workflows/ci.yml` gira a ogni
