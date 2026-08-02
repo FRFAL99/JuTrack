@@ -42,6 +42,7 @@ export {
   type GroupRecord,
 } from './groups';
 export { ensureSchema } from './schema';
+export { wipeDevice, type WipeOutcome } from './wipe';
 export {
   useBudgets,
   useCategories,

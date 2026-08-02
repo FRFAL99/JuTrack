@@ -1,6 +1,6 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-02, a Step 21 chiuso — **piano v3 in corso, resta lo Step 22**.
+Aggiornato: 2026-08-02, a Step 22 chiuso — **il piano v3 è finito: non resta codice da scrivere, resta la prova sul campo**.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -31,25 +31,29 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 19 — Tutto il gruppo nel gruppo     | ✅    | Categorie, budget, pareggi, export dietro un'unica guardia   |
 | 20 — Quattro tab                    | ✅    | Gruppi, Grafici, Impostazioni, Profilo                       |
 | 21 — Nessun gruppo al primo avvio   | ✅    | Fase `absent`, l'utente crea o entra con un invito           |
-| 22 — Azzera questo telefono         | ⬜    | Wipe totale e ritorno all'onboarding, senza riavvio          |
+| 22 — Azzera questo telefono         | ✅    | Wipe totale e ritorno all'onboarding, senza riavvio          |
 
-**570 test verdi** (387 core + 140 app + 43 relay), typecheck, lint e `format:check` puliti.
+**577 test verdi** (387 core + 147 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 **I piani chiusi sono due.** Il piano originale (Step 0–9), e
 [piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md) (**Step 10–14**), nato dalla prima
 prova con due dispositivi che aveva fatto emergere due bug sui numeri e tre limiti di prodotto.
 
-**Il terzo è in corso:** [piano-v3-tab-gruppi-azzeramento-sync.md](piano-v3-tab-gruppi-azzeramento-sync.md),
-**Step 16–22**, di cui **16, 17, 18, 19, 20 e 21 sono fatti**. Nasce dalla prova a mano delle
-funzionalità: la gestione dei gruppi non è intuitiva, il gruppo di default al primo avvio genera
-confusione, e il poll del relay va tarato. **Uno step per sessione.** La taratura del motore è
-finita, **gli spostamenti di rotte pure** — erano i due step più delicati del piano, quelli che
-potevano rompere in silenzio l'ingresso da un invito, e sono chiusi entrambi con gli URL intatti
-(vedi sotto) — la riorganizzazione dei tab anche, e il gruppo di default non c'è più. **Resta lo
-Step 22**, «Azzera questo telefono»: la schermata che spiega è già in piedi dallo Step 20, quindi
-è tutto codice distruttivo e niente impaginazione.
+**Anche il terzo è chiuso:** [piano-v3-tab-gruppi-azzeramento-sync.md](piano-v3-tab-gruppi-azzeramento-sync.md),
+**Step 16–22**, tutti fatti. Nasceva dalla prova a mano delle funzionalità: la gestione dei gruppi
+non era intuitiva, il gruppo di default al primo avvio generava confusione, e il poll del relay
+andava tarato. **Uno step per sessione.** La taratura del motore è finita, **gli spostamenti di rotte
+pure** — erano i due step più delicati del piano, quelli che potevano rompere in silenzio l'ingresso
+da un invito, e sono chiusi entrambi con gli URL intatti (vedi sotto) — la riorganizzazione dei tab
+anche, il gruppo di default non c'è più, e «Azzera questo telefono» adesso azzera davvero.
 
-> **Non resta codice da scrivere per i piani v1 e v2, resta la prova sul campo.** Dallo Step 10 in poi
+**Da qui in avanti non c'è un piano v4 approvato.** Il seguito naturale è
+[la prova sui due telefoni](piano-v3-tab-gruppi-azzeramento-sync.md#criterio-di-fatto-end-to-end),
+che è ciò che manca a tutti e tre i piani; le WebSocket sul Durable Object restano una possibilità
+dichiarata fuori perimetro, **da valutare solo dopo** aver provato sul campo la taratura degli Step
+16 e 17.
+
+> **Non resta codice da scrivere per nessuno dei tre piani, resta la prova sul campo.** Dallo Step 10 in poi
 > nulla è mai stato visto funzionare su un telefono: quello che manca è il [criterio di «fatto»
 > end-to-end](piano-v2-profili-gruppi-sync.md#criterio-di-fatto-end-to-end) su due dispositivi
 > fisici. Finché non è stato fatto, «i test passano» e «funziona» restano due frasi diverse. **Gli
@@ -183,6 +187,11 @@ la lista si è accorciata parecchio, ma non è vuota:
   dall'ultimo gruppo riporti all'elenco vuoto senza spinner appesi; e soprattutto che **chi ha già
   dei dati non si accorga di nulla** — nessuna migrazione, quindi l'unico modo di saperlo è aprirla
   su un telefono che i gruppi ce li ha già
+- **Lo Step 22**, che è l'unico gesto dell'app che **non si può annullare**: doppia conferma,
+  ritorno all'onboarding **senza riavviare**, e — la parte che conta — che registrando un profilo
+  nuovo non riappaia nulla di prima. Da guardare anche il caso con un gruppo aperto e il motore che
+  gira: fra il tocco e l'onboarding devono passare frazioni di secondo, non secondi, e nessun errore
+  deve comparire in console mentre il motore si spegne
 - **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
   rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
   l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima
@@ -192,29 +201,31 @@ la lista si è accorciata parecchio, ma non è vuota:
 > `try/catch` proprio per questo — e l'export ripiega sugli appunti, dichiarandolo nell'interfaccia.
 > Il foglio di condivisione comparirà solo dopo una build aggiornata.
 
-Tutto il resto è verificato: 563 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 577 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 ## Trappole già risolte — da non riscoprire
 
-| Trappola                                                                                          | Soluzione adottata                                                                             |
-| ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `TextEncoder` non esiste su Hermes                                                                | UTF-8 scritta in `crypto/encoding.ts`; vietato l'import da noble                               |
-| Yjs non fa il bundle su RN (`lib0` → `isomorphic-webcrypto`, fermo al 2022)                       | Alias in `metro.config.js` verso uno shim su `expo-crypto`                                     |
-| `storage.deleteAll()` su Durable Object SQLite cancella anche le tabelle                          | `ensureSchema()` subito dopo, con test di regressione                                          |
-| Un blob corrotto blocca **tutti** gli update successivi di quel device                            | Ripubblicazione dello stato completo al rilevamento                                            |
-| TypeScript bloccato a 6.x                                                                         | `typescript-eslint` dichiara peer `typescript <6.1.0`                                          |
-| Nella flat config ESLint vince l'ultima regola                                                    | Gli override vanno **dopo** il blocco generale                                                 |
-| Metro annunciava `127.0.0.1` come host del bundle                                                 | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                                                      |
-| expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera        | `expo-camera`, `expo-file-system`, `expo-sharing` con `require` in `try/catch`                 |
-| **`expo start` dalla root del monorepo**: 404 su ogni bundle, app muta                            | Avviarlo **sempre** da `apps/mobile`; è costato giorni                                         |
-| Due copie di React (`expo-*` dichiara `"react": "*"`)                                             | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede                                |
-| `DELETE FROM sync_pending` senza `WHERE`: con due gruppi cancella la coda offline dell'altro      | Colonna `vault_id` ovunque, e un test su SQLite vero — con un finto motore passerebbe comunque |
-| I tipi delle rotte expo-router non li rigenera `expo export`, ma `expo start`                     | Sono in `.expo/types/`, gitignorato: in CI non esistono e il typecheck passa lo stesso         |
-| **expo-router non espone il fragment**: `useLocalSearchParams` vede il percorso e la query        | La rotta `/join` legge il link grezzo con `Linking.useLinkingURL()`                            |
-| Uscire da un gruppo **mai sincronizzato**: `no such table: sync_state`                            | `SqliteSyncStore.forget` passa dallo stesso `ensureSchema` di `open`                           |
-| La schermata del gruppo riselezionava il gruppo **appena abbandonato**: app ferma sul caricamento | Guardia nella schermata **e** in `select`, che rifiuta un `vaultId` non nel registro           |
-| Spostare rotte con `.expo/types/` gitignorato: gli href obsoleti passano typecheck **e** lint     | Grep sugli href, poi `expo start` per rigenerare i tipi e `tsc` **con quei tipi presenti**     |
+| Trappola                                                                                             | Soluzione adottata                                                                                    |
+| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `TextEncoder` non esiste su Hermes                                                                   | UTF-8 scritta in `crypto/encoding.ts`; vietato l'import da noble                                      |
+| Yjs non fa il bundle su RN (`lib0` → `isomorphic-webcrypto`, fermo al 2022)                          | Alias in `metro.config.js` verso uno shim su `expo-crypto`                                            |
+| `storage.deleteAll()` su Durable Object SQLite cancella anche le tabelle                             | `ensureSchema()` subito dopo, con test di regressione                                                 |
+| Un blob corrotto blocca **tutti** gli update successivi di quel device                               | Ripubblicazione dello stato completo al rilevamento                                                   |
+| TypeScript bloccato a 6.x                                                                            | `typescript-eslint` dichiara peer `typescript <6.1.0`                                                 |
+| Nella flat config ESLint vince l'ultima regola                                                       | Gli override vanno **dopo** il blocco generale                                                        |
+| Metro annunciava `127.0.0.1` come host del bundle                                                    | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                                                             |
+| expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera           | `expo-camera`, `expo-file-system`, `expo-sharing` con `require` in `try/catch`                        |
+| **`expo start` dalla root del monorepo**: 404 su ogni bundle, app muta                               | Avviarlo **sempre** da `apps/mobile`; è costato giorni                                                |
+| Due copie di React (`expo-*` dichiara `"react": "*"`)                                                | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede                                       |
+| `DELETE FROM sync_pending` senza `WHERE`: con due gruppi cancella la coda offline dell'altro         | Colonna `vault_id` ovunque, e un test su SQLite vero — con un finto motore passerebbe comunque        |
+| I tipi delle rotte expo-router non li rigenera `expo export`, ma `expo start`                        | Sono in `.expo/types/`, gitignorato: in CI non esistono e il typecheck passa lo stesso                |
+| **expo-router non espone il fragment**: `useLocalSearchParams` vede il percorso e la query           | La rotta `/join` legge il link grezzo con `Linking.useLinkingURL()`                                   |
+| Uscire da un gruppo **mai sincronizzato**: `no such table: sync_state`                               | `SqliteSyncStore.forget` passa dallo stesso `ensureSchema` di `open`                                  |
+| La schermata del gruppo riselezionava il gruppo **appena abbandonato**: app ferma sul caricamento    | Guardia nella schermata **e** in `select`, che rifiuta un `vaultId` non nel registro                  |
+| Spostare rotte con `.expo/types/` gitignorato: gli href obsoleti passano typecheck **e** lint        | Grep sugli href, poi `expo start` per rigenerare i tipi e `tsc` **con quei tipi presenti**            |
+| **SecureStore non sa elencare i propri slot**: cancellare `groups` per primo orfanerebbe le chiavi   | `wipeDevice` legge `registry.list()` come primissima operazione, prima di qualunque DELETE            |
+| Dopo `DELETE FROM app_meta`, `ensureSchema` scambia le tabelle di sync per quelle del vecchio schema | Innocuo di proposito: a quel punto sono vuote e `SqliteSyncStore.open` le ricrea — scritto nel codice |
 
 ## Dove sta ogni schermata (Step 18, 19 e 20)
 
@@ -279,9 +290,9 @@ app/azzera.tsx                                     "/azzera"               fuori
   `useVaultRuntime()`, che solleva — e non tocca `useGroups().current`: con zero gruppi (Step 21)
   funziona, e «Sincronizza adesso» è semplicemente disabilitato. È l'unica condizione che quel tab
   avrà mai.
-- **`/azzera` esiste ma spiega e basta**: elenca che cosa sparisce e che cosa no, e lo dichiara sulla
-  schermata stessa. La doppia conferma e `wipeDevice` sono lo Step 22, che resta così tutto codice
-  distruttivo e niente impaginazione.
+- **`/azzera` è nata allo Step 20 e spiegava soltanto** — che cosa sparisce e che cosa no — perché lo
+  Step 22 restasse tutto codice distruttivo e niente impaginazione. Adesso ha anche l'interruttore,
+  l'`Alert` e la cancellazione vera: vedi [Azzera questo telefono](#azzera-questo-telefono-step-22).
 
 ## Nessun gruppo è uno stato normale (Step 21)
 
@@ -312,6 +323,49 @@ mai chiesto, senza capire se fosse quello condiviso.
   Grafici, e `app/(gruppo)/_layout.tsx`.
 - **`backup.tsx` senza gruppo mostra solo il ripristino**, e si intitola «Ripristina una chiave». È
   la conferma pratica della scelta dello Step 19 di tenerla fuori da `(gruppo)`.
+
+## Azzera questo telefono (Step 22)
+
+`src/app/azzera.tsx` → `useWipeDevice()` → `wipeDevice()`. Il gesto meno reversibile dell'app, e
+l'unico posto del progetto dove si cancella tutto: **l'ordine delle operazioni è il contenuto dello
+step**, non un dettaglio di implementazione.
+
+- **`registry.list()` è la primissima operazione, sempre.** Le chiavi stanno in SecureStore sotto
+  `groupKeyStorageKey(vaultId)`, ed `expo-secure-store` **non sa elencare i propri slot**: l'unico
+  modo di nominarle è leggere i `vaultId` dal registro. Cancellare `groups` prima lascerebbe nel
+  Keystore di sistema chiavi innominabili **per sempre**.
+- **Il profilo per ultimo.** Così ogni prefisso interrotto della sequenza è «profilo presente, zero
+  gruppi» — lo stato vuoto dello Step 21, che l'app sa già disegnare. Nell'ordine inverso ci sarebbe
+  una finestra con nessun profilo ma i gruppi ancora in elenco: l'app manderebbe all'onboarding e poi
+  farebbe **riapparire i gruppi di prima**.
+- **Se un `forget` fallisce ci si ferma prima del profilo**, con l'errore mostrato in schermata: chi
+  riprova trova i gruppi rimasti ancora in elenco, quindi le loro chiavi ancora nominabili. È il test
+  «un'interruzione a metà lascia uno stato coerente».
+- **Il motore va spento prima.** `closeCurrent()` (nuovo su `GroupsProvider`: il gruppo resta in
+  elenco, semplicemente non è più corrente) → il cleanup del `VaultProvider` ferma engine e
+  persistenza → **si attende `phase === 'absent'`** → solo allora si cancella. Attendere invece di
+  sperare è la differenza fra un progetto e un `setTimeout(…, 300)`.
+- **La fase di `useWipeDevice` è derivata**, non scritta da un `setState` nell'effetto: «il motore è
+  spento» si legge già dallo stato del vault. Stessa regola dello Step 21.
+- **Non si tocca il relay.** Azzerare è un gesto locale: le copie sono cifrate, scadono col TTL di
+  trenta giorni, e cancellarle riguarda tutti gli altri. Chi le vuole via esce da ogni gruppo con
+  l'interruttore _Cancella anche la copia sul relay_ **prima**. C'è un test con la spia sul
+  `RelayGateway`: zero `deleteVault`.
+- **`SqliteSyncStore.forgetAll`** è l'unico `DELETE` senza `WHERE` ammesso nel progetto, e sta dentro
+  la classe che possiede quelle tabelle. Altrove il `WHERE vault_id` è ciò che impedisce a un gruppo
+  di svuotare la coda offline di un altro.
+- **È anche riparatore:** la spazzata delle `y_updates_*` orfane conclude oggi un tentativo
+  interrotto ieri. Solo i nomi nella forma esatta di `updatesTableName` vengono eliminati — quello
+  che arriva da `sqlite_master` finisce in un `DROP TABLE`, dove non esistono parametri.
+- **`ensureSchema` chiude la sequenza**, perché `DELETE FROM app_meta` porta via anche
+  `schema_version` e qui non si riavvia l'app. Trovandosi senza versione, `ensureSchema` prende le
+  tabelle di sync per quelle del vecchio schema — hanno gli stessi nomi — e le elimina: va bene, sono
+  vuote da un istante prima e `SqliteSyncStore.open` le ricrea.
+- **Il ritorno all'onboarding senza riavvio** è `forgetProfile()`: il `ProfileGate` smonta
+  `GroupsProvider` e `VaultProvider` con tutto il loro stato in memoria, e registrando un profilo
+  nuovo quelli rimontano su tabelle vuote. Prima di smontare si fa `router.replace('/')`: il
+  navigatore sparisce per intero, e al ritorno riaprirebbe l'ultima rotta — cioè «Azzera questo
+  telefono».
 
 ## Come si entra in un gruppo (Step 7 e 13)
 

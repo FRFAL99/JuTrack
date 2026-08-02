@@ -31,6 +31,19 @@ export interface AppData {
   register(name: string, color: string): Promise<void>;
   /** Rinomina o cambia colore. Il membro nel vault aperto si aggiorna da sé. */
   update(patch: { name?: string; color?: string }): Promise<void>;
+  /**
+   * Dimentica il profilo, e con lui tutto ciò che gli sta sotto.
+   *
+   * Solo lo stato in memoria: la riga su disco l'ha già cancellata `wipeDevice`, che
+   * svuota `app_meta` per intero. Serve perché senza riavvio nessuno rileggerebbe quel
+   * `null`, e il telefono resterebbe a mostrare un profilo che non esiste più.
+   *
+   * L'effetto è più largo di quanto sembri, ed è voluto: il `ProfileGate` torna
+   * all'onboarding e **smonta `GroupsProvider` e `VaultProvider` con tutto il loro stato
+   * in memoria**. Registrando un profilo nuovo, quei provider rimontano e trovano le
+   * tabelle vuote — identico a un'installazione nuova, senza chiedere un riavvio.
+   */
+  forgetProfile(): void;
 }
 
 type AppDataStatus =
@@ -90,11 +103,15 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
     [opened, profile],
   );
 
+  const forgetProfile = useCallback((): void => {
+    setProfile(null);
+  }, []);
+
   const status = useMemo((): AppDataStatus => {
     if (error !== null) return { phase: 'error', message: error };
     if (opened === null) return { phase: 'loading' };
-    return { phase: 'ready', data: { ...opened, profile, register, update } };
-  }, [error, opened, profile, register, update]);
+    return { phase: 'ready', data: { ...opened, profile, register, update, forgetProfile } };
+  }, [error, forgetProfile, opened, profile, register, update]);
 
   return <AppDataContext.Provider value={status}>{children}</AppDataContext.Provider>;
 }

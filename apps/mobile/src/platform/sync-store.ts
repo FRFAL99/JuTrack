@@ -75,6 +75,28 @@ export class SqliteSyncStore implements SyncCursorStore {
     await db.execute('DELETE FROM sync_meta WHERE vault_id = ?', [vaultId]);
   }
 
+  /**
+   * Cancella le tracce di sync di **tutti** i vault.
+   *
+   * L'unico `DELETE` senza `WHERE` ammesso nel progetto, e sta qui — dentro la classe che
+   * possiede queste tabelle — invece che nel chiamante: altrove il `WHERE vault_id` è ciò
+   * che impedisce a un gruppo di svuotare la coda offline di un altro, ed è il solo punto
+   * di tutto lo Step 12 dove un errore distrugge dati.
+   *
+   * Serve a «Azzera questo telefono», che di vault non ne lascia nessuno. Chiamarla a
+   * motore acceso rimetterebbe in gioco proprio quel rischio: `wipeDevice` la esegue solo
+   * dopo che il runtime del gruppo aperto è stato smontato.
+   */
+  static async forgetAll(db: SqliteDatabase): Promise<void> {
+    // Come in `forget`: su un telefono che non ha mai sincronizzato queste tabelle non
+    // esistono, e un `no such table` farebbe fallire un azzeramento che non ha nulla da
+    // cancellare.
+    await SqliteSyncStore.ensureSchema(db);
+    await db.execute('DELETE FROM sync_state');
+    await db.execute('DELETE FROM sync_pending');
+    await db.execute('DELETE FROM sync_meta');
+  }
+
   async getCursor(): Promise<number> {
     const rows = await this.db.query<{ value: string }>(
       'SELECT value FROM sync_state WHERE vault_id = ? AND key = ?',

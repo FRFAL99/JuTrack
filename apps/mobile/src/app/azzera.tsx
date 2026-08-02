@@ -1,28 +1,55 @@
+import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { router } from 'expo-router';
-import { ScrollView, Text, View } from 'react-native';
+import { Alert, ScrollView, Switch, Text, View } from 'react-native';
+import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
 import { NavCard } from '@/components/NavCard';
+import { useWipeDevice } from '@/features/profile/useWipeDevice';
 import { useGroups, useProfile } from '@/state';
 import { useTheme } from '@/theme';
 
 /**
- * Azzera questo telefono: che cosa sparisce, e che cosa no.
+ * Azzera questo telefono: che cosa sparisce, che cosa no, e la doppia conferma.
  *
  * Sta sulla radice e **fuori** da `app/(gruppo)/`: chi azzera resta senza gruppi, e questa
  * schermata deve continuare a essere disegnabile mentre lo fa. Per la stessa ragione non
  * legge il vault — solo il profilo e il registro dei gruppi, che è ciò che elenca.
  *
- * **In questo step spiega e basta.** La doppia conferma e la cancellazione vera arrivano
- * con lo Step 22, che così è tutto codice distruttivo e niente impaginazione: l'ordine
- * delle operazioni in `wipeDevice` è la parte in cui un errore lascia chiavi orfane nel
- * Keystore di sistema per sempre, e non va scritta insieme alla grafica.
+ * La conferma è **un interruttore più un `Alert`**, e non un `Alert.prompt` con il nome del
+ * profilo da riscrivere: su Android `Alert.prompt` non esiste. L'interruttore fa da attrito
+ * deliberato — il bottone non si può premere per sbaglio mentre si scorre la pagina — e
+ * l'`Alert` finale è l'ultima occasione per annullare.
  */
 export default function WipeDeviceScreen() {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const profile = useProfile();
   const { groups } = useGroups();
+  const { phase, error, start } = useWipeDevice();
+  /**
+   * Spento di default, e non ricordato: è il gesto meno reversibile dell'app, e ogni volta
+   * che si apre questa schermata la domanda va rifatta da capo.
+   */
+  const [understood, setUnderstood] = useState(false);
+  const busy = phase === 'closing' || phase === 'wiping';
+
+  const confirm = (): void => {
+    Alert.alert(
+      'Azzerare questo telefono?',
+      `Spariscono il profilo «${profile.name}»` +
+        (groups.length === 0
+          ? ''
+          : groups.length === 1
+            ? ' e il tuo gruppo, con tutte le sue spese'
+            : ` e i tuoi ${groups.length} gruppi, con tutte le loro spese`) +
+        '. Senza un backup della chiave non tornano: non esiste un reset lato server.',
+      [
+        { text: 'Annulla', style: 'cancel' },
+        { text: 'Azzera', style: 'destructive', onPress: start },
+      ],
+    );
+  };
 
   const heading = {
     color: colors.text,
@@ -97,14 +124,44 @@ export default function WipeDeviceScreen() {
           </Card>
         )}
 
-        {/* Detto qui e non taciuto: una schermata che elenca disastri e non ha un pulsante
-            sembra rotta. Lo Step 22 aggiunge l'interruttore «Ho capito» e il bottone. */}
-        <Card style={{ gap: spacing.sm }}>
-          <Text style={heading}>Non ancora attivo</Text>
-          <Text style={body}>
-            L&apos;azzeramento vero arriva col prossimo passo. Per adesso questa schermata dice
-            soltanto che cosa succederà: non c&apos;è nulla da toccare, e niente è stato cancellato.
-          </Text>
+        <Card style={{ gap: spacing.md, borderColor: colors.danger }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+            <Text style={{ color: colors.text, fontSize: fontSize.sm, flex: 1 }}>
+              Ho capito che non si torna indietro
+            </Text>
+            <Switch
+              value={understood}
+              onValueChange={setUnderstood}
+              disabled={busy}
+              accessibilityLabel="Ho capito che non si torna indietro"
+            />
+          </View>
+
+          <Button
+            label={
+              phase === 'closing'
+                ? 'Chiusura del gruppo…'
+                : phase === 'wiping'
+                  ? 'Azzeramento…'
+                  : 'Azzera questo telefono'
+            }
+            variant="danger"
+            onPress={confirm}
+            disabled={!understood}
+            loading={busy}
+          />
+
+          {/* Un azzeramento fallito lascia uno stato normale — profilo presente, qualche
+              gruppo in meno — e si può riprovare: `wipeDevice` si ferma prima di toccare
+              il profilo apposta. Dirlo evita che sembri un telefono a metà. */}
+          {error !== null && (
+            <Text
+              style={{ color: colors.danger, fontSize: fontSize.sm, lineHeight: 20 }}
+              selectable
+            >
+              {error}
+            </Text>
+          )}
         </Card>
       </ScrollView>
     </ModalScreen>

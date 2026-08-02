@@ -4,6 +4,91 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-02 — Step 22: azzera questo telefono (e il piano v3 finisce qui)
+
+L'ultimo step del piano v3, e l'unico gesto dell'app che **non si può annullare**. La schermata
+esisteva già dallo Step 20 e spiegava soltanto: questo step è quindi tutto codice distruttivo e
+niente impaginazione, che era esattamente il motivo per cui i due erano stati separati.
+
+**L'ordine delle operazioni è il contenuto dello step.** Il criterio che le tiene insieme è uno:
+qualunque interruzione deve lasciare il telefono in uno stato che l'app **sa già disegnare**.
+
+1. **`registry.list()` per primissima cosa.** Le chiavi stanno in SecureStore sotto
+   `groupKeyStorageKey(vaultId)`, ed `expo-secure-store` **non sa elencare i propri slot**: l'unico
+   modo di nominarle è leggere i `vaultId` dal registro. Cancellare `groups` prima lascerebbe nel
+   Keystore di sistema chiavi che nessuno potrà più nominare, per sempre. È il punto più pericoloso.
+2. **`registry.forget(vaultId, { wipeRelay: false })` per ognuno**, riusando il percorso già scritto
+   e già testato invece di riscriverne il SQL. Il `false` è esplicito: azzerare è un gesto **locale**,
+   e cancellare dal relay riguarda tutti gli altri. Un `forget` che fallisce viene raccolto e non
+   ferma gli altri.
+3. **Spazzata delle `y_updates_*` orfane**, che rende l'azzeramento riparatore: un tentativo
+   interrotto ieri si conclude oggi. Solo i nomi nella forma esatta di `updatesTableName` vengono
+   eliminati — ciò che arriva da `sqlite_master` finisce in un `DROP TABLE`, dove non esistono
+   parametri e tutto è interpolazione di testo.
+4. **`SqliteSyncStore.forgetAll(db)`**, nuovo statico accanto a `forget`: l'unico `DELETE` senza
+   `WHERE` ammesso nel progetto, e sta dentro la classe che possiede quelle tabelle, sotto il commento
+   che spiega perché altrove il `WHERE vault_id` è intoccabile.
+5. **`DELETE FROM groups`**, i residui.
+6. **`DELETE FROM app_meta` per ultimo**, cioè il profilo per ultimo. Ogni prefisso interrotto della
+   sequenza è allora «profilo presente, zero gruppi» — lo stato vuoto dello Step 21. Nell'ordine
+   inverso ci sarebbe una finestra con nessun profilo ma i gruppi ancora in elenco: l'app manderebbe
+   all'onboarding e poi farebbe **riapparire i gruppi di prima**, che è la peggior cosa che possa
+   capitare a una funzione chiamata «azzera».
+
+**Se qualcosa fallisce ci si ferma prima del punto 3**, con l'errore mostrato in schermata. Riprovando,
+i gruppi rimasti sono ancora in elenco — quindi le loro chiavi sono ancora nominabili — e
+l'azzeramento si conclude. È il test `un'interruzione a metà lascia uno stato coerente`, che fa
+sollevare `keyStore.delete` sul secondo gruppo e verifica che il primo sia sparito del tutto, che il
+secondo sia intatto e che il profilo ci sia ancora.
+
+**Una cosa non prevista dal piano, trovata da un test rosso.** `ensureSchema` chiude la sequenza,
+perché `DELETE FROM app_meta` porta via anche `schema_version` e qui non si riavvia l'app. Ma senza
+versione registrata `ensureSchema` cerca lo schema a vault unico e lo **trova**: `sync_state`,
+`sync_pending` e `sync_meta` portano gli stessi nomi di allora, e le elimina credendole vecchie. È
+innocuo — a quel punto sono vuote da un istante, le ha appena svuotate `forgetAll`, e
+`SqliteSyncStore.open` le ricrea alla prima apertura di un gruppo — ma è il tipo di cosa che va
+scritta nel codice invece di essere riscoperta fra sei mesi. Il test ora chiede «è sopravvissuto
+qualcosa?», che ha la stessa risposta nei due casi.
+
+**Il motore va spento prima, e lo si attende.** `useWipeDevice` (`features/profile/`): `closeCurrent()`
+— nuovo su `GroupsProvider`, il gruppo resta in elenco ma non è più corrente — poi il cleanup
+dell'effetto di `VaultProvider` ferma engine e persistenza, e **solo quando `phase === 'absent'`** si
+cancella. Cancellare a motore acceso significa un ciclo in volo che applica update su una
+`y_updates_<id>` appena eliminata, o una coda ricreata dopo la spazzata. Attendere invece di sperare è
+la differenza fra un progetto e un `setTimeout(…, 300)`.
+
+**La fase dell'hook è derivata**, non scritta da un `setState` nell'effetto: `requested && absent`
+significa «sto cancellando», e «il motore è spento» si legge già dallo stato del vault. È la stessa
+regola imparata allo Step 21, applicata senza doverla riscoprire. Un `useRef` impedisce che un
+rigiro dell'effetto avvii una seconda cancellazione.
+
+**Il ritorno all'onboarding senza riavvio** è `forgetProfile()` (nuovo su `ProfileProvider`, un
+`setProfile(null)`): il `ProfileGate` mostra `ProfileOnboarding` e **smonta `GroupsProvider` e
+`VaultProvider` con tutto il loro stato in memoria**. Registrando un profilo nuovo, quei provider
+rimontano e trovano le tabelle vuote — identico a un'installazione nuova. Prima di smontare si fa
+`router.replace('/')`: il navigatore sparisce per intero con l'onboarding, e al ritorno riaprirebbe
+l'ultima rotta, cioè «Azzera questo telefono» come prima schermata dopo un azzeramento.
+
+**La doppia conferma è un `Switch` più un `Alert`**, e non `Alert.prompt`, che su Android non esiste.
+L'interruttore «Ho capito che non si torna indietro» è attrito deliberato — il bottone non si preme
+scorrendo la pagina — e non viene ricordato fra un'apertura e l'altra. Il link «Fai prima un backup
+della chiave» resta in cima: è l'unica cosa che rende reversibile il gesto.
+
+**Verifica:** `format:check`, `lint`, `typecheck` puliti; **577 test** (147 app + 387 core + 43
+relay), **sette nuovi** in `state/wipe.test.ts` su `NodeSqliteDatabase` e store in memoria, fra cui
+la spia sul `RelayGateway` che pretende zero `deleteVault`; `expo export --platform android`
+riuscito; nessuna rotta aggiunta o spostata.
+
+**Non provato sul telefono**, ed è l'unica funzione dell'app dove un errore non si corregge: doppia
+conferma, ritorno all'onboarding senza riavviare, e che registrando un profilo nuovo non riappaia
+nulla di prima. Da guardare anche il caso con un gruppo aperto e il motore in funzione: fra il tocco
+e l'onboarding devono passare frazioni di secondo.
+
+**Il piano v3 è finito.** Non resta codice da scrivere per nessuno dei tre piani: resta il criterio
+di «fatto» su due telefoni fisici, che vale ancora e viene prima di qualunque piano v4.
+
+---
+
 ## 2026-08-02 — Step 21: al primo avvio non esiste nessun gruppo
 
 Lo Step 12 aveva eliminato lo stato «non c'è ancora un vault» creando un primo gruppo d'ufficio:

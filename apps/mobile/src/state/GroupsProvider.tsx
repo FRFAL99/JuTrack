@@ -37,6 +37,17 @@ export interface GroupsData {
   join(key: Uint8Array, name: string): Promise<GroupRecord>;
   /** Apre un gruppo che c'è già: smonta il runtime corrente e ne monta un altro. */
   select(vaultId: string): Promise<void>;
+  /**
+   * Chiude il gruppo aperto senza uscirne: resta in elenco, semplicemente non è più
+   * corrente.
+   *
+   * Esiste per l'azzeramento. Cancellare le tabelle di un gruppo mentre il suo motore
+   * gira significa che un ciclo in volo può riscrivere ciò che si è appena eliminato — un
+   * update scaricato applicato su una `y_updates_<id>` che non c'è più, o una coda
+   * ricreata dopo la spazzata. Chiudendolo, il `VaultProvider` smonta motore e
+   * persistenza e passa a `absent`: è quel passaggio che `useWipeDevice` attende.
+   */
+  closeCurrent(): Promise<void>;
   /** Aggiorna la copia locale del nome. Quello dentro il vault lo scrive il runtime. */
   rename(vaultId: string, name: string): Promise<void>;
   /** Registra a quale membro ci si è ricollegati in questo gruppo. */
@@ -136,6 +147,14 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
     [meta, refresh, registry],
   );
 
+  const closeCurrent = useCallback(async (): Promise<void> => {
+    // Anche il ricordo su disco, non solo lo stato in memoria: `wipeDevice` cancella
+    // `app_meta` per intero, e lasciarlo qui vorrebbe dire riscriverlo un istante prima
+    // che venga eliminato — cioè far dipendere l'esito da chi arriva primo.
+    await meta.delete(CURRENT_GROUP_KEY);
+    setCurrentId(null);
+  }, [meta]);
+
   const create = useCallback(
     async (name: string): Promise<GroupRecord> => {
       if (registry === null) throw new Error('registro dei gruppi non ancora pronto');
@@ -234,6 +253,7 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
         create,
         join,
         select,
+        closeCurrent,
         rename,
         setMyMemberId,
         leave,
@@ -241,6 +261,7 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
       },
     };
   }, [
+    closeCurrent,
     create,
     currentId,
     error,
