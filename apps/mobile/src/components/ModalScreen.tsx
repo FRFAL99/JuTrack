@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View, type ViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Feather from '@expo/vector-icons/Feather';
 import { useTheme } from '@/theme';
 
 interface ModalScreenProps extends ViewProps {
@@ -13,12 +14,23 @@ interface ModalScreenProps extends ViewProps {
    * lì il gesto è tornare indietro di un passo, non chiudere: `'‹ Indietro'`.
    */
   closeLabel?: string;
+  /**
+   * Chiudi come **x tonda a sinistra**, titolo al centro, e niente a destra.
+   *
+   * Per le schermate la cui azione principale è un bottone a piena larghezza **in fondo**,
+   * dove il pollice arriva: se «Salva» stesse anche in alto a destra sarebbero due modi di
+   * fare la stessa cosa, e quello in alto è il meno raggiungibile dei due. La usa il form
+   * della spesa; le altre tredici schermate modali tengono l'etichetta testuale, perché lì
+   * il pulsante in alto **è** l'unico modo di uscire.
+   */
+  compact?: boolean;
 }
 
 /** Schermata a pagina intera con intestazione e pulsante di chiusura. */
 export function ModalScreen({
   title,
   closeLabel = 'Chiudi',
+  compact = false,
   children,
   style,
   ...rest
@@ -35,22 +47,54 @@ export function ModalScreen({
       ]}
       {...rest}
     >
-      <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingBottom: spacing.md }]}>
-        <Text
-          accessibilityRole="header"
-          style={{ color: colors.text, fontSize: fontSize.lg, fontWeight: fontWeight.semibold }}
-        >
-          {title}
-        </Text>
-        <Pressable
-          onPress={() => router.back()}
-          accessibilityRole="button"
-          accessibilityLabel={closeLabel}
-          hitSlop={12}
-        >
-          <Text style={{ color: colors.accent, fontSize: fontSize.md }}>{closeLabel}</Text>
-        </Pressable>
-      </View>
+      {compact ? (
+        <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingBottom: spacing.md }]}>
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel={closeLabel}
+            hitSlop={8}
+            style={({ pressed }) => ({
+              width: 32,
+              height: 32,
+              borderRadius: 16,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: pressed ? colors.surfacePressed : colors.surface,
+              borderWidth: StyleSheet.hairlineWidth,
+              borderColor: colors.border,
+            })}
+          >
+            <Feather name="x" size={17} color={colors.textMuted} />
+          </Pressable>
+          <Text
+            accessibilityRole="header"
+            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
+          >
+            {title}
+          </Text>
+          {/* Lo spazio vuoto a destra tiene il titolo al centro: senza, sarebbe centrato
+              sullo spazio che resta dopo la x, cioè spostato. */}
+          <View style={{ width: 32 }} />
+        </View>
+      ) : (
+        <View style={[styles.header, { paddingHorizontal: spacing.lg, paddingBottom: spacing.md }]}>
+          <Text
+            accessibilityRole="header"
+            style={{ color: colors.text, fontSize: fontSize.lg, fontWeight: fontWeight.semibold }}
+          >
+            {title}
+          </Text>
+          <Pressable
+            onPress={() => router.back()}
+            accessibilityRole="button"
+            accessibilityLabel={closeLabel}
+            hitSlop={12}
+          >
+            <Text style={{ color: colors.accent, fontSize: fontSize.md }}>{closeLabel}</Text>
+          </Pressable>
+        </View>
+      )}
       {children}
     </View>
   );

@@ -53,12 +53,12 @@ export default function EditExpenseScreen() {
   };
 
   return (
-    <ModalScreen title="Modifica spesa">
+    <ModalScreen title="Modifica spesa" compact>
       <ExpenseForm
         initial={expense}
         onSubmit={handleSubmit}
         onDelete={handleDelete}
-        submitLabel="Salva modifiche"
+        submitLabel="Salva le modifiche"
       />
     </ModalScreen>
   );
