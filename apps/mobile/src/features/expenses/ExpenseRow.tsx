@@ -1,31 +1,53 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { formatMoney, type Category, type Expense, type Member } from '@jutrack/core';
+import { formatCents, formatMoney, type Category, type Expense, type Member } from '@jutrack/core';
 import { CategoryIcon } from '@/features/categories/CategoryIcon';
-import { useTheme } from '@/theme';
+import { numeric, useTheme } from '@/theme';
 
 interface ExpenseRowProps {
   expense: Expense;
   category: Category | undefined;
   paidByMember: Member | undefined;
+  /**
+   * Quanto questa spesa sposta fra me e gli altri, da `yourShareCents`.
+   *
+   * Opzionale perché a zero non si disegna: una spesa tutta mia e pagata da me non ha
+   * niente da dire in quella colonna, e uno `0,00` accanto a ogni riga farebbe sembrare
+   * che ci sia un conto aperto anche dove non c'è.
+   */
+  yourShareCents?: number;
   onPress: () => void;
 }
 
-export function ExpenseRow({ expense, category, paidByMember, onPress }: ExpenseRowProps) {
+export function ExpenseRow({
+  expense,
+  category,
+  paidByMember,
+  yourShareCents,
+  onPress,
+}: ExpenseRowProps) {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
 
   // La nota è l'informazione più utile quando c'è; altrimenti la categoria.
   const title = expense.note.trim() !== '' ? expense.note : (category?.name ?? 'Senza categoria');
   const subtitle = expense.note.trim() !== '' && category !== undefined ? category.name : undefined;
 
+  const share = yourShareCents ?? 0;
+  const shareLabel =
+    share === 0 ? null : `${share > 0 ? '+' : '−'}${formatCents(Math.abs(share))} per te`;
+
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${title}, ${formatMoney(expense.amountCents)}`}
+      accessibilityLabel={
+        shareLabel === null
+          ? `${title}, ${formatMoney(expense.amountCents)}`
+          : `${title}, ${formatMoney(expense.amountCents)}, ${shareLabel}`
+      }
       style={({ pressed }) => [
         styles.row,
         {
-          backgroundColor: pressed ? colors.surfacePressed : colors.surface,
+          backgroundColor: pressed ? colors.surfacePressed : 'transparent',
           paddingVertical: spacing.md,
           paddingHorizontal: spacing.lg,
           gap: spacing.md,
@@ -41,7 +63,7 @@ export function ExpenseRow({ expense, category, paidByMember, onPress }: Expense
           },
         ]}
       >
-        <CategoryIcon icon={category?.icon} color={category?.color ?? colors.textMuted} size={20} />
+        <CategoryIcon icon={category?.icon} color={category?.color ?? colors.textMuted} size={19} />
       </View>
 
       <View style={styles.middle}>
@@ -51,20 +73,41 @@ export function ExpenseRow({ expense, category, paidByMember, onPress }: Expense
         >
           {title}
         </Text>
-        <Text numberOfLines={1} style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
+        <Text numberOfLines={1} style={{ color: colors.textMuted, fontSize: fontSize.xxs }}>
           {[subtitle, paidByMember?.name].filter(Boolean).join(' · ')}
         </Text>
       </View>
 
-      <Text style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}>
-        {formatMoney(expense.amountCents)}
-      </Text>
+      <View style={styles.amounts}>
+        <Text
+          style={[
+            numeric,
+            { color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
+          ]}
+        >
+          {formatMoney(expense.amountCents)}
+        </Text>
+        {shareLabel !== null && (
+          <Text
+            style={[
+              numeric,
+              {
+                color: share > 0 ? colors.income : colors.expense,
+                fontSize: fontSize.xxs,
+              },
+            ]}
+          >
+            {shareLabel}
+          </Text>
+        )}
+      </View>
     </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center' },
-  icon: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+  icon: { width: 38, height: 38, alignItems: 'center', justifyContent: 'center' },
   middle: { flex: 1, gap: 2 },
+  amounts: { alignItems: 'flex-end', gap: 2 },
 });
