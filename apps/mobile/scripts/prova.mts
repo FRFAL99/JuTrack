@@ -149,15 +149,27 @@ async function main(): Promise<void> {
   );
   const netOf = (id: string | null): number =>
     balances.find((x) => x.memberId === id)?.netCents ?? Number.NaN;
+  /**
+   * Il saldo come dettaglio leggibile, `NaN` compreso.
+   *
+   * `NaN` significa «questo membro non compare nei saldi», e capita **proprio quando il
+   * sync non è arrivato** — cioè nel caso che questa checklist esiste per scoprire. Passarlo
+   * a `formatMoney` solleva (`assertCents` rifiuta un non-intero, a ragione), e sollevare
+   * qui uccideva lo script alla sezione 4: categorie, gruppi separati e coda offline non
+   * venivano mai eseguiti. Una checklist deve arrivare in fondo e stampare tutte le righe,
+   * soprattutto quando qualcosa è rotto.
+   */
+  const netDetail = (cents: number): string =>
+    Number.isNaN(cents) ? 'membro assente dai saldi' : formatMoney(cents);
   check(
     'il saldo di Anna coincide col calcolo a mano',
     netOf(casaA.myMemberId) === 625,
-    formatMoney(netOf(casaA.myMemberId)),
+    netDetail(netOf(casaA.myMemberId)),
   );
   check(
     'il saldo di Bruno è speculare',
     netOf(casaB.myMemberId) === -625,
-    formatMoney(netOf(casaB.myMemberId)),
+    netDetail(netOf(casaB.myMemberId)),
   );
 
   // ------------------------------------------------------------ 5. categorie
