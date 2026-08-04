@@ -41,12 +41,12 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 1 — Token                  | ✅    | Grigi scuri più profondi, `surfaceRaised`/`divider`/`textFaint` |
 | 2 — Icone                  | ✅    | Feather al posto delle emoji, mappa emoji→icona in `seed.ts`    |
 | 3 — Componenti nuovi       | ✅    | `SectionLabel`, `ListRow`, `AvatarStack`, `Card` a varianti     |
-| 4 — Tu                     | ⬜    | Fusione profilo + impostazioni, da quattro tab a tre            |
+| 4 — Tu                     | ✅    | Fusione profilo + impostazioni, da quattro tab a tre            |
 | 5 — Grafici                | ⬜    | Riscrittura in forma registro, barre ritoccate                  |
 | 6 — Spese home + selettore | ⬜    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ⬜    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**593 test verdi** (387 core + 163 app + 43 relay), typecheck, lint e `format:check` puliti.
+**599 test verdi** (387 core + 169 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 **I piani chiusi sono due.** Il piano originale (Step 0–9), e
 [piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md) (**Step 10–14**), nato dalla prima
@@ -94,8 +94,32 @@ maiuscoletta — dove si legge (grafici, selettore gruppi, Tu). Regola unica: **
 schermata**. Il redesign passa da quattro tab a tre, e non tocca `packages/core`, lo schema Yjs,
 sync, crypto, relay, backup, export né azzeramento.
 
-**Un passo per sessione**, come per i piani precedenti. Passi 1 (token), 2 (icone) e 3 (componenti)
-chiusi.
+**Un passo per sessione**, come per i piani precedenti. Passi 1 (token), 2 (icone), 3 (componenti) e
+4 (Tu) chiusi.
+
+**Il passo 4 fonde `profile.tsx` e `settings.tsx` in `tu.tsx`.** Tre tab invece di quattro: il tab
+Impostazioni sparisce, e con lui il file omonimo — che però **non si cancella**, diventa un
+`<Redirect href="/tu" />`, perché expo-router persiste l'ultima rotta e chi riapre l'app dopo
+l'aggiornamento con `/settings` come stato salvato deve arrivare comunque da qualche parte. Va
+tolto dopo un ciclo, quando nessuna installazione può più avere quello stato. Lo stesso vale per il
+tab nella tab bar: `href: null` nelle `options`, non la cancellazione dello screen, o la rotta
+resterebbe raggiungibile ma senza un modo di arrivarci dal redirect.
+
+**`profile.tsx` → `tu.tsx` cambia l'URL**, quindi la procedura dei tipi di rotta dello Step 18 è
+stata rifatta: `.expo/types/router.d.ts` rigenerato con `expo start` e verificato con `tsc` prima di
+scrivere gli `router.push` di `tu.tsx` — non dopo, perché senza quei tipi presenti un href sbagliato
+passa il typecheck lo stesso.
+
+**Solo la sezione «Il gruppo aperto» si smonta senza un gruppo.** Sincronizzazione e Questo telefono
+restano sempre montate — «Sincronizza» si disabilita e basta, come già faceva Impostazioni dallo
+Step 21 — perché Diagnostica e **Azzera questo telefono** devono restare raggiungibili proprio
+quando i gruppi sono zero.
+
+**Il pallino dello stato di sync è condiviso, non duplicato.** `syncTone()` in
+`features/sync/describe.ts` estrae la scelta fase→tonalità (`ok`/`warn`/`muted`) che prima viveva
+solo dentro `SyncBadge`; il componente la usa ancora per colorare icona e testo, e il pallino nudo di
+Tu la stessa funzione per colorare un cerchio di 7px. `describeSync()` non è stata toccata — il suo
+`icon` testuale resta quello di sempre, coperto dal test esistente.
 
 **Il default di `Card` resta la forma di sempre.** Le varianti nuove sono `flat` (contenitore di
 lista: niente bordo, niente padding) e `raised` (card eroe, una per schermata); `default` è un ponte
@@ -290,6 +314,11 @@ su un dispositivo Android reale.
 Quattro tab: **Gruppi** 👥 · **Grafici** 📊 · **Impostazioni** ⚙️ · **Profilo** 🙂. Il primo non è
 una schermata ma uno **stack**: elenco dei gruppi → gruppo aperto.
 
+> Il redesign visivo, passo 4, ha portato Impostazioni e Profilo a un solo tab, **Tu** — vedi
+> [Redesign visivo](#redesign-visivo). Il resto di questa sezione descrive l'architettura di
+> instradamento di allora, che quel passo non ha cambiato: resta valida per i tab Gruppi e Grafici,
+> e per tutto quello che sta sotto `app/(gruppo)/`.
+
 ```
 app/(tabs)/(gruppi)/index.tsx                      "/"                     elenco dei gruppi
 app/(tabs)/(gruppi)/groups/[vaultId]/_layout.tsx                           guardia di selezione
@@ -305,8 +334,8 @@ app/(gruppo)/expense/new.tsx                       "/expense/new"
 app/(gruppo)/expense/[id].tsx                      "/expense/<id>"
 
 app/(tabs)/stats.tsx                               "/stats"                Grafici del gruppo aperto
-app/(tabs)/settings.tsx                            "/settings"             solo app: sync, diagnostica, versione
-app/(tabs)/profile.tsx                             "/profile"              nome, colore, id, i tuoi gruppi
+app/(tabs)/tu.tsx                                  "/tu"                   sync, diagnostica, profilo, azzeramento
+app/(tabs)/settings.tsx                            "/settings"             redatto: solo un redirect verso "/tu"
 
 app/backup.tsx                                     "/backup"               fuori: serve senza gruppo
 app/pair/invite.tsx                                "/pair/invite"          fuori: `GroupRequired` in linea

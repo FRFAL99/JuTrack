@@ -50,27 +50,22 @@ export default function TabsLayout() {
           tabBarIcon: ({ color }) => <TabIcon name="bar-chart-2" color={color} />,
         }}
       />
-      {/* Le impostazioni sono dell'**app**, non di un gruppo: da questo step non
-          contengono più nulla che appartenga a un gruppo (categorie, backup, export sono
-          nella sua gestione) né al profilo, che ha un tab suo. È anche l'unico tab che
-          dallo Step 21 dovrà funzionare senza alcun gruppo aperto. */}
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: 'Impostazioni',
-          tabBarIcon: ({ color }) => <TabIcon name="sliders" color={color} />,
-        }}
-      />
       {/* Per ultimo, come vuole la convenzione: è il tab di «chi sono io», non un
           contenuto. Sta fuori dai gruppi perché il profilo è uno solo e li attraversa
-          tutti — è il `profileId` a rendermi la stessa persona in ognuno. */}
+          tutti — è il `profileId` a rendermi la stessa persona in ognuno. Assorbe le
+          impostazioni dell'app (redesign, passo 4): sincronizzazione e diagnostica non
+          appartengono a un gruppo più di quanto appartengano a me. */}
       <Tabs.Screen
-        name="profile"
+        name="tu"
         options={{
-          title: 'Profilo',
+          title: 'Tu',
           tabBarIcon: ({ color }) => <TabIcon name="user" color={color} />,
         }}
       />
+      {/* Non più un tab: `href: null` lo toglie dalla tab bar senza rimuovere la rotta,
+          che resta un semplice redirect verso `/tu` per chi la ritrova come stato di
+          navigazione salvato da prima dell'aggiornamento. */}
+      <Tabs.Screen name="settings" options={{ href: null }} />
     </Tabs>
   );
 }

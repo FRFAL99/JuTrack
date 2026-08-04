@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SyncState } from '@jutrack/core';
-import { describeSync } from './describe';
+import { describeSync, syncTone } from './describe';
 
 const NOW = new Date('2026-08-01T12:00:00Z').getTime();
 
@@ -54,5 +54,18 @@ describe('describeSync', () => {
   it('segnala che le modifiche offline non sono perse', () => {
     const { text } = describeSync({ phase: 'offline' }, NOW);
     expect(text).toContain('coda');
+  });
+});
+
+describe('syncTone', () => {
+  it.each([
+    ['error', 'warn'],
+    ['offline', 'warn'],
+    ['blocked', 'warn'],
+    ['synced', 'ok'],
+    ['idle', 'muted'],
+    ['syncing', 'muted'],
+  ] as const)('%s è %s', (phase, expected) => {
+    expect(syncTone(phase)).toBe(expected);
   });
 });
