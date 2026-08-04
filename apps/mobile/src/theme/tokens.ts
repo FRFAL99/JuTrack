@@ -4,7 +4,11 @@
  * Un unico posto in cui vivono colori, spaziature e tipografia. I componenti non
  * scrivono mai valori letterali: se un colore compare hardcoded in una schermata,
  * è un bug da correggere qui.
+ *
+ * L'unico import è **di tipo** (`TextStyle`), quindi non porta react-native nel bundle di
+ * questo modulo: serve a `numeric`, che è uno stile e non un valore.
  */
+import type { TextStyle } from 'react-native';
 
 /** Scala di spaziatura in multipli di 4. Usare solo questi valori. */
 export const spacing = {
@@ -53,8 +57,15 @@ export const fontWeight = {
  * Senza, le cifre cambiano larghezza fra una riga e l'altra di una lista e le colonne
  * di importi ballano: è il difetto più visibile di un elenco di spese. Supportato da
  * React Native sia su Android sia su iOS.
+ *
+ * **Il tipo non è `as const`, e la ragione è che non compilerebbe.** `as const` rende
+ * `fontVariant` un tuple `readonly`, e `TextStyle` lo dichiara mutabile: passare questo
+ * token a uno `style` darebbe un errore di assegnazione. Il token è nato al passo 1 del
+ * redesign scritto così, ed è passato inosservato per tre passi perché **nessuno lo
+ * usava** — il primo `Text` che l'ha applicato è stato anche il primo a non compilare.
+ * `Pick` invece di `TextStyle` intero: qui si dichiara una cosa sola.
  */
-export const numeric = { fontVariant: ['tabular-nums'] } as const;
+export const numeric: Pick<TextStyle, 'fontVariant'> = { fontVariant: ['tabular-nums'] };
 
 /**
  * Crenatura dei titoli grandi (da 28 in su): a quella scala l'aria di default è troppa

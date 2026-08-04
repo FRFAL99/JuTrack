@@ -43,10 +43,10 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 3 — Componenti nuovi       | ✅    | `SectionLabel`, `ListRow`, `AvatarStack`, `Card` a varianti     |
 | 4 — Tu                     | ✅    | Fusione profilo + impostazioni, da quattro tab a tre            |
 | 5 — Grafici                | ✅    | Riscrittura in forma registro, barre ritoccate                  |
-| 6 — Spese home + selettore | ⬜    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
+| 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ⬜    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**599 test verdi** (387 core + 169 app + 43 relay), typecheck, lint e `format:check` puliti.
+**623 test verdi** (387 core + 193 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 **I piani chiusi sono due.** Il piano originale (Step 0–9), e
 [piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md) (**Step 10–14**), nato dalla prima
@@ -95,7 +95,67 @@ schermata**. Il redesign passa da quattro tab a tre, e non tocca `packages/core`
 sync, crypto, relay, backup, export né azzeramento.
 
 **Un passo per sessione**, come per i piani precedenti. Passi 1 (token), 2 (icone), 3 (componenti),
-4 (Tu) e 5 (Grafici) chiusi.
+4 (Tu), 5 (Grafici) e 6 (spese home + selettore) chiusi. **Resta il passo 7**, la riscrittura del
+form di nuova spesa.
+
+### Il passo 6 ha invertito la radice del primo tab
+
+Era `elenco dei gruppi → gruppo aperto`, adesso è `gruppo aperto`, e l'elenco è un foglio. Si apre
+l'app per registrare una spesa, non per scegliere in quale gruppo si è: quella domanda ora sta nella
+pill dell'header.
+
+**Gli URL non sono cambiati, di nuovo.** `/` era l'elenco ed è la home delle spese; `/groups/<id>` —
+l'indirizzo su cui atterra chi entra da un invito — c'è ancora e mostra la stessa schermata. La
+procedura dello Step 18 è stata rifatta: tipi rigenerati con `expo start`, `tsc` **con quei tipi
+presenti** (ha subito trovato un errore di sintassi vero), rotte verificate una per una.
+
+**Le due rotte condividono `features/expenses/GroupHome.tsx`, e non un redirect.** La strada corta
+era un `<Redirect href="/" />` in `/groups/<id>/index`, e sarebbe stata un bug: in uno stack le
+schermate **sotto** quella a fuoco restano montate, quindi quel redirect scatterebbe anche mentre si
+guarda `/groups/<id>/manage`, che sta nello stesso stack, chiudendo la gestione appena aperta. Un
+componente condiviso non naviga. La differenza fra le due rotte è solo chi decide il gruppo: il
+registro in `/`, l'URL in `/groups/<id>` attraverso la guardia del layout, che è rimasta com'era.
+
+**Cambiare gruppo dal foglio fa `dismissTo('/')` prima di `select()`.** Se si sta guardando
+`/groups/<id>` la guardia di quel layout riporterebbe corrente il gruppo dell'URL, disfacendo il
+cambio all'istante. Si naviga prima, così quella guardia è già smontata quando il corrente cambia.
+`dismissTo` e non `replace`: dalla radice è già a posto e non impila nulla.
+
+**`GroupPicker` è un componente e due contenitori**, come chiedeva il documento: il foglio
+(`GroupSwitcherSheet`) e lo stato vuoto «nessun gruppo» a piena pagina. Due copie divergerebbero, e
+la prima cosa a divergere sarebbe un ingresso dimenticato in una delle due.
+
+**Il foglio è una `Modal` di React Native, non `@gorhom/bottom-sheet`.** Quello porterebbe
+`react-native-reanimated` e `react-native-gesture-handler`, due moduli nativi: una build EAS nuova
+per un'animazione, con una sola development build installata sul telefono. Si paga quando servirà
+trascinare il foglio col dito, non prima.
+
+**La quota per riga non passa da `computeBalances`** — la correzione n. 3 qui sotto, applicata:
+`features/expenses/share.ts` è `amountCents - shares[me]` se ho pagato io, `-shares[me]` altrimenti.
+O(1) per riga, nessuna prop da propagare. Il test ha trovato subito un difetto vero: `-shares[me]`
+con quota zero dà **`-0`**, che non è `0`, e un `Math.sign` a valle lo leggerebbe come debito.
+
+**Il gruppo non ha un colore nello schema, e non gliene è stato aggiunto uno.** La pill lo vuole:
+`groupColor(vaultId)` lo deriva dal `vaultId`, che è già lì, stabile e **uguale sui due telefoni** —
+quindi lo stesso gruppo ha lo stesso colore su entrambi, senza un update Yjs né una domanda a chi
+crea un gruppo. Terza famiglia di colori, distinta da persone e categorie perché nell'header le tre
+cose compaiono insieme; e nel quadratino c'è sempre l'iniziale, quindi il colore non porta mai
+l'identità da solo.
+
+**`numeric` non compilava, e nessuno lo sapeva.** Il token è nato al passo 1 con `as const`, che
+rende `fontVariant` un tuple `readonly` mentre `TextStyle` lo vuole mutabile. È rimasto invisibile
+per tre passi perché **nessuno lo applicava**: il primo `Text` che l'ha usato è stato anche il primo
+a non compilare. Ora è tipizzato `Pick<TextStyle, 'fontVariant'>`.
+
+**`Screen.onTitlePress` è stato smontato.** Serviva al nome del gruppo come titolo toccabile verso la
+gestione; adesso il gruppo è una pill che apre il selettore, e alla gestione porta il bottone con le
+leve. Era il suo unico chiamante.
+
+**Il sottotitolo ricco delle righe vale solo per il gruppo aperto** — quinta correzione al documento,
+che lo mostra su ogni riga. Spese e totali stanno dentro il documento Yjs di quel gruppo, e di
+documenti ne è montato **uno solo per volta**: riempirlo su tutte le righe vorrebbe dire aprire ogni
+vault, N chiavi dal portachiavi e il motore di sync da riassegnare. Le altre righe tengono il
+`vault <short>`, che è comunque ciò che distingue due gruppi con lo stesso nome.
 
 **Il passo 5 riscrive `stats.tsx` in forma registro**, senza toccare `packages/core`: lo stepper
 del mese diventa l'header della schermata (`Screen header=`, come già per Tu), l'importo del mese è
@@ -291,6 +351,14 @@ la lista si è accorciata parecchio, ma non è vuota:
   nuovo non riappaia nulla di prima. Da guardare anche il caso con un gruppo aperto e il motore che
   gira: fra il tocco e l'onboarding devono passare frazioni di secondo, non secondi, e nessun errore
   deve comparire in console mentre il motore si spegne
+- **Il passo 6 del redesign, ed è quello con più modi di fallire in silenzio.** Tre cose in
+  particolare: che **un invito ricevuto in chat apra ancora `/groups/<id>` col gruppo giusto** — la
+  radice del tab è cambiata, gli URL no, e questa è la terza volta che quella prova viene rimandata;
+  che cambiare gruppo dal foglio **non torni indietro da solo** quando si parte da `/groups/<id>`
+  (è il `dismissTo` prima del `select`, e a occhio si vede subito); e che il gesto «indietro» dalla
+  radice esca dall'app invece di finire su una schermata vuota, ora che sotto le spese non c'è più
+  l'elenco. Da guardare anche la `Modal` del foglio su Android: è l'unica dell'app che arriva dal
+  basso, e la tab bar le sta sotto
 - **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
   rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
   l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima
@@ -305,41 +373,48 @@ su un dispositivo Android reale.
 
 ## Trappole già risolte — da non riscoprire
 
-| Trappola                                                                                             | Soluzione adottata                                                                                    |
-| ---------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `TextEncoder` non esiste su Hermes                                                                   | UTF-8 scritta in `crypto/encoding.ts`; vietato l'import da noble                                      |
-| Yjs non fa il bundle su RN (`lib0` → `isomorphic-webcrypto`, fermo al 2022)                          | Alias in `metro.config.js` verso uno shim su `expo-crypto`                                            |
-| `storage.deleteAll()` su Durable Object SQLite cancella anche le tabelle                             | `ensureSchema()` subito dopo, con test di regressione                                                 |
-| Un blob corrotto blocca **tutti** gli update successivi di quel device                               | Ripubblicazione dello stato completo al rilevamento                                                   |
-| TypeScript bloccato a 6.x                                                                            | `typescript-eslint` dichiara peer `typescript <6.1.0`                                                 |
-| Nella flat config ESLint vince l'ultima regola                                                       | Gli override vanno **dopo** il blocco generale                                                        |
-| Metro annunciava `127.0.0.1` come host del bundle                                                    | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                                                             |
-| expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera           | `expo-camera`, `expo-file-system`, `expo-sharing` con `require` in `try/catch`                        |
-| **`expo start` dalla root del monorepo**: 404 su ogni bundle, app muta                               | Avviarlo **sempre** da `apps/mobile`; è costato giorni                                                |
-| Due copie di React (`expo-*` dichiara `"react": "*"`)                                                | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede                                       |
-| `DELETE FROM sync_pending` senza `WHERE`: con due gruppi cancella la coda offline dell'altro         | Colonna `vault_id` ovunque, e un test su SQLite vero — con un finto motore passerebbe comunque        |
-| I tipi delle rotte expo-router non li rigenera `expo export`, ma `expo start`                        | Sono in `.expo/types/`, gitignorato: in CI non esistono e il typecheck passa lo stesso                |
-| **expo-router non espone il fragment**: `useLocalSearchParams` vede il percorso e la query           | La rotta `/join` legge il link grezzo con `Linking.useLinkingURL()`                                   |
-| Uscire da un gruppo **mai sincronizzato**: `no such table: sync_state`                               | `SqliteSyncStore.forget` passa dallo stesso `ensureSchema` di `open`                                  |
-| La schermata del gruppo riselezionava il gruppo **appena abbandonato**: app ferma sul caricamento    | Guardia nella schermata **e** in `select`, che rifiuta un `vaultId` non nel registro                  |
-| Spostare rotte con `.expo/types/` gitignorato: gli href obsoleti passano typecheck **e** lint        | Grep sugli href, poi `expo start` per rigenerare i tipi e `tsc` **con quei tipi presenti**            |
-| **SecureStore non sa elencare i propri slot**: cancellare `groups` per primo orfanerebbe le chiavi   | `wipeDevice` legge `registry.list()` come primissima operazione, prima di qualunque DELETE            |
-| Dopo `DELETE FROM app_meta`, `ensureSchema` scambia le tabelle di sync per quelle del vecchio schema | Innocuo di proposito: a quel punto sono vuote e `SqliteSyncStore.open` le ricrea — scritto nel codice |
+| Trappola                                                                                                      | Soluzione adottata                                                                                    |
+| ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `TextEncoder` non esiste su Hermes                                                                            | UTF-8 scritta in `crypto/encoding.ts`; vietato l'import da noble                                      |
+| Yjs non fa il bundle su RN (`lib0` → `isomorphic-webcrypto`, fermo al 2022)                                   | Alias in `metro.config.js` verso uno shim su `expo-crypto`                                            |
+| `storage.deleteAll()` su Durable Object SQLite cancella anche le tabelle                                      | `ensureSchema()` subito dopo, con test di regressione                                                 |
+| Un blob corrotto blocca **tutti** gli update successivi di quel device                                        | Ripubblicazione dello stato completo al rilevamento                                                   |
+| TypeScript bloccato a 6.x                                                                                     | `typescript-eslint` dichiara peer `typescript <6.1.0`                                                 |
+| Nella flat config ESLint vince l'ultima regola                                                                | Gli override vanno **dopo** il blocco generale                                                        |
+| Metro annunciava `127.0.0.1` come host del bundle                                                             | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                                                             |
+| expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera                    | `expo-camera`, `expo-file-system`, `expo-sharing` con `require` in `try/catch`                        |
+| **`expo start` dalla root del monorepo**: 404 su ogni bundle, app muta                                        | Avviarlo **sempre** da `apps/mobile`; è costato giorni                                                |
+| Due copie di React (`expo-*` dichiara `"react": "*"`)                                                         | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede                                       |
+| `DELETE FROM sync_pending` senza `WHERE`: con due gruppi cancella la coda offline dell'altro                  | Colonna `vault_id` ovunque, e un test su SQLite vero — con un finto motore passerebbe comunque        |
+| I tipi delle rotte expo-router non li rigenera `expo export`, ma `expo start`                                 | Sono in `.expo/types/`, gitignorato: in CI non esistono e il typecheck passa lo stesso                |
+| **expo-router non espone il fragment**: `useLocalSearchParams` vede il percorso e la query                    | La rotta `/join` legge il link grezzo con `Linking.useLinkingURL()`                                   |
+| Uscire da un gruppo **mai sincronizzato**: `no such table: sync_state`                                        | `SqliteSyncStore.forget` passa dallo stesso `ensureSchema` di `open`                                  |
+| La schermata del gruppo riselezionava il gruppo **appena abbandonato**: app ferma sul caricamento             | Guardia nella schermata **e** in `select`, che rifiuta un `vaultId` non nel registro                  |
+| Spostare rotte con `.expo/types/` gitignorato: gli href obsoleti passano typecheck **e** lint                 | Grep sugli href, poi `expo start` per rigenerare i tipi e `tsc` **con quei tipi presenti**            |
+| **SecureStore non sa elencare i propri slot**: cancellare `groups` per primo orfanerebbe le chiavi            | `wipeDevice` legge `registry.list()` come primissima operazione, prima di qualunque DELETE            |
+| Dopo `DELETE FROM app_meta`, `ensureSchema` scambia le tabelle di sync per quelle del vecchio schema          | Innocuo di proposito: a quel punto sono vuote e `SqliteSyncStore.open` le ricrea — scritto nel codice |
+| **Un `<Redirect>` in una schermata di stack scatta anche quando non è a fuoco**: quelle sotto restano montate | Componente condiviso fra le due rotte, che non naviga — vedi `GroupHome` (passo 6)                    |
+| Cambiare gruppo mentre si è su `/groups/<id>`: la guardia del layout lo riporta indietro subito               | `dismissTo('/')` **prima** di `select()`, così la guardia è già smontata                              |
+| Un token di stile con `as const` non è assegnabile a `TextStyle` (`fontVariant` diventa `readonly`)           | Tipizzarlo `Pick<TextStyle, …>`; e un token che nessuno usa non compila senza che nessuno lo sappia   |
+| `-shares[me]` con quota zero dà `-0`, che non è `0` e a valle si legge come debito                            | `net === 0 ? 0 : net` in `yourShareCents`, con il test che lo fissa                                   |
 
 ## Dove sta ogni schermata (Step 18, 19 e 20)
 
 Quattro tab: **Gruppi** 👥 · **Grafici** 📊 · **Impostazioni** ⚙️ · **Profilo** 🙂. Il primo non è
 una schermata ma uno **stack**: elenco dei gruppi → gruppo aperto.
 
-> Il redesign visivo, passo 4, ha portato Impostazioni e Profilo a un solo tab, **Tu** — vedi
-> [Redesign visivo](#redesign-visivo). Il resto di questa sezione descrive l'architettura di
-> instradamento di allora, che quel passo non ha cambiato: resta valida per i tab Gruppi e Grafici,
-> e per tutto quello che sta sotto `app/(gruppo)/`.
+> **Due cose sono cambiate dopo**, e stanno in [Redesign visivo](#redesign-visivo): il passo 4 ha
+> portato Impostazioni e Profilo a un solo tab, **Tu** (tre tab, non quattro); il passo 6 ha
+> invertito lo stack del primo tab — la radice sono **le spese del gruppo aperto**, e l'elenco dei
+> gruppi è un foglio. Tutto il resto di questa sezione è ancora valido, **compresi gli URL**, che
+> nessuno dei due passi ha toccato: è la ragione per cui sono descritti con tanta cura.
 
 ```
-app/(tabs)/(gruppi)/index.tsx                      "/"                     elenco dei gruppi
+app/(tabs)/(gruppi)/index.tsx                      "/"                     le spese del gruppo aperto
+                                                                           (era l'elenco: passo 6)
 app/(tabs)/(gruppi)/groups/[vaultId]/_layout.tsx                           guardia di selezione
-app/(tabs)/(gruppi)/groups/[vaultId]/index.tsx     "/groups/<id>"          le spese del gruppo
+app/(tabs)/(gruppi)/groups/[vaultId]/index.tsx     "/groups/<id>"          le spese del gruppo dell'URL
+                                                                           stesso componente della radice
 app/(tabs)/(gruppi)/groups/[vaultId]/manage.tsx    "/groups/<id>/manage"   nome, persone, invito, uscita
                                                                            + le cinque NavCard qui sotto
 app/(gruppo)/_layout.tsx                                                   guardia «serve un gruppo»
@@ -369,8 +444,10 @@ app/azzera.tsx                                     "/azzera"               fuori
 - **La guardia che rende corrente il gruppo sta nel layout**, non nelle schermate: gira una volta per
   gruppo, e spese e gestione la ereditano. Sotto di essa il runtime del vault è per costruzione quello
   del `vaultId` nell'URL.
-- **Il gruppo non è più una pill da leggere**: è il **titolo** della schermata delle spese, e toccarlo
-  porta alla sua gestione.
+- ~~**Il gruppo non è più una pill da leggere**: è il **titolo** della schermata delle spese.~~
+  **Rovesciato dal passo 6 del redesign:** il gruppo è tornato una pill, che però adesso **si tocca**
+  e apre il selettore in un foglio; alla gestione porta il bottone con le leve accanto. La pill che
+  lo Step 18 aveva tolto era di sola lettura, ed era quello il difetto.
 - `unstable_settings = { initialRouteName: 'index' }` in entrambi i layout: senza, chi arriva a
   `/groups/<id>` da un link non ha nulla sotto nello stack, e «indietro» esce dall'app.
 - **`app/(gruppo)/` è una guardia, non un tab.** Il suo layout controlla che un gruppo aperto esista
