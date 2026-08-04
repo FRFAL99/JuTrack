@@ -42,7 +42,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 2 — Icone                  | ✅    | Feather al posto delle emoji, mappa emoji→icona in `seed.ts`    |
 | 3 — Componenti nuovi       | ✅    | `SectionLabel`, `ListRow`, `AvatarStack`, `Card` a varianti     |
 | 4 — Tu                     | ✅    | Fusione profilo + impostazioni, da quattro tab a tre            |
-| 5 — Grafici                | ⬜    | Riscrittura in forma registro, barre ritoccate                  |
+| 5 — Grafici                | ✅    | Riscrittura in forma registro, barre ritoccate                  |
 | 6 — Spese home + selettore | ⬜    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ⬜    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
@@ -94,8 +94,25 @@ maiuscoletta — dove si legge (grafici, selettore gruppi, Tu). Regola unica: **
 schermata**. Il redesign passa da quattro tab a tre, e non tocca `packages/core`, lo schema Yjs,
 sync, crypto, relay, backup, export né azzeramento.
 
-**Un passo per sessione**, come per i piani precedenti. Passi 1 (token), 2 (icone), 3 (componenti) e
-4 (Tu) chiusi.
+**Un passo per sessione**, come per i piani precedenti. Passi 1 (token), 2 (icone), 3 (componenti),
+4 (Tu) e 5 (Grafici) chiusi.
+
+**Il passo 5 riscrive `stats.tsx` in forma registro**, senza toccare `packages/core`: lo stepper
+del mese diventa l'header della schermata (`Screen header=`, come già per Tu), l'importo del mese è
+l'unico numero grande (`fontSize.display`/`fontWeight.heavy` — nuovo, **800**, perché a quella
+scala anche `bold` a 700 si legge sottile), e `MonthlyBars`/`CategoryBars` perdono il contenitore a
+card. `CategoryBars` perde anche l'icona di categoria: colore della barra e nome bastano, ed era
+l'unico punto in cui l'icona ripeteva un'informazione già data dal colore. `BudgetRows` resta
+**invariata** di proposito, com'è scritto nel documento.
+
+**`EmptyState` accetta un nodo oltre a un'emoji.** `icon` era `string`, reso sempre come `<Text>`;
+ora accetta anche un `ReactNode` — usato dai due stati vuoti dei Grafici per un'icona Feather
+(`bar-chart-2`, `colors.textFaint`) — e i tre chiamanti rimasti (`GroupRequired`, l'elenco spese di
+un gruppo, la spesa non trovata) continuano a passare un'emoji senza toccare una riga.
+
+**Il bottone "Pareggia"/"Storico" è un componente locale**, non `Button`: quest'ultimo è pensato a
+piena larghezza, e qui serve un tocco compatto accanto a una riga di testo. Non è salito fra i
+componenti condivisi perché lo usa una sola schermata.
 
 **Il passo 4 fonde `profile.tsx` e `settings.tsx` in `tu.tsx`.** Tre tab invece di quattro: il tab
 Impostazioni sparisce, e con lui il file omonimo — che però **non si cancella**, diventa un

@@ -11,7 +11,7 @@ interface MonthlyBarsProps {
   onSelect: (month: string) => void;
 }
 
-const CHART_HEIGHT = 120;
+const CHART_HEIGHT = 100;
 
 /**
  * Andamento mese per mese.
@@ -30,7 +30,7 @@ export function MonthlyBars({ months, selected, onSelect }: MonthlyBarsProps) {
 
   return (
     <View style={{ gap: spacing.sm }}>
-      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: CHART_HEIGHT }}>
+      <View style={{ flexDirection: 'row', alignItems: 'flex-end', gap: 9, height: CHART_HEIGHT }}>
         {months.map((month) => {
           const isSelected = month.month === selected;
           const isPeak = peak > 0 && month.totalCents === peak;
@@ -63,8 +63,7 @@ export function MonthlyBars({ months, selected, onSelect }: MonthlyBarsProps) {
                   // Una traccia minima anche a zero: una barra assente e una barra
                   // piccolissima direbbero la stessa cosa, e sono cose diverse.
                   height: Math.max(2, height),
-                  borderTopLeftRadius: 4,
-                  borderTopRightRadius: 4,
+                  borderRadius: 3,
                   backgroundColor: isSelected
                     ? colors.accent
                     : month.totalCents === 0

@@ -1,6 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { formatMoney, type Category, type CategoryTotal } from '@jutrack/core';
-import { CategoryIcon } from '@/features/categories/CategoryIcon';
 import { useTheme } from '@/theme';
 import { formatShare } from './format';
 
@@ -10,12 +9,12 @@ interface CategoryBarsProps {
 }
 
 /**
- * Ripartizione della spesa per categoria.
+ * Ripartizione della spesa per categoria, in forma registro.
  *
- * Ogni barra porta il proprio nome, la propria icona e il proprio importo: l'identità non
- * è affidata al colore, che serve solo da rinforzo. È la ragione per cui il grafico resta
- * leggibile anche per chi non distingue due tinte vicine — e perché le barre possono
- * essere ordinate per importo senza che l'ordine renda ambiguo il colore.
+ * Niente icona: il colore della barra e il nome bastano a distinguere le voci, ed era
+ * l'unico posto in cui l'icona ripeteva un'informazione già data dal colore stesso. La
+ * percentuale sta a sinistra, a larghezza fissa, perché è il numero che si confronta voce
+ * per voce — l'importo, che si legge una riga alla volta, sta a destra.
  */
 export function CategoryBars({ totals, categories }: CategoryBarsProps) {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
@@ -36,7 +35,9 @@ export function CategoryBars({ totals, categories }: CategoryBarsProps) {
         return (
           <View key={total.categoryId ?? 'none'} style={{ gap: spacing.xs }}>
             <View style={styles.row}>
-              <CategoryIcon icon={category?.icon} color={color} size={14} />
+              <Text style={{ width: 26, color: colors.textMuted, fontSize: fontSize.xs }}>
+                {formatShare(total.share)}
+              </Text>
               <Text
                 numberOfLines={1}
                 style={{ flex: 1, color: colors.text, fontSize: fontSize.sm }}
@@ -52,27 +53,17 @@ export function CategoryBars({ totals, categories }: CategoryBarsProps) {
               >
                 {formatMoney(total.totalCents)}
               </Text>
-              <Text
-                style={{
-                  color: colors.textMuted,
-                  fontSize: fontSize.xs,
-                  minWidth: 34,
-                  textAlign: 'right',
-                }}
-              >
-                {formatShare(total.share)}
-              </Text>
             </View>
             <View
               accessible
               accessibilityLabel={`${name}: ${formatMoney(total.totalCents)}, ${formatShare(total.share)} del totale`}
-              style={{ height: 8, borderRadius: 4, backgroundColor: colors.surfacePressed }}
+              style={{ height: 3, borderRadius: 1.5, backgroundColor: colors.surfacePressed }}
             >
               <View
                 style={{
-                  height: 8,
+                  height: 3,
                   width: `${width}%`,
-                  borderRadius: 4,
+                  borderRadius: 1.5,
                   backgroundColor: color,
                 }}
               />
