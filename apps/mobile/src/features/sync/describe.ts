@@ -10,6 +10,20 @@ import type { SyncState } from '@jutrack/core';
  * credere all'utente che i due telefoni siano allineati quando non lo sono — e su
  * un'app di conti condivisi quella convinzione sbagliata è peggio dell'errore stesso.
  */
+export type SyncTone = 'ok' | 'warn' | 'muted';
+
+/**
+ * A quale semantica appartiene una fase, indipendente dal colore vero e proprio: lo sceglie
+ * chi disegna, da `colors.income`/`colors.warning`/`colors.textMuted` o equivalenti. Estratta
+ * perché due punti la leggono (il pallino di `SyncBadge` e quello nudo del tab Tu) e non
+ * doveva divergere fra i due.
+ */
+export function syncTone(phase: SyncState['phase']): SyncTone {
+  if (phase === 'error' || phase === 'offline' || phase === 'blocked') return 'warn';
+  if (phase === 'synced') return 'ok';
+  return 'muted';
+}
+
 export function describeSync(state: SyncState, now = Date.now()): { icon: string; text: string } {
   switch (state.phase) {
     case 'idle':

@@ -1,7 +1,7 @@
 import { Text, View } from 'react-native';
 import type { SyncState } from '@jutrack/core';
 import { useTheme } from '@/theme';
-import { describeSync } from './describe';
+import { describeSync, syncTone } from './describe';
 
 export { describeSync };
 
@@ -10,12 +10,8 @@ export function SyncBadge({ state }: { state: SyncState }) {
   const { colors, spacing, fontSize } = useTheme();
   const { icon, text } = describeSync(state);
 
-  const color =
-    state.phase === 'error' || state.phase === 'offline' || state.phase === 'blocked'
-      ? colors.warning
-      : state.phase === 'synced'
-        ? colors.income
-        : colors.textMuted;
+  const tone = syncTone(state.phase);
+  const color = tone === 'warn' ? colors.warning : tone === 'ok' ? colors.income : colors.textMuted;
 
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.xs }}>
