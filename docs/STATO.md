@@ -1,7 +1,8 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-02 — **i tre piani funzionali sono finiti** (resta la prova sul campo) ed è
-cominciato il **redesign visivo**, che ha un documento suo: [visualdesign.md](visualdesign.md).
+Aggiornato: 2026-08-04 — **i tre piani funzionali e il redesign visivo sono finiti nel codice.**
+Tutti e sette i passi del redesign sono chiusi ([visualdesign.md](visualdesign.md)). **Quello che
+resta, per tutto quanto, è la prova su due telefoni veri**: non c'è più codice previsto in attesa.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -44,9 +45,15 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 4 — Tu                     | ✅    | Fusione profilo + impostazioni, da quattro tab a tre            |
 | 5 — Grafici                | ✅    | Riscrittura in forma registro, barre ritoccate                  |
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
-| 7 — Nuova spesa            | ⬜    | Riscrittura del form: importo → chi/come → categoria → dettagli |
+| 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**623 test verdi** (387 core + 193 app + 43 relay), typecheck, lint e `format:check` puliti.
+**641 test verdi** (387 core + 211 app + 43 relay), typecheck, lint e `format:check` puliti.
+
+> **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
+> non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
+> funzionali, ma questa volta pesa di più — i passi 4, 6 e 7 hanno rifatto le tre schermate che si
+> aprono più spesso, e il 6 ha spostato la radice del primo tab. Cosa provare, in ordine di rischio,
+> in [Cosa non è ancora stato verificato su hardware reale](#cosa-non-è-ancora-stato-verificato-su-hardware-reale).
 
 **I piani chiusi sono due.** Il piano originale (Step 0–9), e
 [piano-v2-profili-gruppi-sync.md](piano-v2-profili-gruppi-sync.md) (**Step 10–14**), nato dalla prima
@@ -60,21 +67,23 @@ pure** — erano i due step più delicati del piano, quelli che potevano rompere
 da un invito, e sono chiusi entrambi con gli URL intatti (vedi sotto) — la riorganizzazione dei tab
 anche, il gruppo di default non c'è più, e «Azzera questo telefono» adesso azzera davvero.
 
-**Il lavoro in corso è il redesign visivo**, non un piano v4 funzionale: vedi
-[visualdesign.md](visualdesign.md) e la sezione [Redesign visivo](#redesign-visivo) qui sotto. Il
-seguito naturale sul fronte funzionale resta
+**Anche il redesign visivo è chiuso** — sette passi su sette: vedi
+[visualdesign.md](visualdesign.md) e la sezione [Redesign visivo](#redesign-visivo) qui sotto. **Non
+c'è un quarto piano, e non è il momento di scriverne uno:** il seguito è
 [la prova sui due telefoni](piano-v3-tab-gruppi-azzeramento-sync.md#criterio-di-fatto-end-to-end),
-che è ciò che manca a tutti e tre i piani; le WebSocket sul Durable Object restano una possibilità
-dichiarata fuori perimetro, **da valutare solo dopo** aver provato sul campo la taratura degli Step
-16 e 17.
+che manca a tutti e tre i piani e ora anche al redesign. Le WebSocket sul Durable Object restano una
+possibilità dichiarata fuori perimetro, **da valutare solo dopo** aver provato sul campo la taratura
+degli Step 16 e 17.
 
-> **Non resta codice da scrivere per nessuno dei tre piani, resta la prova sul campo.** Dallo Step 10 in poi
-> nulla è mai stato visto funzionare su un telefono: quello che manca è il [criterio di «fatto»
-> end-to-end](piano-v2-profili-gruppi-sync.md#criterio-di-fatto-end-to-end) su due dispositivi
-> fisici. Finché non è stato fatto, «i test passano» e «funziona» restano due frasi diverse. **Gli
-> Step 18 e 19 hanno appena spostato tutte le rotte dell'app**: gli URL sono rimasti quelli di prima
-> e i tipi generati da expo-router lo confermano, ma è una ragione in più per farla adesso. Gli
-> spostamenti di file sono finiti: da qui in poi la struttura delle rotte non si tocca più.
+> **Non resta codice da scrivere: resta la prova sul campo.** Vale per i tre piani e ora anche per il
+> redesign. Dallo Step 10 in poi nulla è mai stato visto funzionare su un telefono: quello che manca è
+> il [criterio di «fatto» end-to-end](piano-v2-profili-gruppi-sync.md#criterio-di-fatto-end-to-end) su
+> due dispositivi fisici. Finché non è stato fatto, «i test passano» e «funziona» restano due frasi
+> diverse — e adesso la distanza fra le due è più larga di prima, perché **i passi 4, 6 e 7 hanno
+> rifatto le tre schermate che si aprono più spesso** e il 6 ha spostato la radice del primo tab. Gli
+> URL sono rimasti quelli di prima e i tipi generati da expo-router lo confermano a ogni passo, ma è
+> una ragione in più per farla adesso, non una in meno. Gli spostamenti di file sono finiti: da qui in
+> poi la struttura delle rotte non si tocca più.
 >
 > **Con un telefono solo si fa quasi tutto lo stesso:** `npm run prova` esegue la checklist da sola
 > — due dispositivi senza schermo che montano **i moduli veri dell'app** su SQLite vero contro il
@@ -94,9 +103,44 @@ maiuscoletta — dove si legge (grafici, selettore gruppi, Tu). Regola unica: **
 schermata**. Il redesign passa da quattro tab a tre, e non tocca `packages/core`, lo schema Yjs,
 sync, crypto, relay, backup, export né azzeramento.
 
-**Un passo per sessione**, come per i piani precedenti. Passi 1 (token), 2 (icone), 3 (componenti),
-4 (Tu), 5 (Grafici) e 6 (spese home + selettore) chiusi. **Resta il passo 7**, la riscrittura del
-form di nuova spesa.
+**Un passo per sessione**, come per i piani precedenti. **Tutti e sette chiusi.**
+
+### Il passo 7 ha riscritto il form della spesa
+
+L'ordine adesso è **importo → chi e come → categoria → dettagli**, che è l'ordine in cui la spesa
+viene detta a voce. Prima era importo, descrizione, categoria, chi ha pagato, come si divide: la
+parte sui soldi stava in due tronconi separati dal resto, ed è la schermata che si apre più spesso.
+
+**Il salva non sta più in alto**, ma a piena larghezza in fondo, dove arriva il pollice. In cima
+resta solo la x per uscire: `ModalScreen` ha una prop `compact` — x tonda a sinistra, titolo al
+centro — usata da queste due rotte e da nessun'altra delle quattordici, perché altrove il pulsante
+in alto **è** l'unico modo di uscire.
+
+**L'importo è la card eroe e la cifra è il campo**: si tocca il numero, non un riquadro attorno.
+Sotto ogni persona compare la quota che le toccherebbe, aggiornata mentre si scrive — è ciò che rende
+visibile la differenza fra le tre modalità senza provarle una per una. Il riquadro selezionato prende
+il **colore del membro**, non l'accento, così dice _chi_ e non solo _scelto_.
+
+**Due etichette del mockup erano false, e non sono state copiate** — sesta e settima correzione al
+documento:
+
+- **«Metà e metà» è vero solo in due.** In tre sarebbe falso, e su un'app di conti una frase falsa
+  accanto a un numero è peggio di una lunga: `splitModeLabel` dice «Metà e metà» con due membri e
+  «In parti uguali` da tre in su.
+- **«Tutto mio» è falso quando ha pagato un altro.** La modalità `single` mette la spesa a carico di
+  **chi ha pagato**, e una spesa pagata da un altro si può registrare. L'etichetta è «Solo chi paga»,
+  vera in entrambi i casi.
+
+**La data resta non modificabile, com'era prima.** Un selettore di date vuole
+`@react-native-community/datetimepicker`, cioè un modulo nativo, cioè una build EAS nuova. La riga la
+**mostra** — su una spesa vecchia dice di quale giorno si parla — e non finge di essere toccabile.
+
+**`describeGap` e `splitPreview` sono usciti dal componente** in `features/expenses/split-text.ts`,
+dove hanno dei test: stavano in `ExpenseForm.tsx` senza, e `splitPreview` ha il caso del centesimo di
+resto (10,00 € in tre fa 3,34 / 3,33 / 3,33), che è esattamente il tipo di cosa che si vuole fissata.
+
+**La logica di calcolo non è cambiata:** `parseAmount`, `buildSplit`, la validazione delle quote e la
+costruzione dello `split` sono quelle di prima, riga per riga. È un passo di impaginazione.
 
 ### Il passo 6 ha invertito la radice del primo tab
 
@@ -293,7 +337,16 @@ relay in produzione, invito di pairing, QR, fotocamera.
 ## Cosa non è ancora stato verificato su hardware reale
 
 Va detto con precisione, perché è la differenza fra «testato» e «funzionante». Dopo la diagnostica
-la lista si è accorciata parecchio, ma non è vuota:
+la lista si è accorciata parecchio, ma non è vuota — e con il redesign chiuso è tornata a essere
+**la sola cosa che resta da fare su questo progetto**.
+
+> **Da dove cominciare, se si ha un telefono in mano e mezz'ora.** Nell'ordine, perché è l'ordine in
+> cui un guasto rende inutile provare il resto: **(1)** l'app si apre e la home mostra le spese del
+> gruppo giusto (passo 6); **(2)** si registra una spesa e ricompare nella lista col totale giusto
+> (passo 7); **(3)** un invito mandato in chat apre `/groups/<id>` sul gruppo giusto sull'**altro**
+> telefono; **(4)** la spesa compare sull'altro telefono, **e in entrambi i versi** — è il criterio
+> di «fatto» che manca a tutti e tre i piani. I punti 1 e 2 si provano con un telefono solo; i punti
+> 3 e 4 sono quelli che non sono mai stati visti funzionare.
 
 - Il ciclo di sync completo **fra due telefoni fisici**: provato una volta e **fallito** (una sola
   direzione, con ritardi di parecchi secondi, e membri duplicati). Le cause sono state corrette agli
@@ -308,7 +361,8 @@ la lista si è accorciata parecchio, ma non è vuota:
 - Che `expo-sqlite` **persista fra due riavvii** dell'app: la diagnostica scrive e rilegge nella
   stessa sessione, che è meno
 - Le **schermate degli Step 7, 8 e 9** — statistiche, budget, pareggi, quote libere, export, backup
-  della chiave — mai toccate con un dito
+  della chiave — mai toccate con un dito. Statistiche e quote libere sono state anche **riscritte**
+  dal redesign (passi 5 e 7), quindi non è più solo «mai provate»: è codice nuovo mai provato
 - L'**APK autonomo** (profilo `preview`), che gira senza Metro: mai costruito
 - Il costo di `scrypt` con `logN = 16` su mobile (default da calibrare, in
   `packages/core/src/crypto/backup.ts`). La schermata di backup **misura e mostra** il tempo
@@ -359,6 +413,14 @@ la lista si è accorciata parecchio, ma non è vuota:
   radice esca dall'app invece di finire su una schermata vuota, ora che sotto le spese non c'è più
   l'elenco. Da guardare anche la `Modal` del foglio su Android: è l'unica dell'app che arriva dal
   basso, e la tab bar le sta sotto
+- **Il passo 7**, che è la schermata che si apre più spesso e l'unica in cui si **scrive** qualcosa
+  che finisce nel documento condiviso. Il rischio non è l'impaginazione ma la tastiera: che il
+  tastierino numerico non copra il bottone «Salva la spesa», che sta in fondo (il
+  `KeyboardAvoidingView` c'era già, ma prima il bottone non era l'ultima cosa della pagina); che
+  toccando la cifra da 46px si apra davvero il tastierino decimale e non quello intero; e che la nota,
+  che adesso è una riga che **diventa** un campo al tocco, salvi quello che si scrive quando si esce
+  dal campo invece di perderlo. Da verificare anche che la quota sotto ogni persona si aggiorni
+  mentre si digita, perché è il modo in cui la schermata spiega le tre modalità di divisione
 - **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
   rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
   l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima

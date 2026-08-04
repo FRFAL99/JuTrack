@@ -20,8 +20,10 @@ export default function NewExpenseScreen() {
   };
 
   return (
-    <ModalScreen title="Nuova spesa">
-      <ExpenseForm onSubmit={handleSubmit} submitLabel="Salva" />
+    // `compact`: la x tonda a sinistra e il titolo al centro, perché l'azione che conclude
+    // — «Salva la spesa» — è il bottone a piena larghezza in fondo al form.
+    <ModalScreen title="Nuova spesa" compact>
+      <ExpenseForm onSubmit={handleSubmit} submitLabel="Salva la spesa" />
     </ModalScreen>
   );
 }
