@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import {
   budgetStatuses,
   computeBalances,
+  formatCents,
   formatMoney,
   monthBounds,
   shiftMonth,
@@ -13,9 +15,9 @@ import {
   totalsByMonth,
 } from '@jutrack/core';
 import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
+import { SectionLabel } from '@/components/SectionLabel';
 import { currentMonth, formatMonthTitle } from '@/features/expenses/grouping';
 import { BudgetRows } from '@/features/stats/BudgetRows';
 import { CategoryBars } from '@/features/stats/CategoryBars';
@@ -46,14 +48,14 @@ const TREND_MONTHS = 6;
  * La guardia sta sopra il componente che lavora: tutti i suoi hook leggono il vault.
  */
 export default function StatsScreen() {
-  const { spacing } = useTheme();
+  const { colors, spacing } = useTheme();
   const group = useCurrentGroup();
 
   if (group === null) {
     return (
       <Screen title="Grafici">
         <EmptyState
-          icon="📊"
+          icon={<Feather name="bar-chart-2" size={26} color={colors.textFaint} />}
           title="Nessun gruppo aperto"
           hint="I grafici raccontano le spese di un gruppo. Aprine uno, o creane uno, e qui compariranno andamento, categorie e saldo."
         />
@@ -114,12 +116,13 @@ function StatsOfGroup() {
 
   const previous = trend[trend.length - 2]?.totalCents ?? 0;
   const nameOf = (id: string): string => members.find((m) => m.id === id)?.name ?? 'qualcuno';
+  const atCurrentMonth = month >= currentMonth();
 
   if (allExpenses.length === 0) {
     return (
       <Screen title="Grafici">
         <EmptyState
-          icon="📊"
+          icon={<Feather name="bar-chart-2" size={26} color={colors.textFaint} />}
           title="Ancora nessun dato"
           hint="Andamento mensile, ripartizione per categoria e saldo tra di voi appariranno qui una volta registrate le prime spese."
         />
@@ -127,89 +130,57 @@ function StatsOfGroup() {
     );
   }
 
+  const monthHeader = (
+    <View style={[styles.rowBetween, { paddingHorizontal: spacing.lg, paddingBottom: spacing.md }]}>
+      <Pressable
+        onPress={() => setMonth(shiftMonth(month, -1))}
+        accessibilityRole="button"
+        accessibilityLabel="Mese precedente"
+        hitSlop={12}
+      >
+        <Feather name="chevron-left" size={22} color={colors.accent} />
+      </Pressable>
+      <Text style={{ color: colors.text, fontSize: fontSize.sm, fontWeight: fontWeight.bold }}>
+        {formatMonthTitle(month)}
+      </Text>
+      <Pressable
+        onPress={() => setMonth(shiftMonth(month, 1))}
+        disabled={atCurrentMonth}
+        accessibilityRole="button"
+        accessibilityLabel="Mese successivo"
+        accessibilityState={{ disabled: atCurrentMonth }}
+        hitSlop={12}
+      >
+        <Feather
+          name="chevron-right"
+          size={22}
+          color={atCurrentMonth ? colors.textFaint : colors.accent}
+        />
+      </Pressable>
+    </View>
+  );
+
   return (
-    <Screen title="Grafici">
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
-        <Card style={{ gap: spacing.md }}>
-          <View style={styles.rowBetween}>
-            <MonthStep
-              label="‹"
-              hint="Mese precedente"
-              onPress={() => setMonth(shiftMonth(month, -1))}
-            />
-            <Text
-              style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-            >
-              {formatMonthTitle(month)}
-            </Text>
-            <MonthStep
-              label="›"
-              hint="Mese successivo"
-              onPress={() => setMonth(shiftMonth(month, 1))}
-              disabled={month >= currentMonth()}
-            />
-          </View>
-
-          <View style={{ alignItems: 'center', gap: 2 }}>
-            <Text
-              style={{ color: colors.text, fontSize: fontSize.xxl, fontWeight: fontWeight.bold }}
-            >
-              {formatMoney(monthTotal)}
-            </Text>
-            <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-              {describeChange(monthTotal, previous, formatMonthTitle(shiftMonth(month, -1)))}
-            </Text>
-          </View>
-        </Card>
-
-        {members.length > 1 && (
-          <Card style={{ gap: spacing.sm }}>
-            <Text
-              style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-            >
-              Fra di voi
-            </Text>
-            {transfers.length === 0 ? (
-              <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-                Siete pari. Nessuno deve niente a nessuno.
-              </Text>
-            ) : (
-              transfers.map((transfer) => (
-                <Text
-                  key={`${transfer.fromMember}-${transfer.toMember}`}
-                  style={{ color: colors.text, fontSize: fontSize.md, lineHeight: 24 }}
-                >
-                  {nameOf(transfer.fromMember)} deve{' '}
-                  <Text style={{ fontWeight: fontWeight.semibold }}>
-                    {formatMoney(transfer.amountCents)}
-                  </Text>{' '}
-                  a {nameOf(transfer.toMember)}
-                </Text>
-              ))
-            )}
-            <Button
-              label={transfers.length === 0 ? 'Storico dei pareggi' : 'Registra un pareggio'}
-              variant="secondary"
-              onPress={() => router.push('/settle')}
-            />
-          </Card>
-        )}
-
-        <Card style={{ gap: spacing.md }}>
+    <Screen header={monthHeader}>
+      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
+        <View style={{ alignItems: 'center', paddingHorizontal: spacing.lg, gap: 2 }}>
           <Text
-            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
+            style={{ color: colors.text, fontSize: fontSize.display, fontWeight: fontWeight.heavy }}
           >
-            Ultimi {TREND_MONTHS} mesi
+            {formatCents(monthTotal)} <Text style={{ color: colors.textMuted }}>€</Text>
           </Text>
+          <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
+            {describeChange(monthTotal, previous, formatMonthTitle(shiftMonth(month, -1)))}
+          </Text>
+        </View>
+
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
           <MonthlyBars months={trend} selected={month} onSelect={setMonth} />
-        </Card>
+        </View>
 
-        <Card style={{ gap: spacing.md }}>
-          <Text
-            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-          >
-            Dove sono finiti
-          </Text>
+        <Rule color={colors.border} />
+        <SectionLabel>Dove sono finiti</SectionLabel>
+        <View style={{ paddingHorizontal: spacing.lg }}>
           {byCategory.length === 0 ? (
             <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
               Nessuna spesa in {formatMonthTitle(month)}.
@@ -217,64 +188,126 @@ function StatsOfGroup() {
           ) : (
             <CategoryBars totals={byCategory} categories={categories} />
           )}
-        </Card>
+        </View>
 
-        <Card style={{ gap: spacing.md }}>
-          <View style={styles.rowBetween}>
-            <Text
-              style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-            >
-              Budget
-            </Text>
-            <Pressable
-              onPress={() => router.push('/budget')}
-              accessibilityRole="button"
-              hitSlop={8}
-            >
-              <Text style={{ color: colors.accent, fontSize: fontSize.sm }}>Imposta</Text>
-            </Pressable>
-          </View>
+        {members.length > 1 && (
+          <>
+            <Rule color={colors.border} />
+            <SectionLabel>Fra di voi</SectionLabel>
+            <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+              {transfers.length === 0 ? (
+                <View style={styles.rowBetween}>
+                  <Text style={{ flex: 1, color: colors.text, fontSize: fontSize.md }}>
+                    Siete pari. Nessuno deve niente a nessuno.
+                  </Text>
+                  <CompactButton label="Storico" onPress={() => router.push('/settle')} />
+                </View>
+              ) : (
+                transfers.map((transfer, index) => (
+                  <View
+                    key={`${transfer.fromMember}-${transfer.toMember}`}
+                    style={styles.rowBetween}
+                  >
+                    <Text style={{ flex: 1, color: colors.text, fontSize: fontSize.md }}>
+                      {nameOf(transfer.fromMember)} deve{' '}
+                      <Text style={{ color: colors.expense, fontWeight: fontWeight.semibold }}>
+                        {formatMoney(transfer.amountCents)}
+                      </Text>{' '}
+                      a {nameOf(transfer.toMember)}
+                    </Text>
+                    {index === transfers.length - 1 && (
+                      <CompactButton label="Pareggia" onPress={() => router.push('/settle')} />
+                    )}
+                  </View>
+                ))
+              )}
+            </View>
+          </>
+        )}
+
+        <Rule color={colors.border} />
+        <View
+          style={[
+            styles.rowBetween,
+            { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.sm },
+          ]}
+        >
+          <Text
+            style={{
+              color: colors.textMuted,
+              fontSize: fontSize.xxs,
+              fontWeight: fontWeight.bold,
+              letterSpacing: 1.3,
+              textTransform: 'uppercase',
+            }}
+          >
+            Budget
+          </Text>
+          <Pressable onPress={() => router.push('/budget')} accessibilityRole="button" hitSlop={8}>
+            <Text style={{ color: colors.accent, fontSize: fontSize.sm }}>Imposta</Text>
+          </Pressable>
+        </View>
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.xs }}>
           {budgetState.length === 0 ? (
-            <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
+            <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
               Nessun limite impostato per {formatMonthTitle(month)}. Un budget serve a sapere a metà
               mese se si sta esagerando, non a fine mese.
             </Text>
           ) : (
             <BudgetRows statuses={budgetState} categories={categories} />
           )}
-        </Card>
+        </View>
+
+        <View style={[styles.footer, { paddingHorizontal: spacing.lg, paddingTop: spacing.xl }]}>
+          <Feather name="lock" size={13} color={colors.textFaint} />
+          <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+            Calcolato su questo telefono
+          </Text>
+        </View>
       </ScrollView>
     </Screen>
   );
 }
 
-function MonthStep({
-  label,
-  hint,
-  onPress,
-  disabled = false,
-}: {
-  label: string;
-  hint: string;
-  onPress: () => void;
-  disabled?: boolean;
-}) {
-  const { colors, fontSize } = useTheme();
+/** Bottone secondario in miniatura: per un'azione che accompagna una riga di testo, non
+ *  ne prende il posto. `Button` è pensato a piena larghezza — qui basta un tocco comodo. */
+function CompactButton({ label, onPress }: { label: string; onPress: () => void }) {
+  const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   return (
-    <Pressable
-      onPress={onPress}
-      disabled={disabled}
-      accessibilityRole="button"
-      accessibilityLabel={hint}
-      accessibilityState={{ disabled }}
-      hitSlop={12}
-      style={{ paddingHorizontal: 8, opacity: disabled ? 0.3 : 1 }}
-    >
-      <Text style={{ color: colors.accent, fontSize: fontSize.lg }}>{label}</Text>
+    <Pressable onPress={onPress} accessibilityRole="button">
+      {({ pressed }) => (
+        <View
+          style={{
+            backgroundColor: pressed ? colors.surfacePressed : colors.surface,
+            borderWidth: StyleSheet.hairlineWidth,
+            borderColor: colors.border,
+            borderRadius: radius.md,
+            paddingVertical: spacing.xs + 2,
+            paddingHorizontal: spacing.md,
+          }}
+        >
+          <Text
+            style={{ color: colors.text, fontSize: fontSize.sm, fontWeight: fontWeight.medium }}
+          >
+            {label}
+          </Text>
+        </View>
+      )}
     </Pressable>
+  );
+}
+
+/** Filetto che separa due blocchi del registro. */
+function Rule({ color }: { color: string }) {
+  const { spacing } = useTheme();
+  return (
+    <View
+      style={{ height: StyleSheet.hairlineWidth, backgroundColor: color, marginTop: spacing.lg }}
+    />
   );
 }
 
 const styles = StyleSheet.create({
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  footer: { flexDirection: 'row', alignItems: 'center', gap: 6 },
 });

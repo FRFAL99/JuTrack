@@ -43,6 +43,8 @@ export const fontWeight = {
   medium: '500',
   semibold: '600',
   bold: '700',
+  /** Solo per l'importo eroe (`fontSize.display`): a quella scala anche `bold` si legge sottile. */
+  heavy: '800',
 } as const;
 
 /**
