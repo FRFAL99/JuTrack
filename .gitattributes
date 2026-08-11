@@ -1,0 +1,16 @@
+# Fine riga: LF ovunque, nel repo e nella copia di lavoro.
+#
+# `.editorconfig` dichiara già `end_of_line = lf`, ma vale solo per l'editor: non
+# tocca la conversione che git fa in checkout. Su Windows `core.autocrlf = true` è
+# il default di Git for Windows, e senza questo file scrive tutto in CRLF — che
+# Prettier, configurato con `endOfLine: "lf"`, poi segnala come 200+ file da
+# riformattare. La CI gira su Linux e non lo vede: il problema compare solo
+# clonando su Windows.
+#
+# `eol=lf` ha la precedenza su `core.autocrlf`, quindi risolve per chiunque cloni,
+# senza chiedere a nessuno di configurare il proprio git.
+* text=auto eol=lf
+
+# I binari non vanno normalizzati: `text=auto` di solito li riconosce da sé, ma
+# dirlo esplicitamente evita di dipendere da quell'euristica.
+*.png binary
