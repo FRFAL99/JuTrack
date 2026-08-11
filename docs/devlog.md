@@ -1111,7 +1111,7 @@ Resta fuori solo ciò che è React o nativo.
   del bug dei membri duplicati, e lasciarla lì significava non poterla provare.
 - **`NodeSqliteDatabase` accetta un path**, così il dispositivo sopravvive alla chiusura del processo
   come `expo-sqlite` sopravvive alla chiusura dell'app. I test restano in memoria.
-- **`apps/mobile/tsconfig.json` include ora `**/*.mts`**: l'harness è dentro `npm run typecheck`, e
+- **`apps/mobile/tsconfig.json` include ora `**/\*.mts`**: l'harness è dentro `npm run typecheck`, e
   cambiare la firma di un modulo dell'app senza aggiornarlo rompe la compilazione. È l'unica cosa che
   gli impedisce di divergere in silenzio e continuare a dire verde.
 - `npm run prova` esegue la checklist da sola: dieci sezioni, ~30 controlli, ~90 s, uscita 1 se

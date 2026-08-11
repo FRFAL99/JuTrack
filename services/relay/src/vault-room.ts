@@ -167,7 +167,10 @@ export class VaultRoom implements DurableObject {
     // Si usa `toArray()` invece di `raw()` per accedere alle colonne per nome, così
     // un cambio nell'ordine della SELECT non produce silenziosamente valori scambiati.
     const rows = this.sql
-      .exec<{ seq: number; blob: ArrayBuffer }>(
+      .exec<{
+        seq: number;
+        blob: ArrayBuffer;
+      }>(
         'SELECT seq, blob FROM updates WHERE seq > ? ORDER BY seq ASC LIMIT ?',
         since,
         MAX_UPDATES_PER_RESPONSE + 1,
