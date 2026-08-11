@@ -1,10 +1,13 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-11 — **i tre piani funzionali e il redesign visivo sono finiti nel codice**, e del
-**quarto piano manca un solo step**: [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
-**Step 23–28**, di cui **23, 24, 25, 26 e 27 sono fatti**. Tutti e sette i passi del redesign sono
-chiusi ([visualdesign.md](visualdesign.md)). **Quello che resta di tutto il resto è la prova su due
-telefoni veri**, e il criterio di «fatto» del piano v4 ci passa in mezzo.
+Aggiornato: 2026-08-11 — **tutti e quattro i piani e il redesign visivo sono finiti nel codice**.
+Il quarto — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **Step 23–28** — si è
+chiuso oggi con la dashboard componibile, e i sette passi del redesign sono chiusi da prima
+([visualdesign.md](visualdesign.md)).
+
+> **Non c'è più uno step scritto da fare. Quello che resta è la prova su due telefoni veri**, e i
+> criteri di «fatto» di tutti e quattro i piani ci passano in mezzo. Da qui in avanti scrivere altro
+> codice significa aggiungere funzioni a un'app che non è mai stata vista funzionare in due.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -37,17 +40,16 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 21 — Nessun gruppo al primo avvio   | ✅    | Fase `absent`, l'utente crea o entra con un invito           |
 | 22 — Azzera questo telefono         | ✅    | Wipe totale e ritorno all'onboarding, senza riavvio          |
 
-Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **cinque step su
-sei fatti**:
+Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **chiuso**:
 
-| Step                           | Stato | Cosa conterrà                                                 |
+| Step                           | Stato | Cosa contiene                                                 |
 | ------------------------------ | ----- | ------------------------------------------------------------- |
 | 23 — Negozio e tag nel modello | ✅    | Due campi additivi su `Expense`, normalizzazione, export a v2 |
 | 24 — «Informazioni aggiuntive» | ✅    | Tendina chiusa nel form, suggerimenti, `Chip` condiviso       |
 | 25 — La geometria dei grafici  | ✅    | `packages/core/src/chart/` e sette aggregazioni nuove         |
 | 26 — I grafici nuovi, in SVG   | ✅    | Linee, aree, heatmap, istogramma, treemap, ciambella          |
 | 27 — I sei filtri              | ✅    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
-| 28 — La dashboard componibile  | ⬜    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
+| 28 — La dashboard componibile  | ✅    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
 
 Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette passi:
 
@@ -61,7 +63,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**923 test verdi** (576 core + 304 app + 43 relay), typecheck, lint e `format:check` puliti.
+**952 test verdi** (576 core + 333 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -84,18 +86,17 @@ anche, il gruppo di default non c'è più, e «Azzera questo telefono» adesso a
 **Anche il redesign visivo è chiuso** — sette passi su sette: vedi
 [visualdesign.md](visualdesign.md) e la sezione [Redesign visivo](#redesign-visivo) qui sotto.
 
-**Del quarto piano manca un solo step:** [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
-**Step 23–28** — grafici, filtri e dashboard componibile. Nasce da una richiesta di prodotto e non da
-un difetto: i Grafici sono corretti ma poveri, e non c'è modo di chiedere loro qualcosa di diverso da
-quello che mostrano. **Gli Step 23, 24, 25, 26 e 27 sono fatti.** Il 23 e il 25 sono i due che **non
-si vedono**, tutti dentro `packages/core`, e il piano stesso li indica come il posto giusto da cui
-cominciare — rischio contenuto e nessun lavoro da rifare; il 24 porta negozio e tag nel form, dietro
-una tendina chiusa; il 26 è il primo che **si vede**, ed è quello che consuma la geometria del 25; il
-27 è quello che rende i Grafici **interrogabili**, che era il primo dei tre limiti da cui il piano
-nasce. Vedi [Negozio e tag](#negozio-e-tag-step-23-e-24),
+**Anche il quarto piano è chiuso:** [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
+**Step 23–28** — grafici, filtri e dashboard componibile. Nasceva da una richiesta di prodotto e non
+da un difetto, e dai tre limiti dei Grafici di allora: **non si poteva chiedere niente** (lo risolve
+il 27), **il repertorio era fatto di barre** (il 25 e il 26), **la schermata era la stessa per tutti**
+(il 28). Il 23 e il 25 sono i due che **non si vedono**, tutti dentro `packages/core`, e il piano
+stesso li indicava come il posto giusto da cui cominciare; il 24 porta negozio e tag nel form, dietro
+una tendina chiusa. Vedi [Negozio e tag](#negozio-e-tag-step-23-e-24),
 [La geometria dei grafici](#la-geometria-dei-grafici-step-25),
-[I grafici nuovi, in SVG](#i-grafici-nuovi-in-svg-step-26) e
-[I sei filtri](#i-sei-filtri-step-27).
+[I grafici nuovi, in SVG](#i-grafici-nuovi-in-svg-step-26),
+[I sei filtri](#i-sei-filtri-step-27) e
+[La dashboard componibile](#la-dashboard-componibile-step-28).
 
 Resta però vero che il seguito più urgente è
 [la prova sui due telefoni](piano-v3-tab-gruppi-azzeramento-sync.md#criterio-di-fatto-end-to-end), che
@@ -485,6 +486,50 @@ piano nasce: **non si poteva chiedere niente.**
   — che è una delle tre compensazioni su cui si regge la sua leggibilità. La cella non scende sotto
   i nove punti e la griglia si trascina, con i nomi dei giorni fermi fuori dallo scorrimento.
 
+## La dashboard componibile (Step 28)
+
+Sedici widget in un registro, un layout salvato in `app_meta` e la schermata `/dashboard` per
+scegliere quali mostrare e in che ordine. Il tab Grafici non è più una sequenza scritta nel file: è
+un elenco di id che qualcuno ha scelto. È lo step che risponde al terzo dei tre limiti da cui il
+piano nasce — **la schermata era la stessa per tutti**.
+
+- **L'ordine esce dal JSX e diventa un dato.** `stats.tsx` costruisce una mappa
+  `WidgetId → contenuto` e il layout la percorre. I sedici nodi si costruiscono sempre, anche
+  quando se ne mostrano tre: creare un elemento React non lo disegna, e i calcoli sono quelli di
+  prima. Il guadagno è che l'ordine sta in `layout.ts` e non nella sequenza del file.
+- **Il filetto è passato alla cornice.** Con un ordine variabile, un tratto scritto a mano fra due
+  blocchi resterebbe appeso in cima appena si toglie il widget sopra: a disegnarlo è
+  `DashboardWidget`, che sa qual è il primo.
+- **Ogni widget dice il proprio nome**, compresi il totale e i tre riquadri di riepilogo, che allo
+  Step 26 non avevano etichetta. Un numero grande in cima si spiega da sé; spostato in fondo, no.
+  **È la composizione a rendere obbligatorie le etichette.**
+- **Due stati vuoti, non uno.** `unmet` riguarda il **gruppo** («serve almeno un'altra persona»),
+  `empty` riguarda il **periodo** («in questo periodo non c'è niente da mostrare»): mandano a fare
+  due cose diverse. Un grafico disegnato su zero direbbe invece una terza cosa, falsa.
+- **Un widget scelto non svanisce mai.** Prima negozi, tag, ciambella, saldo e confronto erano
+  dietro un `&&` che li faceva sparire; adesso restano e dichiarano cosa gli serve, con la
+  **stessa frase** che il selettore mostra accanto al nome (`describeNeed`, una funzione sola).
+- **Gli id sconosciuti si scartano, i widget nuovi non si aggiungono.** Sembrano regole opposte e
+  sono la stessa: il layout salvato è una **scelta**, non una cache. Dal punto di vista del file,
+  «widget nuovo» e «widget tolto dall'utente» sono lo stesso caso — un id che non c'è.
+- **Una lista sola** (`{ id, visible }[]`): un widget spento conserva il posto che avrà quando
+  verrà riacceso, e `moveWidget` scambia sull'elenco **intero** — è quello che si sta guardando
+  mentre si riordina, e saltare gli spenti farebbe muovere la riga di due posti invece che di uno.
+- **Il default è tutti e sedici.** Il piano diceva «la schermata di oggi, non il catalogo», ma dopo
+  lo Step 26 la schermata _è_ il catalogo: un default più corto sarebbe una sottrazione fatta
+  d'ufficio a chi aggiorna. Che coincidano è vero oggi e non è una regola.
+- **Frecce e non trascinamento**, per la quinta volta nel progetto: il drag & drop vuole due moduli
+  nativi, cioè una build EAS nuova per un gesto.
+- **«Componi» sta fuori dalla barra dei filtri.** Dentro la riga scorrevole dei chip finirebbe
+  fuori schermo appena i filtri attivi sono due — e sarebbe l'unico modo di riaccendere i widget,
+  nascosto proprio a chi li ha spenti tutti.
+- **Scrittura ottimistica, lettura no.** Un chevron risponde sotto il dito e salva dopo; la
+  dashboard invece aspetta la rilettura, o chi ha spento dieci widget vedrebbe un lampo di
+  schermata piena a ogni apertura del tab.
+- **`/dashboard` sta sulla radice e funziona senza gruppo**, come `azzera.tsx` e `backup.tsx`: il
+  layout è del telefono, non del vault. Il componente è diviso in due perché i suggerimenti sulle
+  dipendenze leggono il vault, e senza gruppo mancano solo quelli.
+
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
 Entrambi nel codice e coperti dai test. **Nessuno dei due è ancora stato visto risolto su due
@@ -670,6 +715,17 @@ la lista si è accorciata parecchio, ma non è vuota — e con il redesign chius
   filtri» invece di undici grafici piatti; e che la **heatmap su «ultimi 12 mesi»** si trascini
   invece di sbordare. Da guardare anche il primo avvio dopo l'aggiornamento: il periodo di partenza
   è «Questo mese», cioè esattamente quello che la schermata mostrava prima
+- **Lo Step 28, e sono i punti 4 e 6 del criterio di «fatto» del piano v4.** Il punto 4 è una prova
+  sola e va fatta per intero: togliere un widget, **chiudere e riaprire l'app**, e ritrovarlo
+  tolto; poi riordinarne uno con i chevron e ripetere il giro. È l'unica cosa che dimostra che
+  `app_meta` sta davvero conservando il layout, e non lo si può vedere senza chiudere l'app. Il
+  punto 6 è il gruppo con **un solo membro**: i tre widget che ne vogliono due devono dire cosa
+  manca invece di sparire, e la stessa frase deve comparire nel selettore accanto al nome. Poi le
+  cose che possono rompersi in silenzio: che spegnendo tutti i widget compaia lo **stato vuoto**
+  con l'indicazione di dove ritrovarli, invece di una pagina bianca; che il pulsante «Componi» in
+  alto a destra resti visibile con due filtri attivi (è fuori dalla riga scorrevole apposta); che
+  i chevron siano disabilitati in cima e in fondo; e che **il totale in cima abbia adesso
+  un'etichetta**, come tutti gli altri blocchi — è il cambiamento visivo più evidente dello step
 - **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
   rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
   l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima

@@ -1,10 +1,12 @@
 # JuTrack — Piano v4: grafici, filtri e dashboard componibile
 
-> **Avanzamento al 2026-08-11.**
-> Completati: **Step 0–9** (piano originale), **Step 10–14** ([piano v2](piano-v2-profili-gruppi-sync.md)),
-> **Step 15–22** ([piano v3](piano-v3-tab-gruppi-azzeramento-sync.md)), i sette passi del
-> [redesign visivo](visualdesign.md) e gli **Step 23–27** di questo piano. Da fare: **Step 28**,
-> l'ultimo.
+> **Piano chiuso l'11 agosto 2026.** Tutti e sei gli step (**23–28**) sono nel codice, insieme a
+> **Step 0–9** (piano originale), **Step 10–14** ([piano v2](piano-v2-profili-gruppi-sync.md)),
+> **Step 15–22** ([piano v3](piano-v3-tab-gruppi-azzeramento-sync.md)) e ai sette passi del
+> [redesign visivo](visualdesign.md).
+>
+> **Quello che resta non è codice**: è il [criterio di «fatto» end-to-end](#criterio-di-fatto-end-to-end)
+> su due telefoni fisici, che manca a tutti e quattro i piani.
 >
 > Nasce da una richiesta di prodotto, non da un difetto: i Grafici sono corretti ma poveri, e non c'è
 > modo di chiedere loro qualcosa di diverso da quello che mostrano.
@@ -447,7 +449,20 @@ indietro`; `un intervallo personalizzato invertito viene raddrizzato invece di d
 resto si prova sul telefono: il criterio è che **cambiando un filtro cambino tutti i grafici insieme**,
 e che il totale in testa continui a coincidere con la somma di ognuno.
 
-### Step 28 — La dashboard componibile
+### Step 28 — La dashboard componibile ✅
+
+> **Fatto l'11 agosto 2026, e con lui il piano.** Come scritto qui sotto, con quattro
+> precisazioni. **Il layout è una lista sola** (`{ id, visible }[]`) invece di un elenco di
+> id visibili: ordine e accensione insieme, così un widget spento conserva il posto che avrà
+> quando verrà riacceso — e `moveWidget` scambia sull'elenco intero, che è quello che si sta
+> guardando mentre si riordina. **Il default è tutti e sedici i widget**: il piano diceva
+> «la schermata di oggi, non il catalogo», ma dopo lo Step 26 la schermata _è_ il catalogo, e
+> un default più corto sarebbe una sottrazione fatta d'ufficio. **Ogni widget ha preso
+> un'etichetta**, compresi il totale e i riquadri di riepilogo che non ne avevano: è la
+> composizione a renderle obbligatorie, perché un numero grande spostato in fondo non si
+> spiega più da sé. E **gli stati vuoti sono due e non uno** — `unmet` riguarda il gruppo,
+> `empty` il periodo, e mandano a fare due cose diverse. Dettagli nel
+> [devlog](devlog.md#2026-08-11--step-28-la-dashboard-componibile).
 
 **File:** `apps/mobile/src/features/stats/dashboard/` (nuova: `widgets.ts`, `layout.ts` e i loro test,
 `useDashboardLayout.ts`, `DashboardWidget.tsx`), `apps/mobile/src/app/dashboard.tsx` (nuovo),

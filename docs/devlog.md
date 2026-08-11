@@ -4,6 +4,95 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-11 — Step 28: la dashboard componibile
+
+Sedici widget in un registro, un layout salvato in `app_meta` e una schermata `/dashboard` per
+decidere quali mostrare e in che ordine. Il tab Grafici non è più una sequenza scritta nel file:
+è un elenco di id che qualcuno ha scelto. **Il piano v4 è finito.**
+
+**L'ordine esce dal JSX e finisce in un dato.** Era una sequenza di blocchi separati da filetti,
+ed è diventata una mappa `WidgetId → contenuto` che il layout percorre. I nodi si costruiscono
+tutti e sedici anche quando la dashboard ne mostra tre: creare un elemento React non lo disegna —
+solo entrare nell'albero lo fa — e i calcoli sono quelli di prima, già tutti dentro `useMemo`.
+Il guadagno è che l'ordine sta in un posto solo, `layout.ts`, invece che nella sequenza del file.
+
+**Il filetto è passato alla cornice, ed era necessario.** Finché i blocchi erano scritti a mano, il
+tratto fra l'uno e l'altro poteva stare nel JSX; da quando l'ordine è variabile, il primo tratto
+resterebbe appeso in cima appena si toglie il widget sopra. `DashboardWidget` sa quale blocco è il
+primo, e `Rule` è sparita da `stats.tsx`.
+
+**Ogni widget dice il proprio nome, anche i due che non lo dicevano.** Il totale in cima e i tre
+riquadri di riepilogo non avevano etichetta: un numero grande in testa alla schermata si spiegava
+da sé. Da quando lo si può spostare in fondo, o togliere tutto ciò che gli sta intorno, non più.
+**È la composizione a rendere obbligatorie le etichette**, non un ripensamento grafico.
+
+**Due modi di non avere niente da dire, e sono due frasi diverse.** `unmet` riguarda il **gruppo**
+(«serve almeno un'altra persona», «serve una spesa con un negozio»), `empty` riguarda il
+**periodo** («in questo periodo non c'è niente da mostrare»). Mandano a fare due cose diverse, e
+per questo non si potevano unire in un'unica riga. La terza possibilità — disegnare il grafico su
+zero — direbbe una cosa falsa: «non ho speso niente» invece di «qui non c'è niente da vedere».
+
+**Un widget scelto non svanisce mai.** Prima `stores`, `tags`, `paid`, `balance` e `members`
+erano dietro un `&&` che li faceva sparire quando il dato mancava; adesso restano e dichiarano
+cosa gli serve, con la **stessa frase** che compare nel selettore accanto al nome — `describeNeed`
+è una funzione sola apposta: due formulazioni diverse farebbero pensare a due condizioni diverse.
+
+**Gli id sconosciuti si scartano, i widget nuovi non si aggiungono.** Sembrano due regole opposte
+e sono la stessa: il layout salvato è una **scelta**, non una cache. Scartare serve a non
+rompersi quando un widget viene tolto dal codice; non aggiungere serve a non far _riapparire_ in
+coda alla dashboard qualcosa che era stato deliberatamente tolto — e dal punto di vista del file
+salvato, «widget nuovo» e «widget rimosso dall'utente» sono lo stesso caso: un id che non c'è.
+La prima regola sta in `parseLayout`, la seconda in `visibleWidgets`.
+
+**Una lista sola invece di due.** Ordine e accensione stanno insieme (`{ id, visible }[]`), così
+un widget spento conserva il posto che avrà quando verrà riacceso. Ne segue che `moveWidget`
+scambia sull'elenco **intero**, spenti compresi: è l'elenco che si sta guardando mentre si
+riordina — nel selettore ci sono tutti — e saltare gli spenti farebbe muovere la riga di due
+posti invece che di uno.
+
+**Il default è tutti e sedici, e non è una discarica.** Il piano diceva «il default riproduce la
+schermata di oggi, non il catalogo»: dopo lo Step 26 la schermata **è** il catalogo, e un default
+più corto sarebbe una sottrazione fatta d'ufficio a chi aggiorna. Che le due cose coincidano è
+vero oggi e non è una regola — i widget futuri entreranno nel catalogo senza entrare in un layout
+già salvato, che è esattamente il meccanismo del paragrafo sopra.
+
+**Frecce e non trascinamento**, per la quinta volta. Il drag & drop vuole
+`react-native-gesture-handler` e `react-native-reanimated`, due moduli nativi, cioè una build EAS
+nuova per un gesto. Due chevron fanno la stessa cosa e funzionano con TalkBack senza lavoro
+aggiuntivo, e hanno un'etichetta che dice cosa spostano («Sposta Budget più in alto»).
+
+**«Componi» sta fuori dalla barra dei filtri, ed è deliberato.** Dentro la `ScrollView`
+orizzontale dei chip finirebbe in coda, cioè fuori dallo schermo appena i filtri attivi sono
+due — e sarebbe l'unico modo di riaccendere i widget, nascosto proprio a chi li ha spenti tutti.
+Per la stessa ragione la dashboard vuota non è una schermata muta: dice dov'è il comando.
+
+**La scrittura è ottimistica, la lettura no.** Il riordino cambia lo stato subito e salva dopo —
+un chevron deve rispondere sotto il dito, e l'unica conseguenza di un salvataggio fallito è
+ritrovare al riavvio l'ordine di prima. La lettura invece fa aspettare: partendo dal default si
+vedrebbe un lampo di schermata piena a ogni apertura del tab, a chi ne ha tolti dieci.
+
+**`/dashboard` sta sulla radice e funziona senza gruppo.** È una preferenza del telefono, non di
+un vault, e deve restare componibile anche a zero gruppi — come `azzera.tsx` e `backup.tsx`. Il
+componente è però diviso in due, perché i suggerimenti sulle dipendenze richiedono `useMembers` e
+`useExpenses`, che leggono il vault: senza gruppo si compone lo stesso, mancano solo quelli.
+
+**La rotta nuova ha richiesto la procedura dei tipi dello Step 18**, e il typecheck l'ha
+intercettata subito: `router.push('/dashboard')` non compilava perché `.expo/types/router.d.ts`
+non conosceva ancora quel percorso. Rigenerati con `expo start` da `apps/mobile` — mai dalla root
+del monorepo — e ricontrollato `tsc` **con quei tipi presenti**, che è il punto della procedura:
+senza, un href sbagliato passerebbe lo stesso.
+
+**Verifica:** 952 test verdi (576 core + 333 app + 43 relay, di cui 29 nuovi), typecheck, lint e
+`format:check` puliti, `expo export --platform android` completato. Restano i punti 4 e 6 del
+criterio di «fatto» del piano v4, che vogliono il telefono: togliere un widget, **chiudere e
+riaprire l'app**, e ritrovarlo tolto; e con un solo membro nel gruppo, che i widget che ne
+vogliono due dicano cosa manca invece di sparire.
+
+**Prossimo:** nessuno step scritto. Il piano v4 è chiuso, come i tre precedenti e il redesign, e
+quello che resta è la prova sui due telefoni fisici — che manca a tutti e quattro.
+
+---
+
 ## 2026-08-11 — Step 27: i sei filtri, che agiscono su tutto insieme
 
 Periodo, persona, categoria, negozio, tag e fascia di importo, in un solo `ExpenseQuery` che

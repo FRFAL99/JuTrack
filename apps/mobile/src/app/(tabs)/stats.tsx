@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
@@ -35,7 +35,6 @@ import {
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
-import { SectionLabel } from '@/components/SectionLabel';
 import { formatMonthTitle, shortMonthLabel, todayIso } from '@/features/expenses/grouping';
 import { BudgetRows } from '@/features/stats/BudgetRows';
 import { CategoryBars } from '@/features/stats/CategoryBars';
@@ -50,6 +49,15 @@ import { StatTile } from '@/features/stats/charts/StatTile';
 import { topSlices, type Slice } from '@/features/stats/charts/slices';
 import { TopList } from '@/features/stats/charts/TopList';
 import { WeekdayBars } from '@/features/stats/charts/WeekdayBars';
+import { DashboardWidget } from '@/features/stats/dashboard/DashboardWidget';
+import { visibleWidgets } from '@/features/stats/dashboard/layout';
+import { useDashboardLayout } from '@/features/stats/dashboard/useDashboardLayout';
+import {
+  unmetNeeds,
+  widgetSpec,
+  type GroupFacts,
+  type WidgetId,
+} from '@/features/stats/dashboard/widgets';
 import type { QueryFacets } from '@/features/stats/filters/facets';
 import { FilterBar } from '@/features/stats/filters/FilterBar';
 import { FilterSheet } from '@/features/stats/filters/FilterSheet';
@@ -135,6 +143,7 @@ function StatsOfGroup() {
   const [period, setPeriod] = useState<Period>(defaultPeriod);
   const [facets, setFacets] = useState<QueryFacets>({});
   const [sheetOpen, setSheetOpen] = useState(false);
+  const { layout, ready } = useDashboardLayout();
   // Saldi e pareggi dipendono da quello che ha scritto l'altro telefono, non solo da noi.
   useEngineActivity();
 
@@ -313,15 +322,33 @@ function StatsOfGroup() {
       color: colorOf(one.memberId),
     }));
 
+  /**
+   * La barra dei filtri scorre, il pulsante che compone no.
+   *
+   * «Componi» sta **fuori** dalla `ScrollView` orizzontale: dentro finirebbe in coda ai
+   * chip, cioè fuori dallo schermo appena i filtri attivi sono due — e sarebbe l'unico modo
+   * di riaccendere i widget, nascosto proprio a chi li ha spenti tutti.
+   */
   const header = (
-    <View style={{ paddingBottom: spacing.md }}>
-      <FilterBar
-        period={period}
-        facets={facets}
-        labels={labels}
-        onOpen={() => setSheetOpen(true)}
-        onReset={reset}
-      />
+    <View style={[styles.rowBetween, { paddingBottom: spacing.md }]}>
+      <View style={{ flex: 1 }}>
+        <FilterBar
+          period={period}
+          facets={facets}
+          labels={labels}
+          onOpen={() => setSheetOpen(true)}
+          onReset={reset}
+        />
+      </View>
+      <Pressable
+        onPress={() => router.push('/dashboard')}
+        accessibilityRole="button"
+        accessibilityLabel="Componi la dashboard"
+        hitSlop={10}
+        style={{ paddingHorizontal: spacing.lg }}
+      >
+        <Feather name="grid" size={18} color={colors.textMuted} />
+      </Pressable>
     </View>
   );
 
@@ -384,9 +411,28 @@ function StatsOfGroup() {
     );
   }
 
-  return (
-    <Screen header={header}>
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
+  const facts: GroupFacts = {
+    members: members.length,
+    stores: storeNames.length,
+    tags: tagNames.length,
+  };
+
+  /**
+   * **Il contenuto di ogni widget, staccato dall'ordine in cui compare.**
+   *
+   * Era una sequenza scritta nel file, ed è diventata una mappa che il layout percorre. Il
+   * costo è che i nodi si costruiscono tutti e sedici anche quando la dashboard ne mostra
+   * tre: creare un elemento React non lo disegna — solo entrare nell'albero lo fa — e i
+   * calcoli sono quelli di prima, già tutti dentro `useMemo` sopra. Il guadagno è che
+   * l'ordine sta in un posto solo, `layout.ts`, invece che nella sequenza del JSX.
+   *
+   * `empty` distingue **«non ho niente da dire in questo periodo»** da «non ho dati del
+   * tutto», che è `unmet` e riguarda il gruppo: le due frasi mandano a fare due cose
+   * diverse. Un grafico disegnato su zero direbbe invece una terza cosa, falsa.
+   */
+  const content: Record<WidgetId, { node: ReactNode; empty?: boolean }> = {
+    total: {
+      node: (
         <View style={{ alignItems: 'center', paddingHorizontal: spacing.lg, gap: 2 }}>
           <Text
             style={{ color: colors.text, fontSize: fontSize.display, fontWeight: fontWeight.heavy }}
@@ -397,8 +443,12 @@ function StatsOfGroup() {
             {describeChange(periodTotal, previous, previousLabel(period))}
           </Text>
         </View>
+      ),
+    },
 
-        <View style={[styles.tiles, { paddingHorizontal: spacing.sm, paddingTop: spacing.lg }]}>
+    tiles: {
+      node: (
+        <View style={[styles.tiles, { paddingHorizontal: spacing.sm }]}>
           <StatTile
             label="Al giorno"
             value={formatMoney(averagePerDay(days))}
@@ -415,14 +465,16 @@ function StatsOfGroup() {
           <Divider color={colors.divider} />
           <StatTile
             label="A spesa"
-            value={formatMoney(
-              filtered.length === 0 ? 0 : Math.round(periodTotal / filtered.length),
-            )}
+            value={formatMoney(Math.round(periodTotal / filtered.length))}
             hint="in media"
           />
         </View>
+      ),
+    },
 
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: spacing.sm }}>
+    months: {
+      node: (
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
           {/* Toccare una barra sceglie quel mese come periodo: è anche il modo di andare
               indietro nel tempo più di quanto facciano i preset, e ha preso il posto dello
               stepper del mese, che diceva la stessa cosa mostrando un mese solo. */}
@@ -437,9 +489,11 @@ function StatsOfGroup() {
             </Text>
           )}
         </View>
+      ),
+    },
 
-        <Rule color={colors.border} />
-        <SectionLabel>Giorno per giorno</SectionLabel>
+    daily: {
+      node: (
         <View style={{ paddingHorizontal: spacing.lg }}>
           <LineChart
             points={days.map((day) => ({
@@ -451,9 +505,11 @@ function StatsOfGroup() {
             overlayLabel={`Media dei ${SMOOTHING_DAYS} giorni precedenti`}
           />
         </View>
+      ),
+    },
 
-        <Rule color={colors.border} />
-        <SectionLabel>Quanto si è accumulato</SectionLabel>
+    cumulative: {
+      node: (
         <View style={{ paddingHorizontal: spacing.lg }}>
           <AreaChart
             points={cumulative.map((day) => ({
@@ -467,15 +523,19 @@ function StatsOfGroup() {
             })}
           />
         </View>
+      ),
+    },
 
-        <Rule color={colors.border} />
-        <SectionLabel>Quando si è speso</SectionLabel>
+    heatmap: {
+      node: (
         <View style={{ paddingHorizontal: spacing.lg }}>
           <CalendarHeatmap cells={heat} />
         </View>
+      ),
+    },
 
-        <Rule color={colors.border} />
-        <SectionLabel>Dodici mesi</SectionLabel>
+    year: {
+      node: (
         <View style={{ paddingHorizontal: spacing.lg }}>
           <LineChart
             points={trendYear.map((one) => ({
@@ -488,9 +548,11 @@ function StatsOfGroup() {
             maxLabels={6}
           />
         </View>
+      ),
+    },
 
-        <Rule color={colors.border} />
-        <SectionLabel>Giorni della settimana</SectionLabel>
+    weekdays: {
+      node: (
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
           <WeekdayBars totals={weekdays} />
           <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
@@ -498,137 +560,131 @@ function StatsOfGroup() {
             a caso.
           </Text>
         </View>
+      ),
+    },
 
-        <Rule color={colors.border} />
-        <SectionLabel>Dove sono finiti</SectionLabel>
+    categories: {
+      node: (
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.lg }}>
           <CategoryTreemap items={categorySlices} />
           <CategoryBars totals={byCategory} categories={categories} />
         </View>
+      ),
+    },
 
-        <Rule color={colors.border} />
-        <SectionLabel>Quante spese, per fascia</SectionLabel>
+    amounts: {
+      node: (
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
           <AmountHistogram bins={bins} />
           <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            L'altezza è il numero di spese, non la somma: dice se si fanno tanti scontrini piccoli o
-            pochi grossi.
+            L&apos;altezza è il numero di spese, non la somma: dice se si fanno tanti scontrini
+            piccoli o pochi grossi.
           </Text>
         </View>
+      ),
+    },
 
-        {members.length > 1 && paidSlices.length > 0 && (
-          <>
-            <Rule color={colors.border} />
-            <SectionLabel>Chi ha anticipato</SectionLabel>
-            <View style={{ paddingHorizontal: spacing.lg }}>
-              <DonutChart
-                slices={topSlices(paidSlices, TOP_SLICES, colors.textMuted)}
-                centerLabel={`Anticipato in ${periodTitle}`}
-              />
-            </View>
-          </>
-        )}
+    // Con più persone nel gruppo ma nessuna che abbia anticipato qualcosa nel periodo, la
+    // ciambella non ha fette: è il caso `empty`, diverso dal gruppo di una persona sola.
+    paid: {
+      empty: paidSlices.length === 0,
+      node: (
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <DonutChart
+            slices={topSlices(paidSlices, TOP_SLICES, colors.textMuted)}
+            centerLabel={`Anticipato in ${periodTitle}`}
+          />
+        </View>
+      ),
+    },
 
-        {members.length > 1 && (
-          <>
-            <Rule color={colors.border} />
-            <SectionLabel>Fra di voi</SectionLabel>
-            <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
-              {transfers.length === 0 ? (
-                <View style={styles.rowBetween}>
-                  <Text style={{ flex: 1, color: colors.text, fontSize: fontSize.md }}>
-                    Siete pari. Nessuno deve niente a nessuno.
-                  </Text>
-                  <CompactButton label="Storico" onPress={() => router.push('/settle')} />
-                </View>
-              ) : (
-                transfers.map((transfer, index) => (
-                  <View
-                    key={`${transfer.fromMember}-${transfer.toMember}`}
-                    style={styles.rowBetween}
-                  >
-                    <Text style={{ flex: 1, color: colors.text, fontSize: fontSize.md }}>
-                      {nameOf(transfer.fromMember)} deve{' '}
-                      <Text style={{ color: colors.expense, fontWeight: fontWeight.semibold }}>
-                        {formatMoney(transfer.amountCents)}
-                      </Text>{' '}
-                      a {nameOf(transfer.toMember)}
-                    </Text>
-                    {index === transfers.length - 1 && (
-                      <CompactButton label="Pareggia" onPress={() => router.push('/settle')} />
-                    )}
-                  </View>
-                ))
-              )}
-              <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-                Su tutta la storia del gruppo, filtri esclusi: un debito non si azzera cambiando
-                periodo.
+    balance: {
+      node: (
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+          {transfers.length === 0 ? (
+            <View style={styles.rowBetween}>
+              <Text style={{ flex: 1, color: colors.text, fontSize: fontSize.md }}>
+                Siete pari. Nessuno deve niente a nessuno.
               </Text>
+              <CompactButton label="Storico" onPress={() => router.push('/settle')} />
             </View>
-
-            <Rule color={colors.border} />
-            <SectionLabel>Anticipato e a carico</SectionLabel>
-            <View style={{ paddingHorizontal: spacing.lg }}>
-              <MemberComparison
-                series={overTheYear}
-                members={members}
-                periodLabel="negli ultimi dodici mesi"
-              />
-            </View>
-          </>
-        )}
-
-        {stores.length > 0 && (
-          <>
-            <Rule color={colors.border} />
-            <SectionLabel>Negozi</SectionLabel>
-            <View style={{ paddingHorizontal: spacing.lg }}>
-              <TopList
-                totals={stores}
-                max={TOP_SLICES}
-                note="Le spese senza negozio non compaiono: questa classifica somma meno del totale del periodo."
-              />
-            </View>
-          </>
-        )}
-
-        {tags.length > 0 && (
-          <>
-            <Rule color={colors.border} />
-            <SectionLabel>Tag</SectionLabel>
-            <View style={{ paddingHorizontal: spacing.lg }}>
-              <TopList
-                totals={tags}
-                max={TOP_SLICES}
-                note="Una spesa con due tag conta per intero in entrambi: qui la somma può superare il totale del periodo."
-              />
-            </View>
-          </>
-        )}
-
-        <Rule color={colors.border} />
-        <View
-          style={[
-            styles.rowBetween,
-            { paddingHorizontal: spacing.lg, paddingTop: spacing.lg, paddingBottom: spacing.sm },
-          ]}
-        >
-          <Text
-            style={{
-              color: colors.textMuted,
-              fontSize: fontSize.xxs,
-              fontWeight: fontWeight.bold,
-              letterSpacing: 1.3,
-              textTransform: 'uppercase',
-            }}
-          >
-            Budget di {formatMonthTitle(anchor)}
+          ) : (
+            transfers.map((transfer, index) => (
+              <View key={`${transfer.fromMember}-${transfer.toMember}`} style={styles.rowBetween}>
+                <Text style={{ flex: 1, color: colors.text, fontSize: fontSize.md }}>
+                  {nameOf(transfer.fromMember)} deve{' '}
+                  <Text style={{ color: colors.expense, fontWeight: fontWeight.semibold }}>
+                    {formatMoney(transfer.amountCents)}
+                  </Text>{' '}
+                  a {nameOf(transfer.toMember)}
+                </Text>
+                {index === transfers.length - 1 && (
+                  <CompactButton label="Pareggia" onPress={() => router.push('/settle')} />
+                )}
+              </View>
+            ))
+          )}
+          <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+            Su tutta la storia del gruppo, filtri esclusi: un debito non si azzera cambiando
+            periodo.
           </Text>
-          <Pressable onPress={() => router.push('/budget')} accessibilityRole="button" hitSlop={8}>
-            <Text style={{ color: colors.accent, fontSize: fontSize.sm }}>Imposta</Text>
-          </Pressable>
         </View>
+      ),
+    },
+
+    members: {
+      node: (
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <MemberComparison
+            series={overTheYear}
+            members={members}
+            periodLabel="negli ultimi dodici mesi"
+          />
+        </View>
+      ),
+    },
+
+    stores: {
+      empty: stores.length === 0,
+      node: (
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <TopList
+            totals={stores}
+            max={TOP_SLICES}
+            note="Le spese senza negozio non compaiono: questa classifica somma meno del totale del periodo."
+          />
+        </View>
+      ),
+    },
+
+    tags: {
+      empty: tags.length === 0,
+      node: (
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <TopList
+            totals={tags}
+            max={TOP_SLICES}
+            note="Una spesa con due tag conta per intero in entrambi: qui la somma può superare il totale del periodo."
+          />
+        </View>
+      ),
+    },
+
+    budget: {
+      node: (
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.xs }}>
+          <View style={[styles.rowBetween, { paddingBottom: spacing.xs }]}>
+            <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
+              {formatMonthTitle(anchor)}
+            </Text>
+            <Pressable
+              onPress={() => router.push('/budget')}
+              accessibilityRole="button"
+              hitSlop={8}
+            >
+              <Text style={{ color: colors.accent, fontSize: fontSize.sm }}>Imposta</Text>
+            </Pressable>
+          </View>
           {budgetState.length === 0 ? (
             <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
               Nessun limite impostato per {formatMonthTitle(anchor)}. Un budget serve a sapere a
@@ -638,6 +694,46 @@ function StatsOfGroup() {
             <BudgetRows statuses={budgetState} categories={categories} />
           )}
         </View>
+      ),
+    },
+  };
+
+  const shown = visibleWidgets(layout);
+
+  return (
+    <Screen header={header}>
+      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
+        {/* Finché il layout non è stato riletto non si disegna niente: partendo dal default
+            si vedrebbe un lampo di schermata piena a ogni apertura del tab, a chi ne ha
+            tolti dieci. È una lettura puntuale da SQLite, quindi è un battito di ciglia. */}
+        {ready &&
+          shown.map((id, index) => {
+            const spec = widgetSpec(id);
+            // `parseLayout` scarta già gli id senza scheda: questa è la seconda rete.
+            if (spec === undefined) return null;
+            const block = content[id];
+            return (
+              <DashboardWidget
+                key={id}
+                spec={spec}
+                first={index === 0}
+                unmet={unmetNeeds(spec, facts)}
+                empty={block.empty ?? false}
+              >
+                {block.node}
+              </DashboardWidget>
+            );
+          })}
+
+        {ready && shown.length === 0 && (
+          <View style={{ paddingTop: spacing.xl }}>
+            <EmptyState
+              icon={<Feather name="grid" size={26} color={colors.textFaint} />}
+              title="Dashboard vuota"
+              hint="Hai spento tutti i widget. Riaccendine qualcuno da «Componi la dashboard», in alto a destra."
+            />
+          </View>
+        )}
 
         <View style={[styles.footer, { paddingHorizontal: spacing.lg, paddingTop: spacing.xl }]}>
           <Feather name="lock" size={13} color={colors.textFaint} />
@@ -698,17 +794,14 @@ function CompactButton({ label, onPress }: { label: string; onPress: () => void 
   );
 }
 
-/** Filetto che separa due blocchi del registro. */
-function Rule({ color }: { color: string }) {
-  const { spacing } = useTheme();
-  return (
-    <View
-      style={{ height: StyleSheet.hairlineWidth, backgroundColor: color, marginTop: spacing.lg }}
-    />
-  );
-}
-
-/** Filetto verticale fra due riquadri di riepilogo. */
+/**
+ * Filetto verticale fra due riquadri di riepilogo.
+ *
+ * Il filetto **orizzontale** fra un blocco e il successivo non sta più qui: se l'ordine dei
+ * blocchi lo decide il layout, a disegnare la separazione dev'essere la cornice comune —
+ * `DashboardWidget` — che sa quale blocco è il primo. Scritto a mano fra un widget e
+ * l'altro, il primo tratto resterebbe appeso in cima appena si toglie il widget sopra.
+ */
 function Divider({ color }: { color: string }) {
   return <View style={{ width: StyleSheet.hairlineWidth, backgroundColor: color }} />;
 }
