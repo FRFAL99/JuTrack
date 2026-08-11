@@ -3,11 +3,17 @@
 Aggiornato: 2026-08-11 — **tutti e quattro i piani e il redesign visivo sono finiti nel codice**.
 Il quarto — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **Step 23–28** — si è
 chiuso oggi con la dashboard componibile, e i sette passi del redesign sono chiusi da prima
-([visualdesign.md](visualdesign.md)).
+([visualdesign.md](visualdesign.md)). Lo stesso giorno è stato scritto un **quinto piano**,
+[piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md) — notifiche locali,
+due widget Android, valuta e lingua nel profilo — ma è **solo pianificato**: nessuno dei dodici step
+è ancora nel codice.
 
-> **Non c'è più uno step scritto da fare. Quello che resta è la prova su due telefoni veri**, e i
-> criteri di «fatto» di tutti e quattro i piani ci passano in mezzo. Da qui in avanti scrivere altro
-> codice significa aggiungere funzioni a un'app che non è mai stata vista funzionare in due.
+> **Non c'è più uno step scritto da fare fra i primi quattro piani. Quello che resta è la prova su
+> due telefoni veri**, e i criteri di «fatto» di tutti e quattro i piani ci passano in mezzo. Il
+> piano v5 è un'aggiunta di prodotto separata e parte da zero: il suo primo step
+> ([Step 29](piano-v5-notifiche-widget-profilo.md#step-29--valuta-di-default-nel-profilo)) è il
+> prossimo lavoro da fare, quando si deciderà di riprendere in mano il codice invece della prova sul
+> campo.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -50,6 +56,20 @@ Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 | 26 — I grafici nuovi, in SVG   | ✅    | Linee, aree, heatmap, istogramma, treemap, ciambella          |
 | 27 — I sei filtri              | ✅    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
 | 28 — La dashboard componibile  | ✅    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
+
+Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **appena
+scritto, nessuno step iniziato**:
+
+| Step                              | Stato | Cosa contiene                                                    |
+| ---------------------------------- | ----- | ------------------------------------------------------------------ |
+| 29 — Valuta di default nel profilo | ⬜    | Campo `currency` sul `Profile`, selettore in `tu.tsx`             |
+| 30 — Infrastruttura nativa         | ⬜    | Plugin `expo-notifications` + `react-native-android-widget`, build EAS |
+| 31–33 — Notifiche locali           | ⬜    | Promemoria spesa, soglia budget, sync bloccato                    |
+| 34–35 — I due widget               | ⬜    | Saldo del gruppo aperto, totale del mese                          |
+| 36 — Refresh in background         | ⬜    | Opzionale, solo se il refresh ad apertura app non basta           |
+| 37 — Infrastruttura i18n           | ⬜    | `i18next`, campo `language` sul `Profile`, selettore in `tu.tsx`  |
+| 38–39 — Traduzione EN              | ⬜    | Schermata per schermata, un passo a sessione                      |
+| 40 — Verifica end-to-end           | ⬜    | Su telefono reale: notifiche, widget, lingua, valuta              |
 
 Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette passi:
 
