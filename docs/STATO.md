@@ -2,7 +2,7 @@
 
 Aggiornato: 2026-08-11 — **i tre piani funzionali e il redesign visivo sono finiti nel codice**, e il
 **quarto piano è cominciato**: [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
-**Step 23–28**, di cui il **23 è fatto**. Tutti e sette i passi del redesign sono chiusi
+**Step 23–28**, di cui **23 e 24 sono fatti**. Tutti e sette i passi del redesign sono chiusi
 ([visualdesign.md](visualdesign.md)). **Quello che resta di tutto il resto è la prova su due telefoni
 veri**, e il criterio di «fatto» del piano v4 ci passa in mezzo.
 
@@ -37,13 +37,13 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 21 — Nessun gruppo al primo avvio   | ✅    | Fase `absent`, l'utente crea o entra con un invito           |
 | 22 — Azzera questo telefono         | ✅    | Wipe totale e ritorno all'onboarding, senza riavvio          |
 
-Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **uno step su sei
-fatto**:
+Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **due step su sei
+fatti**:
 
 | Step                           | Stato | Cosa conterrà                                                 |
 | ------------------------------ | ----- | ------------------------------------------------------------- |
 | 23 — Negozio e tag nel modello | ✅    | Due campi additivi su `Expense`, normalizzazione, export a v2 |
-| 24 — «Informazioni aggiuntive» | ⬜    | Tendina chiusa nel form, suggerimenti, `Chip` condiviso       |
+| 24 — «Informazioni aggiuntive» | ✅    | Tendina chiusa nel form, suggerimenti, `Chip` condiviso       |
 | 25 — La geometria dei grafici  | ⬜    | `packages/core/src/chart/` e sette aggregazioni nuove         |
 | 26 — I grafici nuovi, in SVG   | ⬜    | Linee, aree, heatmap, istogramma, treemap, ciambella          |
 | 27 — I sei filtri              | ⬜    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
@@ -61,7 +61,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**674 test verdi** (420 core + 211 app + 43 relay), typecheck, lint e `format:check` puliti.
+**686 test verdi** (420 core + 223 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -87,9 +87,10 @@ anche, il gruppo di default non c'è più, e «Azzera questo telefono» adesso a
 **Il quarto piano è cominciato:** [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 **Step 23–28** — grafici, filtri e dashboard componibile. Nasce da una richiesta di prodotto e non da
 un difetto: i Grafici sono corretti ma poveri, e non c'è modo di chiedere loro qualcosa di diverso da
-quello che mostrano. **Lo Step 23 è fatto** (vedi [Negozio e tag](#negozio-e-tag-step-23)): è uno dei
-due che non si vedono, tutto dentro `packages/core`, e il piano stesso lo indica come il posto giusto
-da cui cominciare — rischio contenuto e nessun lavoro da rifare.
+quello che mostrano. **Gli Step 23 e 24 sono fatti** (vedi [Negozio e tag](#negozio-e-tag-step-23-e-24)):
+il 23 è uno dei due che non si vedono, tutto dentro `packages/core`, e il piano stesso lo indica come
+il posto giusto da cui cominciare; il 24 li porta nel form della spesa, dietro una tendina chiusa, e
+promuove `Chip` a componente condiviso.
 
 Resta però vero che il seguito più urgente è
 [la prova sui due telefoni](piano-v3-tab-gruppi-azzeramento-sync.md#criterio-di-fatto-end-to-end), che
@@ -301,11 +302,11 @@ sono nel documento come sono stati scritti, quindi vanno letti da qui:
    non basta finché sta in `(tabs)/`. E `profile.tsx` → `tu.tsx` cambia l'URL, quindi al passo 4 va
    rifatta la procedura dei tipi di rotta dello Step 18.
 
-## Negozio e tag (Step 23)
+## Negozio e tag (Step 23 e 24)
 
-Due campi su `Expense` — `store: string` e `tags: string[]` — e nient'altro: nessuna schermata è
-cambiata, il form arriva allo Step 24. È il primo dei due step del piano v4 che **non si vedono**, e
-insieme allo Step 25 è quello che decide se il resto mostrerà numeri giusti.
+Due campi su `Expense` — `store: string` e `tags: string[]` — nel modello (23) e nel form (24). Il 23
+è il primo dei due step del piano v4 che **non si vedono**, e insieme allo Step 25 è quello che
+decide se il resto mostrerà numeri giusti.
 
 - **Sono campi, non entità.** Niente mappe `stores` e `tags` con i propri id: il vocabolario si
   deriva in lettura da chi li usa (`insights/naming.ts`), quindi un negozio esiste finché esiste una
@@ -334,6 +335,30 @@ insieme allo Step 25 è quello che decide se il resto mostrerà numeri giusti.
 - **L'export sale a v2**, e le colonne nuove sono `negozio` e `tag`, quest'ultima con i tag uniti da
   `;` perché la virgola è il separatore del file. Il disinnesco contro la CSV injection si applica a
   **ogni tag prima di unirli**: farlo dopo proteggerebbe solo il primo.
+
+Nel form (Step 24) stanno dietro **«Informazioni aggiuntive»**, una tendina in fondo alla schermata,
+dopo i dettagli e prima del salva — l'ordine importo → chi e come → categoria → dettagli del passo 7
+non è stato toccato.
+
+- **La riga chiusa dice cosa c'è sotto**: «Esselunga · 2 tag», oppure «Facoltativi». Nascondere
+  campi **compilati** dietro una tendina muta è il modo in cui i dati si perdono senza che nessuno se
+  ne accorga. Resta chiusa anche su una spesa che ha già negozio e tag: a dirlo è il riassunto.
+- **Il negozio si tronca a 20 caratteri, e non è cosmetico.** `numberOfLines={1}` taglierebbe la
+  **fine** della stringa, cioè proprio il «· 2 tag» che dice che sotto c'è dell'altro. La logica è
+  `extraSummary` in `features/expenses/extra-fields.ts`, con i test, come `split-text.ts`.
+- **Due modi di perdere un tag, chiusi entrambi**: il campo usa `submitBehavior="submit"` invece del
+  default `blurAndSubmit`, così due tag di seguito non richiedono di ritoccarlo; e `handleSubmit`
+  salva `normalizeTags([...tags, tagDraft])`, cioè include il tag a metà scrittura di chi tocca
+  «Salva» senza premere «fine».
+- **Il form non normalizza.** `ExpenseFormValues` porta il testo com'è stato scritto: a ripulirlo è
+  `VaultStore` in scrittura, l'unico punto da cui entra nel documento. Una seconda regola nel form
+  sarebbe una seconda regola da tenere allineata.
+- **`Chip` è ora un componente condiviso** (`components/Chip.tsx`), e i due punti che lo scrivevano a
+  mano dentro `ExpenseForm.tsx` — modalità di divisione e categorie — sono convertiti nello stesso
+  commit. Senza `color` la pillola selezionata si riempie d'accento (una scelta fra modi), con
+  `color` prende bordo del colore e fondo `color + '22'` (lì il colore **è** l'informazione).
+  Unificato anche il peso dell'etichetta, che nelle due copie divergeva senza una ragione:
+  `semibold` da selezionata, `medium` altrimenti.
 
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
@@ -487,6 +512,14 @@ la lista si è accorciata parecchio, ma non è vuota — e con il redesign chius
   provabile finché non si fa la prova sui due telefoni, ed è esattamente il criterio di «fatto» del
   piano v4. Quello che si può guardare subito è che l'app apra e mostri **le spese registrate prima**
   senza inciampare: i due campi non esistono in quei record, e sono i fallback dei reader a reggerli
+- **Lo Step 24, e il rischio è la tastiera**, non l'impaginazione: la sezione nuova sta in fondo, e
+  sopra il bottone «Salva la spesa» che già stava all'ultimo posto. Da guardare che il tastierino
+  non copra il salva mentre si scrive un tag, che `submitBehavior="submit"` tenga davvero il fuoco
+  sul campo fra un tag e l'altro (è il punto in cui un tag si perde in silenzio), e che toccando
+  «Salva» con un tag scritto e **non** confermato quel tag finisca comunque nella spesa. Poi le due
+  conversioni a `Chip`, che sono modifiche a punti collaudati: le tre modalità di divisione e le
+  pillole delle categorie devono selezionarsi e deselezionarsi come prima, con l'icona di categoria
+  al suo posto
 - **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
   rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
   l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima
@@ -496,7 +529,7 @@ la lista si è accorciata parecchio, ma non è vuota — e con il redesign chius
 > `try/catch` proprio per questo — e l'export ripiega sugli appunti, dichiarandolo nell'interfaccia.
 > Il foglio di condivisione comparirà solo dopo una build aggiornata.
 
-Tutto il resto è verificato: 674 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 686 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 ## Trappole già risolte — da non riscoprire

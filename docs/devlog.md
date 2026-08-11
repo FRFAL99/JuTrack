@@ -4,6 +4,70 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-11 — Step 24: «Informazioni aggiuntive», e la pillola smette di essere scritta a mano
+
+I due campi dello Step 23 arrivano nel form, dietro una tendina chiusa in fondo alla schermata.
+Nello stesso commit `Chip` diventa un componente condiviso e i due punti che la scrivevano a mano
+passano a usarlo — perché lasciarne tre copie significa che la prossima modifica ne aggiorna due su
+tre.
+
+**La riga chiusa dice cosa c'è sotto.** «Esselunga · 2 tag» quando c'è qualcosa, «Facoltativi»
+quando non c'è niente. Nascondere dietro una tendina muta dei campi **compilati** è il modo in cui i
+dati si perdono senza che nessuno se ne accorga: chi riapre una spesa vecchia per correggerla deve
+vedere dalla riga chiusa che lì sotto c'è dell'altro. La tendina resta chiusa **anche** su una spesa
+che ha già negozio e tag: a dirlo è il riassunto, non l'apertura d'ufficio.
+
+`extraSummary` sta in `features/expenses/extra-fields.ts` con i suoi test, come `split-text.ts`. Il
+troncamento del negozio a 20 caratteri **non è cosmetico**: il `numberOfLines={1}` del `Text`
+impedirebbe già l'a capo, ma taglierebbe la **fine** della stringa, cioè proprio il «· 2 tag» che è
+l'informazione che dice che sotto c'è dell'altro. Troncando il negozio si perde la coda del nome,
+che è la parte che importa meno. Il taglio è per grafemi (`Array.from`), non per unità UTF-16, come
+già `initialOf`.
+
+**`Chip` unifica anche una divergenza che non era voluta.** Le due copie non erano identiche: le
+modalità di divisione stavano su `medium` sempre, le categorie su `semibold` da selezionate e
+`regular` altrimenti. Nato dallo scriverle in due momenti diversi, non da una distinzione. La regola
+del componente è una: `semibold` da selezionata, `medium` altrimenti. Quello che invece **è** una
+distinzione vera resta: senza `color` la pillola selezionata si riempie d'accento — è una scelta fra
+modi, il colore non aggiunge nulla — con `color` prende bordo del colore e fondo `color + '22'`,
+perché lì il colore _è_ l'informazione.
+
+`Chip` prende un `icon?: ReactNode` che il piano non prevedeva: senza, le pillole delle categorie non
+erano convertibili, e quelle sono metà del motivo per cui il componente esiste.
+
+**Il vocabolario arriva da `useExpenses()`.** Nessun elenco da gestire: `knownStores` e `knownTags`
+derivano i suggerimenti dalle spese del gruppo, ordinati per frequenza — i primi sei per i negozi,
+perché una riga di pillole non deve diventare un elenco. `tagChoices` mette in cima i tag già scelti
+e poi i suggerimenti non ancora presi, confrontando sulla **chiave**: `Regalo` scritto qui e `regalo`
+altrove sono lo stesso tag, e due pillole sarebbero due modi di scegliere la stessa cosa. È una lista
+e non una stringa, ma la ragione per tirarla fuori dal componente è la stessa, e ha i suoi test.
+
+**Due modi di perdere un tag, chiusi entrambi.** Il campo di aggiunta usa `submitBehavior="submit"`
+invece del default `blurAndSubmit`: chi mette due tag di seguito non deve ritoccare il campo dopo il
+primo. E `handleSubmit` salva `normalizeTags([...tags, tagDraft])`, cioè **include il tag a metà
+scrittura**: chi tocca «Salva» senza aver premuto «fine» sulla tastiera si aspetta di ritrovarlo. Con
+`keyboardShouldPersistTaps="handled"` il tocco sul bottone arriva subito e l'`onBlur` non farebbe in
+tempo a entrare nello stato letto da `handleSubmit`.
+
+**Niente normalizzazione nel form.** `ExpenseFormValues` porta negozio e tag **così come sono stati
+scritti**: a ripulirli è `VaultStore` in scrittura (Step 23), che è l'unico punto da cui il testo
+entra nel documento. Una seconda regola nel form sarebbe una seconda regola da tenere allineata.
+
+**Nessuna animazione**, come prescrive il piano: `LayoutAnimation` sulla nuova architettura è a
+supporto parziale, e per una tendina non vale il rischio. `useState` e render condizionale.
+
+**Verifica:** 686 test verdi (420 core + 223 app + 43 relay), typecheck, lint e `format:check`
+puliti, `expo export --platform android` completato. Le stringhe nuove sono **dentro il bundle** —
+controllate una a una, come al passo 3 del redesign: `Dove è stata fatta` non si trova con un `grep`
+perché Hermes memorizza in UTF-16 le stringhe con caratteri non ASCII, e infatti cercata in quella
+codifica c'è.
+
+**Prossimo:** Step 25 — la geometria dei grafici in `packages/core`, l'altro step che non si vede.
+Ma prima va guardata questa schermata sul telefono **con la tastiera aperta**: è il rischio vero di
+questo step, e il salva sta in fondo.
+
+---
+
 ## 2026-08-11 — Step 23: il modello impara negozio e tag
 
 Primo step del piano v4, e uno dei due che **non si vedono**: due campi su `Expense`, la loro

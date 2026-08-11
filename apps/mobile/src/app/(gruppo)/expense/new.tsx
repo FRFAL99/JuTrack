@@ -12,6 +12,8 @@ export default function NewExpenseScreen() {
       date: values.date,
       categoryId: values.categoryId,
       note: values.note,
+      store: values.store,
+      tags: values.tags,
       paidBy: values.paidBy,
       split: values.split,
     });

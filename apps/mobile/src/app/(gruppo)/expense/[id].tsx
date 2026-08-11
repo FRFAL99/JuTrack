@@ -29,6 +29,8 @@ export default function EditExpenseScreen() {
       amountCents: values.amountCents,
       categoryId: values.categoryId,
       note: values.note,
+      store: values.store,
+      tags: values.tags,
       paidBy: values.paidBy,
       // Lo split arriva sempre insieme all'importo: VaultStore rifiuta un aggiornamento
       // che lascerebbe le quote incoerenti col totale.

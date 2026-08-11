@@ -9,10 +9,16 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import Feather from '@expo/vector-icons/Feather';
 import {
   buildSplit,
   formatCents,
+  knownStores,
+  knownTags,
+  normalizeTags,
   parseAmount,
+  storeKey,
+  tagKey,
   type Expense,
   type ExpenseSplit,
   type Member,
@@ -21,9 +27,11 @@ import {
 import { initialOf } from '@/components/avatar';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { Chip } from '@/components/Chip';
 import { CategoryIcon } from '@/features/categories/CategoryIcon';
-import { useCategories, useMembers, useMyMemberId } from '@/state';
+import { useCategories, useExpenses, useMembers, useMyMemberId } from '@/state';
 import { numeric, tightTitle, useTheme } from '@/theme';
+import { extraSummary, tagChoices } from './extra-fields';
 import { formatDayTitle, todayIso } from './grouping';
 import { describeGap, previewShareCents, splitModeLabel, splitPreview } from './split-text';
 
@@ -32,6 +40,15 @@ export interface ExpenseFormValues {
   date: string;
   categoryId: string | null;
   note: string;
+  /**
+   * Negozio e tag così come sono stati scritti.
+   *
+   * **Non normalizzati qui**: lo fa `VaultStore` in scrittura (Step 23), che è l'unico
+   * punto da cui il testo entra nel documento. Ripulirli anche nel form sarebbe una
+   * seconda regola da tenere allineata alla prima.
+   */
+  store: string;
+  tags: string[];
   paidBy: string;
   /**
    * Quote già bilanciate sull'importo.
@@ -72,12 +89,21 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   const categories = useCategories();
   const members = useMembers();
   const myMemberId = useMyMemberId();
+  // Il vocabolario di negozi e tag si deriva dalle spese del gruppo (Step 23): non esiste
+  // un elenco da gestire, esiste ciò che è già stato scritto.
+  const expenses = useExpenses();
 
   const [amountText, setAmountText] = useState(
     initial === undefined ? '' : formatCents(initial.amountCents).replace(/\./g, ''),
   );
   const [note, setNote] = useState(initial?.note ?? '');
   const [editingNote, setEditingNote] = useState(false);
+  const [store, setStore] = useState(initial?.store ?? '');
+  const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
+  const [tagDraft, setTagDraft] = useState('');
+  // Chiusa anche su una spesa che ha già negozio e tag: a dire che sotto c'è qualcosa è il
+  // riassunto sulla riga, non l'apertura d'ufficio della tendina.
+  const [extraOpen, setExtraOpen] = useState(false);
   const [categoryId, setCategoryId] = useState<string | null>(initial?.categoryId ?? null);
   // Chi paga è quasi sempre chi sta scrivendo: il proprio membro è il default, non il
   // primo della lista in ordine alfabetico.
@@ -106,6 +132,26 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
 
   const memberIds = useMemo(() => members.map((m) => m.id), [members]);
 
+  // Sei suggerimenti bastano: `knownStores` è ordinata per frequenza, quindi i primi sono
+  // quelli che si ripetono davvero, e una riga di pillole non deve diventare un elenco.
+  const storeHints = useMemo(() => knownStores(expenses).slice(0, 6), [expenses]);
+  const tagHints = useMemo(() => tagChoices(tags, knownTags(expenses)), [tags, expenses]);
+
+  const toggleTag = (tag: string): void => {
+    const key = tagKey(tag);
+    setTags((current) =>
+      current.some((t) => tagKey(t) === key)
+        ? current.filter((t) => tagKey(t) !== key)
+        : [...current, tag],
+    );
+  };
+
+  /** Aggiunge il tag scritto a mano. `normalizeTags` scarta il vuoto e i doppioni. */
+  const commitTagDraft = (): void => {
+    setTags((current) => normalizeTags([...current, tagDraft]));
+    setTagDraft('');
+  };
+
   const customTotal = useMemo(
     () => members.reduce((sum, m) => sum + (parseAmount(customShares[m.id] ?? '') ?? 0), 0),
     [customShares, members],
@@ -114,6 +160,8 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   const customBalances = mode !== 'custom' || (amountCents !== null && customGap === 0);
 
   const canSubmit = amountCents !== null && amountCents > 0 && paidBy !== '' && customBalances;
+
+  const hasExtras = store.trim() !== '' || tags.length > 0;
 
   /** Passando a quote libere si parte dalla divisione equa: è il punto di partenza più probabile. */
   const chooseMode = (next: SplitMode): void => {
@@ -145,6 +193,10 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
       date: initial?.date ?? todayIso(),
       categoryId,
       note: note.trim(),
+      // Il tag a metà scrittura conta come scritto: chi tocca «Salva» senza aver premuto
+      // «fine» sulla tastiera si aspetta di ritrovarlo, non di averlo perso.
+      store,
+      tags: normalizeTags([...tags, tagDraft]),
       paidBy,
       split: buildValues(amountCents),
     });
@@ -247,35 +299,14 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
               </View>
 
               <View style={styles.chips}>
-                {SPLIT_MODES.map((value) => {
-                  const selected = value === mode;
-                  return (
-                    <Pressable
-                      key={value}
-                      onPress={() => chooseMode(value)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected }}
-                      style={{
-                        paddingVertical: spacing.sm,
-                        paddingHorizontal: spacing.md,
-                        borderRadius: radius.pill,
-                        backgroundColor: selected ? colors.accent : 'transparent',
-                        borderWidth: StyleSheet.hairlineWidth,
-                        borderColor: selected ? colors.accent : colors.border,
-                      }}
-                    >
-                      <Text
-                        style={{
-                          color: selected ? colors.textOnAccent : colors.textMuted,
-                          fontSize: fontSize.sm,
-                          fontWeight: fontWeight.medium,
-                        }}
-                      >
-                        {splitModeLabel(value, members.length)}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
+                {SPLIT_MODES.map((value) => (
+                  <Chip
+                    key={value}
+                    label={splitModeLabel(value, members.length)}
+                    selected={value === mode}
+                    onPress={() => chooseMode(value)}
+                  />
+                ))}
               </View>
 
               {mode === 'equal' && (
@@ -353,39 +384,16 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
             }}
           >
             <View style={styles.chips}>
-              {categories.map((category) => {
-                const selected = category.id === categoryId;
-                return (
-                  <Pressable
-                    key={category.id}
-                    onPress={() => setCategoryId(selected ? null : category.id)}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                    style={{
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: spacing.xs + 2,
-                      paddingVertical: spacing.sm,
-                      paddingHorizontal: spacing.md,
-                      borderRadius: radius.pill,
-                      backgroundColor: selected ? category.color + '22' : 'transparent',
-                      borderWidth: StyleSheet.hairlineWidth,
-                      borderColor: selected ? category.color : colors.border,
-                    }}
-                  >
-                    <CategoryIcon icon={category.icon} color={category.color} size={14} />
-                    <Text
-                      style={{
-                        color: selected ? colors.text : colors.textMuted,
-                        fontSize: fontSize.sm,
-                        fontWeight: selected ? fontWeight.semibold : fontWeight.regular,
-                      }}
-                    >
-                      {category.name}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+              {categories.map((category) => (
+                <Chip
+                  key={category.id}
+                  label={category.name}
+                  selected={category.id === categoryId}
+                  color={category.color}
+                  icon={<CategoryIcon icon={category.icon} color={category.color} size={14} />}
+                  onPress={() => setCategoryId(category.id === categoryId ? null : category.id)}
+                />
+              ))}
             </View>
           </Card>
         </View>
@@ -447,6 +455,130 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
                   {note === '' ? 'Facoltativa' : note}
                 </Text>
               </Pressable>
+            )}
+          </Card>
+        </View>
+
+        {/* 5. Le informazioni aggiuntive: chiuse, perché sono facoltative e la schermata
+            si apre decine di volte al mese. La riga chiusa **dice cosa c'è sotto**. */}
+        <View style={{ paddingTop: spacing.lg }}>
+          <Card
+            variant="flat"
+            style={{ marginHorizontal: spacing.lg, paddingHorizontal: 18, paddingVertical: 4 }}
+          >
+            <Pressable
+              onPress={() => setExtraOpen((open) => !open)}
+              accessibilityRole="button"
+              accessibilityState={{ expanded: extraOpen }}
+              accessibilityLabel="Informazioni aggiuntive"
+              style={[styles.detailRow, { paddingVertical: spacing.md }]}
+            >
+              <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
+                Informazioni aggiuntive
+              </Text>
+              <View style={styles.summary}>
+                <Text
+                  numberOfLines={1}
+                  style={{
+                    color: hasExtras ? colors.text : colors.textFaint,
+                    fontSize: fontSize.sm,
+                  }}
+                >
+                  {extraSummary(store, tags)}
+                </Text>
+                <Feather
+                  name={extraOpen ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color={colors.textFaint}
+                />
+              </View>
+            </Pressable>
+
+            {/* Nessuna animazione: `LayoutAnimation` è a supporto parziale sulla nuova
+                architettura, e non vale il rischio per una tendina. */}
+            {extraOpen && (
+              <View style={{ paddingBottom: spacing.md, gap: spacing.md }}>
+                <View
+                  style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.divider }}
+                />
+
+                <View style={{ gap: spacing.sm }}>
+                  <Text style={sectionTitle}>Negozio</Text>
+                  <TextInput
+                    value={store}
+                    onChangeText={setStore}
+                    placeholder="Dove è stata fatta"
+                    placeholderTextColor={colors.textFaint}
+                    autoCapitalize="words"
+                    accessibilityLabel="Negozio"
+                    style={{
+                      color: colors.text,
+                      fontSize: fontSize.sm,
+                      backgroundColor: colors.background,
+                      borderRadius: radius.md,
+                      borderWidth: StyleSheet.hairlineWidth,
+                      borderColor: colors.border,
+                      paddingVertical: spacing.md,
+                      paddingHorizontal: spacing.md,
+                    }}
+                  />
+                  {storeHints.length > 0 && (
+                    <View style={styles.chips}>
+                      {storeHints.map((hint) => {
+                        const selected = storeKey(hint) === storeKey(store);
+                        return (
+                          <Chip
+                            key={hint}
+                            label={hint}
+                            selected={selected}
+                            onPress={() => setStore(selected ? '' : hint)}
+                          />
+                        );
+                      })}
+                    </View>
+                  )}
+                </View>
+
+                <View style={{ gap: spacing.sm }}>
+                  <Text style={sectionTitle}>Tag</Text>
+                  {tagHints.length > 0 && (
+                    <View style={styles.chips}>
+                      {tagHints.map((tag) => (
+                        <Chip
+                          key={tagKey(tag)}
+                          label={tag}
+                          selected={tags.some((t) => tagKey(t) === tagKey(tag))}
+                          onPress={() => toggleTag(tag)}
+                        />
+                      ))}
+                    </View>
+                  )}
+                  <TextInput
+                    value={tagDraft}
+                    onChangeText={setTagDraft}
+                    onSubmitEditing={commitTagDraft}
+                    onBlur={commitTagDraft}
+                    placeholder="Aggiungi un tag"
+                    placeholderTextColor={colors.textFaint}
+                    autoCapitalize="none"
+                    returnKeyType="done"
+                    // `submit` e non il default `blurAndSubmit`: chi mette due tag di
+                    // seguito non deve ritoccare il campo dopo il primo.
+                    submitBehavior="submit"
+                    accessibilityLabel="Aggiungi un tag"
+                    style={{
+                      color: colors.text,
+                      fontSize: fontSize.sm,
+                      backgroundColor: colors.background,
+                      borderRadius: radius.md,
+                      borderWidth: StyleSheet.hairlineWidth,
+                      borderColor: colors.border,
+                      paddingVertical: spacing.md,
+                      paddingHorizontal: spacing.md,
+                    }}
+                  />
+                </View>
+              </View>
             )}
           </Card>
         </View>
@@ -555,4 +687,7 @@ const styles = StyleSheet.create({
   people: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   shareRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   detailRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  // `flexShrink` sul riassunto: è lui a doversi accorciare quando il negozio è lungo, non
+  // l'etichetta fissa a sinistra.
+  summary: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
 });

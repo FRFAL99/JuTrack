@@ -3,8 +3,8 @@
 > **Avanzamento al 2026-08-11.**
 > Completati: **Step 0–9** (piano originale), **Step 10–14** ([piano v2](piano-v2-profili-gruppi-sync.md)),
 > **Step 15–22** ([piano v3](piano-v3-tab-gruppi-azzeramento-sync.md)), i sette passi del
-> [redesign visivo](visualdesign.md) e lo **Step 23** di questo piano. Da fare: **Step 24–28**, uno
-> per sessione.
+> [redesign visivo](visualdesign.md) e gli **Step 23–24** di questo piano. Da fare: **Step 25–28**,
+> uno per sessione.
 >
 > Nasce da una richiesta di prodotto, non da un difetto: i Grafici sono corretti ma poveri, e non c'è
 > modo di chiedere loro qualcosa di diverso da quello che mostrano.
@@ -224,7 +224,14 @@ normalizzata`; `storeKey unisce Esselunga ed esselunga`; `knownStores ordina per
 la grafia più usata`; `il CSV disinnesca un negozio che comincia per uguale`; `due documenti convergono
 su una spesa con i tag`.
 
-### Step 24 — «Informazioni aggiuntive» nel form della spesa
+### Step 24 — «Informazioni aggiuntive» nel form della spesa ✅
+
+> **Fatto l'11 agosto 2026.** Come scritto qui sotto, con tre aggiunte: `Chip` prende un
+> `icon?: ReactNode`, senza il quale le pillole delle categorie non erano convertibili; il peso
+> dell'etichetta è unificato (`semibold`/`medium`), perché le due copie divergevano senza una
+> ragione; e `extra-fields.ts` contiene anche `tagChoices`, che ordina le pillole dei tag
+> confrontando sulla chiave. Il tag scritto e non confermato viene salvato lo stesso. Dettagli nel
+> [devlog](devlog.md#2026-08-11--step-24-informazioni-aggiuntive-e-la-pillola-smette-di-essere-scritta-a-mano).
 
 **File:** `apps/mobile/src/features/expenses/ExpenseForm.tsx`,
 `features/expenses/extra-fields.ts` (nuovo) e il suo test, `apps/mobile/src/components/Chip.tsx` (nuovo).
