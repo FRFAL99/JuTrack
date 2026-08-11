@@ -1,10 +1,10 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-11 — **i tre piani funzionali e il redesign visivo sono finiti nel codice**, e il
-**quarto piano è a due terzi**: [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
-**Step 23–28**, di cui **23, 24, 25 e 26 sono fatti**. Tutti e sette i passi del redesign sono chiusi
-([visualdesign.md](visualdesign.md)). **Quello che resta di tutto il resto è la prova su due telefoni
-veri**, e il criterio di «fatto» del piano v4 ci passa in mezzo.
+Aggiornato: 2026-08-11 — **i tre piani funzionali e il redesign visivo sono finiti nel codice**, e del
+**quarto piano manca un solo step**: [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
+**Step 23–28**, di cui **23, 24, 25, 26 e 27 sono fatti**. Tutti e sette i passi del redesign sono
+chiusi ([visualdesign.md](visualdesign.md)). **Quello che resta di tutto il resto è la prova su due
+telefoni veri**, e il criterio di «fatto» del piano v4 ci passa in mezzo.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -37,7 +37,7 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 21 — Nessun gruppo al primo avvio   | ✅    | Fase `absent`, l'utente crea o entra con un invito           |
 | 22 — Azzera questo telefono         | ✅    | Wipe totale e ritorno all'onboarding, senza riavvio          |
 
-Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **quattro step su
+Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **cinque step su
 sei fatti**:
 
 | Step                           | Stato | Cosa conterrà                                                 |
@@ -46,7 +46,7 @@ sei fatti**:
 | 24 — «Informazioni aggiuntive» | ✅    | Tendina chiusa nel form, suggerimenti, `Chip` condiviso       |
 | 25 — La geometria dei grafici  | ✅    | `packages/core/src/chart/` e sette aggregazioni nuove         |
 | 26 — I grafici nuovi, in SVG   | ✅    | Linee, aree, heatmap, istogramma, treemap, ciambella          |
-| 27 — I sei filtri              | ⬜    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
+| 27 — I sei filtri              | ✅    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
 | 28 — La dashboard componibile  | ⬜    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
 
 Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette passi:
@@ -61,7 +61,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**872 test verdi** (576 core + 253 app + 43 relay), typecheck, lint e `format:check` puliti.
+**923 test verdi** (576 core + 304 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -84,16 +84,18 @@ anche, il gruppo di default non c'è più, e «Azzera questo telefono» adesso a
 **Anche il redesign visivo è chiuso** — sette passi su sette: vedi
 [visualdesign.md](visualdesign.md) e la sezione [Redesign visivo](#redesign-visivo) qui sotto.
 
-**Il quarto piano è a due terzi:** [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
+**Del quarto piano manca un solo step:** [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 **Step 23–28** — grafici, filtri e dashboard componibile. Nasce da una richiesta di prodotto e non da
 un difetto: i Grafici sono corretti ma poveri, e non c'è modo di chiedere loro qualcosa di diverso da
-quello che mostrano. **Gli Step 23, 24, 25 e 26 sono fatti.** Il 23 e il 25 sono i due che **non si
-vedono**, tutti dentro `packages/core`, e il piano stesso li indica come il posto giusto da cui
+quello che mostrano. **Gli Step 23, 24, 25, 26 e 27 sono fatti.** Il 23 e il 25 sono i due che **non
+si vedono**, tutti dentro `packages/core`, e il piano stesso li indica come il posto giusto da cui
 cominciare — rischio contenuto e nessun lavoro da rifare; il 24 porta negozio e tag nel form, dietro
-una tendina chiusa; il 26 è il primo che **si vede**, ed è quello che consuma la geometria del 25.
-Vedi [Negozio e tag](#negozio-e-tag-step-23-e-24),
-[La geometria dei grafici](#la-geometria-dei-grafici-step-25) e
-[I grafici nuovi, in SVG](#i-grafici-nuovi-in-svg-step-26).
+una tendina chiusa; il 26 è il primo che **si vede**, ed è quello che consuma la geometria del 25; il
+27 è quello che rende i Grafici **interrogabili**, che era il primo dei tre limiti da cui il piano
+nasce. Vedi [Negozio e tag](#negozio-e-tag-step-23-e-24),
+[La geometria dei grafici](#la-geometria-dei-grafici-step-25),
+[I grafici nuovi, in SVG](#i-grafici-nuovi-in-svg-step-26) e
+[I sei filtri](#i-sei-filtri-step-27).
 
 Resta però vero che il seguito più urgente è
 [la prova sui due telefoni](piano-v3-tab-gruppi-azzeramento-sync.md#criterio-di-fatto-end-to-end), che
@@ -432,6 +434,57 @@ solo molto più lunga: i filtri sono lo Step 27, la composizione il 28. `Monthly
   con la query vuota `amountFor` dà l'importo pieno — e allo Step 27 basterà sostituire un oggetto
   solo invece di rileggere undici componenti.
 
+## I sei filtri (Step 27)
+
+Periodo, persona, categoria, negozio, tag e fascia di importo, in un solo `ExpenseQuery` che
+alimenta ogni grafico. Sette file in `apps/mobile/src/features/stats/filters/` — `period.ts`,
+`amount.ts` e `facets.ts` con i loro test, più `FilterBar`, `FilterSheet`, `PeriodPicker` e
+`DayGridPicker` — e `stats.tsx` ricablato. È lo step che risponde al primo dei tre limiti da cui il
+piano nasce: **non si poteva chiedere niente.**
+
+- **Lo stepper del mese non c'è più.** Erano due controlli per la stessa cosa: lo stepper diceva un
+  mese per volta, le **barre mensili** ne mostrano sei e ne fanno toccare uno. Ogni tocco riancora
+  le sei barre, quindi si va indietro sei mesi alla volta — più lontano di quanto arrivino i
+  preset. L'intestazione della schermata è adesso la barra dei filtri.
+- **I chip portano il valore, non il nome del filtro**: «Spesa», non «Categoria». Le frasi le
+  costruisce `queryParts` di `@jutrack/core`, la stessa di `describeQuery`. E **«Azzera» sta nella
+  barra**, non dentro il foglio: è l'uscita di sicurezza da una schermata vuota, e chiedere di
+  aprire un foglio per trovarla vorrebbe dire chiederlo proprio a chi non ha capito cosa succede.
+- **Niente da mostrare non è tutto a zero.** Con la query senza risposte compare uno stato vuoto —
+  che distingue «filtri attivi» da «periodo senza spese» — invece di undici grafici piatti, che si
+  leggerebbero come un dato.
+- **Tre grafici non rispettano il periodo, e lo dicono nel titolo.** «Dodici mesi», «Giorni della
+  settimana» e «Anticipato e a carico» leggono la loro finestra ancorata al mese in cui il periodo
+  **finisce**: un grafico intitolato «dodici mesi» che ne mostra sette sarebbe un titolo falso.
+  Rispettano gli altri cinque filtri. **Saldo e budget non ne rispettano nessuno**: sono fatti sul
+  gruppo, non viste — «speso 40 € di 200» diventerebbe falso filtrando per persona. Ognuna delle
+  tre righe è scritta sotto il grafico a cui si riferisce.
+- **`QueryFacets` è un tipo a sé** (`Omit<ExpenseQuery, 'from' | 'to'>`) e non una `ExpenseQuery`
+  che ci si ricorda di non riempire: `amountFor` legge solo persona e modalità, ma `totalsByDay`
+  usa `query.from`/`query.to` come estremi di ripiego, e per i grafici a dodici mesi sarebbero gli
+  estremi sbagliati.
+- **Le letture dal documento restano due**: una ristretta al periodo — l'unico filtro che conviene
+  far fare allo store, perché restringe la scansione — e una completa per saldo e dodici mesi. Il
+  resto sono due `applyQuery` in altrettanti `useMemo`.
+- **«Rispetto a…» ha tre casi.** Un mese intero si confronta con il mese intero prima; un mese **in
+  corso** con lo stesso tratto del mese prima (il 31 marzo diventa il 28 febbraio), o a metà agosto
+  qualunque mese finito vincerebbe e la riga direbbe «-60%» ogni giorno; tutto il resto con il
+  tratto di pari lunghezza subito precedente, che finisce il giorno prima che il periodo cominci.
+- **Il massimo delle fasce è esclusivo in `bins.ts` e inclusivo in `ExpenseQuery`.** Senza togliere
+  quel centesimo, una spesa da 20,00 € starebbe in «10–20» **e** in «20–50». Il test lo verifica
+  passando dalla stessa `binsFor` che disegna le barre.
+- **Un filtro su un negozio si spegne anche scritto con un'altra grafia**: `toggleValue` confronta
+  sulla chiave normalizzata. E l'ultima voce spenta lascia la chiave **assente** invece di un
+  elenco vuoto, o «Azzera» resterebbe nella barra senza niente da azzerare.
+- **`DayGridPicker` non porta moduli nativi**, quindi nessuna build: è una griglia di `Pressable`
+  sugli stessi helper di `calendar.ts` che servono alla heatmap. Quarta volta che il progetto
+  rifiuta un modulo nativo per un gesto, e resta la base da cui rendere modificabile un giorno la
+  data della spesa.
+- **La heatmap ha imparato a scorrere.** Con «ultimi 12 mesi» sono cinquantatré colonne: divise per
+  la larghezza di un telefono darebbero celle da tre punti, invisibili e **impossibili da toccare**
+  — che è una delle tre compensazioni su cui si regge la sua leggibilità. La cella non scende sotto
+  i nove punti e la griglia si trascina, con i nomi dei giorni fermi fuori dallo scorrimento.
+
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
 Entrambi nel codice e coperti dai test. **Nessuno dei due è ancora stato visto risolto su due
@@ -604,6 +657,19 @@ la lista si è accorciata parecchio, ma non è vuota — e con il redesign chius
   membro** nel gruppo le sezioni che ne vogliono due semplicemente non compaiano (il messaggio che
   dice cosa manca è lo Step 28, non questo). Da provare anche con **poche spese**: un mese con due
   spese sole è il caso in cui una scala piatta o un quantile mancante si vedono subito
+- **Lo Step 27, ed è il punto 3 del criterio di «fatto» del piano v4.** La prova è una sola frase e
+  si vede a occhio: **cambiando un filtro devono cambiare tutti i grafici insieme**, e il totale in
+  testa continuare a coincidere con la somma di ognuno. In particolare il **filtro persona**, dove
+  un numero plausibile e sbagliato non si riconosce guardandolo: con «a carico di», una spesa
+  divisa a metà deve contare **la metà**; con «ha pagato», per intero. Poi le cose che possono
+  rompersi in silenzio: che la barra dei chip **scorra** senza rubare lo scorrimento verticale alla
+  schermata; che il foglio si apra da qualunque chip e che «Fatto» lo chiuda; che scegliendo un
+  intervallo di due tocchi sulla griglia il periodo sia quello **raddrizzato** anche toccando prima
+  la data più avanti; che toccando una barra mensile il periodo diventi quel mese e le sei barre si
+  riancorino; che con un filtro che non trova niente compaia lo **stato vuoto** con «Azzera i
+  filtri» invece di undici grafici piatti; e che la **heatmap su «ultimi 12 mesi»** si trascini
+  invece di sbordare. Da guardare anche il primo avvio dopo l'aggiornamento: il periodo di partenza
+  è «Questo mese», cioè esattamente quello che la schermata mostrava prima
 - **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
   rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
   l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima

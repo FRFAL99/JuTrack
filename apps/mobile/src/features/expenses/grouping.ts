@@ -71,6 +71,22 @@ export function formatDayTitle(isoDate: string, now: Date = new Date()): string 
   return sameYear ? `${weekday} ${day} ${monthName}` : `${day} ${monthName} ${year}`;
 }
 
+/**
+ * Un giorno per esteso: «15 agosto», con l'anno solo quando non è quello in corso.
+ *
+ * Diverso da `formatDayTitle`, che dice «Oggi» e «Ieri»: dentro un intervallo di date
+ * quelle due parole non si possono usare — «Oggi – 15 agosto» non è un intervallo, e a
+ * mezzanotte diventerebbe falso senza che nulla lo ridisegni.
+ */
+export function formatDayShort(isoDate: string, now: Date = new Date()): string {
+  const [yearPart, monthPart, dayPart] = isoDate.split('-');
+  const year = Number(yearPart);
+  const day = Number(dayPart);
+  const name = MONTHS[Number(monthPart) - 1];
+  if (!Number.isFinite(year) || !Number.isFinite(day) || name === undefined) return isoDate;
+  return year === now.getFullYear() ? `${day} ${name}` : `${day} ${name} ${year}`;
+}
+
 /** Mese corrente del dispositivo in formato `YYYY-MM`. */
 export function currentMonth(now: Date = new Date()): string {
   return todayIso(now).slice(0, 7);

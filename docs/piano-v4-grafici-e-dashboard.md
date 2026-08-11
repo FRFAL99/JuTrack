@@ -3,8 +3,8 @@
 > **Avanzamento al 2026-08-11.**
 > Completati: **Step 0–9** (piano originale), **Step 10–14** ([piano v2](piano-v2-profili-gruppi-sync.md)),
 > **Step 15–22** ([piano v3](piano-v3-tab-gruppi-azzeramento-sync.md)), i sette passi del
-> [redesign visivo](visualdesign.md) e gli **Step 23–26** di questo piano. Da fare: **Step 27–28**,
-> uno per sessione.
+> [redesign visivo](visualdesign.md) e gli **Step 23–27** di questo piano. Da fare: **Step 28**,
+> l'ultimo.
 >
 > Nasce da una richiesta di prodotto, non da un difetto: i Grafici sono corretti ma poveri, e non c'è
 > modo di chiedere loro qualcosa di diverso da quello che mostrano.
@@ -399,7 +399,20 @@ android`**, che qui conta più che altrove: è la prima volta che `react-native-
 QR, e i problemi di bundling non li vedono né i test né il typecheck. Poi il telefono, in tema chiaro e
 scuro.
 
-### Step 27 — I sei filtri, che agiscono su tutto insieme
+### Step 27 — I sei filtri, che agiscono su tutto insieme ✅
+
+> **Fatto l'11 agosto 2026.** Come scritto qui sotto, con due moduli puri in più e quattro
+> precisazioni. I moduli: `amount.ts`, perché il massimo delle fasce è **esclusivo** in
+> `bins.ts` e **inclusivo** in `ExpenseQuery`, e quel centesimo si toglie una volta sola; e
+> `facets.ts`, con `QueryFacets` (`Omit<ExpenseQuery, 'from' | 'to'>`) e un `toggleValue` che
+> confronta sulla **chiave normalizzata**, o un filtro su `Esselunga` non si spegnerebbe più.
+> Le precisazioni: **lo stepper del mese è stato tolto** e a sostituirlo sono le barre
+> mensili, che ne mostrano sei invece di uno; **tre grafici non rispettano il periodo** ma
+> solo gli altri cinque filtri, perché la loro finestra è dichiarata nel titolo, e **saldo e
+> budget non ne rispettano nessuno**, perché sono fatti sul gruppo e non viste;
+> `previousPeriod` distingue **tre casi** per la riga «rispetto a…»; e la heatmap ha dovuto
+> imparare a scorrere, perché dodici mesi sono cinquantatré colonne. Dettagli nel
+> [devlog](devlog.md#2026-08-11--step-27-i-sei-filtri-che-agiscono-su-tutto-insieme).
 
 **File:** `apps/mobile/src/features/stats/filters/` (nuova: `FilterBar.tsx`, `FilterSheet.tsx`,
 `PeriodPicker.tsx`, `DayGridPicker.tsx`, `period.ts` e il suo test), `app/(tabs)/stats.tsx`.

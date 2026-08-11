@@ -13,12 +13,15 @@ import {
   dailyHeatmap,
   formatCents,
   formatMoney,
+  isEmptyQuery,
+  knownStores,
+  knownTags,
   monthBounds,
   monthsBetween,
   movingAverage,
+  queryTotalCents,
   shiftMonth,
   simplifyDebts,
-  totalCents,
   totalsByCategory,
   totalsByDay,
   totalsByMemberOverTime,
@@ -27,17 +30,13 @@ import {
   totalsByTag,
   totalsByWeekday,
   type ExpenseQuery,
+  type QueryLabels,
 } from '@jutrack/core';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
 import { SectionLabel } from '@/components/SectionLabel';
-import {
-  currentMonth,
-  formatMonthTitle,
-  shortMonthLabel,
-  todayIso,
-} from '@/features/expenses/grouping';
+import { formatMonthTitle, shortMonthLabel, todayIso } from '@/features/expenses/grouping';
 import { BudgetRows } from '@/features/stats/BudgetRows';
 import { CategoryBars } from '@/features/stats/CategoryBars';
 import { AmountHistogram } from '@/features/stats/charts/AmountHistogram';
@@ -51,6 +50,18 @@ import { StatTile } from '@/features/stats/charts/StatTile';
 import { topSlices, type Slice } from '@/features/stats/charts/slices';
 import { TopList } from '@/features/stats/charts/TopList';
 import { WeekdayBars } from '@/features/stats/charts/WeekdayBars';
+import type { QueryFacets } from '@/features/stats/filters/facets';
+import { FilterBar } from '@/features/stats/filters/FilterBar';
+import { FilterSheet } from '@/features/stats/filters/FilterSheet';
+import {
+  anchorMonth,
+  defaultPeriod,
+  describeRange,
+  monthPeriod,
+  previousPeriod,
+  startsAtMonthStart,
+  type Period,
+} from '@/features/stats/filters/period';
 import { describeChange } from '@/features/stats/format';
 import { MonthlyBars } from '@/features/stats/MonthlyBars';
 import { useEngineActivity } from '@/features/sync/useEngineActivity';
@@ -72,16 +83,6 @@ const YEAR_MONTHS = 12;
 const SMOOTHING_DAYS = 7;
 /** Quante voci al più nella ciambella e nelle classifiche. */
 const TOP_SLICES = 5;
-
-/**
- * **La domanda che si fa a questi grafici, per ora, è sempre la stessa.**
- *
- * Lo Step 27 la renderà componibile con i sei filtri; qui è vuota, e con la query vuota
- * `amountFor` restituisce l'importo pieno — cioè esattamente quello che la schermata
- * mostrava prima. Passarla comunque, invece di leggere `amountCents`, è ciò che permetterà
- * di sostituirla senza rileggere ogni grafico.
- */
-const NO_FILTER: ExpenseQuery = {};
 
 /**
  * I Grafici sono di **un** gruppo, e questo tab sta fuori da `app/(gruppo)/`.
@@ -115,53 +116,96 @@ export default function StatsScreen() {
   return <StatsOfGroup />;
 }
 
+/**
+ * **Una domanda sola, che alimenta tutti i grafici.**
+ *
+ * Il periodo e i cinque filtri compongono un unico `ExpenseQuery`: passarli uno per uno a
+ * ciascun widget sarebbe il modo più rapido per averne uno che ne ignora uno, e un grafico
+ * che risponde a una domanda diversa dagli altri non si riconosce guardandolo — i numeri
+ * restano plausibili.
+ *
+ * **Le letture dal documento sono due, non una per grafico.** `listExpenses` è una scansione
+ * lineare che alloca un array nuovo a ogni chiamata: una lettura ristretta al periodo (è
+ * l'unico filtro che conviene far fare allo store, perché restringe la scansione) e una
+ * completa, che serve al saldo — cumulativo su tutta la storia — e alla finestra di dodici
+ * mesi. Tutto il resto passa da `applyQuery` in due `useMemo`.
+ */
 function StatsOfGroup() {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
-  const [month, setMonth] = useState(currentMonth);
+  const [period, setPeriod] = useState<Period>(defaultPeriod);
+  const [facets, setFacets] = useState<QueryFacets>({});
+  const [sheetOpen, setSheetOpen] = useState(false);
   // Saldi e pareggi dipendono da quello che ha scritto l'altro telefono, non solo da noi.
   useEngineActivity();
 
-  const bounds = monthBounds(month);
-  const monthExpenses = useExpenses({ from: bounds.from, to: bounds.to });
-  const allExpenses = useExpenses();
   const categories = useCategories(true);
   const members = useMembers();
   const settlements = useSettlements();
-  const budgets = useBudgets(month);
 
-  const monthTotal = totalCents(monthExpenses, NO_FILTER);
-  const byCategory = useMemo(() => totalsByCategory(monthExpenses, NO_FILTER), [monthExpenses]);
+  const anchor = anchorMonth(period);
+  const anchorBounds = monthBounds(anchor);
+  const budgets = useBudgets(anchor);
+
+  const periodExpenses = useExpenses({ from: period.from, to: period.to });
+  const allExpenses = useExpenses();
+
+  /**
+   * La domanda intera. `facets` non ha `from`/`to`: li mette il periodo, qui e solo qui.
+   */
+  const query: ExpenseQuery = useMemo(
+    () => ({ ...facets, from: period.from, to: period.to }),
+    [facets, period],
+  );
+
+  const filtered = useMemo(() => applyQuery(periodExpenses, query), [periodExpenses, query]);
+
+  /**
+   * La finestra di dodici mesi, per i grafici che dichiarano la propria nel titolo.
+   *
+   * Rispettano i **filtri** ma non il **periodo**: «giorni della settimana» su un mese solo
+   * sarebbe rumore, e «dodici mesi» che ne mostra sette perché il periodo è corto sarebbe
+   * un titolo falso. Il periodo decide *dove si guarda*, questi dicono da quanto lontano.
+   *
+   * Ricevono `facets` e non `query` come proiezione: `amountFor` legge solo persona e
+   * modalità, ma `totalsByDay` userebbe `query.from`/`query.to` come estremi di ripiego, e
+   * sarebbero gli estremi sbagliati.
+   */
+  const yearFrom = `${shiftMonth(anchor, -(YEAR_MONTHS - 1))}-01`;
+  const yearExpenses = useMemo(
+    () => applyQuery(allExpenses, { ...facets, from: yearFrom, to: anchorBounds.to }),
+    [allExpenses, facets, yearFrom, anchorBounds.to],
+  );
+
+  const periodTotal = queryTotalCents(filtered, query);
+
+  const previous = useMemo(() => {
+    const before = previousPeriod(period);
+    return queryTotalCents(applyQuery(allExpenses, { ...facets, ...before }), facets);
+  }, [allExpenses, facets, period]);
+
+  const byCategory = useMemo(() => totalsByCategory(filtered, query), [filtered, query]);
 
   const trend = useMemo(
     () =>
-      totalsByMonth(allExpenses, {
-        from: shiftMonth(month, -(TREND_MONTHS - 1)),
-        to: month,
-      }),
-    [allExpenses, month],
+      totalsByMonth(
+        yearExpenses,
+        { from: shiftMonth(anchor, -(TREND_MONTHS - 1)), to: anchor },
+        facets,
+      ),
+    [yearExpenses, anchor, facets],
   );
 
   const trendYear = useMemo(
     () =>
-      totalsByMonth(allExpenses, {
-        from: shiftMonth(month, -(YEAR_MONTHS - 1)),
-        to: month,
-      }),
-    [allExpenses, month],
+      totalsByMonth(
+        yearExpenses,
+        { from: shiftMonth(anchor, -(YEAR_MONTHS - 1)), to: anchor },
+        facets,
+      ),
+    [yearExpenses, anchor, facets],
   );
 
-  /**
-   * L'ultimo giorno che ha senso disegnare.
-   *
-   * Sul mese in corso è **oggi**, non la fine del mese: una curva che prosegue piatta fino
-   * al 31 non dice «non ho ancora speso», dice «non spenderò», e sono due frasi diverse.
-   */
-  const lastDay = month >= currentMonth() ? todayIso() : bounds.to;
-
-  const days = useMemo(
-    () => totalsByDay(monthExpenses, NO_FILTER, { from: bounds.from, to: lastDay }),
-    [monthExpenses, bounds.from, lastDay],
-  );
+  const days = useMemo(() => totalsByDay(filtered, query), [filtered, query]);
   const cumulative = useMemo(() => cumulativeByDay(days), [days]);
   const smoothed = useMemo(
     () =>
@@ -172,64 +216,83 @@ function StatsOfGroup() {
     [days],
   );
 
-  // La heatmap copre il **mese intero** anche quando è in corso: i giorni che restano si
-  // vedono spenti, ed è l'informazione che dice a che punto del mese si è.
+  /**
+   * La heatmap del mese in corso copre il **mese intero**, non solo fino a oggi.
+   *
+   * I giorni che restano si vedono spenti, ed è l'informazione che dice a che punto del mese
+   * si è. Vale solo per «questo mese»: estendere un intervallo scelto a mano vorrebbe dire
+   * mostrare giorni che nessuno ha chiesto.
+   */
+  const heatTo = period.id === 'thisMonth' ? anchorBounds.to : period.to;
   const heat = useMemo(
-    () => dailyHeatmap(monthExpenses, bounds.from, bounds.to, NO_FILTER),
-    [monthExpenses, bounds.from, bounds.to],
+    () => dailyHeatmap(filtered, period.from, heatTo, query),
+    [filtered, period.from, heatTo, query],
   );
 
   const bins = useMemo(
-    () => binsFor(monthExpenses.map((expense) => amountFor(expense, NO_FILTER))),
-    [monthExpenses],
+    () => binsFor(filtered.map((expense) => amountFor(expense, query))),
+    [filtered, query],
   );
 
-  // L'abitudine settimanale su un mese solo sarebbe rumore: si guarda su un anno.
-  const yearExpenses = useMemo(
-    () =>
-      applyQuery(allExpenses, {
-        from: `${shiftMonth(month, -(YEAR_MONTHS - 1))}-01`,
-        to: bounds.to,
-      }),
-    [allExpenses, month, bounds.to],
-  );
-  const weekdays = useMemo(() => totalsByWeekday(yearExpenses, NO_FILTER), [yearExpenses]);
+  const weekdays = useMemo(() => totalsByWeekday(yearExpenses, facets), [yearExpenses, facets]);
 
-  const stores = useMemo(() => totalsByStore(monthExpenses, NO_FILTER), [monthExpenses]);
-  const tags = useMemo(() => totalsByTag(monthExpenses, NO_FILTER), [monthExpenses]);
+  const stores = useMemo(() => totalsByStore(filtered, query), [filtered, query]);
+  const tags = useMemo(() => totalsByTag(filtered, query), [filtered, query]);
 
   const memberIds = useMemo(() => members.map((m) => m.id), [members]);
-  const paidThisMonth = useMemo(
-    () => totalsByMemberOverTime(monthExpenses, memberIds, [month]),
-    [monthExpenses, memberIds, month],
+  const paidInPeriod = useMemo(
+    () =>
+      totalsByMemberOverTime(filtered, memberIds, monthsBetween(period.from.slice(0, 7), anchor)),
+    [filtered, memberIds, period.from, anchor],
   );
   const overTheYear = useMemo(
     () =>
       totalsByMemberOverTime(
         yearExpenses,
         memberIds,
-        monthsBetween(shiftMonth(month, -(YEAR_MONTHS - 1)), month),
+        monthsBetween(shiftMonth(anchor, -(YEAR_MONTHS - 1)), anchor),
       ),
-    [yearExpenses, memberIds, month],
+    [yearExpenses, memberIds, anchor],
   );
 
-  // Il saldo è cumulativo su tutta la storia, non sul mese scelto: un debito non si
-  // azzera al cambio di pagina del calendario.
+  /**
+   * Il saldo **non passa dai filtri**, e il budget nemmeno.
+   *
+   * Sono due fatti sul gruppo, non due viste: chi deve quanto a chi non cambia perché si sta
+   * guardando una categoria, e «speso 40 € di 200» diventerebbe falso filtrando per persona.
+   * Il saldo è poi cumulativo su tutta la storia — un debito non si azzera al cambio di
+   * pagina del calendario — e `budgetStatuses` sceglie da sé il mese che le interessa.
+   */
   const transfers = useMemo(
     () => simplifyDebts(computeBalances(allExpenses, settlements, memberIds)),
     [allExpenses, settlements, memberIds],
   );
 
   const budgetState = useMemo(
-    () => budgetStatuses(budgets, monthExpenses, month),
-    [budgets, monthExpenses, month],
+    () => budgetStatuses(budgets, allExpenses, anchor),
+    [budgets, allExpenses, anchor],
   );
 
-  const previous = trend[trend.length - 2]?.totalCents ?? 0;
+  // Il vocabolario del gruppo si deriva in lettura dalle spese, non da due entità: un
+  // negozio esiste finché esiste una spesa che lo nomina. Su tutte le spese e non su quelle
+  // filtrate, o filtrando per un negozio sparirebbero tutti gli altri dal foglio.
+  const storeNames = useMemo(() => knownStores(allExpenses), [allExpenses]);
+  const tagNames = useMemo(() => knownTags(allExpenses), [allExpenses]);
+
   const nameOf = (id: string): string => members.find((m) => m.id === id)?.name ?? 'qualcuno';
   const colorOf = (id: string): string => members.find((m) => m.id === id)?.color ?? colors.accent;
-  const atCurrentMonth = month >= currentMonth();
-  const monthLabel = formatMonthTitle(month);
+  const periodTitle = describeRange(period.from, period.to);
+
+  const labels: QueryLabels = useMemo(
+    () => ({
+      category: (id) => categories.find((one) => one.id === id)?.name ?? 'categoria',
+      member: (id) => members.find((one) => one.id === id)?.name ?? 'qualcuno',
+    }),
+    [categories, members],
+  );
+
+  const filtering = !isEmptyQuery(facets);
+  const reset = () => setFacets({});
 
   const categorySlices: Slice[] = byCategory.map((total) => {
     const category = total.categoryId === null ? undefined : byId(categories, total.categoryId);
@@ -241,7 +304,7 @@ function StatsOfGroup() {
     };
   });
 
-  const paidSlices: Slice[] = paidThisMonth
+  const paidSlices: Slice[] = paidInPeriod
     .filter((one) => one.paidCents > 0)
     .map((one) => ({
       key: one.memberId,
@@ -250,59 +313,88 @@ function StatsOfGroup() {
       color: colorOf(one.memberId),
     }));
 
+  const header = (
+    <View style={{ paddingBottom: spacing.md }}>
+      <FilterBar
+        period={period}
+        facets={facets}
+        labels={labels}
+        onOpen={() => setSheetOpen(true)}
+        onReset={reset}
+      />
+    </View>
+  );
+
+  const sheet = (
+    <FilterSheet
+      visible={sheetOpen}
+      onClose={() => setSheetOpen(false)}
+      period={period}
+      onPeriodChange={setPeriod}
+      facets={facets}
+      onFacetsChange={setFacets}
+      categories={categories}
+      members={members}
+      stores={storeNames}
+      tags={tagNames}
+      matchCount={filtered.length}
+      today={todayIso()}
+    />
+  );
+
   if (allExpenses.length === 0) {
     return (
       <Screen title="Grafici">
         <EmptyState
           icon={<Feather name="bar-chart-2" size={26} color={colors.textFaint} />}
           title="Ancora nessun dato"
-          hint="Andamento mensile, ripartizione per categoria e saldo tra di voi appariranno qui una volta registrate le prime spese."
+          hint="Andamento, ripartizione per categoria e saldo tra di voi appariranno qui una volta registrate le prime spese."
         />
       </Screen>
     );
   }
 
-  const monthHeader = (
-    <View style={[styles.rowBetween, { paddingHorizontal: spacing.lg, paddingBottom: spacing.md }]}>
-      <Pressable
-        onPress={() => setMonth(shiftMonth(month, -1))}
-        accessibilityRole="button"
-        accessibilityLabel="Mese precedente"
-        hitSlop={12}
-      >
-        <Feather name="chevron-left" size={22} color={colors.accent} />
-      </Pressable>
-      <Text style={{ color: colors.text, fontSize: fontSize.sm, fontWeight: fontWeight.bold }}>
-        {monthLabel}
-      </Text>
-      <Pressable
-        onPress={() => setMonth(shiftMonth(month, 1))}
-        disabled={atCurrentMonth}
-        accessibilityRole="button"
-        accessibilityLabel="Mese successivo"
-        accessibilityState={{ disabled: atCurrentMonth }}
-        hitSlop={12}
-      >
-        <Feather
-          name="chevron-right"
-          size={22}
-          color={atCurrentMonth ? colors.textFaint : colors.accent}
+  /**
+   * Niente da mostrare **non è la stessa cosa di tutto a zero**.
+   *
+   * Undici grafici disegnati su una lista vuota sono undici forme piatte che si leggono come
+   * un dato — «non ho speso niente» — e non come «la domanda non ha risposte». La barra
+   * resta in cima, così si vede *quale* domanda è stata posta, e «azzera i filtri» è lì
+   * accanto: è il caso in cui un filtro dimenticato fa sembrare guasta l'app.
+   */
+  if (filtered.length === 0) {
+    return (
+      <Screen header={header}>
+        <EmptyState
+          icon={<Feather name="filter" size={26} color={colors.textFaint} />}
+          title={filtering ? 'Nessuna spesa con questi filtri' : `Nessuna spesa in ${periodTitle}`}
+          hint={
+            filtering
+              ? 'I filtri valgono per tutti i grafici insieme. Toglierne uno, o allargare il periodo, li fa ricomparire.'
+              : 'Scegli un periodo più largo, oppure registra una spesa in questi giorni.'
+          }
         />
-      </Pressable>
-    </View>
-  );
+        {filtering && (
+          <View style={{ padding: spacing.lg }}>
+            <Button label="Azzera i filtri" onPress={reset} />
+          </View>
+        )}
+        {sheet}
+      </Screen>
+    );
+  }
 
   return (
-    <Screen header={monthHeader}>
+    <Screen header={header}>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
         <View style={{ alignItems: 'center', paddingHorizontal: spacing.lg, gap: 2 }}>
           <Text
             style={{ color: colors.text, fontSize: fontSize.display, fontWeight: fontWeight.heavy }}
           >
-            {formatCents(monthTotal)} <Text style={{ color: colors.textMuted }}>€</Text>
+            {formatCents(periodTotal)} <Text style={{ color: colors.textMuted }}>€</Text>
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
-            {describeChange(monthTotal, previous, formatMonthTitle(shiftMonth(month, -1)))}
+            {describeChange(periodTotal, previous, previousLabel(period))}
           </Text>
         </View>
 
@@ -312,26 +404,38 @@ function StatsOfGroup() {
             value={formatMoney(averagePerDay(days))}
             hint={`su ${days.length} ${days.length === 1 ? 'giorno' : 'giorni'}`}
             values={days.map((day) => day.totalCents)}
-            sparklineLabel={`Andamento giornaliero di ${monthLabel}`}
+            sparklineLabel={`Andamento giornaliero di ${periodTitle}`}
           />
           <Divider color={colors.divider} />
           <StatTile
             label="Spese"
-            value={String(monthExpenses.length)}
-            hint={monthExpenses.length === 1 ? 'registrata' : 'registrate'}
+            value={String(filtered.length)}
+            hint={filtered.length === 1 ? 'registrata' : 'registrate'}
           />
           <Divider color={colors.divider} />
           <StatTile
             label="A spesa"
             value={formatMoney(
-              monthExpenses.length === 0 ? 0 : Math.round(monthTotal / monthExpenses.length),
+              filtered.length === 0 ? 0 : Math.round(periodTotal / filtered.length),
             )}
             hint="in media"
           />
         </View>
 
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
-          <MonthlyBars months={trend} selected={month} onSelect={setMonth} />
+        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: spacing.sm }}>
+          {/* Toccare una barra sceglie quel mese come periodo: è anche il modo di andare
+              indietro nel tempo più di quanto facciano i preset, e ha preso il posto dello
+              stepper del mese, che diceva la stessa cosa mostrando un mese solo. */}
+          <MonthlyBars
+            months={trend}
+            selected={anchor}
+            onSelect={(month) => setPeriod(monthPeriod(month))}
+          />
+          {!startsAtMonthStart(period) && (
+            <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+              I mesi sono interi, anche quando il periodo scelto è più corto.
+            </Text>
+          )}
         </View>
 
         <Rule color={colors.border} />
@@ -359,7 +463,7 @@ function StatsOfGroup() {
             }))}
             {...(previous > 0 && {
               referenceCents: previous,
-              referenceLabel: `Totale di ${formatMonthTitle(shiftMonth(month, -1))}`,
+              referenceLabel: `Totale di ${previousLabel(period)}`,
             })}
           />
         </View>
@@ -390,23 +494,16 @@ function StatsOfGroup() {
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
           <WeekdayBars totals={weekdays} />
           <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            Sugli ultimi dodici mesi: su un mese solo sarebbero sette numeri a caso.
+            Sugli ultimi dodici mesi, non sul periodo scelto: su un mese solo sarebbero sette numeri
+            a caso.
           </Text>
         </View>
 
         <Rule color={colors.border} />
         <SectionLabel>Dove sono finiti</SectionLabel>
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.lg }}>
-          {byCategory.length === 0 ? (
-            <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-              Nessuna spesa in {monthLabel}.
-            </Text>
-          ) : (
-            <>
-              <CategoryTreemap items={categorySlices} />
-              <CategoryBars totals={byCategory} categories={categories} />
-            </>
-          )}
+          <CategoryTreemap items={categorySlices} />
+          <CategoryBars totals={byCategory} categories={categories} />
         </View>
 
         <Rule color={colors.border} />
@@ -426,7 +523,7 @@ function StatsOfGroup() {
             <View style={{ paddingHorizontal: spacing.lg }}>
               <DonutChart
                 slices={topSlices(paidSlices, TOP_SLICES, colors.textMuted)}
-                centerLabel={`Anticipato in ${monthLabel}`}
+                centerLabel={`Anticipato in ${periodTitle}`}
               />
             </View>
           </>
@@ -463,6 +560,10 @@ function StatsOfGroup() {
                   </View>
                 ))
               )}
+              <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+                Su tutta la storia del gruppo, filtri esclusi: un debito non si azzera cambiando
+                periodo.
+              </Text>
             </View>
 
             <Rule color={colors.border} />
@@ -485,7 +586,7 @@ function StatsOfGroup() {
               <TopList
                 totals={stores}
                 max={TOP_SLICES}
-                note="Le spese senza negozio non compaiono: questa classifica somma meno del totale del mese."
+                note="Le spese senza negozio non compaiono: questa classifica somma meno del totale del periodo."
               />
             </View>
           </>
@@ -499,7 +600,7 @@ function StatsOfGroup() {
               <TopList
                 totals={tags}
                 max={TOP_SLICES}
-                note="Una spesa con due tag conta per intero in entrambi: qui la somma può superare il totale del mese."
+                note="Una spesa con due tag conta per intero in entrambi: qui la somma può superare il totale del periodo."
               />
             </View>
           </>
@@ -521,7 +622,7 @@ function StatsOfGroup() {
               textTransform: 'uppercase',
             }}
           >
-            Budget
+            Budget di {formatMonthTitle(anchor)}
           </Text>
           <Pressable onPress={() => router.push('/budget')} accessibilityRole="button" hitSlop={8}>
             <Text style={{ color: colors.accent, fontSize: fontSize.sm }}>Imposta</Text>
@@ -530,8 +631,8 @@ function StatsOfGroup() {
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.xs }}>
           {budgetState.length === 0 ? (
             <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
-              Nessun limite impostato per {monthLabel}. Un budget serve a sapere a metà mese se si
-              sta esagerando, non a fine mese.
+              Nessun limite impostato per {formatMonthTitle(anchor)}. Un budget serve a sapere a
+              metà mese se si sta esagerando, non a fine mese.
             </Text>
           ) : (
             <BudgetRows statuses={budgetState} categories={categories} />
@@ -545,8 +646,16 @@ function StatsOfGroup() {
           </Text>
         </View>
       </ScrollView>
+
+      {sheet}
     </Screen>
   );
+}
+
+/** Come si chiama il tratto con cui il periodo si confronta: «rispetto a luglio». */
+function previousLabel(period: Period): string {
+  const before = previousPeriod(period);
+  return describeRange(before.from, before.to);
 }
 
 /** Il giorno del mese, senza lo zero davanti: sotto una linea ci stanno due cifre. */

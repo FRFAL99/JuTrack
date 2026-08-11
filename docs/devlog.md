@@ -4,6 +4,108 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-11 — Step 27: i sei filtri, che agiscono su tutto insieme
+
+Periodo, persona, categoria, negozio, tag e fascia di importo, in un solo `ExpenseQuery` che
+alimenta ogni grafico della schermata. Sette file nuovi in
+`apps/mobile/src/features/stats/filters/` — tre di logica pura con i loro test, quattro di
+interfaccia — e `stats.tsx` ricablato. **Da qui i Grafici si possono interrogare**, invece di
+mostrare quello che c'è nell'ordine in cui è scritto nel file.
+
+**Lo stepper del mese non c'è più, e a sostituirlo sono le barre mensili.** Erano due controlli
+per la stessa cosa: lo stepper diceva un mese per volta, la barra ne mostra sei e ne fa toccare
+uno. Toccare una barra imposta quel mese come periodo — `monthPeriod`, che per il mese in corso
+ripiega sul preset «Questo mese» così il chip non dice una data — ed è anche il modo di andare
+indietro nel tempo più di quanto facciano i preset: ogni tocco riancora le sei barre, quindi si
+scorre a ritroso sei mesi alla volta. L'intestazione della schermata è adesso la barra dei filtri.
+
+**I chip portano il valore, non il nome del filtro.** «Spesa», non «Categoria»: un chip che
+dicesse il nome costringerebbe ad aprire il foglio per sapere cosa sta filtrando. Le frasi le
+costruisce `queryParts` di `@jutrack/core`, la stessa che scrive `describeQuery`, perché due
+elenchi scritti in due punti finirebbero per raccontare due domande diverse. E «Azzera» sta
+**nella barra**, non dentro il foglio: è l'uscita di sicurezza da una schermata vuota, e
+chiederne di aprire un foglio per trovarla vorrebbe dire chiederlo proprio a chi non ha capito
+cosa sta succedendo.
+
+**Niente da mostrare non è la stessa cosa di tutto a zero.** Con la query senza risposte, undici
+grafici disegnati su una lista vuota sono undici forme piatte che si leggono come un dato — «non
+ho speso niente» — invece che come «la domanda non ha risposte». Al loro posto va uno stato vuoto
+che distingue i due casi (filtri attivi o periodo senza spese) con la barra ancora in cima, così
+si vede **quale** domanda è stata posta.
+
+**Non tutti i grafici rispettano il periodo, ed è voluto.** Tre lo dichiarano nel titolo — «Dodici
+mesi», «Giorni della settimana», «Anticipato e a carico» — e leggono la loro finestra di dodici
+mesi ancorata al mese in cui il periodo **finisce**: un grafico intitolato «dodici mesi» che ne
+mostra sette perché il periodo è corto sarebbe un titolo falso, e l'abitudine settimanale su un
+mese solo sarebbe rumore. Rispettano invece gli altri cinque filtri. Saldo e budget non passano
+**da nessun filtro**: sono due fatti sul gruppo e non due viste — chi deve quanto a chi non cambia
+perché si sta guardando una categoria, e «speso 40 € di 200» diventerebbe falso filtrando per
+persona. Ognuna di queste tre righe è scritta sotto il grafico a cui si riferisce, non solo qui.
+
+**La proiezione passa `facets` e non `query` dove la finestra è un'altra.** `amountFor` legge solo
+persona e modalità, quindi le due sarebbero equivalenti — ma `totalsByDay` usa `query.from` e
+`query.to` come estremi di ripiego, e per i grafici a dodici mesi sarebbero gli estremi sbagliati.
+La distinzione è la ragione per cui `QueryFacets` è un tipo a sé (`Omit<ExpenseQuery, 'from' |
+'to'>`) invece di una `ExpenseQuery` che ci si ricorda di non riempire.
+
+**Le letture dal documento restano due, non una per widget.** Una ristretta al periodo — è l'unico
+filtro che conviene far fare allo store, perché restringe la scansione — e una completa, che serve
+al saldo (cumulativo su tutta la storia) e alla finestra di dodici mesi. Tutto il resto sono due
+`applyQuery` in altrettanti `useMemo`.
+
+**Il confronto «rispetto a…» aveva bisogno di una regola, e sono tre casi.** Prima era sempre il
+mese precedente, perché il periodo era sempre un mese. Con «ultimi 7 giorni» quel confronto non
+significa niente, e con un mese **in corso** è peggio che inutile: a metà agosto qualunque mese
+finito vince, e la riga direbbe «-60%» ogni giorno fino all'ultimo. `previousPeriod` distingue un
+mese intero (si confronta con il mese intero prima), un mese in corso (lo **stesso tratto** del
+mese prima, accorciato se quel mese è più corto: il 31 marzo diventa il 28 febbraio) e tutto il
+resto (il tratto di pari lunghezza subito precedente, che finisce il giorno prima che il periodo
+cominci — un giorno in comune conterebbe due volte).
+
+**Il massimo delle fasce di importo è esclusivo di qua e inclusivo di là.** In `bins.ts` è
+`min <= importo < max`, così 10,00 € sta in «10–20» e non in «0–10»; in `ExpenseQuery` `maxCents`
+è inclusivo come `from` e `to`. Passare 2000 alla query includerebbe una spesa da 20,00 € nella
+fascia «10–20» **e** in «20–50». Il centesimo si toglie in `amount.ts`, una volta, e il test lo
+verifica passando dalla stessa `binsFor` che disegna le barre: è il tipo di scarto che nessuno
+nota finché non conta due volte la stessa spesa.
+
+**Un filtro su un negozio si spegne anche scritto con un'altra grafia.** `toggleValue` confronta
+sulla chiave normalizzata (`storeKey`, `tagKey`), perché il filtro conserva la grafia scelta
+mentre i suggerimenti mostrano la più usata: senza, la pillola resterebbe accesa e non ci sarebbe
+modo di toglierla. E l'ultima voce spenta lascia la chiave **assente** invece di un elenco vuoto,
+o `isEmptyQuery` continuerebbe a contare un filtro che non c'è più — cioè «Azzera» resterebbe
+nella barra senza niente da azzerare.
+
+**Il selettore di giorni non porta moduli nativi.** `DayGridPicker` è una griglia di `Pressable`
+costruita sugli stessi helper di `calendar.ts` che servono alla heatmap, buchi in testa compresi:
+un mese che comincia di sabato deve disegnare i giorni nella colonna giusta. È la quarta volta che
+il progetto rifiuta un modulo nativo per un gesto — dopo `@gorhom/bottom-sheet`,
+`@react-native-community/datetimepicker` e il drag & drop dei widget — e resta la base da cui
+rendere modificabile, un giorno, la data della spesa, ferma dal passo 7 del redesign proprio per
+mancanza di un selettore.
+
+**La heatmap non ci stava più in larghezza, e non era un difetto suo.** Con il periodo fisso a un
+mese erano cinque colonne; con «ultimi 12 mesi» sono cinquantatré, e diviso la larghezza di un
+telefono farebbero celle da tre punti — invisibili e, soprattutto, **impossibili da toccare**, che
+è una delle tre compensazioni su cui si regge la leggibilità di quel grafico. Ora la cella non
+scende sotto i nove punti e la griglia si trascina, con la colonna dei nomi dei giorni ferma fuori
+dallo scorrimento e una riga che dice che si può trascinare.
+
+**Le modifiche del foglio si applicano subito, senza un «Applica».** Uno stato di bozza da
+confermare vorrebbe dire tenere due copie della stessa domanda e un modo di sbagliare a
+riallinearle; così invece il conteggio in fondo al foglio cambia mentre si tocca, e si vede
+l'effetto di un filtro prima di chiudere.
+
+**Verifica:** 923 test verdi (576 core + 304 app + 43 relay, di cui 51 nuovi), typecheck, lint e
+`format:check` puliti, `expo export --platform android` completato senza variazioni di peso. Resta
+il punto 3 del criterio di «fatto» del piano v4, che si vede solo su un telefono: cambiando un
+filtro devono cambiare **tutti** i grafici insieme, e il totale in testa continuare a coincidere
+con la somma di ognuno.
+
+**Prossimo:** Step 28 — la dashboard componibile.
+
+---
+
 ## 2026-08-11 — Step 26: i grafici nuovi, in SVG
 
 Undici componenti in `apps/mobile/src/features/stats/charts/` e una schermata Grafici tre volte

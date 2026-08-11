@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
 import { formatMoney, HEATMAP_LEVELS, type HeatmapCell } from '@jutrack/core';
 import { formatDayTitle } from '@/features/expenses/grouping';
@@ -50,8 +50,19 @@ export function CalendarHeatmap({ cells }: CalendarHeatmapProps) {
     MAX_CELL,
     Math.floor((available - GAP * Math.max(0, columns.length - 1)) / Math.max(1, columns.length)),
   );
-  const cell = Math.max(6, size);
+  /**
+   * **La cella non scende sotto i nove punti, e quando non ci sta si scorre.**
+   *
+   * Dal periodo di un mese si è passati a un periodo qualunque (Step 27): «ultimi 12 mesi»
+   * sono cinquantatré colonne, e diviso la larghezza di un telefono farebbero celle da tre
+   * punti — invisibili e, soprattutto, impossibili da toccare, che è la compensazione su cui
+   * si regge la leggibilità di questo grafico. Meglio una griglia che esce dallo schermo e
+   * si trascina: il gesto è ovvio e le celle restano quelle di sempre.
+   */
+  const cell = Math.max(9, size);
   const gridHeight = cell * 7 + GAP * 6;
+  const gridWidth = columns.length * cell + GAP * Math.max(0, columns.length - 1);
+  const scrolls = gridWidth > available;
 
   const fillFor = (level: number): { fill: string; opacity: number } =>
     level === 0
@@ -79,52 +90,65 @@ export function CalendarHeatmap({ cells }: CalendarHeatmapProps) {
               ))}
             </View>
 
-            <View>
-              <Svg width={available} height={gridHeight}>
+            <ScrollView
+              horizontal
+              scrollEnabled={scrolls}
+              showsHorizontalScrollIndicator={false}
+              style={{ flexGrow: 0 }}
+            >
+              <View>
+                <Svg width={gridWidth} height={gridHeight}>
+                  {columns.map((column, columnIndex) =>
+                    column.map((day, row) =>
+                      day === null ? null : (
+                        <Rect
+                          key={day.date}
+                          x={columnIndex * (cell + GAP)}
+                          y={row * (cell + GAP)}
+                          width={cell}
+                          height={cell}
+                          rx={2.5}
+                          fill={fillFor(day.level).fill}
+                          fillOpacity={fillFor(day.level).opacity}
+                          stroke={selected?.date === day.date ? colors.text : 'none'}
+                          strokeWidth={selected?.date === day.date ? 1.5 : 0}
+                        />
+                      ),
+                    ),
+                  )}
+                </Svg>
+
                 {columns.map((column, columnIndex) =>
                   column.map((day, row) =>
                     day === null ? null : (
-                      <Rect
+                      <Pressable
                         key={day.date}
-                        x={columnIndex * (cell + GAP)}
-                        y={row * (cell + GAP)}
-                        width={cell}
-                        height={cell}
-                        rx={2.5}
-                        fill={fillFor(day.level).fill}
-                        fillOpacity={fillFor(day.level).opacity}
-                        stroke={selected?.date === day.date ? colors.text : 'none'}
-                        strokeWidth={selected?.date === day.date ? 1.5 : 0}
+                        onPress={() => setSelected(selected?.date === day.date ? null : day)}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected: selected?.date === day.date }}
+                        accessibilityLabel={`${formatDayTitle(day.date)}: ${
+                          day.totalCents === 0 ? 'nessuna spesa' : formatMoney(day.totalCents)
+                        }`}
+                        style={{
+                          position: 'absolute',
+                          left: columnIndex * (cell + GAP),
+                          top: row * (cell + GAP),
+                          width: cell,
+                          height: cell,
+                        }}
                       />
                     ),
                   ),
                 )}
-              </Svg>
-
-              {columns.map((column, columnIndex) =>
-                column.map((day, row) =>
-                  day === null ? null : (
-                    <Pressable
-                      key={day.date}
-                      onPress={() => setSelected(selected?.date === day.date ? null : day)}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: selected?.date === day.date }}
-                      accessibilityLabel={`${formatDayTitle(day.date)}: ${
-                        day.totalCents === 0 ? 'nessuna spesa' : formatMoney(day.totalCents)
-                      }`}
-                      style={{
-                        position: 'absolute',
-                        left: columnIndex * (cell + GAP),
-                        top: row * (cell + GAP),
-                        width: cell,
-                        height: cell,
-                      }}
-                    />
-                  ),
-                ),
-              )}
-            </View>
+              </View>
+            </ScrollView>
           </View>
+
+          {scrolls && (
+            <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+              Il periodo è lungo: trascina la griglia per vedere le altre settimane.
+            </Text>
+          )}
 
           <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
             {selected === null ? (
