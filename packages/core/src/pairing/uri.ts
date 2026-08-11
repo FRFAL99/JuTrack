@@ -94,11 +94,7 @@ export interface PairingInvite {
 
 /** Motivo per cui un URI scansionato non è utilizzabile. */
 export type PairingErrorReason =
-  | 'not-pairing-uri'
-  | 'unsupported-version'
-  | 'missing-key'
-  | 'malformed-key'
-  | 'expired';
+  'not-pairing-uri' | 'unsupported-version' | 'missing-key' | 'malformed-key' | 'expired';
 
 export type PairingParseResult =
   | { ok: true; key: Uint8Array; expiresAt: number | null }

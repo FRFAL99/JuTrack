@@ -24,12 +24,7 @@ import { formatDayShort, formatMonthTitle, todayIso } from '@/features/expenses/
 
 /** I sei preset del selettore. `custom` non è fra questi: non ha una regola, ha due date. */
 export type PeriodPresetId =
-  | 'last7'
-  | 'last30'
-  | 'thisMonth'
-  | 'lastMonth'
-  | 'last12Months'
-  | 'thisYear';
+  'last7' | 'last30' | 'thisMonth' | 'lastMonth' | 'last12Months' | 'thisYear';
 
 export type PeriodId = PeriodPresetId | 'custom';
 
