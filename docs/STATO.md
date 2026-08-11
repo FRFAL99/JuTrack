@@ -1,8 +1,8 @@
 # Stato del progetto — punto di partenza
 
 Aggiornato: 2026-08-11 — **i tre piani funzionali e il redesign visivo sono finiti nel codice**, e il
-**quarto piano è a metà**: [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
-**Step 23–28**, di cui **23, 24 e 25 sono fatti**. Tutti e sette i passi del redesign sono chiusi
+**quarto piano è a due terzi**: [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
+**Step 23–28**, di cui **23, 24, 25 e 26 sono fatti**. Tutti e sette i passi del redesign sono chiusi
 ([visualdesign.md](visualdesign.md)). **Quello che resta di tutto il resto è la prova su due telefoni
 veri**, e il criterio di «fatto» del piano v4 ci passa in mezzo.
 
@@ -37,15 +37,15 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 21 — Nessun gruppo al primo avvio   | ✅    | Fase `absent`, l'utente crea o entra con un invito           |
 | 22 — Azzera questo telefono         | ✅    | Wipe totale e ritorno all'onboarding, senza riavvio          |
 
-Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **tre step su sei
-fatti**:
+Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **quattro step su
+sei fatti**:
 
 | Step                           | Stato | Cosa conterrà                                                 |
 | ------------------------------ | ----- | ------------------------------------------------------------- |
 | 23 — Negozio e tag nel modello | ✅    | Due campi additivi su `Expense`, normalizzazione, export a v2 |
 | 24 — «Informazioni aggiuntive» | ✅    | Tendina chiusa nel form, suggerimenti, `Chip` condiviso       |
 | 25 — La geometria dei grafici  | ✅    | `packages/core/src/chart/` e sette aggregazioni nuove         |
-| 26 — I grafici nuovi, in SVG   | ⬜    | Linee, aree, heatmap, istogramma, treemap, ciambella          |
+| 26 — I grafici nuovi, in SVG   | ✅    | Linee, aree, heatmap, istogramma, treemap, ciambella          |
 | 27 — I sei filtri              | ⬜    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
 | 28 — La dashboard componibile  | ⬜    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
 
@@ -61,7 +61,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**842 test verdi** (576 core + 223 app + 43 relay), typecheck, lint e `format:check` puliti.
+**872 test verdi** (576 core + 253 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -84,14 +84,16 @@ anche, il gruppo di default non c'è più, e «Azzera questo telefono» adesso a
 **Anche il redesign visivo è chiuso** — sette passi su sette: vedi
 [visualdesign.md](visualdesign.md) e la sezione [Redesign visivo](#redesign-visivo) qui sotto.
 
-**Il quarto piano è cominciato:** [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
+**Il quarto piano è a due terzi:** [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 **Step 23–28** — grafici, filtri e dashboard componibile. Nasce da una richiesta di prodotto e non da
 un difetto: i Grafici sono corretti ma poveri, e non c'è modo di chiedere loro qualcosa di diverso da
-quello che mostrano. **Gli Step 23, 24 e 25 sono fatti.** Il 23 e il 25 sono i due che **non si
+quello che mostrano. **Gli Step 23, 24, 25 e 26 sono fatti.** Il 23 e il 25 sono i due che **non si
 vedono**, tutti dentro `packages/core`, e il piano stesso li indica come il posto giusto da cui
 cominciare — rischio contenuto e nessun lavoro da rifare; il 24 porta negozio e tag nel form, dietro
-una tendina chiusa. Vedi [Negozio e tag](#negozio-e-tag-step-23-e-24) e
-[La geometria dei grafici](#la-geometria-dei-grafici-step-25).
+una tendina chiusa; il 26 è il primo che **si vede**, ed è quello che consuma la geometria del 25.
+Vedi [Negozio e tag](#negozio-e-tag-step-23-e-24),
+[La geometria dei grafici](#la-geometria-dei-grafici-step-25) e
+[I grafici nuovi, in SVG](#i-grafici-nuovi-in-svg-step-26).
 
 Resta però vero che il seguito più urgente è
 [la prova sui due telefoni](piano-v3-tab-gruppi-azzeramento-sync.md#criterio-di-fatto-end-to-end), che
@@ -394,6 +396,42 @@ per cui viene prima di quello che li disegna.
   voce «senza negozio» perché dominerebbe ogni grafico); **`totalsByTag` somma di più** (una spesa
   con due tag conta per intero in entrambi). Vanno dette entrambe dove i numeri si mostrano.
 
+## I grafici nuovi, in SVG (Step 26)
+
+Undici componenti in `apps/mobile/src/features/stats/charts/` — `LineChart`, `AreaChart`,
+`Sparkline`, `WeekdayBars`, `CalendarHeatmap`, `AmountHistogram`, `CategoryTreemap`, `DonutChart`,
+`StatTile`, `TopList`, `MemberComparison` — e un tab Grafici che è ancora **una sequenza fissa**,
+solo molto più lunga: i filtri sono lo Step 27, la composizione il 28. `MonthlyBars`,
+`CategoryBars` e `BudgetRows` non sono state toccate.
+
+- **I componenti non calcolano niente.** Tutto quello che serviva è stato scritto e provato allo
+  Step 25: qui si scelgono le scale, si chiede il tracciato e si disegna.
+- **«Nessuna logica pura nuova» era sbagliato, e sono trenta test.** Quattro moduli con i loro
+  test: `axis.ts` (quali etichette ci stanno sotto un asse), `heatmap-grid.ts` (i giorni in
+  colonne di settimane, e le soglie della legenda ricavate dai livelli), `slices.ts` (la coda
+  della ciambella, che non deve perdere centesimi) e `ink.ts`.
+- **Metà dei colori di categoria vuole il testo scuro, non il bianco.** `ink.ts` esiste perché il
+  treemap è il primo punto dell'app in cui una scritta finisce **dentro** una tinta. Il test è
+  nato asserendo il bianco per tutti e otto ed è fallito: arancione, turchese, ocra e grigio col
+  bianco stanno sotto 3,7:1. E la soglia WCAG di luminanza non serve, perché vale contro il bianco
+  e il nero **puri**: si confrontano i due contrasti veri e vince il maggiore.
+- **La heatmap si disegna in SVG e si tocca in React Native**, con `Pressable` trasparenti
+  sovrapposti alle celle. Le tre compensazioni chieste dal piano ci sono tutte e tre — etichetta
+  per cella, legenda con le soglie **in euro**, tocco che scrive giorno e importo — ed è l'unico
+  grafico in cui il colore porterebbe l'informazione da solo.
+- **L'istogramma misura il numero di spese, non la somma.** La domanda è «tanti scontrini piccoli o
+  pochi grossi?»: su una scala di importi la fascia «200+» vincerebbe sempre con due spese sole.
+- **La ciambella solo dove le fette sommano al totale** — chi ha anticipato. Negozi e tag vanno in
+  `TopList`, con la nota che dice perché sommano meno (i negozi) o più (i tag) del totale.
+- **Sul mese in corso le curve si fermano a oggi**; la heatmap invece copre il mese intero, e i
+  giorni spenti in fondo dicono a che punto del mese si è.
+- **Ogni grafico si misura da sé** con `onLayout`: `Dimensions.get('window')` darebbe la larghezza
+  dello schermo ignorando i padding, e il grafico sborderebbe. Serve anche allo Step 28, dove i
+  widget non sanno in che colonna finiranno.
+- **`stats.tsx` passa già una `ExpenseQuery` vuota** a ogni aggregazione. Oggi non cambia nulla —
+  con la query vuota `amountFor` dà l'importo pieno — e allo Step 27 basterà sostituire un oggetto
+  solo invece di rileggere undici componenti.
+
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
 Entrambi nel codice e coperti dai test. **Nessuno dei due è ancora stato visto risolto su due
@@ -554,6 +592,18 @@ la lista si è accorciata parecchio, ma non è vuota — e con il redesign chius
   conversioni a `Chip`, che sono modifiche a punti collaudati: le tre modalità di divisione e le
   pillole delle categorie devono selezionarsi e deselezionarsi come prima, con l'icona di categoria
   al suo posto
+- **Lo Step 26, ed è il primo del piano v4 che si vede.** Il tab Grafici è lungo il triplo di
+  prima e disegna in SVG in otto punti nuovi. Da guardare, in ordine: che la schermata **scorra
+  fluida** fino in fondo (undici grafici che si misurano da soli, un render in più ciascuno); che
+  **nessuno sbordi** — ognuno si misura con `onLayout` e la prima passata avviene a larghezza zero,
+  quindi il rischio è un grafico che resta vuoto, non uno storto; che **heatmap, treemap e curve si
+  leggano in tema chiaro e in tema scuro**, che è il punto 5 del criterio di «fatto» del piano v4;
+  che il **tocco sulla cella della heatmap e sul riquadro del treemap** scriva davvero giorno e
+  importo sotto — sono la compensazione che rende leggibili quei due grafici a chi le tinte non le
+  distingue, e se non funzionassero il grafico resterebbe un colore e basta; e che con **un solo
+  membro** nel gruppo le sezioni che ne vogliono due semplicemente non compaiano (il messaggio che
+  dice cosa manca è lo Step 28, non questo). Da provare anche con **poche spese**: un mese con due
+  spese sole è il caso in cui una scala piatta o un quantile mancante si vedono subito
 - **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
   rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
   l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima
@@ -563,42 +613,45 @@ la lista si è accorciata parecchio, ma non è vuota — e con il redesign chius
 > `try/catch` proprio per questo — e l'export ripiega sugli appunti, dichiarandolo nell'interfaccia.
 > Il foglio di condivisione comparirà solo dopo una build aggiornata.
 
-Tutto il resto è verificato: 842 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 872 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
-> **Lo Step 25 non compare in questa lista, e non è una dimenticanza.** Non ha interfaccia: nessuna
-> schermata lo usa ancora, e ciò che c'è da verificare lo verificano i test, che è esattamente il
-> motivo per cui quello step esiste. Arriverà nella lista con lo Step 26, quando quei numeri
-> diventeranno marche su uno schermo.
+> **Lo Step 25 è entrato in questa lista attraverso il 26**, come era stato scritto: la geometria
+> non aveva interfaccia e non c'era niente da guardare, ma adesso quei numeri sono marche su uno
+> schermo, e guardare i grafici del 26 è anche il modo di guardare il 25.
 
 ## Trappole già risolte — da non riscoprire
 
-| Trappola                                                                                                      | Soluzione adottata                                                                                    |
-| ------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
-| `TextEncoder` non esiste su Hermes                                                                            | UTF-8 scritta in `crypto/encoding.ts`; vietato l'import da noble                                      |
-| Yjs non fa il bundle su RN (`lib0` → `isomorphic-webcrypto`, fermo al 2022)                                   | Alias in `metro.config.js` verso uno shim su `expo-crypto`                                            |
-| `storage.deleteAll()` su Durable Object SQLite cancella anche le tabelle                                      | `ensureSchema()` subito dopo, con test di regressione                                                 |
-| Un blob corrotto blocca **tutti** gli update successivi di quel device                                        | Ripubblicazione dello stato completo al rilevamento                                                   |
-| TypeScript bloccato a 6.x                                                                                     | `typescript-eslint` dichiara peer `typescript <6.1.0`                                                 |
-| Nella flat config ESLint vince l'ultima regola                                                                | Gli override vanno **dopo** il blocco generale                                                        |
-| Metro annunciava `127.0.0.1` come host del bundle                                                             | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                                                             |
-| expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera                    | `expo-camera`, `expo-file-system`, `expo-sharing` con `require` in `try/catch`                        |
-| **`expo start` dalla root del monorepo**: 404 su ogni bundle, app muta                                        | Avviarlo **sempre** da `apps/mobile`; è costato giorni                                                |
-| Due copie di React (`expo-*` dichiara `"react": "*"`)                                                         | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede                                       |
-| `DELETE FROM sync_pending` senza `WHERE`: con due gruppi cancella la coda offline dell'altro                  | Colonna `vault_id` ovunque, e un test su SQLite vero — con un finto motore passerebbe comunque        |
-| I tipi delle rotte expo-router non li rigenera `expo export`, ma `expo start`                                 | Sono in `.expo/types/`, gitignorato: in CI non esistono e il typecheck passa lo stesso                |
-| **expo-router non espone il fragment**: `useLocalSearchParams` vede il percorso e la query                    | La rotta `/join` legge il link grezzo con `Linking.useLinkingURL()`                                   |
-| Uscire da un gruppo **mai sincronizzato**: `no such table: sync_state`                                        | `SqliteSyncStore.forget` passa dallo stesso `ensureSchema` di `open`                                  |
-| La schermata del gruppo riselezionava il gruppo **appena abbandonato**: app ferma sul caricamento             | Guardia nella schermata **e** in `select`, che rifiuta un `vaultId` non nel registro                  |
-| Spostare rotte con `.expo/types/` gitignorato: gli href obsoleti passano typecheck **e** lint                 | Grep sugli href, poi `expo start` per rigenerare i tipi e `tsc` **con quei tipi presenti**            |
-| **SecureStore non sa elencare i propri slot**: cancellare `groups` per primo orfanerebbe le chiavi            | `wipeDevice` legge `registry.list()` come primissima operazione, prima di qualunque DELETE            |
-| Dopo `DELETE FROM app_meta`, `ensureSchema` scambia le tabelle di sync per quelle del vecchio schema          | Innocuo di proposito: a quel punto sono vuote e `SqliteSyncStore.open` le ricrea — scritto nel codice |
-| **Un `<Redirect>` in una schermata di stack scatta anche quando non è a fuoco**: quelle sotto restano montate | Componente condiviso fra le due rotte, che non naviga — vedi `GroupHome` (passo 6)                    |
-| Cambiare gruppo mentre si è su `/groups/<id>`: la guardia del layout lo riporta indietro subito               | `dismissTo('/')` **prima** di `select()`, così la guardia è già smontata                              |
-| Un token di stile con `as const` non è assegnabile a `TextStyle` (`fontVariant` diventa `readonly`)           | Tipizzarlo `Pick<TextStyle, …>`; e un token che nessuno usa non compila senza che nessuno lo sappia   |
-| `-shares[me]` con quota zero dà `-0`, che non è `0` e a valle si legge come debito                            | `net === 0 ? 0 : net` in `yourShareCents`, con il test che lo fissa                                   |
-| Un campo nuovo letto senza fallback: un record dall'altro telefono fa saltare `listExpenses` intera           | Reader difensivi: `strList` accetta solo array e solo stringhe, e i test ci scrivono dentro un `42`   |
-| Disinnescare le formule **dopo** aver unito i tag in una cella CSV: protegge solo il primo                    | `neutralizeFormula` su ciascun tag, poi il `join(';')` — e il test guarda il secondo, non il primo    |
+| Trappola                                                                                                      | Soluzione adottata                                                                                      |
+| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `TextEncoder` non esiste su Hermes                                                                            | UTF-8 scritta in `crypto/encoding.ts`; vietato l'import da noble                                        |
+| Yjs non fa il bundle su RN (`lib0` → `isomorphic-webcrypto`, fermo al 2022)                                   | Alias in `metro.config.js` verso uno shim su `expo-crypto`                                              |
+| `storage.deleteAll()` su Durable Object SQLite cancella anche le tabelle                                      | `ensureSchema()` subito dopo, con test di regressione                                                   |
+| Un blob corrotto blocca **tutti** gli update successivi di quel device                                        | Ripubblicazione dello stato completo al rilevamento                                                     |
+| TypeScript bloccato a 6.x                                                                                     | `typescript-eslint` dichiara peer `typescript <6.1.0`                                                   |
+| Nella flat config ESLint vince l'ultima regola                                                                | Gli override vanno **dopo** il blocco generale                                                          |
+| Metro annunciava `127.0.0.1` come host del bundle                                                             | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                                                               |
+| expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera                    | `expo-camera`, `expo-file-system`, `expo-sharing` con `require` in `try/catch`                          |
+| **`expo start` dalla root del monorepo**: 404 su ogni bundle, app muta                                        | Avviarlo **sempre** da `apps/mobile`; è costato giorni                                                  |
+| Due copie di React (`expo-*` dichiara `"react": "*"`)                                                         | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede                                         |
+| `DELETE FROM sync_pending` senza `WHERE`: con due gruppi cancella la coda offline dell'altro                  | Colonna `vault_id` ovunque, e un test su SQLite vero — con un finto motore passerebbe comunque          |
+| I tipi delle rotte expo-router non li rigenera `expo export`, ma `expo start`                                 | Sono in `.expo/types/`, gitignorato: in CI non esistono e il typecheck passa lo stesso                  |
+| **expo-router non espone il fragment**: `useLocalSearchParams` vede il percorso e la query                    | La rotta `/join` legge il link grezzo con `Linking.useLinkingURL()`                                     |
+| Uscire da un gruppo **mai sincronizzato**: `no such table: sync_state`                                        | `SqliteSyncStore.forget` passa dallo stesso `ensureSchema` di `open`                                    |
+| La schermata del gruppo riselezionava il gruppo **appena abbandonato**: app ferma sul caricamento             | Guardia nella schermata **e** in `select`, che rifiuta un `vaultId` non nel registro                    |
+| Spostare rotte con `.expo/types/` gitignorato: gli href obsoleti passano typecheck **e** lint                 | Grep sugli href, poi `expo start` per rigenerare i tipi e `tsc` **con quei tipi presenti**              |
+| **SecureStore non sa elencare i propri slot**: cancellare `groups` per primo orfanerebbe le chiavi            | `wipeDevice` legge `registry.list()` come primissima operazione, prima di qualunque DELETE              |
+| Dopo `DELETE FROM app_meta`, `ensureSchema` scambia le tabelle di sync per quelle del vecchio schema          | Innocuo di proposito: a quel punto sono vuote e `SqliteSyncStore.open` le ricrea — scritto nel codice   |
+| **Un `<Redirect>` in una schermata di stack scatta anche quando non è a fuoco**: quelle sotto restano montate | Componente condiviso fra le due rotte, che non naviga — vedi `GroupHome` (passo 6)                      |
+| Cambiare gruppo mentre si è su `/groups/<id>`: la guardia del layout lo riporta indietro subito               | `dismissTo('/')` **prima** di `select()`, così la guardia è già smontata                                |
+| Un token di stile con `as const` non è assegnabile a `TextStyle` (`fontVariant` diventa `readonly`)           | Tipizzarlo `Pick<TextStyle, …>`; e un token che nessuno usa non compila senza che nessuno lo sappia     |
+| `-shares[me]` con quota zero dà `-0`, che non è `0` e a valle si legge come debito                            | `net === 0 ? 0 : net` in `yourShareCents`, con il test che lo fissa                                     |
+| Un campo nuovo letto senza fallback: un record dall'altro telefono fa saltare `listExpenses` intera           | Reader difensivi: `strList` accetta solo array e solo stringhe, e i test ci scrivono dentro un `42`     |
+| Disinnescare le formule **dopo** aver unito i tag in una cella CSV: protegge solo il primo                    | `neutralizeFormula` su ciascun tag, poi il `join(';')` — e il test guarda il secondo, non il primo      |
+| Testo bianco fisso dentro una tinta: metà dei colori di categoria di default sta sotto 3,7:1                  | `inkOn` confronta i **due contrasti veri**; la soglia WCAG vale contro bianco e nero puri, non qui      |
+| Contare a sette per fare le colonne di una heatmap: funziona solo se il periodo comincia di lunedì            | Colonna nuova al lunedì, buchi in testa — e il test parte da un mese che comincia di sabato             |
+| `Dimensions.get('window')` per dare una larghezza a un SVG: ignora i padding e il grafico sborda              | Ogni grafico si misura con `onLayout` e non disegna niente finché la larghezza è zero                   |
+| Un accumulatore riassegnato dentro una `map` in fase di render                                                | `react-hooks/immutability` lo rifiuta: ciclo che scrive in un elenco locale (gli archi della ciambella) |
 
 ## Dove sta ogni schermata (Step 18, 19 e 20)
 

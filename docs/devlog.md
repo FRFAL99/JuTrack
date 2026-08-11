@@ -4,6 +4,97 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-11 — Step 26: i grafici nuovi, in SVG
+
+Undici componenti in `apps/mobile/src/features/stats/charts/` e una schermata Grafici tre volte
+più lunga di prima. I componenti non calcolano niente: ricevono quello che lo Step 25 ha già
+prodotto e provato, scelgono le scale e disegnano. **È il primo step del piano v4 che si vede.**
+
+**«Nessuna logica pura nuova» era sbagliato, e sono trenta test.** Il piano dava questo step per
+tutta impaginazione. Quattro cose invece sono logica, e tutte e quattro sbagliano in silenzio:
+quali etichette ci stanno sotto un asse (`axis.ts`), come si dispongono i giorni in colonne di
+settimane (`heatmap-grid.ts`), come si raccoglie la coda della ciambella senza perdere centesimi
+(`slices.ts`), e di che colore va scritto un nome **dentro** il colore di una categoria
+(`ink.ts`). Stanno fuori dai componenti, con i loro test, come `format.ts` e `split-text.ts`.
+
+**`inkOn` è nato con un'assunzione sbagliata, e il test l'ha bocciata al primo colpo.** Il primo
+test diceva «sui colori di categoria di default scrive bianco», per tutti e otto. Ne sono passati
+quattro: arancione, turchese, ocra e grigio hanno luminanza fra 0,23 e 0,27, e col bianco stanno
+sotto 3,7:1. Correggere il test sarebbe stato il modo peggiore di chiuderla — la prima versione
+usava la soglia WCAG (0,179), che vale contro il **bianco e il nero puri**, mentre i due
+inchiostri qui sono `#FFFFFF` e `#14141B`: su un verde come `#2B8A3E` quella soglia indica il
+testo scuro, e il chiaro contrasta di più. Ora si calcolano entrambi i rapporti e vince il
+maggiore. Due divisioni, nessun caso limite da ricordare, e la palette si divide davvero a metà.
+
+**La heatmap è disegnata in SVG e si tocca in React Native.** L'SVG fa le celle; sopra ci sono dei
+`Pressable` trasparenti, uno per giorno, che portano il tocco e l'etichetta d'accessibilità. La
+gestione dell'accessibilità dentro l'SVG dipende dalla piattaforma, quella di React Native no ed è
+la stessa del resto dell'app. Le tre compensazioni chieste dal piano ci sono tutte e tre —
+etichetta per cella («mercoledì 12 agosto: 34,20 €»), legenda con le soglie **in euro**, tocco che
+scrive giorno e importo sotto la griglia — e vanno tenute insieme: è l'unico grafico in cui il
+colore porterebbe l'informazione da solo.
+
+**Le soglie della legenda si leggono all'indietro.** `dailyHeatmap` assegna i livelli per quantili
+e non racconta a nessuno da che cifra comincia ciascuno: `levelThresholds` ricava il **minimo
+osservato** per livello. Un livello che nessun giorno raggiunge resta senza soglia invece di
+inventarne una, e succede davvero quando i giorni con spese sono meno di quattro.
+
+**Una colonna della griglia comincia di lunedì, non ogni sette celle.** Contare a sette funziona
+solo se il periodo comincia di lunedì: agosto 2026 comincia di sabato, e senza i buchi in testa
+tutti i giorni scivolerebbero di cinque righe — il grafico direbbe che si spende di lunedì mentre
+si spende di sabato. Il test passa da un mese che comincia di sabato, che è il caso vero.
+
+**L'istogramma misura il numero di spese, non la somma.** La domanda è «faccio tanti scontrini
+piccoli o pochi grossi?», e su una scala di importi la fascia «200+» vincerebbe sempre con due
+spese sole. La somma di ciascuna fascia resta nell'etichetta d'accessibilità, dove serve senza
+deformare la lettura.
+
+**La ciambella si usa solo dove le fette sommano al totale.** Chi ha anticipato, sì. Negozi e tag,
+no: la prima classifica somma **meno** del totale (le spese senza negozio non ci sono), la seconda
+**di più** (una spesa con due tag conta per intero in entrambi). Un cerchio direbbe una falsità
+sulla forma stessa, quindi lì va `TopList` — con la nota che dice perché i conti non tornano
+scritta sotto l'elenco, non in un documento.
+
+**Sul mese in corso le curve si fermano a oggi.** Una cumulata che prosegue piatta fino al 31 non
+dice «non ho ancora speso», dice «non spenderò». La heatmap invece copre il mese **intero**, e i
+giorni che restano si vedono spenti: lì il vuoto in fondo è l'informazione che dice a che punto
+del mese si è.
+
+**La cumulata è una spezzata, non una curva morbida.** `smoothLinePath` non scavalca i punti — è
+la proprietà per cui esiste — ma su una cumulata inventerebbe pendenze nei giorni in cui non si è
+speso niente, che sono precisamente i tratti piatti da leggere. La morbida sta sui dodici mesi,
+dove i punti sono dodici e radi.
+
+**Non tutto è finito in SVG, ed è una scelta.** `TopList`, `MemberComparison` e `StatTile` restano
+`View` di React Native: una barra orizzontale è una vista con una larghezza, e l'SVG lì non
+comprerebbe niente pagando il testo che non eredita il font dell'app. L'SVG si guadagna il posto
+dove c'è un tracciato o un impacchettamento — linee, aree, archi, treemap, celle. `MonthlyBars`,
+`CategoryBars` e `BudgetRows` non sono state toccate, come diceva il piano.
+
+**Ogni grafico si misura da sé** con `onLayout` invece di ricevere la larghezza come prop o
+leggere `Dimensions.get('window')`, che darebbe la larghezza dello schermo ignorando i padding
+della schermata — il grafico sborderebbe di sedici punti per lato. Costa un render in più a
+grafico e li rende autonomi, che è quello che servirà ai widget dello Step 28.
+
+**`stats.tsx` passa una `ExpenseQuery` vuota a ogni aggregazione.** Non serve a niente oggi —
+`amountFor` con la query vuota restituisce l'importo pieno, cioè quello che la schermata mostrava
+già — e serve a tutto allo Step 27: la barra dei filtri dovrà sostituire un oggetto solo, senza
+rileggere undici componenti per scoprire chi legge `amountCents` per conto proprio.
+
+Una cosa trovata dal lint: `react-hooks/immutability` rifiuta un accumulatore riassegnato dentro
+una `map` — erano gli angoli progressivi degli spicchi. Riscritto come ciclo che scrive in un
+elenco locale, dove ogni arco comincia dove finisce il precedente.
+
+**Verifica:** 872 test verdi (576 core + 253 app + 43 relay), typecheck, lint e `format:check`
+puliti, `expo export --platform android` completato. Il bundle resta quello dello Step 25 (4 MB
+secondo expo, 3,81 MB il file `.hbc`): `react-native-svg` c'era già per il QR, quindi i grafici
+nuovi pagano solo il proprio codice. Era il rischio dichiarato di questo step — i problemi di
+bundling non li vedono né i test né il typecheck — e non si è materializzato.
+
+**Prossimo:** Step 27 — i sei filtri, che agiscono su tutti i grafici insieme.
+
+---
+
 ## 2026-08-11 — Step 25: la geometria dei grafici, dove si può provare
 
 Undici moduli nuovi in `packages/core`, nessuna riga di interfaccia. Quattro in `chart/` — scale,

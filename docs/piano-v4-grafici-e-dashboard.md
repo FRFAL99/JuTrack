@@ -3,7 +3,7 @@
 > **Avanzamento al 2026-08-11.**
 > Completati: **Step 0–9** (piano originale), **Step 10–14** ([piano v2](piano-v2-profili-gruppi-sync.md)),
 > **Step 15–22** ([piano v3](piano-v3-tab-gruppi-azzeramento-sync.md)), i sette passi del
-> [redesign visivo](visualdesign.md) e gli **Step 23–25** di questo piano. Da fare: **Step 26–28**,
+> [redesign visivo](visualdesign.md) e gli **Step 23–26** di questo piano. Da fare: **Step 27–28**,
 > uno per sessione.
 >
 > Nasce da una richiesta di prodotto, non da un difetto: i Grafici sono corretti ma poveri, e non c'è
@@ -350,7 +350,20 @@ copre l'area senza sovrapporre rettangoli`; `binsFor mette 10,00 € nella fasci
 (il confine è il caso che si sbaglia); `dailyHeatmap con una spesa enorme non manda tutti gli altri
 giorni a livello zero`.
 
-### Step 26 — I grafici nuovi, in SVG
+### Step 26 — I grafici nuovi, in SVG ✅
+
+> **Fatto l'11 agosto 2026.** Come scritto qui sotto, con una correzione e tre precisazioni.
+> La correzione: **«nessuna logica pura nuova» non era vero**, e sono quattro moduli con trenta
+> test — `axis.ts` (quali etichette ci stanno), `heatmap-grid.ts` (i giorni in colonne di
+> settimane, e le soglie della legenda lette all'indietro dai livelli), `slices.ts` (la coda
+> della ciambella) e `ink.ts` (di che colore scrivere dentro il colore di una categoria: metà
+> della palette di default vuole il testo **scuro**, e il test l'ha scoperto bocciando
+> l'assunzione opposta). Le tre precisazioni: la heatmap si disegna in SVG ma si tocca con
+> `Pressable` sovrapposti, perché l'accessibilità di React Native non dipende dalla piattaforma;
+> l'istogramma misura il **numero di spese** e non la somma, o la fascia «200+» vincerebbe
+> sempre; e `TopList`, `MemberComparison` e `StatTile` restano `View` di React Native — una
+> barra orizzontale è una vista con una larghezza, e l'SVG lì non compra niente. Dettagli nel
+> [devlog](devlog.md#2026-08-11--step-26-i-grafici-nuovi-in-svg).
 
 **File:** `apps/mobile/src/features/stats/charts/` (nuova) e `app/(tabs)/stats.tsx`.
 
