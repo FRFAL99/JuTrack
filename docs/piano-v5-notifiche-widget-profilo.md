@@ -54,18 +54,18 @@ propria valuta e lingua senza che questo influenzi gli altri membri dello stesso
 
 ## Decisioni prese
 
-| Ambito                          | Scelta                                                                          |
-| -------------------------------- | -------------------------------------------------------------------------------- |
-| Notifiche                        | **Solo locali.** Niente FCM/APNs, niente token, niente modifica al relay        |
-| Push fra dispositivi              | **Fuori dal piano.** Riaprire solo con una discussione esplicita sulla privacy  |
-| Widget: contenuto                 | **Due widget**: saldo del gruppo aperto, totale speso nel mese                   |
-| Widget: aggiornamento             | **Ad apertura app / fine sync.** Nessun refresh in background nell'MVP           |
-| Valuta e lingua                   | **Solo nel profilo**, mai nel gruppo. Locali al telefono, non sincronizzate      |
-| Build native                      | **Una sola build EAS nuova**, con entrambi i plugin (notifiche + widget) insieme |
-| Libreria widget                   | `react-native-android-widget` (config plugin, nessun `expo prebuild` manuale)   |
-| Libreria i18n                     | `i18next` + `react-i18next` + `expo-localization`. Puro JS, nessuna build in più |
-| Traduzione                        | **Progressiva, schermata per schermata**, non tutta in un colpo solo            |
-| Modello Yjs / schema del vault    | **Non toccato.** Nessuno dei tre filoni scrive nel documento condiviso           |
+| Ambito                         | Scelta                                                                           |
+| ------------------------------ | -------------------------------------------------------------------------------- |
+| Notifiche                      | **Solo locali.** Niente FCM/APNs, niente token, niente modifica al relay         |
+| Push fra dispositivi           | **Fuori dal piano.** Riaprire solo con una discussione esplicita sulla privacy   |
+| Widget: contenuto              | **Due widget**: saldo del gruppo aperto, totale speso nel mese                   |
+| Widget: aggiornamento          | **Ad apertura app / fine sync.** Nessun refresh in background nell'MVP           |
+| Valuta e lingua                | **Solo nel profilo**, mai nel gruppo. Locali al telefono, non sincronizzate      |
+| Build native                   | **Una sola build EAS nuova**, con entrambi i plugin (notifiche + widget) insieme |
+| Libreria widget                | `react-native-android-widget` (config plugin, nessun `expo prebuild` manuale)    |
+| Libreria i18n                  | `i18next` + `react-i18next` + `expo-localization`. Puro JS, nessuna build in più |
+| Traduzione                     | **Progressiva, schermata per schermata**, non tutta in un colpo solo             |
+| Modello Yjs / schema del vault | **Non toccato.** Nessuno dei tre filoni scrive nel documento condiviso           |
 
 ### Perché una sola build EAS per notifiche e widget
 
@@ -120,20 +120,20 @@ schermate.
 
 ## Step
 
-| Step | Filone     | Contenuto                                                                                | Build EAS |
-| ---- | ---------- | ------------------------------------------------------------------------------------------ | :-------: |
-| 29   | Profilo    | Valuta di default nel `Profile`, selettore in `tu.tsx`, precompila il form nuova spesa     | No        |
-| 30   | Infra      | Config plugin `expo-notifications` + `react-native-android-widget`, permessi Android, build EAS nuova, verifica diagnostica | **Sì** |
-| 31   | Notifiche  | Promemoria locale "registra una spesa" (programmato, cancellabile)                         | No        |
-| 32   | Notifiche  | Avviso locale soglia di budget superata                                                    | No        |
-| 33   | Notifiche  | Notifica locale esito sync (fallito/bloccato a lungo)                                      | No        |
-| 34   | Widget     | Widget "Saldo del gruppo aperto" — refresh quando l'app è in primo piano/dopo sync          | No        |
-| 35   | Widget     | Widget "Totale speso nel mese" — stesso meccanismo di refresh                              | No        |
-| 36   | Widget     | *(opzionale, da valutare dopo l'uso reale)* refresh periodico in background via WorkManager | Forse     |
-| 37   | Lingua     | Infrastruttura i18n (libreria, provider, dizionari IT/EN), campo `language` nel `Profile`, selettore in `tu.tsx` | No |
-| 38   | Lingua     | Traduzione EN delle tre schermate più aperte: home spese, nuova spesa, gruppi              | No        |
-| 39   | Lingua     | Traduzione EN del resto: grafici/dashboard, Tu/impostazioni, onboarding, pairing, backup/export, azzera | No |
-| 40   | Verifica   | Prova end-to-end su telefono reale: notifiche mostrate davvero, widget che si aggiornano, cambio lingua visibile, valuta di default applicata | No |
+| Step | Filone    | Contenuto                                                                                                                                     | Build EAS |
+| ---- | --------- | --------------------------------------------------------------------------------------------------------------------------------------------- | :-------: |
+| 29   | Profilo   | Valuta di default nel `Profile`, selettore in `tu.tsx`, precompila il form nuova spesa                                                        |    No     |
+| 30   | Infra     | Config plugin `expo-notifications` + `react-native-android-widget`, permessi Android, build EAS nuova, verifica diagnostica                   |  **Sì**   |
+| 31   | Notifiche | Promemoria locale "registra una spesa" (programmato, cancellabile)                                                                            |    No     |
+| 32   | Notifiche | Avviso locale soglia di budget superata                                                                                                       |    No     |
+| 33   | Notifiche | Notifica locale esito sync (fallito/bloccato a lungo)                                                                                         |    No     |
+| 34   | Widget    | Widget "Saldo del gruppo aperto" — refresh quando l'app è in primo piano/dopo sync                                                            |    No     |
+| 35   | Widget    | Widget "Totale speso nel mese" — stesso meccanismo di refresh                                                                                 |    No     |
+| 36   | Widget    | _(opzionale, da valutare dopo l'uso reale)_ refresh periodico in background via WorkManager                                                   |   Forse   |
+| 37   | Lingua    | Infrastruttura i18n (libreria, provider, dizionari IT/EN), campo `language` nel `Profile`, selettore in `tu.tsx`                              |    No     |
+| 38   | Lingua    | Traduzione EN delle tre schermate più aperte: home spese, nuova spesa, gruppi                                                                 |    No     |
+| 39   | Lingua    | Traduzione EN del resto: grafici/dashboard, Tu/impostazioni, onboarding, pairing, backup/export, azzera                                       |    No     |
+| 40   | Verifica  | Prova end-to-end su telefono reale: notifiche mostrate davvero, widget che si aggiornano, cambio lingua visibile, valuta di default applicata |    No     |
 
 ### Step 29 — Valuta di default nel profilo
 

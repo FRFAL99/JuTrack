@@ -60,16 +60,16 @@ Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **appena
 scritto, nessuno step iniziato**:
 
-| Step                              | Stato | Cosa contiene                                                    |
-| ---------------------------------- | ----- | ------------------------------------------------------------------ |
-| 29 — Valuta di default nel profilo | ⬜    | Campo `currency` sul `Profile`, selettore in `tu.tsx`             |
+| Step                               | Stato | Cosa contiene                                                          |
+| ---------------------------------- | ----- | ---------------------------------------------------------------------- |
+| 29 — Valuta di default nel profilo | ⬜    | Campo `currency` sul `Profile`, selettore in `tu.tsx`                  |
 | 30 — Infrastruttura nativa         | ⬜    | Plugin `expo-notifications` + `react-native-android-widget`, build EAS |
-| 31–33 — Notifiche locali           | ⬜    | Promemoria spesa, soglia budget, sync bloccato                    |
-| 34–35 — I due widget               | ⬜    | Saldo del gruppo aperto, totale del mese                          |
-| 36 — Refresh in background         | ⬜    | Opzionale, solo se il refresh ad apertura app non basta           |
-| 37 — Infrastruttura i18n           | ⬜    | `i18next`, campo `language` sul `Profile`, selettore in `tu.tsx`  |
-| 38–39 — Traduzione EN              | ⬜    | Schermata per schermata, un passo a sessione                      |
-| 40 — Verifica end-to-end           | ⬜    | Su telefono reale: notifiche, widget, lingua, valuta              |
+| 31–33 — Notifiche locali           | ⬜    | Promemoria spesa, soglia budget, sync bloccato                         |
+| 34–35 — I due widget               | ⬜    | Saldo del gruppo aperto, totale del mese                               |
+| 36 — Refresh in background         | ⬜    | Opzionale, solo se il refresh ad apertura app non basta                |
+| 37 — Infrastruttura i18n           | ⬜    | `i18next`, campo `language` sul `Profile`, selettore in `tu.tsx`       |
+| 38–39 — Traduzione EN              | ⬜    | Schermata per schermata, un passo a sessione                           |
+| 40 — Verifica end-to-end           | ⬜    | Su telefono reale: notifiche, widget, lingua, valuta                   |
 
 Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette passi:
 

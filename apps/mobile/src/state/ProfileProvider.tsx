@@ -47,7 +47,9 @@ export interface AppData {
 }
 
 type AppDataStatus =
-  { phase: 'loading' } | { phase: 'ready'; data: AppData } | { phase: 'error'; message: string };
+  | { phase: 'loading' }
+  | { phase: 'ready'; data: AppData }
+  | { phase: 'error'; message: string };
 
 const AppDataContext = createContext<AppDataStatus>({ phase: 'loading' });
 

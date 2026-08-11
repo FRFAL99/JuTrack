@@ -71,7 +71,9 @@ export interface GroupsData {
 }
 
 type GroupsStatus =
-  { phase: 'loading' } | { phase: 'ready'; data: GroupsData } | { phase: 'error'; message: string };
+  | { phase: 'loading' }
+  | { phase: 'ready'; data: GroupsData }
+  | { phase: 'error'; message: string };
 
 const CURRENT_GROUP_KEY = 'current_group';
 
