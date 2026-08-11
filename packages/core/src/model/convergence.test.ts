@@ -148,6 +148,52 @@ describe('convergenza fra due dispositivi', () => {
     expect(total, 'le quote devono sempre sommare al totale').toBe(1000);
   });
 
+  it('porta negozio e tag sull altro dispositivo', () => {
+    // I due campi nuovi viaggiano come tutto il resto: se non arrivassero, un filtro per
+    // negozio mostrerebbe risultati diversi sui due telefoni sugli stessi dati.
+    const { docA, docB, storeA, storeB } = twoDevices();
+    const me = 'membro-a';
+
+    const created = storeA.addExpense({
+      amountCents: 1000,
+      date: '2026-08-01',
+      paidBy: me,
+      split: buildSplit('single', 1000, [me]),
+      store: 'Esselunga',
+      tags: ['spesa', 'casa'],
+    });
+    sync(docA, docB);
+
+    expect(storeB.getExpense(created.id)?.store).toBe('Esselunga');
+    expect(storeB.getExpense(created.id)?.tags).toEqual(['spesa', 'casa']);
+  });
+
+  it('su tag concorrenti vince una scrittura sola, uguale sui due dispositivi', () => {
+    // I tag si scrivono come array intero e non come `Y.Array`: due aggiunte concorrenti
+    // non si fondono. Ciò che conta è che i due telefoni scelgano la **stessa** lista —
+    // il conflitto richiede che due persone etichettino la stessa spesa nello stesso
+    // momento, e allora la `Y.Array` si comprerà.
+    const { docA, docB, storeA, storeB } = twoDevices();
+    const me = 'membro-a';
+
+    const created = storeA.addExpense({
+      amountCents: 1000,
+      date: '2026-08-01',
+      paidBy: me,
+      split: buildSplit('single', 1000, [me]),
+    });
+    sync(docA, docB);
+
+    storeA.updateExpense(created.id, { tags: ['da A'] });
+    storeB.updateExpense(created.id, { tags: ['da B'] });
+
+    sync(docA, docB);
+
+    const tagsA = storeA.getExpense(created.id)?.tags;
+    expect(tagsA).toEqual(storeB.getExpense(created.id)?.tags);
+    expect([['da A'], ['da B']]).toContainEqual(tagsA);
+  });
+
   it('propaga la cancellazione senza far ricomparire la spesa', () => {
     // Il caso che giustifica i tombstone: A cancella, B nel frattempo modifica.
     // Dopo il sync la spesa deve restare cancellata su entrambi.

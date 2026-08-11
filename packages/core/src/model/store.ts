@@ -21,6 +21,7 @@ import {
   settlementsMap,
   writeRecord,
 } from './doc';
+import { normalizeStore, normalizeTags } from '../insights/naming';
 import { newId } from './ids';
 import { assertCents, splitByWeights, splitEvenly, type Cents } from './money';
 import type {
@@ -50,6 +51,10 @@ export interface NewExpenseInput {
   categoryId?: string | null;
   note?: string;
   currency?: string;
+  /** Dove è stata fatta. Normalizzato in scrittura. */
+  store?: string;
+  /** Etichette libere. Normalizzate e deduplicate in scrittura. */
+  tags?: string[];
 }
 
 export type ExpensePatch = Partial<Omit<NewExpenseInput, never>>;
@@ -191,6 +196,11 @@ export class VaultStore {
         date: input.date,
         categoryId: input.categoryId ?? null,
         note: input.note ?? '',
+        // Normalizzati **qui**, in scrittura: è l'unico punto da cui il testo entra nel
+        // documento, e due grafie della stessa cosa salvate com'erano diventerebbero due
+        // voci nei grafici. Vedi `insights/naming.ts`.
+        store: normalizeStore(input.store ?? ''),
+        tags: normalizeTags(input.tags ?? []),
         paidBy: input.paidBy,
         split: input.split,
         createdAt: ts,
@@ -222,6 +232,10 @@ export class VaultStore {
     if (patch.date !== undefined) fields.date = patch.date;
     if (patch.categoryId !== undefined) fields.categoryId = patch.categoryId;
     if (patch.note !== undefined) fields.note = patch.note;
+    if (patch.store !== undefined) fields.store = normalizeStore(patch.store);
+    // L'array si riscrive intero: non c'è un «aggiungi un tag» che si fonda con quello
+    // dell'altro telefono, vince l'ultima scrittura. Vedi il commento in `readExpense`.
+    if (patch.tags !== undefined) fields.tags = normalizeTags(patch.tags);
     if (patch.paidBy !== undefined) fields.paidBy = patch.paidBy;
     if (patch.split !== undefined) fields.split = patch.split;
 

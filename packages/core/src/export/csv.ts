@@ -64,6 +64,17 @@ function csvText(value: string): string {
   return escapeCsvField(neutralizeFormula(value));
 }
 
+/**
+ * I tag in una cella sola, separati da `;`.
+ *
+ * La virgola è già il separatore del file e non può essere anche quello interno. Ogni tag
+ * passa **singolarmente** per il disinnesco delle formule: unirli prima proteggerebbe solo
+ * il primo, e basta un `=` sul secondo perché Excel valuti la cella.
+ */
+function csvTags(tags: string[]): string {
+  return escapeCsvField(tags.map(neutralizeFormula).join(';'));
+}
+
 function csvRow(fields: string[]): string {
   return fields.join(',');
 }
@@ -113,6 +124,8 @@ export function expensesToCsv(snapshot: VaultSnapshot, options: CsvOptions = {})
     'valuta',
     'categoria',
     'note',
+    'negozio',
+    'tag',
     'pagata_da',
     'divisione',
     ...shareLabels,
@@ -156,6 +169,8 @@ function expenseRow(
     csvText(expense.currency),
     csvText(category),
     csvText(expense.note),
+    csvText(expense.store),
+    csvTags(expense.tags),
     csvText(payer),
     expense.split.mode,
     ...shares,

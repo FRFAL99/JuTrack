@@ -2,8 +2,9 @@
 
 > **Avanzamento al 2026-08-11.**
 > Completati: **Step 0–9** (piano originale), **Step 10–14** ([piano v2](piano-v2-profili-gruppi-sync.md)),
-> **Step 15–22** ([piano v3](piano-v3-tab-gruppi-azzeramento-sync.md)) e i sette passi del
-> [redesign visivo](visualdesign.md). Da fare: **Step 23–28**, uno per sessione.
+> **Step 15–22** ([piano v3](piano-v3-tab-gruppi-azzeramento-sync.md)), i sette passi del
+> [redesign visivo](visualdesign.md) e lo **Step 23** di questo piano. Da fare: **Step 24–28**, uno
+> per sessione.
 >
 > Nasce da una richiesta di prodotto, non da un difetto: i Grafici sono corretti ma poveri, e non c'è
 > modo di chiedere loro qualcosa di diverso da quello che mostrano.
@@ -151,7 +152,14 @@ cd apps/mobile && npx expo export --platform android
 > vedono, sono quelli che decidono se tutto il resto mostrerà numeri giusti. Se una sessione ha tempo
 > per una cosa sola, sono quelle: rischio contenuto e nessun lavoro da rifare.
 
-### Step 23 — Il modello impara negozio e tag
+### Step 23 — Il modello impara negozio e tag ✅
+
+> **Fatto l'11 agosto 2026.** Come scritto qui sotto, con tre aggiunte: la normalizzazione in
+> scrittura è esposta come `normalizeStore`/`normalizeTags` accanto alle quattro funzioni previste;
+> `knownStores`/`knownTags` **ignorano le spese cancellate** (un negozio nominato solo da una spesa
+> cancellata è sparito con lei); e i tag del CSV passano per il disinnesco delle formule **uno per
+> uno prima del `join(';')`**, perché farlo dopo proteggerebbe solo il primo. Dettagli nel
+> [devlog](devlog.md#2026-08-11--step-23-il-modello-impara-negozio-e-tag).
 
 **File:** `packages/core/src/model/types.ts`, `model/doc.ts`, `model/store.ts`,
 `packages/core/src/insights/naming.ts` (nuovo) e il suo test, `insights/index.ts`,

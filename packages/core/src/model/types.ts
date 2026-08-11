@@ -38,6 +38,17 @@ export interface Expense {
   /** `null` se non categorizzata. */
   categoryId: string | null;
   note: string;
+  /** Dove è stata fatta. Stringa vuota se non è stato detto. */
+  store: string;
+  /**
+   * Etichette libere, normalizzate in scrittura. Array vuoto se nessuna.
+   *
+   * Sono un campo della spesa e non un'entità con un id: il vocabolario si deriva in
+   * lettura da chi le usa (`insights/naming.ts`), così un tag esiste finché esiste una
+   * spesa che lo nomina e sparisce da solo quando non ne resta nessuna. Il prezzo è che
+   * non si può rinominarne uno in tutte le spese insieme.
+   */
+  tags: string[];
   /** Membro che ha materialmente pagato. */
   paidBy: string;
   split: ExpenseSplit;

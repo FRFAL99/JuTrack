@@ -4,6 +4,72 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-11 — Step 23: il modello impara negozio e tag
+
+Primo step del piano v4, e uno dei due che **non si vedono**: due campi su `Expense`, la loro
+normalizzazione, il vocabolario derivato, e le due colonne nuove nell'export. Nessuna schermata
+cambia — il form arriva allo Step 24 — ma da qui in poi i filtri hanno di che lavorare.
+
+**Additivo, e la prova è un test.** `store` e `tags` sono campi obbligatori nel tipo e assenti nei
+record già scritti: i reader hanno un fallback (`''` e `[]`) e `writeRecord` scrive solo le chiavi
+che riceve, quindi una spesa registrata la settimana scorsa si legge senza che nulla la tocchi.
+Niente backfill, niente bump di `CURRENT_SCHEMA_VERSION` — che è un meccanismo di **azzeramento**,
+non di migrazione, e alzarlo qui cancellerebbe le tabelle. Il test «legge una spesa scritta prima
+che i due campi esistessero» scrive a mano nella `Y.Map` un record senza le due chiavi.
+
+**`strList` è difensivo perché il valore arriva dall'altro telefono.** Non è una precauzione di
+stile: `listExpenses` è la lettura da cui dipende l'intera lista spese, e un `tags` che è un numero
+— versione diversa dell'app, o un record scritto male — la farebbe saltare per intero. Il reader
+accetta solo se è un array e tiene solo le stringhe, e restituisce sempre un array **nuovo**, così
+chi legge non può modificare per sbaglio il valore dentro il documento. Due test lo fissano
+scrivendo `42` e `['buono', 3, null]` direttamente nella mappa.
+
+**I tag si scrivono come array intero, e vince l'ultimo.** La `Y.Array` fonderebbe correttamente due
+aggiunte concorrenti, ma vorrebbe reader e writer nuovi in `doc.ts`, che oggi tratta solo valori
+piatti, **per un conflitto che richiede che due persone etichettino la stessa spesa nello stesso
+momento**. La scelta sta nel codice accanto al campo e non solo nel piano, e c'è un test di
+convergenza che la fissa: dopo il sync i due documenti hanno la **stessa** lista, quale delle due non
+importa. Diverso da `split`, che è atomico perché ha un'invariante da rispettare — un elenco di
+etichette non ne ha.
+
+**`Esselunga`, `esselunga` e `Esselunga ` sono lo stesso negozio.** La normalizzazione sta in
+`insights/naming.ts` e si applica **in scrittura**, dentro `addExpense` e `updateExpense`, che è
+l'unico punto da cui il testo entra nel documento. Si conserva la grafia scritta, si aggrega sulla
+chiave, e `knownStores`/`knownTags` restituiscono la grafia **più usata**. Senza, «top negozi»
+sarebbe un elenco di refusi. La deduplica dei tag è sulla chiave, non sulla grafia: `Spesa` e `spesa`
+sulla stessa riga sarebbero un doppione che poi produce due barre.
+
+Due dettagli che valgono la funzione a parte. A **parità di frequenza decide la chiave in ordine
+alfabetico**, come già fa `totalsByCategory`: i due telefoni devono proporre lo stesso elenco. E le
+**spese cancellate non contano**: un negozio nominato solo da una spesa che qualcuno ha cancellato è
+sparito con lei, e continuare a suggerirlo mostrerebbe un posto che nell'app non risulta più.
+
+**Il disinnesco delle formule vale anche per negozio e tag.** Un nome di negozio è testo scelto
+dall'utente esattamente come la nota: un `=` in testa lo fa valutare da Excel e da Fogli Google. Per
+i tag c'è una trappola in più — sono una cella sola, uniti da `;` perché la virgola è il separatore
+del file — e il filtro va applicato a **ciascun tag prima di unirli**: unirli prima proteggerebbe
+solo il primo, e basta un `=` sul secondo. Il test lo verifica sul secondo elemento, non sul primo.
+
+`EXPORT_FORMAT_VERSION` passa da 1 a 2, con scritto nel commento cosa cambia e come si legge un file
+di versione 1: `''` e `[]`, gli stessi fallback dei reader.
+
+**Un'importazione che va nella direzione insolita.** `model/store.ts` importa da
+`insights/naming.ts`, cioè il modello dipende dalle aggregazioni e non viceversa. È voluto e non
+crea un ciclo a runtime — `naming.ts` importa da `model/types` solo tipi, che spariscono nella
+compilazione — ed è dove il piano vuole la normalizzazione: accanto al vocabolario che deve
+riconoscere le stesse chiavi.
+
+**Verifica:** 674 test verdi (420 core + 211 app + 43 relay), typecheck, lint e `format:check`
+puliti, `expo export --platform android` completato.
+
+**Prossimo:** Step 24 — «Informazioni aggiuntive» nel form della spesa, con `Chip` promosso a
+componente condiviso e i due punti esistenti di `ExpenseForm.tsx` convertiti nello stesso commit.
+Resta prima di tutto, però, [la prova sui due telefoni](STATO.md#cosa-non-è-ancora-stato-verificato-su-hardware-reale):
+finché il sync non è stato visto funzionare in entrambi i versi non si può sapere se un negozio
+scritto di qua arriva di là — che è il criterio di «fatto» di questo step.
+
+---
+
 ## 2026-08-02 — Redesign, passo 3: i componenti del registro, e un default che non si tocca
 
 Tre componenti nuovi, due modificati, uno esteso. Nessuna schermata li usa ancora: li useranno i

@@ -78,6 +78,22 @@ function nullableStr(map: RecordMap, key: string): string | null {
 }
 
 /**
+ * Legge un elenco di stringhe, scartando tutto ciò che stringa non è.
+ *
+ * Difensivo per necessità: il valore arriva da un altro dispositivo, che può avere una
+ * versione diversa dell'app. Un `tags` che non è un array — o che contiene un numero —
+ * non deve far saltare `listExpenses`, che è la lettura da cui dipende tutta l'app.
+ *
+ * Restituisce sempre un array nuovo, così chi legge non può modificare per sbaglio il
+ * valore che sta dentro il documento.
+ */
+function strList(map: RecordMap, key: string): string[] {
+  const value = map.get(key);
+  if (!Array.isArray(value)) return [];
+  return value.filter((item): item is string => typeof item === 'string');
+}
+
+/**
  * Legge lo split.
  *
  * `split` è memorizzato come **valore unico**, non come `Y.Map` annidata, di proposito:
@@ -115,6 +131,13 @@ export function readExpense(id: string, map: RecordMap): Expense {
     date: str(map, 'date'),
     categoryId: nullableStr(map, 'categoryId'),
     note: str(map, 'note'),
+    store: str(map, 'store'),
+    // I tag si scrivono e si leggono come **array intero**, non come `Y.Array`: due
+    // aggiunte concorrenti alla stessa spesa non si fondono, vince l'ultima. Un elenco di
+    // etichette non ha invarianti da rispettare come `split`, e il conflitto richiede che
+    // due persone etichettino la stessa spesa nello stesso momento. Se un giorno capiterà
+    // davvero, la `Y.Array` si compra allora.
+    tags: strList(map, 'tags'),
     paidBy,
     split: readSplit(map, paidBy, amountCents),
     createdAt: str(map, 'createdAt'),

@@ -17,8 +17,12 @@ import type { VaultSnapshot } from '../model/types';
  *
  * Va alzata quando cambia la forma dei record. Un domani il reimport dovrà saper leggere
  * anche i file vecchi, ed è il campo che glielo permette.
+ *
+ * - **2** — le spese hanno `store` e `tags`. Un file di versione 1 resta leggibile: i due
+ *   campi vanno letti come `''` e `[]`, come già fa `readExpense` sui record vecchi.
+ * - **1** — la forma iniziale.
  */
-export const EXPORT_FORMAT_VERSION = 1;
+export const EXPORT_FORMAT_VERSION = 2;
 
 export const EXPORT_FORMAT_NAME = 'jutrack-export';
 

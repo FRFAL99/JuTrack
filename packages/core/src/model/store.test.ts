@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import * as Y from 'yjs';
 import { testRandom } from '../crypto/testing';
+import { expensesMap, writeRecord } from './doc';
 import { assertSplitBalances, buildSplit, VaultStore } from './store';
 
 function makeStore(): VaultStore {
@@ -194,6 +195,111 @@ describe('VaultStore — spese', () => {
 
   it('ignora la cancellazione di una spesa inesistente', () => {
     expect(() => makeStore().deleteExpense('inesistente')).not.toThrow();
+  });
+});
+
+describe('VaultStore — negozio e tag', () => {
+  function withExtras(extras: { store?: string; tags?: string[] } = {}) {
+    const { store: vault, a } = makeCouple();
+    const created = vault.addExpense({
+      amountCents: 500,
+      date: '2026-08-01',
+      paidBy: a,
+      split: buildSplit('single', 500, [a]),
+      ...extras,
+    });
+    return { vault, expense: vault.getExpense(created.id) };
+  }
+
+  it('una spesa senza negozio legge la stringa vuota', () => {
+    expect(withExtras().expense?.store).toBe('');
+  });
+
+  it('una spesa senza tag legge un array vuoto', () => {
+    expect(withExtras().expense?.tags).toEqual([]);
+  });
+
+  it('conserva il negozio ripulendo gli spazi', () => {
+    expect(withExtras({ store: '  Bar   Rossi ' }).expense?.store).toBe('Bar Rossi');
+  });
+
+  it('deduplica i tag sulla chiave normalizzata', () => {
+    // Due grafie della stessa etichetta produrrebbero due barre nei grafici.
+    expect(withExtras({ tags: ['Spesa', 'spesa', ' SPESA '] }).expense?.tags).toEqual(['Spesa']);
+  });
+
+  it('aggiorna negozio e tag senza toccare il resto', () => {
+    const { vault, expense } = withExtras({ store: 'Coop', tags: ['casa'] });
+    const updated = vault.updateExpense(expense?.id as string, {
+      store: 'Esselunga',
+      tags: ['casa', 'regalo'],
+    });
+    expect(updated.store).toBe('Esselunga');
+    expect(updated.tags).toEqual(['casa', 'regalo']);
+    expect(updated.amountCents).toBe(500);
+  });
+
+  it('un tag scritto due volte non raddoppia in aggiornamento', () => {
+    const { vault, expense } = withExtras();
+    expect(
+      vault.updateExpense(expense?.id as string, { tags: ['viaggio', 'Viaggio'] }).tags,
+    ).toEqual(['viaggio']);
+  });
+
+  it('un tags non-array non fa saltare la lettura', () => {
+    // Il valore arriva da un altro dispositivo, che può avere una versione diversa
+    // dell'app: `listExpenses` è la lettura da cui dipende tutta la lista spese, e non
+    // deve sollevare per un campo che non ha la forma attesa.
+    const { store, a } = makeCouple();
+    const created = store.addExpense({
+      amountCents: 500,
+      date: '2026-08-01',
+      paidBy: a,
+      split: buildSplit('single', 500, [a]),
+    });
+    store.transact(() => {
+      writeRecord(expensesMap(store.doc), created.id, { tags: 42, store: 7 });
+    });
+
+    const read = store.listExpenses();
+    expect(read).toHaveLength(1);
+    expect(read[0]?.tags).toEqual([]);
+    expect(read[0]?.store).toBe('');
+  });
+
+  it('scarta i non-stringa dentro un array di tag', () => {
+    const { store, a } = makeCouple();
+    const created = store.addExpense({
+      amountCents: 500,
+      date: '2026-08-01',
+      paidBy: a,
+      split: buildSplit('single', 500, [a]),
+    });
+    store.transact(() => {
+      writeRecord(expensesMap(store.doc), created.id, { tags: ['buono', 3, null] });
+    });
+    expect(store.getExpense(created.id)?.tags).toEqual(['buono']);
+  });
+
+  it('legge una spesa scritta prima che i due campi esistessero', () => {
+    // Nessun backfill: un record vecchio non ha le chiavi, e i fallback dei reader sono
+    // ciò che rende additivo il cambio di modello.
+    const store = makeStore();
+    store.transact(() => {
+      writeRecord(expensesMap(store.doc), 'vecchia', {
+        amountCents: 500,
+        currency: 'EUR',
+        date: '2026-01-01',
+        categoryId: null,
+        note: 'di prima',
+        paidBy: 'anna',
+        split: { mode: 'single', shares: { anna: 500 } },
+        createdAt: '2026-01-01T10:00:00.000Z',
+        updatedAt: '2026-01-01T10:00:00.000Z',
+        deletedAt: null,
+      });
+    });
+    expect(store.getExpense('vecchia')).toMatchObject({ store: '', tags: [], note: 'di prima' });
   });
 });
 

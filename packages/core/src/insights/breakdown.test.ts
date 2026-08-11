@@ -15,6 +15,8 @@ function expense(
     date,
     categoryId,
     note: '',
+    store: '',
+    tags: [],
     paidBy: 'anna',
     split: { mode: 'single', shares: { anna: amountCents } },
     createdAt: `${date}T10:00:00.000Z`,

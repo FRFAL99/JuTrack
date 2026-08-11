@@ -11,6 +11,8 @@ const snapshot: VaultSnapshot = {
       date: '2026-07-04',
       categoryId: 'spesa',
       note: 'pane',
+      store: 'Esselunga',
+      tags: ['casa'],
       paidBy: 'anna',
       split: { mode: 'equal', shares: { anna: 1250, bruno: 1250 } },
       createdAt: '2026-07-04T10:00:00.000Z',
@@ -64,6 +66,12 @@ describe('toJsonExport', () => {
     };
     const parsed = JSON.parse(toJsonExport(withTombstone, { now: fixedNow })) as VaultExport;
     expect(parsed.expenses[0]?.deletedAt).toBe('2026-07-05T10:00:00.000Z');
+  });
+
+  it('conserva negozio e tag della spesa', () => {
+    const parsed = JSON.parse(toJsonExport(snapshot, { now: fixedNow })) as VaultExport;
+    expect(parsed.expenses[0]?.store).toBe('Esselunga');
+    expect(parsed.expenses[0]?.tags).toEqual(['casa']);
   });
 
   it('non contiene mai la chiave del vault', () => {

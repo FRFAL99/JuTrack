@@ -17,6 +17,8 @@ function expense(date: string, amountCents: number, id = date + amountCents): Ex
     date,
     categoryId: null,
     note: '',
+    store: '',
+    tags: [],
     paidBy: 'membro-a',
     split: { mode: 'single', shares: { 'membro-a': amountCents } },
     createdAt: '2026-08-01T10:00:00.000Z',

@@ -23,4 +23,6 @@ export {
   type BudgetStatus,
 } from './budget';
 
+export { knownStores, knownTags, normalizeStore, normalizeTags, storeKey, tagKey } from './naming';
+
 export { daysInMonth, monthBounds, monthOf, monthsBetween, shiftMonth } from './period';

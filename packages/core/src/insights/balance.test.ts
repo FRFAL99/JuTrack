@@ -17,6 +17,8 @@ function expense(
     date: '2026-08-01',
     categoryId: null,
     note: '',
+    store: '',
+    tags: [],
     paidBy,
     split: { mode: 'custom', shares },
     createdAt: '2026-08-01T10:00:00.000Z',

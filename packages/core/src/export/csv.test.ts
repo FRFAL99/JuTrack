@@ -22,6 +22,8 @@ function expense(overrides: Partial<Expense> = {}): Expense {
     date: '2026-07-04',
     categoryId: 'spesa',
     note: 'pane',
+    store: 'Esselunga',
+    tags: ['casa', 'settimanale'],
     paidBy: 'anna',
     split: { mode: 'equal', shares: { anna: 1250, bruno: 1250 } },
     createdAt: '2026-07-04T10:00:00.000Z',
@@ -112,11 +114,11 @@ describe('expensesToCsv', () => {
     const rows = lines(expensesToCsv(snapshot));
     expect(rows).toHaveLength(2);
     expect(rows[0]).toBe(
-      'data,importo,importo_centesimi,valuta,categoria,note,pagata_da,divisione,' +
+      'data,importo,importo_centesimi,valuta,categoria,note,negozio,tag,pagata_da,divisione,' +
         'quota_Anna,quota_Bruno,creata_il,aggiornata_il,cancellata_il,id',
     );
     expect(rows[1]).toBe(
-      '2026-07-04,25.00,2500,EUR,Spesa,pane,Anna,equal,12.50,12.50,' +
+      '2026-07-04,25.00,2500,EUR,Spesa,pane,Esselunga,casa;settimanale,Anna,equal,12.50,12.50,' +
         '2026-07-04T10:00:00.000Z,2026-07-04T10:00:00.000Z,,e1',
     );
   });
@@ -158,17 +160,49 @@ describe('expensesToCsv', () => {
   it('lascia la cella vuota per una spesa senza categoria', () => {
     const uncategorized: VaultSnapshot = { ...snapshot, expenses: [expense({ categoryId: null })] };
     expect(lines(expensesToCsv(uncategorized))[1]).toBe(
-      '2026-07-04,25.00,2500,EUR,,pane,Anna,equal,12.50,12.50,' +
+      '2026-07-04,25.00,2500,EUR,,pane,Esselunga,casa;settimanale,Anna,equal,12.50,12.50,' +
         '2026-07-04T10:00:00.000Z,2026-07-04T10:00:00.000Z,,e1',
     );
+  });
+
+  it('lascia vuote negozio e tag quando non ci sono', () => {
+    const bare: VaultSnapshot = { ...snapshot, expenses: [expense({ store: '', tags: [] })] };
+    expect(lines(expensesToCsv(bare))[1]).toContain(',pane,,,Anna,');
+  });
+
+  it('unisce i tag con il punto e virgola, non con la virgola', () => {
+    // La virgola è il separatore del file: usarla anche dentro la cella sposterebbe
+    // tutte le colonne successive.
+    const many: VaultSnapshot = {
+      ...snapshot,
+      expenses: [expense({ tags: ['casa', 'regalo', 'urgente'] })],
+    };
+    expect(lines(expensesToCsv(many))[1]).toContain(',casa;regalo;urgente,');
+  });
+
+  it('disinnesca un negozio che comincia per uguale', () => {
+    // Un nome di negozio è testo scelto dall'utente esattamente come la nota, e passa
+    // per lo stesso filtro: senza, Excel lo valuterebbe come formula.
+    const injected: VaultSnapshot = { ...snapshot, expenses: [expense({ store: '=cmd|x' })] };
+    expect(lines(expensesToCsv(injected))[1]).toContain(",'=cmd|x,");
+  });
+
+  it('disinnesca ogni tag, non solo il primo', () => {
+    // Unirli prima del filtro proteggerebbe solo il primo, e basta un `=` sul secondo
+    // perché il foglio di calcolo valuti la cella.
+    const injected: VaultSnapshot = {
+      ...snapshot,
+      expenses: [expense({ tags: ['casa', '=1+1'] })],
+    };
+    expect(lines(expensesToCsv(injected))[1]).toContain(",casa;'=1+1,");
   });
 
   it('quota una nota che contiene una virgola, senza spostare le colonne', () => {
     const tricky: VaultSnapshot = { ...snapshot, expenses: [expense({ note: 'pane, latte' })] };
     const row = lines(expensesToCsv(tricky))[1] ?? '';
     expect(row).toContain('"pane, latte"');
-    // Le virgole dentro le virgolette non contano come separatori: le colonne restano 14.
-    expect(row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)).toHaveLength(14);
+    // Le virgole dentro le virgolette non contano come separatori: le colonne restano 16.
+    expect(row.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/)).toHaveLength(16);
   });
 
   it('disinnesca una nota che sembra una formula', () => {

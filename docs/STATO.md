@@ -1,10 +1,10 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-11 — **i tre piani funzionali e il redesign visivo sono finiti nel codice**, e
-c'è un **quarto piano scritto e non ancora cominciato**:
-[piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **Step 23–28**. Tutti e sette i
-passi del redesign sono chiusi ([visualdesign.md](visualdesign.md)). **Quello che resta di tutto il
-resto è la prova su due telefoni veri**, e viene prima del piano v4.
+Aggiornato: 2026-08-11 — **i tre piani funzionali e il redesign visivo sono finiti nel codice**, e il
+**quarto piano è cominciato**: [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
+**Step 23–28**, di cui il **23 è fatto**. Tutti e sette i passi del redesign sono chiusi
+([visualdesign.md](visualdesign.md)). **Quello che resta di tutto il resto è la prova su due telefoni
+veri**, e il criterio di «fatto» del piano v4 ci passa in mezzo.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -37,12 +37,12 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 21 — Nessun gruppo al primo avvio   | ✅    | Fase `absent`, l'utente crea o entra con un invito           |
 | 22 — Azzera questo telefono         | ✅    | Wipe totale e ritorno all'onboarding, senza riavvio          |
 
-Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **scritto, nessuno
-step ancora cominciato**:
+Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **uno step su sei
+fatto**:
 
 | Step                           | Stato | Cosa conterrà                                                 |
 | ------------------------------ | ----- | ------------------------------------------------------------- |
-| 23 — Negozio e tag nel modello | ⬜    | Due campi additivi su `Expense`, normalizzazione, export a v2 |
+| 23 — Negozio e tag nel modello | ✅    | Due campi additivi su `Expense`, normalizzazione, export a v2 |
 | 24 — «Informazioni aggiuntive» | ⬜    | Tendina chiusa nel form, suggerimenti, `Chip` condiviso       |
 | 25 — La geometria dei grafici  | ⬜    | `packages/core/src/chart/` e sette aggregazioni nuove         |
 | 26 — I grafici nuovi, in SVG   | ⬜    | Linee, aree, heatmap, istogramma, treemap, ciambella          |
@@ -61,7 +61,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**641 test verdi** (387 core + 211 app + 43 relay), typecheck, lint e `format:check` puliti.
+**674 test verdi** (420 core + 211 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -84,11 +84,14 @@ anche, il gruppo di default non c'è più, e «Azzera questo telefono» adesso a
 **Anche il redesign visivo è chiuso** — sette passi su sette: vedi
 [visualdesign.md](visualdesign.md) e la sezione [Redesign visivo](#redesign-visivo) qui sotto.
 
-**Il quarto piano adesso c'è, ed è scritto e basta:**
-[piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **Step 23–28** — grafici, filtri e
-dashboard componibile. Nasce da una richiesta di prodotto e non da un difetto: i Grafici sono corretti
-ma poveri, e non c'è modo di chiedere loro qualcosa di diverso da quello che mostrano. **Nessuno step è
-cominciato**, ed è deliberato: il seguito immediato resta
+**Il quarto piano è cominciato:** [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
+**Step 23–28** — grafici, filtri e dashboard componibile. Nasce da una richiesta di prodotto e non da
+un difetto: i Grafici sono corretti ma poveri, e non c'è modo di chiedere loro qualcosa di diverso da
+quello che mostrano. **Lo Step 23 è fatto** (vedi [Negozio e tag](#negozio-e-tag-step-23)): è uno dei
+due che non si vedono, tutto dentro `packages/core`, e il piano stesso lo indica come il posto giusto
+da cui cominciare — rischio contenuto e nessun lavoro da rifare.
+
+Resta però vero che il seguito più urgente è
 [la prova sui due telefoni](piano-v3-tab-gruppi-azzeramento-sync.md#criterio-di-fatto-end-to-end), che
 manca a tutti e tre i piani precedenti e ora anche al redesign. Il piano v4 aggiunge due campi alla
 spesa, quindi il suo criterio di «fatto» **dipende** da quella prova: finché il sync non è stato visto
@@ -298,6 +301,40 @@ sono nel documento come sono stati scritti, quindi vanno letti da qui:
    non basta finché sta in `(tabs)/`. E `profile.tsx` → `tu.tsx` cambia l'URL, quindi al passo 4 va
    rifatta la procedura dei tipi di rotta dello Step 18.
 
+## Negozio e tag (Step 23)
+
+Due campi su `Expense` — `store: string` e `tags: string[]` — e nient'altro: nessuna schermata è
+cambiata, il form arriva allo Step 24. È il primo dei due step del piano v4 che **non si vedono**, e
+insieme allo Step 25 è quello che decide se il resto mostrerà numeri giusti.
+
+- **Sono campi, non entità.** Niente mappe `stores` e `tags` con i propri id: il vocabolario si
+  deriva in lettura da chi li usa (`insights/naming.ts`), quindi un negozio esiste finché esiste una
+  spesa che lo nomina e sparisce da solo quando non ne resta nessuna. Niente schermate di gestione,
+  niente cancellazioni, **nessun orfano**. Il prezzo, accettato: non si può dare un colore a un tag
+  né rinominarne uno in tutte le spese insieme.
+- **Additivo per davvero.** I reader hanno un fallback (`''` e `[]`) e `writeRecord` scrive solo le
+  chiavi che riceve: una spesa registrata prima di oggi si legge senza che nulla la tocchi. **Nessun
+  backfill** e **nessun bump di `CURRENT_SCHEMA_VERSION`**, che è un meccanismo di azzeramento e non
+  di migrazione — alzarlo qui cancellerebbe le tabelle. C'è il test che scrive a mano un record senza
+  le due chiavi.
+- **`strList` è difensivo perché il valore arriva dall'altro telefono.** `listExpenses` è la lettura
+  da cui dipende l'intera lista spese: un `tags` che è un numero la farebbe saltare tutta. Si accetta
+  solo se è un array, si tengono solo le stringhe, e si restituisce sempre un array **nuovo** — così
+  chi legge non modifica per sbaglio il valore dentro il documento.
+- **I tag si scrivono come array intero: vince l'ultimo.** Una `Y.Array` fonderebbe due aggiunte
+  concorrenti, ma richiede reader e writer nuovi in `doc.ts` — che oggi tratta solo valori piatti —
+  per un conflitto che vuole due persone che etichettano la stessa spesa nello stesso momento. Il
+  test di convergenza fissa ciò che conta: dopo il sync i due documenti hanno la **stessa** lista.
+  Diverso da `split`, atomico perché ha un'invariante da rispettare.
+- **`Esselunga`, `esselunga` e `Esselunga ` sono lo stesso negozio.** La normalizzazione si applica
+  **in scrittura**, dentro `addExpense` e `updateExpense`, che è l'unico punto da cui il testo entra
+  nel documento; si conserva la grafia scritta e a schermo compare la **più usata**. A parità di
+  frequenza decide la chiave in ordine alfabetico, come già per le categorie: i due telefoni devono
+  proporre lo stesso elenco. Le spese cancellate non contribuiscono al vocabolario.
+- **L'export sale a v2**, e le colonne nuove sono `negozio` e `tag`, quest'ultima con i tag uniti da
+  `;` perché la virgola è il separatore del file. Il disinnesco contro la CSV injection si applica a
+  **ogni tag prima di unirli**: farlo dopo proteggerebbe solo il primo.
+
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
 Entrambi nel codice e coperti dai test. **Nessuno dei due è ancora stato visto risolto su due
@@ -445,6 +482,11 @@ la lista si è accorciata parecchio, ma non è vuota — e con il redesign chius
   che adesso è una riga che **diventa** un campo al tocco, salvi quello che si scrive quando si esce
   dal campo invece di perderlo. Da verificare anche che la quota sotto ogni persona si aggiorni
   mentre si digita, perché è il modo in cui la schermata spiega le tre modalità di divisione
+- **Lo Step 23**, che sul telefono per ora si vede in un posto solo: l'**export CSV**, che adesso ha
+  sedici colonne invece di quattordici. Il resto — un negozio scritto di qua che arriva di là — non è
+  provabile finché non si fa la prova sui due telefoni, ed è esattamente il criterio di «fatto» del
+  piano v4. Quello che si può guardare subito è che l'app apra e mostri **le spese registrate prima**
+  senza inciampare: i due campi non esistono in quei record, e sono i fallback dei reader a reggerli
 - **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
   rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
   l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima
@@ -454,7 +496,7 @@ la lista si è accorciata parecchio, ma non è vuota — e con il redesign chius
 > `try/catch` proprio per questo — e l'export ripiega sugli appunti, dichiarandolo nell'interfaccia.
 > Il foglio di condivisione comparirà solo dopo una build aggiornata.
 
-Tutto il resto è verificato: 577 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 674 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 ## Trappole già risolte — da non riscoprire
@@ -483,6 +525,8 @@ su un dispositivo Android reale.
 | Cambiare gruppo mentre si è su `/groups/<id>`: la guardia del layout lo riporta indietro subito               | `dismissTo('/')` **prima** di `select()`, così la guardia è già smontata                              |
 | Un token di stile con `as const` non è assegnabile a `TextStyle` (`fontVariant` diventa `readonly`)           | Tipizzarlo `Pick<TextStyle, …>`; e un token che nessuno usa non compila senza che nessuno lo sappia   |
 | `-shares[me]` con quota zero dà `-0`, che non è `0` e a valle si legge come debito                            | `net === 0 ? 0 : net` in `yourShareCents`, con il test che lo fissa                                   |
+| Un campo nuovo letto senza fallback: un record dall'altro telefono fa saltare `listExpenses` intera           | Reader difensivi: `strList` accetta solo array e solo stringhe, e i test ci scrivono dentro un `42`   |
+| Disinnescare le formule **dopo** aver unito i tag in una cella CSV: protegge solo il primo                    | `neutralizeFormula` su ciascun tag, poi il `join(';')` — e il test guarda il secondo, non il primo    |
 
 ## Dove sta ogni schermata (Step 18, 19 e 20)
 

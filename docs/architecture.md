@@ -122,18 +122,32 @@ Cinque `Y.Map` top-level di record, più `meta` per le proprietà del gruppo. Og
 volta una `Y.Map`: due edit su campi diversi dello stesso record si fondono invece di
 sovrascriversi a vicenda.
 
-| Mappa         | Chiave                   | Valore                                                                                          |
-| ------------- | ------------------------ | ----------------------------------------------------------------------------------------------- |
-| `expenses`    | `id`                     | `amountCents, currency, date, categoryId, note, paidBy, split, createdAt, updatedAt, deletedAt` |
-| `categories`  | `id`                     | `name, icon, color, archived`                                                                   |
-| `budgets`     | `<categoryId>:<YYYY-MM>` | `limitCents`                                                                                    |
-| `members`     | `id`                     | `name, color`                                                                                   |
-| `settlements` | `id`                     | `fromMember, toMember, amountCents, date`                                                       |
-| `meta`        | `name`                   | il nome del gruppo, condiviso: rinominarlo raggiunge l'altro telefono                           |
+| Mappa         | Chiave                   | Valore                                                                                                       |
+| ------------- | ------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `expenses`    | `id`                     | `amountCents, currency, date, categoryId, note, store, tags, paidBy, split, createdAt, updatedAt, deletedAt` |
+| `categories`  | `id`                     | `name, icon, color, archived`                                                                                |
+| `budgets`     | `<categoryId>:<YYYY-MM>` | `limitCents`                                                                                                 |
+| `members`     | `id`                     | `name, color`                                                                                                |
+| `settlements` | `id`                     | `fromMember, toMember, amountCents, date`                                                                    |
+| `meta`        | `name`                   | il nome del gruppo, condiviso: rinominarlo raggiunge l'altro telefono                                        |
 
 Il nome del gruppo sta **dentro** il vault e non nel registro locale proprio perché va sincronizzato
 come tutto il resto. Il registro ne tiene una copia per disegnare la lista dei gruppi senza aprire
 ogni documento; quando le due divergono, è la copia ad aggiornarsi.
+
+**`store` e `tags` sono campi, non entità** (Step 23). Non esistono una mappa dei negozi e una dei
+tag con i propri id: il vocabolario si deriva in lettura dalle spese che li nominano
+(`insights/naming.ts`), quindi un negozio esiste finché esiste una spesa che lo cita e sparisce da
+solo quando non ne resta nessuna. Niente schermate di gestione, niente cancellazioni, e soprattutto
+nessun orfano — un tag rinominato mentre l'altro telefono lo sta usando. Il prezzo è che non si può
+dare un colore a un tag né rinominarne uno in tutte le spese insieme.
+
+I due campi sono **additivi**: i reader hanno un fallback (`''` e `[]`), `writeRecord` scrive solo le
+chiavi che riceve, e una spesa registrata prima che esistessero si legge senza che nulla la tocchi.
+Nessun backfill e nessun bump di `schema_version`, che è un meccanismo di azzeramento e non di
+migrazione. `tags` è scritto come **array intero** e non come `Y.Array`: due etichettature
+concorrenti della stessa spesa non si fondono, vince l'ultima. La regola del valore composto in una
+chiave sola vale per `split`, che ha un'invariante da rispettare; un elenco di etichette non ne ha.
 
 ### Due regole ferree
 
