@@ -102,11 +102,18 @@ function vocabulary(expenses: Expense[], pick: (expense: Expense) => string[]): 
 
   return [...byKey.entries()]
     .sort(([keyA, a], [keyB, b]) => b.total - a.total || (keyA < keyB ? -1 : 1))
-    .map(([, entry]) => mostUsed(entry.spellings));
+    .map(([, entry]) => mostUsedSpelling(entry.spellings));
 }
 
-/** La grafia scritta più volte; a parità, la prima in ordine alfabetico. */
-function mostUsed(spellings: Map<string, number>): string {
+/**
+ * La grafia scritta più volte; a parità, la prima in ordine alfabetico.
+ *
+ * Esportata perché la usa anche `stores.ts`, che aggrega gli **importi** per negozio
+ * mentre qui si contano le occorrenze: due copie della stessa regola finirebbero per
+ * mostrare due grafie diverse dello stesso negozio in due punti della stessa schermata.
+ * Non è nel barrel: serve dentro `insights/`, non all'app.
+ */
+export function mostUsedSpelling(spellings: Map<string, number>): string {
   let best = '';
   let bestCount = -1;
   for (const [name, count] of spellings) {

@@ -3,7 +3,7 @@
 > **Avanzamento al 2026-08-11.**
 > Completati: **Step 0–9** (piano originale), **Step 10–14** ([piano v2](piano-v2-profili-gruppi-sync.md)),
 > **Step 15–22** ([piano v3](piano-v3-tab-gruppi-azzeramento-sync.md)), i sette passi del
-> [redesign visivo](visualdesign.md) e gli **Step 23–24** di questo piano. Da fare: **Step 25–28**,
+> [redesign visivo](visualdesign.md) e gli **Step 23–25** di questo piano. Da fare: **Step 26–28**,
 > uno per sessione.
 >
 > Nasce da una richiesta di prodotto, non da un difetto: i Grafici sono corretti ma poveri, e non c'è
@@ -267,7 +267,16 @@ negozio dice il negozio`; `coi soli tag ne dice il numero`; `con entrambi li uni
 mediano`; `un negozio lungo viene troncato invece di mandare la riga a capo`. Il resto è impaginazione,
 e si verifica sul telefono — con la tastiera aperta, che è il rischio vero di questa schermata.
 
-### Step 25 — La geometria dei grafici, in `packages/core`
+### Step 25 — La geometria dei grafici, in `packages/core` ✅
+
+> **Fatto l'11 agosto 2026.** Come scritto qui sotto, con quattro precisazioni: `amountFor` sotto
+> **«ha pagato»** restituisce l'importo **pieno** e non la quota (la domanda è quanto ha anticipato);
+> la **fascia di importo** si misura sull'importo proiettato, o l'istogramma mostrerebbe barre fuori
+> fascia; `totalCents`, `totalsByCategory` e `totalsByMonth` hanno preso la query come parametro
+> additivo in coda, perché «si riusano senza toccarle» e «nessuno legge `amountCents` per conto suo»
+> non stanno insieme; e `calendar.ts` lavora in **UTC** invece che col trucco del mezzogiorno, che
+> serve solo ai `Date` costruiti con componenti locali. Dettagli nel
+> [devlog](devlog.md#2026-08-11--step-25-la-geometria-dei-grafici-dove-si-può-provare).
 
 **File:** cartella nuova `packages/core/src/chart/` (`scale.ts`, `path.ts`, `treemap.ts`, `bins.ts`,
 `index.ts`) e le aggregazioni nuove in `packages/core/src/insights/` (`query.ts`, `calendar.ts`,

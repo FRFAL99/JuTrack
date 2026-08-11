@@ -4,6 +4,82 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-11 — Step 25: la geometria dei grafici, dove si può provare
+
+Undici moduli nuovi in `packages/core`, nessuna riga di interfaccia. Quattro in `chart/` — scale,
+tracciati, treemap, fasce di importo — e sette in `insights/`. È lo step che rende i grafici
+verificabili senza un telefono, ed è il motivo per cui viene prima di quello che li disegna.
+
+**`amountFor` è il cuore, ed è una funzione sola apposta.** `paidBy` e `split.shares` sono cose
+diverse: filtrando per una persona una cena da 40 € divisa a metà, mostrare 40 € sarebbe falso. Le
+regole sono tre e stanno scritte accanto al codice: senza filtro persona l'importo è pieno; con «a
+carico di» è la **quota**; con «ha pagato» torna **pieno**, perché la domanda è quanto ha
+anticipato — mostrare la sua quota sotto un'etichetta che dice «ha pagato» contraddirebbe
+l'etichetta. Il piano dava la prima e la seconda; la terza è una precisazione che serviva.
+
+**La fascia di importo si misura sull'importo proiettato, non su quello pieno.** Altrimenti,
+scegliendo «0–10 €» con un filtro persona attivo, l'istogramma costruito su `amountFor` mostrerebbe
+barre **fuori** dalla fascia scelta: un filtro le cui soglie non corrispondono all'asse su cui si
+legge è una trappola.
+
+**Le tre aggregazioni esistenti hanno preso la query, e non era previsto.** Il piano dice che
+`totalCents`, `totalsByCategory` e `totalsByMonth` «si riusano senza toccarle», ma dice anche che
+nessun grafico legge `amountCents` per conto suo — e le due cose insieme non stanno in piedi: con un
+filtro persona attivo quelle tre sarebbero rimaste le uniche a mostrare importi pieni sotto un
+totale fatto di quote. Il parametro è **additivo e in coda**, il default è la query vuota, e con la
+query vuota `amountFor` restituisce esattamente `amountCents`: nessun chiamante è stato toccato.
+
+**Il test che attraversa i moduli è quello che vale.** Con lo stesso `ExpenseQuery`, la somma della
+serie giornaliera, delle sette barre settimanali, delle categorie, dell'istogramma e della curva
+cumulata deve dare **lo stesso numero** del totale in testa; e le aree del treemap devono coprire il
+rettangolo in proporzione. Sei query diverse, filtro persona compreso in entrambe le modalità. È il
+controllo che si accorge di un filtro applicato due volte o di un modulo che ha dimenticato
+`amountFor` — nessuno dei test dei singoli moduli lo vedrebbe, perché ciascuno sarebbe coerente con
+sé stesso. Ci sono anche le due identità che tengono in piedi il filtro persona: la somma delle
+quote di tutti i membri **è** il totale pieno, e così la somma di quanto ciascuno ha anticipato.
+
+**`smoothLinePath` è una cubica monotona (Fritsch–Carlson), non una spline naturale.** Fra due mesi
+bassi e uno alto una spline scavalca i punti e scende sotto la linea di base: disegnerebbe una spesa
+negativa in un mese in cui si è speso poco. Il test lo verifica senza campionare la curva, sfruttando
+una proprietà delle Bézier — la curva sta nell'inviluppo convesso dei suoi punti di controllo — e
+controllando che nessuna ordinata del tracciato esca dall'intervallo dei dati.
+
+**I livelli della heatmap sono per quantili, sui soli giorni con spese.** Con una scala lineare basta
+un affitto ad alzare il massimo e schiacciare tutti gli altri giorni al minimo: la griglia direbbe
+«non ho speso niente» proprio nei giorni in cui si è speso. Includere i giorni vuoti nei quantili
+sposterebbe invece i confini verso il basso, e in un mese tranquillo il livello 1 coprirebbe quasi
+tutto. Il confronto sul confine è `>=` perché due giorni con lo stesso importo devono avere lo stesso
+colore.
+
+**`calendar.ts` lavora in UTC, non col trucco del mezzogiorno.** Il trucco di `grouping.ts:66` serve
+quando il `Date` è costruito con componenti **locali**, dove l'ora legale può spostare la mezzanotte
+al giorno prima. Qui non si costruisce mai un `Date` locale: UTC l'ora legale non ce l'ha, quindi il
+problema non si pone invece di essere aggirato. I test passano per il 29 marzo e il 25 ottobre 2026,
+che sono i due giorni in cui la differenza si vedrebbe.
+
+Tre scelte piccole che vale la pena ricordare. La settimana comincia **di lunedì** (`dayOfWeek`
+restituisce 0 per lunedì), perché è come la legge chi userà l'app. `totalsByStore` **non** produce
+una voce «senza negozio»: il campo è facoltativo, quella voce dominerebbe ogni grafico dicendo
+soltanto che il campo è facoltativo — e la conseguenza, che la classifica somma **meno** del totale,
+è scritta dove serve. `totalsByTag` fa il contrario: una spesa con due tag conta per intero in
+entrambi, quindi somma **di più**, ed è giusto così perché la domanda è «quanto ho speso in cose
+etichettate casa».
+
+`totalsByMemberOverTime` è **l'unica aggregazione che non passa da `amountFor`**, ed è scritto nel
+suo commento: _è_ la scomposizione per persona, e proiettare gli importi su un membro scelto altrove
+risponderebbe due volte alla stessa domanda.
+
+**Verifica:** 842 test verdi (576 core + 223 app + 43 relay), typecheck, lint e `format:check`
+puliti, `expo export --platform android` completato. Il bundle passa da 3,9 a 4,0 MB: `chart/` esce
+dal barrel di `@jutrack/core`, quindi entra nel bundle anche se nessuna schermata lo usa ancora — è
+il contrario di quanto successe al passo 3 del redesign, dove i componenti non importati da nessuno
+restavano fuori.
+
+**Prossimo:** Step 26 — i grafici in SVG, che consumano tutto questo senza calcolare niente. È il
+primo step del piano v4 che si vede.
+
+---
+
 ## 2026-08-11 — Step 24: «Informazioni aggiuntive», e la pillola smette di essere scritta a mano
 
 I due campi dello Step 23 arrivano nel form, dietro una tendina chiusa in fondo alla schermata.

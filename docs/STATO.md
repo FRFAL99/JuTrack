@@ -1,8 +1,8 @@
 # Stato del progetto — punto di partenza
 
 Aggiornato: 2026-08-11 — **i tre piani funzionali e il redesign visivo sono finiti nel codice**, e il
-**quarto piano è cominciato**: [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
-**Step 23–28**, di cui **23 e 24 sono fatti**. Tutti e sette i passi del redesign sono chiusi
+**quarto piano è a metà**: [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
+**Step 23–28**, di cui **23, 24 e 25 sono fatti**. Tutti e sette i passi del redesign sono chiusi
 ([visualdesign.md](visualdesign.md)). **Quello che resta di tutto il resto è la prova su due telefoni
 veri**, e il criterio di «fatto» del piano v4 ci passa in mezzo.
 
@@ -37,14 +37,14 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 21 — Nessun gruppo al primo avvio   | ✅    | Fase `absent`, l'utente crea o entra con un invito           |
 | 22 — Azzera questo telefono         | ✅    | Wipe totale e ritorno all'onboarding, senza riavvio          |
 
-Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **due step su sei
+Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **tre step su sei
 fatti**:
 
 | Step                           | Stato | Cosa conterrà                                                 |
 | ------------------------------ | ----- | ------------------------------------------------------------- |
 | 23 — Negozio e tag nel modello | ✅    | Due campi additivi su `Expense`, normalizzazione, export a v2 |
 | 24 — «Informazioni aggiuntive» | ✅    | Tendina chiusa nel form, suggerimenti, `Chip` condiviso       |
-| 25 — La geometria dei grafici  | ⬜    | `packages/core/src/chart/` e sette aggregazioni nuove         |
+| 25 — La geometria dei grafici  | ✅    | `packages/core/src/chart/` e sette aggregazioni nuove         |
 | 26 — I grafici nuovi, in SVG   | ⬜    | Linee, aree, heatmap, istogramma, treemap, ciambella          |
 | 27 — I sei filtri              | ⬜    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
 | 28 — La dashboard componibile  | ⬜    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
@@ -61,7 +61,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**686 test verdi** (420 core + 223 app + 43 relay), typecheck, lint e `format:check` puliti.
+**842 test verdi** (576 core + 223 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -87,10 +87,11 @@ anche, il gruppo di default non c'è più, e «Azzera questo telefono» adesso a
 **Il quarto piano è cominciato:** [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 **Step 23–28** — grafici, filtri e dashboard componibile. Nasce da una richiesta di prodotto e non da
 un difetto: i Grafici sono corretti ma poveri, e non c'è modo di chiedere loro qualcosa di diverso da
-quello che mostrano. **Gli Step 23 e 24 sono fatti** (vedi [Negozio e tag](#negozio-e-tag-step-23-e-24)):
-il 23 è uno dei due che non si vedono, tutto dentro `packages/core`, e il piano stesso lo indica come
-il posto giusto da cui cominciare; il 24 li porta nel form della spesa, dietro una tendina chiusa, e
-promuove `Chip` a componente condiviso.
+quello che mostrano. **Gli Step 23, 24 e 25 sono fatti.** Il 23 e il 25 sono i due che **non si
+vedono**, tutti dentro `packages/core`, e il piano stesso li indica come il posto giusto da cui
+cominciare — rischio contenuto e nessun lavoro da rifare; il 24 porta negozio e tag nel form, dietro
+una tendina chiusa. Vedi [Negozio e tag](#negozio-e-tag-step-23-e-24) e
+[La geometria dei grafici](#la-geometria-dei-grafici-step-25).
 
 Resta però vero che il seguito più urgente è
 [la prova sui due telefoni](piano-v3-tab-gruppi-azzeramento-sync.md#criterio-di-fatto-end-to-end), che
@@ -360,6 +361,39 @@ non è stato toccato.
   Unificato anche il peso dell'etichetta, che nelle due copie divergeva senza una ragione:
   `semibold` da selezionata, `medium` altrimenti.
 
+## La geometria dei grafici (Step 25)
+
+Undici moduli in `packages/core`, nessuna riga di interfaccia: quattro in `chart/` (`scale`, `path`,
+`treemap`, `bins`) e sette in `insights/` (`query`, `calendar`, `series`, `weekday`, `heatmap`,
+`stores`, `people`). Serve a rendere i grafici verificabili **senza un telefono**, ed è la ragione
+per cui viene prima di quello che li disegna.
+
+- **`amountFor` è il punto in cui si producono numeri plausibili e sbagliati, e per questo è una
+  funzione sola.** Senza filtro persona l'importo è pieno; con **«a carico di»** è la quota di quella
+  persona; con **«ha pagato»** torna pieno, perché la domanda è quanto ha anticipato. Nessun grafico
+  legge `amountCents` per conto suo.
+- **La fascia di importo si misura sull'importo proiettato.** Sull'importo pieno, un istogramma
+  costruito su `amountFor` mostrerebbe barre fuori dalla fascia scelta.
+- **Le tre aggregazioni esistenti hanno preso la query in coda**, con default vuoto: `totalCents`,
+  `totalsByCategory`, `totalsByMonth`. Il piano le dava per intoccate, ma dice anche che nessuno
+  legge `amountCents` da solo — e le due cose insieme non stanno in piedi. Nessun chiamante toccato.
+- **Il test che attraversa i moduli è quello che vale.** Con la stessa query, serie giornaliera,
+  barre settimanali, categorie, istogramma e curva cumulata devono dare **lo stesso** totale, e le
+  aree del treemap coprire il rettangolo in proporzione. Sei query, filtro persona in entrambe le
+  modalità. Nessun test di singolo modulo se ne accorgerebbe: ciascuno sarebbe coerente con sé.
+- **`smoothLinePath` è una cubica monotona**, non una spline naturale, che fra due mesi bassi e uno
+  alto scenderebbe sotto la linea di base disegnando una spesa negativa. Il test non campiona la
+  curva: sfrutta l'inviluppo convesso delle Bézier.
+- **La heatmap è per quantili, sui soli giorni con spese.** Con una scala lineare un affitto
+  schiaccia tutto il resto al minimo; includendo i giorni vuoti nei quantili, in un mese tranquillo
+  il livello 1 coprirebbe quasi tutto.
+- **`calendar.ts` lavora in UTC**, non col trucco del mezzogiorno di `grouping.ts`: quello serve
+  quando il `Date` è costruito con componenti locali, e qui non se ne costruisce mai uno. UTC l'ora
+  legale non ce l'ha. La settimana comincia **di lunedì**.
+- **`totalsByStore` somma meno del totale** (le spese senza negozio non compaiono, e non c'è una
+  voce «senza negozio» perché dominerebbe ogni grafico); **`totalsByTag` somma di più** (una spesa
+  con due tag conta per intero in entrambi). Vanno dette entrambe dove i numeri si mostrano.
+
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
 Entrambi nel codice e coperti dai test. **Nessuno dei due è ancora stato visto risolto su due
@@ -529,8 +563,13 @@ la lista si è accorciata parecchio, ma non è vuota — e con il redesign chius
 > `try/catch` proprio per questo — e l'export ripiega sugli appunti, dichiarandolo nell'interfaccia.
 > Il foglio di condivisione comparirà solo dopo una build aggiornata.
 
-Tutto il resto è verificato: 686 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 842 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
+
+> **Lo Step 25 non compare in questa lista, e non è una dimenticanza.** Non ha interfaccia: nessuna
+> schermata lo usa ancora, e ciò che c'è da verificare lo verificano i test, che è esattamente il
+> motivo per cui quello step esiste. Arriverà nella lista con lo Step 26, quando quei numeri
+> diventeranno marche su uno schermo.
 
 ## Trappole già risolte — da non riscoprire
 
