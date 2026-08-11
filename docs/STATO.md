@@ -1,8 +1,10 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-04 — **i tre piani funzionali e il redesign visivo sono finiti nel codice.**
-Tutti e sette i passi del redesign sono chiusi ([visualdesign.md](visualdesign.md)). **Quello che
-resta, per tutto quanto, è la prova su due telefoni veri**: non c'è più codice previsto in attesa.
+Aggiornato: 2026-08-11 — **i tre piani funzionali e il redesign visivo sono finiti nel codice**, e
+c'è un **quarto piano scritto e non ancora cominciato**:
+[piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **Step 23–28**. Tutti e sette i
+passi del redesign sono chiusi ([visualdesign.md](visualdesign.md)). **Quello che resta di tutto il
+resto è la prova su due telefoni veri**, e viene prima del piano v4.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -34,6 +36,18 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 | 20 — Quattro tab                    | ✅    | Gruppi, Grafici, Impostazioni, Profilo                       |
 | 21 — Nessun gruppo al primo avvio   | ✅    | Fase `absent`, l'utente crea o entra con un invito           |
 | 22 — Azzera questo telefono         | ✅    | Wipe totale e ritorno all'onboarding, senza riavvio          |
+
+Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **scritto, nessuno
+step ancora cominciato**:
+
+| Step                           | Stato | Cosa conterrà                                                 |
+| ------------------------------ | ----- | ------------------------------------------------------------- |
+| 23 — Negozio e tag nel modello | ⬜    | Due campi additivi su `Expense`, normalizzazione, export a v2 |
+| 24 — «Informazioni aggiuntive» | ⬜    | Tendina chiusa nel form, suggerimenti, `Chip` condiviso       |
+| 25 — La geometria dei grafici  | ⬜    | `packages/core/src/chart/` e sette aggregazioni nuove         |
+| 26 — I grafici nuovi, in SVG   | ⬜    | Linee, aree, heatmap, istogramma, treemap, ciambella          |
+| 27 — I sei filtri              | ⬜    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
+| 28 — La dashboard componibile  | ⬜    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
 
 Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette passi:
 
@@ -68,15 +82,25 @@ da un invito, e sono chiusi entrambi con gli URL intatti (vedi sotto) — la rio
 anche, il gruppo di default non c'è più, e «Azzera questo telefono» adesso azzera davvero.
 
 **Anche il redesign visivo è chiuso** — sette passi su sette: vedi
-[visualdesign.md](visualdesign.md) e la sezione [Redesign visivo](#redesign-visivo) qui sotto. **Non
-c'è un quarto piano, e non è il momento di scriverne uno:** il seguito è
-[la prova sui due telefoni](piano-v3-tab-gruppi-azzeramento-sync.md#criterio-di-fatto-end-to-end),
-che manca a tutti e tre i piani e ora anche al redesign. Le WebSocket sul Durable Object restano una
-possibilità dichiarata fuori perimetro, **da valutare solo dopo** aver provato sul campo la taratura
-degli Step 16 e 17.
+[visualdesign.md](visualdesign.md) e la sezione [Redesign visivo](#redesign-visivo) qui sotto.
 
-> **Non resta codice da scrivere: resta la prova sul campo.** Vale per i tre piani e ora anche per il
-> redesign. Dallo Step 10 in poi nulla è mai stato visto funzionare su un telefono: quello che manca è
+**Il quarto piano adesso c'è, ed è scritto e basta:**
+[piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **Step 23–28** — grafici, filtri e
+dashboard componibile. Nasce da una richiesta di prodotto e non da un difetto: i Grafici sono corretti
+ma poveri, e non c'è modo di chiedere loro qualcosa di diverso da quello che mostrano. **Nessuno step è
+cominciato**, ed è deliberato: il seguito immediato resta
+[la prova sui due telefoni](piano-v3-tab-gruppi-azzeramento-sync.md#criterio-di-fatto-end-to-end), che
+manca a tutti e tre i piani precedenti e ora anche al redesign. Il piano v4 aggiunge due campi alla
+spesa, quindi il suo criterio di «fatto» **dipende** da quella prova: finché il sync non è stato visto
+funzionare in entrambi i versi, non si può sapere se un negozio scritto di qua arriva di là.
+
+Le WebSocket sul Durable Object restano una possibilità dichiarata fuori perimetro, **da valutare solo
+dopo** aver provato sul campo la taratura degli Step 16 e 17.
+
+> **Di quanto è stato scritto finora non resta codice da scrivere: resta la prova sul campo.** Vale
+> per i tre piani e ora anche per il redesign — il piano v4 è un'aggiunta, non il completamento di
+> qualcosa, e non sostituisce questa riga.
+> Dallo Step 10 in poi nulla è mai stato visto funzionare su un telefono: quello che manca è
 > il [criterio di «fatto» end-to-end](piano-v2-profili-gruppi-sync.md#criterio-di-fatto-end-to-end) su
 > due dispositivi fisici. Finché non è stato fatto, «i test passano» e «funziona» restano due frasi
 > diverse — e adesso la distanza fra le due è più larga di prima, perché **i passi 4, 6 e 7 hanno
