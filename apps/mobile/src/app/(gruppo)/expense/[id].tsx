@@ -31,6 +31,9 @@ export default function EditExpenseScreen() {
       note: values.note,
       store: values.store,
       tags: values.tags,
+      // `values.currency` esiste ma **non si scrive**: una spesa conserva la valuta con cui
+      // è nata. Riscriverla con quella del profilo di adesso cambierebbe di significato una
+      // cifra che nessuno ha toccato.
       paidBy: values.paidBy,
       // Lo split arriva sempre insieme all'importo: VaultStore rifiuta un aggiornamento
       // che lascerebbe le quote incoerenti col totale.

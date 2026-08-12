@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
 import { bandScale, formatMoney, type AmountBin } from '@jutrack/core';
+import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { useChartWidth } from './useChartWidth';
 
@@ -23,6 +24,7 @@ interface AmountHistogramProps {
  */
 export function AmountHistogram({ bins, height = 96 }: AmountHistogramProps) {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const symbol = useCurrencySymbol();
   const { width, onLayout } = useChartWidth();
 
   const peak = bins.reduce((max, bin) => Math.max(max, bin.count), 0);
@@ -54,7 +56,7 @@ export function AmountHistogram({ bins, height = 96 }: AmountHistogramProps) {
               <View
                 key={bin.label}
                 accessible
-                accessibilityLabel={`Da ${bin.label} euro: ${bin.count} ${bin.count === 1 ? 'spesa' : 'spese'}, ${formatMoney(bin.totalCents)}`}
+                accessibilityLabel={`Da ${bin.label} euro: ${bin.count} ${bin.count === 1 ? 'spesa' : 'spese'}, ${formatMoney(bin.totalCents, symbol)}`}
                 style={{ flex: 1, alignItems: 'center', gap: 1 }}
               >
                 <Text

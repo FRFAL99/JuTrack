@@ -1,6 +1,7 @@
 import { Pressable, Text, View } from 'react-native';
 import { formatMoney, type MonthTotal } from '@jutrack/core';
 import { shortMonthLabel } from '@/features/expenses/grouping';
+import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { compactAmount } from './format';
 
@@ -26,6 +27,7 @@ const CHART_HEIGHT = 100;
  */
 export function MonthlyBars({ months, selected, onSelect }: MonthlyBarsProps) {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const symbol = useCurrencySymbol();
   const peak = months.reduce((max, m) => Math.max(max, m.totalCents), 0);
 
   return (
@@ -42,7 +44,7 @@ export function MonthlyBars({ months, selected, onSelect }: MonthlyBarsProps) {
               onPress={() => onSelect(month.month)}
               accessibilityRole="button"
               accessibilityState={{ selected: isSelected }}
-              accessibilityLabel={`${shortMonthLabel(month.month)}: ${formatMoney(month.totalCents)}`}
+              accessibilityLabel={`${shortMonthLabel(month.month)}: ${formatMoney(month.totalCents, symbol)}`}
               style={{ flex: 1, justifyContent: 'flex-end', alignItems: 'center', gap: 4 }}
             >
               {(isSelected || isPeak) && month.totalCents > 0 && (

@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { formatMoney, type NamedTotal } from '@jutrack/core';
+import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { formatShare } from '../format';
 
@@ -27,6 +28,7 @@ interface TopListProps {
  */
 export function TopList({ totals, max = 5, note }: TopListProps) {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const symbol = useCurrencySymbol();
   const shown = totals.slice(0, max);
   const peak = shown.reduce((highest, total) => Math.max(highest, total.totalCents), 0);
 
@@ -44,12 +46,12 @@ export function TopList({ totals, max = 5, note }: TopListProps) {
             <Text
               style={{ color: colors.text, fontSize: fontSize.sm, fontWeight: fontWeight.semibold }}
             >
-              {formatMoney(total.totalCents)}
+              {formatMoney(total.totalCents, symbol)}
             </Text>
           </View>
           <View
             accessible
-            accessibilityLabel={`${total.name}: ${formatMoney(total.totalCents)}, ${total.count} ${total.count === 1 ? 'spesa' : 'spese'}`}
+            accessibilityLabel={`${total.name}: ${formatMoney(total.totalCents, symbol)}, ${total.count} ${total.count === 1 ? 'spesa' : 'spese'}`}
             style={{ height: 3, borderRadius: 1.5, backgroundColor: colors.surfacePressed }}
           >
             <View

@@ -14,6 +14,9 @@ export default function NewExpenseScreen() {
       note: values.note,
       store: values.store,
       tags: values.tags,
+      // La valuta del profilo entra qui e da nessun'altra parte: è l'unico punto in cui
+      // nasce una spesa. In modifica non si tocca — vedi `expense/[id].tsx`.
+      currency: values.currency,
       paidBy: values.paidBy,
       split: values.split,
     });

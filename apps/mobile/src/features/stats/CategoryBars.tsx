@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { formatMoney, type Category, type CategoryTotal } from '@jutrack/core';
+import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { formatShare } from './format';
 
@@ -18,6 +19,7 @@ interface CategoryBarsProps {
  */
 export function CategoryBars({ totals, categories }: CategoryBarsProps) {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const symbol = useCurrencySymbol();
   const byId = new Map(categories.map((c) => [c.id, c]));
 
   // Le larghezze sono rapportate alla voce più alta, non al totale: sul totale la barra
@@ -51,12 +53,12 @@ export function CategoryBars({ totals, categories }: CategoryBarsProps) {
                   fontWeight: fontWeight.semibold,
                 }}
               >
-                {formatMoney(total.totalCents)}
+                {formatMoney(total.totalCents, symbol)}
               </Text>
             </View>
             <View
               accessible
-              accessibilityLabel={`${name}: ${formatMoney(total.totalCents)}, ${formatShare(total.share)} del totale`}
+              accessibilityLabel={`${name}: ${formatMoney(total.totalCents, symbol)}, ${formatShare(total.share)} del totale`}
               style={{ height: 3, borderRadius: 1.5, backgroundColor: colors.surfacePressed }}
             >
               <View

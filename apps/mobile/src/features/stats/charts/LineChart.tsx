@@ -9,6 +9,7 @@ import {
   type Cents,
   type Point,
 } from '@jutrack/core';
+import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { compactAmount } from '../format';
 import { labelIndices, type ChartPoint } from './axis';
@@ -55,6 +56,7 @@ export function LineChart({
   maxLabels = 5,
 }: LineChartProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const symbol = useCurrencySymbol();
   const { width, onLayout } = useChartWidth();
 
   const plotWidth = Math.max(1, width - GUTTER);
@@ -79,7 +81,7 @@ export function LineChart({
   const summary =
     first === undefined || last === undefined
       ? ''
-      : `Da ${first.label} a ${last.label}. Massimo ${formatMoney(highest)}, ${points[peakAt]?.label ?? last.label}.`;
+      : `Da ${first.label} a ${last.label}. Massimo ${formatMoney(highest, symbol)}, ${points[peakAt]?.label ?? last.label}.`;
 
   return (
     <View onLayout={onLayout} style={{ gap: spacing.sm }}>
@@ -159,7 +161,7 @@ export function LineChart({
                 <Text
                   key={point.key}
                   numberOfLines={1}
-                  accessibilityLabel={`${point.label}: ${formatMoney(point.valueCents)}`}
+                  accessibilityLabel={`${point.label}: ${formatMoney(point.valueCents, symbol)}`}
                   style={{
                     position: 'absolute',
                     left: Math.min(Math.max(x(index) - 22, 0), Math.max(0, plotWidth - 44)),

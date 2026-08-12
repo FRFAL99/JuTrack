@@ -11,7 +11,7 @@ import {
 import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
 import { currentMonth, formatMonthTitle } from '@/features/expenses/grouping';
-import { useBudgets, useCategories, useExpenses, useVaultStore } from '@/state';
+import { useBudgets, useCategories, useCurrencySymbol, useExpenses, useVaultStore } from '@/state';
 import { useTheme } from '@/theme';
 
 /**
@@ -24,6 +24,7 @@ import { useTheme } from '@/theme';
  */
 export default function BudgetScreen() {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
+  const symbol = useCurrencySymbol();
   const store = useVaultStore();
   const [month, setMonth] = useState(currentMonth);
 
@@ -148,10 +149,10 @@ export default function BudgetScreen() {
                   <Text
                     style={{ color: colors.textMuted, fontSize: fontSize.xs, textAlign: 'right' }}
                   >
-                    Spesi {formatMoney(status.spentCents)}
+                    Spesi {formatMoney(status.spentCents, symbol)}
                     {status.state === 'over'
-                      ? ` · superato di ${formatMoney(-status.remainingCents)}`
-                      : ` · restano ${formatMoney(status.remainingCents)}`}
+                      ? ` · superato di ${formatMoney(-status.remainingCents, symbol)}`
+                      : ` · restano ${formatMoney(status.remainingCents, symbol)}`}
                   </Text>
                 )}
               </View>

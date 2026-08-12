@@ -20,6 +20,8 @@ export {
   ProfileProvider,
   useAppData,
   useAppDataStatus,
+  useCurrencyCode,
+  useCurrencySymbol,
   useProfile,
   type AppData,
 } from './ProfileProvider';

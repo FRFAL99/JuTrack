@@ -76,6 +76,7 @@ import { useEngineActivity } from '@/features/sync/useEngineActivity';
 import {
   useBudgets,
   useCategories,
+  useCurrencySymbol,
   useCurrentGroup,
   useExpenses,
   useMembers,
@@ -140,6 +141,7 @@ export default function StatsScreen() {
  */
 function StatsOfGroup() {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const symbol = useCurrencySymbol();
   const [period, setPeriod] = useState<Period>(defaultPeriod);
   const [facets, setFacets] = useState<QueryFacets>({});
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -437,7 +439,7 @@ function StatsOfGroup() {
           <Text
             style={{ color: colors.text, fontSize: fontSize.display, fontWeight: fontWeight.heavy }}
           >
-            {formatCents(periodTotal)} <Text style={{ color: colors.textMuted }}>€</Text>
+            {formatCents(periodTotal)} <Text style={{ color: colors.textMuted }}>{symbol}</Text>
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
             {describeChange(periodTotal, previous, previousLabel(period))}
@@ -451,7 +453,7 @@ function StatsOfGroup() {
         <View style={[styles.tiles, { paddingHorizontal: spacing.sm }]}>
           <StatTile
             label="Al giorno"
-            value={formatMoney(averagePerDay(days))}
+            value={formatMoney(averagePerDay(days), symbol)}
             hint={`su ${days.length} ${days.length === 1 ? 'giorno' : 'giorni'}`}
             values={days.map((day) => day.totalCents)}
             sparklineLabel={`Andamento giornaliero di ${periodTitle}`}
@@ -465,7 +467,7 @@ function StatsOfGroup() {
           <Divider color={colors.divider} />
           <StatTile
             label="A spesa"
-            value={formatMoney(Math.round(periodTotal / filtered.length))}
+            value={formatMoney(Math.round(periodTotal / filtered.length), symbol)}
             hint="in media"
           />
         </View>
@@ -614,7 +616,7 @@ function StatsOfGroup() {
                 <Text style={{ flex: 1, color: colors.text, fontSize: fontSize.md }}>
                   {nameOf(transfer.fromMember)} deve{' '}
                   <Text style={{ color: colors.expense, fontWeight: fontWeight.semibold }}>
-                    {formatMoney(transfer.amountCents)}
+                    {formatMoney(transfer.amountCents, symbol)}
                   </Text>{' '}
                   a {nameOf(transfer.toMember)}
                 </Text>

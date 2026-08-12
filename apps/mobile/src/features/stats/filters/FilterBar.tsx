@@ -2,6 +2,7 @@ import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { queryParts, type QueryLabels } from '@jutrack/core';
 import { Chip } from '@/components/Chip';
+import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import type { QueryFacets } from './facets';
 import { periodLabel, type Period } from './period';
@@ -34,7 +35,7 @@ interface FilterBarProps {
  */
 export function FilterBar({ period, facets, labels, onOpen, onReset }: FilterBarProps) {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
-  const parts = queryParts(facets, labels);
+  const parts = queryParts(facets, labels, useCurrencySymbol());
 
   return (
     <ScrollView

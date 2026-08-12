@@ -3,6 +3,7 @@ import { Pressable, ScrollView, Text, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
 import { formatMoney, HEATMAP_LEVELS, type HeatmapCell } from '@jutrack/core';
 import { formatDayTitle } from '@/features/expenses/grouping';
+import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { compactAmount } from '../format';
 import { shortWeekdayLabel } from './axis';
@@ -39,6 +40,7 @@ const LABELLED_ROWS = [0, 2, 4];
  */
 export function CalendarHeatmap({ cells }: CalendarHeatmapProps) {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const symbol = useCurrencySymbol();
   const { width, onLayout } = useChartWidth();
   const [selected, setSelected] = useState<HeatmapCell | null>(null);
 
@@ -127,7 +129,9 @@ export function CalendarHeatmap({ cells }: CalendarHeatmapProps) {
                         accessibilityRole="button"
                         accessibilityState={{ selected: selected?.date === day.date }}
                         accessibilityLabel={`${formatDayTitle(day.date)}: ${
-                          day.totalCents === 0 ? 'nessuna spesa' : formatMoney(day.totalCents)
+                          day.totalCents === 0
+                            ? 'nessuna spesa'
+                            : formatMoney(day.totalCents, symbol)
                         }`}
                         style={{
                           position: 'absolute',
@@ -161,7 +165,7 @@ export function CalendarHeatmap({ cells }: CalendarHeatmapProps) {
                 <Text style={{ fontWeight: fontWeight.semibold }}>
                   {selected.totalCents === 0
                     ? '· nessuna spesa'
-                    : `· ${formatMoney(selected.totalCents)}`}
+                    : `· ${formatMoney(selected.totalCents, symbol)}`}
                 </Text>
               </>
             )}
@@ -194,7 +198,7 @@ export function CalendarHeatmap({ cells }: CalendarHeatmapProps) {
                     }}
                   />
                   <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-                    {level === 0 ? 'niente' : `da ${compactAmount(threshold ?? 0)} €`}
+                    {level === 0 ? 'niente' : `da ${compactAmount(threshold ?? 0)} ${symbol}`}
                   </Text>
                 </View>
               );

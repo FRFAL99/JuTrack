@@ -1,5 +1,12 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { formatCents, formatMoney, type Category, type Expense, type Member } from '@jutrack/core';
+import {
+  currencySymbol,
+  formatCents,
+  formatMoney,
+  type Category,
+  type Expense,
+  type Member,
+} from '@jutrack/core';
 import { CategoryIcon } from '@/features/categories/CategoryIcon';
 import { numeric, useTheme } from '@/theme';
 
@@ -27,6 +34,12 @@ export function ExpenseRow({
 }: ExpenseRowProps) {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
 
+  // **La valuta della spesa, non quella del profilo**: qui si guarda un importo preciso,
+  // scritto un giorno preciso, e `Expense.currency` è l'unico posto che lo sa. È l'unica
+  // riga dell'app in cui il simbolo non viene dal telefono che guarda — ovunque si sommino
+  // più spese non si può fare altrimenti, perché una somma non ha una valuta propria.
+  const symbol = currencySymbol(expense.currency);
+
   // La nota è l'informazione più utile quando c'è; altrimenti la categoria.
   const title = expense.note.trim() !== '' ? expense.note : (category?.name ?? 'Senza categoria');
   const subtitle = expense.note.trim() !== '' && category !== undefined ? category.name : undefined;
@@ -41,8 +54,8 @@ export function ExpenseRow({
       accessibilityRole="button"
       accessibilityLabel={
         shareLabel === null
-          ? `${title}, ${formatMoney(expense.amountCents)}`
-          : `${title}, ${formatMoney(expense.amountCents)}, ${shareLabel}`
+          ? `${title}, ${formatMoney(expense.amountCents, symbol)}`
+          : `${title}, ${formatMoney(expense.amountCents, symbol)}, ${shareLabel}`
       }
       style={({ pressed }) => [
         styles.row,
@@ -85,7 +98,7 @@ export function ExpenseRow({
             { color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold },
           ]}
         >
-          {formatMoney(expense.amountCents)}
+          {formatMoney(expense.amountCents, symbol)}
         </Text>
         {shareLabel !== null && (
           <Text

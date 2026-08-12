@@ -4,6 +4,71 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-12 — Step 29: la valuta di default nel profilo
+
+Un campo `currency` sul `Profile`, un selettore in Tu, e il simbolo che da lì arriva a ogni
+importo che l'app scrive. **Primo step del piano v5**, e il solo dei dodici che non chiede né
+una build EAS né una libreria nuova.
+
+**Il piano diceva «l'unico consumatore nuovo è il default nel form», e non stava in piedi.** Il
+simbolo `€` era scritto a mano in **48 punti**: quaranta chiamate a `formatMoney` che si
+affidavano al suo parametro di default, più otto `€` letterali dentro il JSX. Scegliendo il
+franco, il documento avrebbe registrato `currency: 'CHF'` e la schermata avrebbe continuato a
+dire `12,00 €` — un numero giusto con accanto una parola falsa, che è la cosa che questo
+progetto rifiuta da quando ha deciso che «Metà e metà» non si scrive in tre. Un selettore che
+non si vede non è uno step più piccolo: è una funzione che mente. Quindi il passaggio del
+simbolo fa parte dello step, ed è la metà grossa del diff.
+
+**Il simbolo passa dal profilo, non da un contesto nuovo.** `useCurrencySymbol()` sta accanto a
+`useProfile()`, che è già montato sopra tutta l'app: un `CurrencyProvider` a parte sarebbe stato
+un secondo contesto per un dato che sta già nel primo. I moduli **puri** — `split-text.ts`,
+`balance-line.ts`, `stats/format.ts`, e `queryParts` dentro `packages/core` — non possono
+chiamare un hook e ricevono il simbolo come ultimo parametro, con `'€'` come default: è ciò che
+ha tenuto verdi i loro test senza riscriverli, e ciò che rende la firma additiva come lo erano
+`store` e `tags` allo Step 23.
+
+**`ExpenseRow` è l'unica riga che non guarda il profilo.** Il simbolo lì viene da
+`expense.currency`, perché quella riga mostra **un importo preciso, scritto un giorno preciso**.
+Dove invece si somma — totali, saldi, grafici, budget — la valuta del profilo è l'unica risposta
+possibile: una somma non ha una valuta propria. La stessa ragione fa sì che la modifica di una
+spesa **non riscriva** `currency`: cambiare valuta nel profilo non deve cambiare di significato
+le cifre già registrate.
+
+**Il piano insisteva su «mai a livello di gruppo», e la conseguenza va detta ad alta voce.** Il
+campo resta locale al telefono e non entra mai nel documento condiviso — su questo il piano ha
+ragione, e non c'è niente da fondere fra due membri. Ma **JuTrack non converte**: due persone
+dello stesso gruppo con valute diverse registrano importi in unità diverse, e ogni totale li
+somma come se fossero la stessa cosa. Il campo è locale nel codice, la scelta è comune di fatto,
+e la riga sotto il selettore lo dice invece di lasciarlo scoprire a un saldo sbagliato.
+
+**Sei valute, e le esclusioni sono le decisioni vere.** Fuori le valute a zero decimali (JPY):
+tutto il progetto è in centesimi e `formatCents` stampa sempre due cifre, quindi «1.000,00 ¥»
+non sarebbe yen. Fuori i simboli ambigui: `kr` vale per tre corone diverse, e dove il simbolo
+non distingue si scrive il codice — brutto e vero invece che breve e falso. Il test che formatta
+1234 centesimi in ognuna delle sei è quello che tiene ferma la prima regola.
+
+**Posizione del simbolo e virgola decimale non cambiano**, di proposito: «12,00 $» è italiano
+con dentro un dollaro, e sarebbe sbagliato in inglese. Ma il separatore e la posizione sono
+convenzioni della **lingua** in cui si legge, non della moneta che si spende — vanno con
+`Intl.NumberFormat` allo Step 37, non qui, e anticiparle vorrebbe dire scrivere due volte la
+stessa regola.
+
+**Una valuta illeggibile non fa cadere il profilo**, a differenza di un `profileId` vuoto: si
+torna al default e si continua. Rimandare all'onboarding per un simbolo costerebbe molto più di
+quanto vale, e non c'è nessun danno che si propaghi all'altro telefono — è la differenza fra una
+preferenza di formattazione e la chiave con cui si è scritti dentro un vault.
+
+**Verifica:** 970 test verdi (588 core + 339 app + 43 relay, di cui 18 nuovi), typecheck, lint e
+`format:check` puliti, `expo export --platform android` completato. Resta da vedere sul telefono:
+scegliere una valuta e ritrovarla dopo un riavvio, e che una spesa registrata prima conservi la
+sua.
+
+**Prossimo:** Step 30 — i due config plugin (`expo-notifications` e
+`react-native-android-widget`) insieme, e **la build EAS nuova**. È l'unico step del piano v5 che
+non si può chiudere senza reinstallare l'app sul telefono.
+
+---
+
 ## 2026-08-11 — Step 28: la dashboard componibile
 
 Sedici widget in un registro, un layout salvato in `app_meta` e una schermata `/dashboard` per

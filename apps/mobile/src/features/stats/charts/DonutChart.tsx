@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { arcPath, formatMoney } from '@jutrack/core';
+import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { formatShare } from '../format';
 import { useChartWidth } from './useChartWidth';
@@ -32,6 +33,7 @@ const THICKNESS = 0.34;
  */
 export function DonutChart({ slices, centerLabel, size }: DonutChartProps) {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const symbol = useCurrencySymbol();
   const { width, onLayout } = useChartWidth();
 
   const total = slices.reduce((sum, slice) => sum + slice.valueCents, 0);
@@ -56,7 +58,7 @@ export function DonutChart({ slices, centerLabel, size }: DonutChartProps) {
             <View
               accessible
               accessibilityRole="image"
-              accessibilityLabel={`${centerLabel}: ${formatMoney(total)}, ripartito in ${slices.length} voci`}
+              accessibilityLabel={`${centerLabel}: ${formatMoney(total, symbol)}, ripartito in ${slices.length} voci`}
             >
               <Svg width={diameter} height={diameter}>
                 {arcs.map(({ slice, from, to }) => (
@@ -82,7 +84,7 @@ export function DonutChart({ slices, centerLabel, size }: DonutChartProps) {
               <Text
                 style={{ color: colors.text, fontSize: fontSize.lg, fontWeight: fontWeight.bold }}
               >
-                {formatMoney(total)}
+                {formatMoney(total, symbol)}
               </Text>
               <Text style={{ color: colors.textMuted, fontSize: fontSize.xxs }}>{centerLabel}</Text>
             </View>
@@ -93,7 +95,7 @@ export function DonutChart({ slices, centerLabel, size }: DonutChartProps) {
               <View
                 key={slice.key}
                 accessible
-                accessibilityLabel={`${slice.label}: ${formatMoney(slice.valueCents)}, ${formatShare(slice.valueCents / total)}`}
+                accessibilityLabel={`${slice.label}: ${formatMoney(slice.valueCents, symbol)}, ${formatShare(slice.valueCents / total)}`}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}
               >
                 <View
@@ -120,7 +122,7 @@ export function DonutChart({ slices, centerLabel, size }: DonutChartProps) {
                     fontWeight: fontWeight.semibold,
                   }}
                 >
-                  {formatMoney(slice.valueCents)}
+                  {formatMoney(slice.valueCents, symbol)}
                 </Text>
               </View>
             ))}

@@ -3,9 +3,24 @@
 > Punto d'ingresso del progetto: [STATO.md](STATO.md). Piano approvato:
 > `~/.claude/plans/ho-appena-fatto-delle-nested-conway.md`.
 >
-> **Non ancora iniziato.** Nessuno dei dodici step è nel codice: questo documento è il risultato
-> della sola sessione di pianificazione dell'11 agosto 2026. L'implementazione parte da qui, uno step
-> alla volta, come per i piani precedenti.
+> **Uno step su dodici nel codice.** Lo [Step 29](#step-29--valuta-di-default-nel-profilo) è chiuso
+> il 12 agosto 2026; il prossimo è il 30. L'implementazione procede uno step alla volta, come per i
+> piani precedenti.
+>
+> **Due punti dello Step 29 erano scritti male qui, e sono stati corretti implementandolo** — vanno
+> letti da [STATO.md](STATO.md#la-valuta-di-default-nel-profilo-step-29), non da §Step 29 qui sotto:
+>
+> 1. **«L'unico consumatore nuovo è il default nel form» era falso.** Il simbolo `€` era scritto a
+>    mano in 48 punti (il default di `formatMoney` più otto letterali nel JSX): senza toccarli, una
+>    valuta scelta avrebbe prodotto un'etichetta falsa accanto a ogni numero. Il passaggio del
+>    simbolo fa parte dello step.
+> 2. **«L'utente può comunque cambiarlo spesa per spesa» non era vero.** `Expense.currency` esiste
+>    nel modello, ma il form non ha mai avuto un campo valuta e `ExpenseFormValues` non la portava.
+>
+> E una conseguenza che il piano non dichiarava: **JuTrack non converte**, quindi due membri con
+> valute diverse nello stesso gruppo producono totali che sommano unità diverse. Il campo resta
+> locale al telefono — su questo il piano ha ragione — ma la scelta è comune di fatto, e il
+> selettore lo dice.
 
 ## Contesto
 

@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Category, IsoDate, Member, PersonMode } from '@jutrack/core';
 import { Chip } from '@/components/Chip';
 import { CategoryIcon } from '@/features/categories/CategoryIcon';
+import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { AMOUNT_CHOICES, amountRange, isAmountChosen } from './amount';
 import { hasValue, KEY_OF, toggleValue, type QueryFacets } from './facets';
@@ -62,6 +63,7 @@ export function FilterSheet({
   today,
 }: FilterSheetProps) {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const symbol = useCurrencySymbol();
   const insets = useSafeAreaInsets();
 
   const patch = (change: QueryFacets) => onFacetsChange({ ...facets, ...change });
@@ -211,7 +213,7 @@ export function FilterSheet({
                 return (
                   <Chip
                     key={choice.label}
-                    label={`${choice.label} €`}
+                    label={`${choice.label} ${symbol}`}
                     selected={chosen}
                     onPress={() => {
                       if (chosen) {

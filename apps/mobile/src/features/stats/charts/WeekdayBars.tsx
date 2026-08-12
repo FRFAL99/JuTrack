@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
 import { bandScale, formatMoney, type WeekdayTotal } from '@jutrack/core';
+import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { compactAmount } from '../format';
 import { shortWeekdayLabel, weekdayName } from './axis';
@@ -24,6 +25,7 @@ interface WeekdayBarsProps {
  */
 export function WeekdayBars({ totals, height = 96 }: WeekdayBarsProps) {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const symbol = useCurrencySymbol();
   const { width, onLayout } = useChartWidth();
 
   const peak = totals.reduce((max, total) => Math.max(max, total.totalCents), 0);
@@ -59,7 +61,7 @@ export function WeekdayBars({ totals, height = 96 }: WeekdayBarsProps) {
               <View
                 key={total.weekday}
                 accessible
-                accessibilityLabel={`${weekdayName(total.weekday)}: ${formatMoney(total.totalCents)}, ${total.count} ${total.count === 1 ? 'spesa' : 'spese'}`}
+                accessibilityLabel={`${weekdayName(total.weekday)}: ${formatMoney(total.totalCents, symbol)}, ${total.count} ${total.count === 1 ? 'spesa' : 'spese'}`}
                 style={{ flex: 1, alignItems: 'center', gap: 1 }}
               >
                 <Text style={{ color: colors.textMuted, fontSize: fontSize.xxs }}>

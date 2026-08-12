@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 import Svg, { Line, Path } from 'react-native-svg';
 import { areaPath, formatMoney, linearScale, linePath, niceTicks, type Point } from '@jutrack/core';
+import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { compactAmount } from '../format';
 import { labelIndices, type ChartPoint } from './axis';
@@ -41,6 +42,7 @@ export function AreaChart({
   maxLabels = 5,
 }: AreaChartProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const symbol = useCurrencySymbol();
   const { width, onLayout } = useChartWidth();
 
   const plotWidth = Math.max(1, width - GUTTER);
@@ -59,7 +61,7 @@ export function AreaChart({
   const summary =
     last === undefined
       ? ''
-      : `Andamento cumulato: ${formatMoney(last.valueCents)} al ${last.label}.`;
+      : `Andamento cumulato: ${formatMoney(last.valueCents, symbol)} al ${last.label}.`;
 
   return (
     <View onLayout={onLayout} style={{ gap: spacing.sm }}>
@@ -131,7 +133,7 @@ export function AreaChart({
                 <Text
                   key={point.key}
                   numberOfLines={1}
-                  accessibilityLabel={`${point.label}: ${formatMoney(point.valueCents)}`}
+                  accessibilityLabel={`${point.label}: ${formatMoney(point.valueCents, symbol)}`}
                   style={{
                     position: 'absolute',
                     left: Math.min(Math.max(x(index) - 22, 0), Math.max(0, plotWidth - 44)),

@@ -8,11 +8,13 @@ import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
 import { SectionLabel } from '@/components/SectionLabel';
 import { ColorChoice } from '@/features/profile/ColorChoice';
+import { CurrencyPicker } from '@/features/profile/CurrencyPicker';
 import { describeSync, syncTone } from '@/features/sync/describe';
 import {
   MAX_PROFILE_NAME,
   normalizeProfileName,
   useAppData,
+  useCurrencyCode,
   useCurrentGroup,
   useProfile,
   useSyncState,
@@ -39,6 +41,7 @@ export default function TuScreen() {
   const group = useCurrentGroup();
   const vault = useVaultStatus();
   const syncState = useSyncState();
+  const currency = useCurrencyCode();
 
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(profile.name);
@@ -136,6 +139,20 @@ export default function TuScreen() {
   return (
     <Screen header={identityHeader}>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
+        <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
+
+        <SectionLabel>Valuta</SectionLabel>
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+          <CurrencyPicker value={currency} onChange={(next) => void update({ currency: next })} />
+          {/* La nota non è un dettaglio legale: JuTrack non ha tassi di cambio, quindi due
+              persone dello stesso gruppo che scelgono valute diverse vedono totali che
+              sommano unità diverse. Il campo è locale al telefono, la scelta no. */}
+          <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+            Vale solo su questo telefono, e per le spese che registri da qui. JuTrack non converte
+            fra valute: in un gruppo conviene sceglierne una sola.
+          </Text>
+        </View>
+
         <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
 
         <SectionLabel>Sincronizzazione</SectionLabel>

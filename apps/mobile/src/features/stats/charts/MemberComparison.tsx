@@ -1,5 +1,6 @@
 import { Text, View } from 'react-native';
 import { formatMoney, type Member, type MemberSeries } from '@jutrack/core';
+import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 
 interface MemberComparisonProps {
@@ -23,6 +24,7 @@ interface MemberComparisonProps {
  */
 export function MemberComparison({ series, members, periodLabel }: MemberComparisonProps) {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const symbol = useCurrencySymbol();
   const nameOf = (id: string): string => members.find((m) => m.id === id)?.name ?? 'qualcuno';
   const colorOf = (id: string): string => members.find((m) => m.id === id)?.color ?? colors.accent;
 
@@ -47,14 +49,14 @@ export function MemberComparison({ series, members, periodLabel }: MemberCompari
             percent={shareOf(one.paidCents)}
             color={colorOf(one.memberId)}
             faded
-            accessibilityLabel={`${nameOf(one.memberId)} ha anticipato ${formatMoney(one.paidCents)} ${periodLabel}`}
+            accessibilityLabel={`${nameOf(one.memberId)} ha anticipato ${formatMoney(one.paidCents, symbol)} ${periodLabel}`}
           />
           <MeasureBar
             label="a suo carico"
             amountCents={one.owedCents}
             percent={shareOf(one.owedCents)}
             color={colorOf(one.memberId)}
-            accessibilityLabel={`A carico di ${nameOf(one.memberId)}: ${formatMoney(one.owedCents)} ${periodLabel}`}
+            accessibilityLabel={`A carico di ${nameOf(one.memberId)}: ${formatMoney(one.owedCents, symbol)} ${periodLabel}`}
           />
         </View>
       ))}
@@ -81,6 +83,7 @@ function MeasureBar({
   accessibilityLabel,
 }: MeasureBarProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const symbol = useCurrencySymbol();
 
   return (
     <View
@@ -100,7 +103,9 @@ function MeasureBar({
           }}
         />
       </View>
-      <Text style={{ color: colors.text, fontSize: fontSize.xs }}>{formatMoney(amountCents)}</Text>
+      <Text style={{ color: colors.text, fontSize: fontSize.xs }}>
+        {formatMoney(amountCents, symbol)}
+      </Text>
     </View>
   );
 }

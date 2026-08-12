@@ -13,6 +13,14 @@ export type {
 } from './types';
 
 export {
+  CURRENCIES,
+  currencySymbol,
+  isKnownCurrency,
+  DEFAULT_CURRENCY,
+  type CurrencyChoice,
+} from './currency';
+
+export {
   assertCents,
   formatCents,
   formatMoney,

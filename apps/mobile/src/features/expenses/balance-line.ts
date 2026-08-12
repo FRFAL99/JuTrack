@@ -25,6 +25,7 @@ export function describeMyBalance(
   transfers: Transfer[],
   myMemberId: string,
   nameOf: (memberId: string) => string,
+  symbol = '€',
 ): BalanceLine {
   const owedToMe = transfers.filter((transfer) => transfer.toMember === myMemberId);
   const owedByMe = transfers.filter((transfer) => transfer.fromMember === myMemberId);
@@ -36,25 +37,25 @@ export function describeMyBalance(
   // devono» è la lettura meno allarmante, e chi vuole i dettagli ha i Grafici.
   if (owedToMe.length === 1) {
     return {
-      text: `${nameOf(owedToMe[0]!.fromMember)} ti deve ${formatMoney(sum(owedToMe))}`,
+      text: `${nameOf(owedToMe[0]!.fromMember)} ti deve ${formatMoney(sum(owedToMe), symbol)}`,
       tone: 'credit',
     };
   }
   if (owedToMe.length > 1) {
     return {
-      text: `In ${owedToMe.length} ti devono ${formatMoney(sum(owedToMe))}`,
+      text: `In ${owedToMe.length} ti devono ${formatMoney(sum(owedToMe), symbol)}`,
       tone: 'credit',
     };
   }
   if (owedByMe.length === 1) {
     return {
-      text: `Devi ${formatMoney(sum(owedByMe))} a ${nameOf(owedByMe[0]!.toMember)}`,
+      text: `Devi ${formatMoney(sum(owedByMe), symbol)} a ${nameOf(owedByMe[0]!.toMember)}`,
       tone: 'debt',
     };
   }
   if (owedByMe.length > 1) {
     return {
-      text: `Devi ${formatMoney(sum(owedByMe))} a ${owedByMe.length} persone`,
+      text: `Devi ${formatMoney(sum(owedByMe), symbol)} a ${owedByMe.length} persone`,
       tone: 'debt',
     };
   }

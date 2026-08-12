@@ -87,6 +87,30 @@ describe('persistenza del profilo', () => {
     expect((await loadProfile(meta))?.identity).toEqual({ provider: 'google', subject: 'sub-123' });
   });
 
+  it('conserva la valuta scelta', async () => {
+    const meta = new MemoryKeyValueStore();
+    const profile: Profile = { ...createProfile('Francesco', '#3B5BDB', random), currency: 'CHF' };
+    await saveProfile(meta, profile);
+
+    expect((await loadProfile(meta))?.currency).toBe('CHF');
+  });
+
+  it.each([
+    ['manca', '{"profileId":"abc","name":"X","color":"#000"}'],
+    ['è vuota', '{"profileId":"abc","name":"X","color":"#000","currency":""}'],
+    ['non è una stringa', '{"profileId":"abc","name":"X","color":"#000","currency":42}'],
+  ])('torna al default, senza perdere il profilo, se la valuta %s', async (_case, raw) => {
+    // A differenza di `profileId`, una valuta illeggibile non manda all'onboarding: è una
+    // preferenza di formattazione, e rifare l'onboarding per un simbolo costerebbe molto
+    // più di quanto vale. Il profilo si carica, il campo resta assente, vale l'euro.
+    const meta = new MemoryKeyValueStore();
+    await meta.set('profile', raw);
+
+    const loaded = await loadProfile(meta);
+    expect(loaded).not.toBeNull();
+    expect(loaded?.currency).toBeUndefined();
+  });
+
   it('restituisce null quando non c è ancora nulla', async () => {
     expect(await loadProfile(new MemoryKeyValueStore())).toBeNull();
   });

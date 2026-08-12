@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { formatMoney, type BudgetState, type BudgetStatus, type Category } from '@jutrack/core';
+import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { describeBudget } from './format';
 
@@ -17,6 +18,7 @@ interface BudgetRowsProps {
  */
 export function BudgetRows({ statuses, categories }: BudgetRowsProps) {
   const { colors, spacing, fontSize } = useTheme();
+  const symbol = useCurrencySymbol();
   const byId = new Map(categories.map((c) => [c.id, c]));
 
   const tint = (state: BudgetState): string =>
@@ -43,7 +45,7 @@ export function BudgetRows({ statuses, categories }: BudgetRowsProps) {
                 {category?.name ?? 'Categoria rimossa'}
               </Text>
               <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
-                {formatMoney(status.spentCents)} / {formatMoney(status.limitCents)}
+                {formatMoney(status.spentCents, symbol)} / {formatMoney(status.limitCents, symbol)}
               </Text>
             </View>
 
@@ -54,7 +56,7 @@ export function BudgetRows({ statuses, categories }: BudgetRowsProps) {
             </View>
 
             <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
-              {describeBudget(status.state, status.remainingCents)}
+              {describeBudget(status.state, status.remainingCents, symbol)}
             </Text>
           </View>
         );

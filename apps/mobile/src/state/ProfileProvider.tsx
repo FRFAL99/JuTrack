@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { SqliteDatabase } from '@jutrack/core';
+import { currencySymbol, DEFAULT_CURRENCY, type SqliteDatabase } from '@jutrack/core';
 import {
   ExpoSqliteDatabase,
   expoKeyStore,
@@ -29,8 +29,8 @@ export interface AppData {
   profile: Profile | null;
   /** Crea il profilo al primo avvio. */
   register(name: string, color: string): Promise<void>;
-  /** Rinomina o cambia colore. Il membro nel vault aperto si aggiorna da sé. */
-  update(patch: { name?: string; color?: string }): Promise<void>;
+  /** Rinomina, cambia colore o valuta. Il membro nel vault aperto si aggiorna da sé. */
+  update(patch: { name?: string; color?: string; currency?: string }): Promise<void>;
   /**
    * Dimentica il profilo, e con lui tutto ciò che gli sta sotto.
    *
@@ -94,7 +94,7 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   );
 
   const update = useCallback(
-    async (patch: { name?: string; color?: string }): Promise<void> => {
+    async (patch: { name?: string; color?: string; currency?: string }): Promise<void> => {
       if (opened === null || profile === null) return;
       const next: Profile = { ...profile, ...patch };
       await saveProfile(opened.meta, next);
@@ -144,4 +144,24 @@ export function useProfile(): Profile {
     throw new Error('useProfile chiamato prima che il profilo esistesse.');
   }
   return profile;
+}
+
+/** Il codice della valuta scelta su questo telefono. `DEFAULT_CURRENCY` finché non si sceglie. */
+export function useCurrencyCode(): string {
+  return useProfile().currency ?? DEFAULT_CURRENCY;
+}
+
+/**
+ * Il simbolo da scrivere accanto a un numero, su questo telefono.
+ *
+ * È il modo in cui la scelta fatta in Tu arriva alle quaranta e passa chiamate a
+ * `formatMoney` sparse nell'app. Passa dal profilo, che è già in contesto ovunque: un
+ * `CurrencyProvider` a parte sarebbe un secondo contesto per un dato che sta già nel primo.
+ *
+ * I moduli puri (`split-text.ts`, `balance-line.ts`, `stats/format.ts`) non possono usare un
+ * hook e ricevono lo stesso valore come parametro, con `'€'` come default: è ciò che tiene
+ * verdi i loro test senza doverli riscrivere tutti.
+ */
+export function useCurrencySymbol(): string {
+  return currencySymbol(useCurrencyCode());
 }

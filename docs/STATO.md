@@ -1,19 +1,20 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-11 — **tutti e quattro i piani e il redesign visivo sono finiti nel codice**.
-Il quarto — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **Step 23–28** — si è
-chiuso oggi con la dashboard componibile, e i sette passi del redesign sono chiusi da prima
-([visualdesign.md](visualdesign.md)). Lo stesso giorno è stato scritto un **quinto piano**,
-[piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md) — notifiche locali,
-due widget Android, valuta e lingua nel profilo — ma è **solo pianificato**: nessuno dei dodici step
-è ancora nel codice.
+Aggiornato: 2026-08-12 — **tutti e quattro i piani e il redesign visivo sono finiti nel codice, e il
+quinto piano è cominciato**. Il quarto — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
+**Step 23–28** — si è chiuso l'11 agosto con la dashboard componibile, e i sette passi del redesign
+sono chiusi da prima ([visualdesign.md](visualdesign.md)). Lo stesso giorno è stato scritto il
+**quinto piano**, [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md) —
+notifiche locali, due widget Android, valuta e lingua nel profilo — e oggi ne è entrato nel codice il
+**primo step su dodici**: la valuta di default nel profilo.
 
-> **Non c'è più uno step scritto da fare fra i primi quattro piani. Quello che resta è la prova su
-> due telefoni veri**, e i criteri di «fatto» di tutti e quattro i piani ci passano in mezzo. Il
-> piano v5 è un'aggiunta di prodotto separata e parte da zero: il suo primo step
-> ([Step 29](piano-v5-notifiche-widget-profilo.md#step-29--valuta-di-default-nel-profilo)) è il
-> prossimo lavoro da fare, quando si deciderà di riprendere in mano il codice invece della prova sul
-> campo.
+> **Fra i primi quattro piani non c'è più uno step scritto da fare: quello che resta è la prova su
+> due telefoni veri**, e i criteri di «fatto» di tutti e quattro ci passano in mezzo. Il piano v5 è
+> un'aggiunta di prodotto separata e procede in parallelo, uno step per sessione: lo
+> [Step 29](#la-valuta-di-default-nel-profilo-step-29) è chiuso, e il prossimo è lo
+> [Step 30](piano-v5-notifiche-widget-profilo.md#step-30--infrastruttura-nativa-condivisa) — i due
+> config plugin insieme e **una build EAS nuova**, l'unico dei dodici che non si può chiudere senza
+> reinstallare l'app.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -57,12 +58,12 @@ Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 | 27 — I sei filtri              | ✅    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
 | 28 — La dashboard componibile  | ✅    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
 
-Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **appena
-scritto, nessuno step iniziato**:
+Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **uno step
+su dodici nel codice**:
 
 | Step                               | Stato | Cosa contiene                                                          |
 | ---------------------------------- | ----- | ---------------------------------------------------------------------- |
-| 29 — Valuta di default nel profilo | ⬜    | Campo `currency` sul `Profile`, selettore in `tu.tsx`                  |
+| 29 — Valuta di default nel profilo | ✅    | Campo `currency` sul `Profile`, selettore in `tu.tsx`, simbolo ovunque |
 | 30 — Infrastruttura nativa         | ⬜    | Plugin `expo-notifications` + `react-native-android-widget`, build EAS |
 | 31–33 — Notifiche locali           | ⬜    | Promemoria spesa, soglia budget, sync bloccato                         |
 | 34–35 — I due widget               | ⬜    | Saldo del gruppo aperto, totale del mese                               |
@@ -83,7 +84,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**952 test verdi** (576 core + 333 app + 43 relay), typecheck, lint e `format:check` puliti.
+**970 test verdi** (588 core + 339 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -550,6 +551,46 @@ piano nasce — **la schermata era la stessa per tutti**.
   layout è del telefono, non del vault. Il componente è diviso in due perché i suggerimenti sulle
   dipendenze leggono il vault, e senza gruppo mancano solo quelli.
 
+## La valuta di default nel profilo (Step 29)
+
+Un campo `currency?: string` sul `Profile`, un `CurrencyPicker` in Tu, e il simbolo che da lì arriva
+a ogni importo che l'app scrive. È il primo step del piano v5 e l'unico dei dodici che non chiede né
+una build EAS né una libreria nuova.
+
+- **Il piano sottostimava lo step, e la correzione è la parte importante.** Diceva «l'unico
+  consumatore nuovo è il default del campo valuta nel form di nuova spesa», ma il simbolo `€` era
+  scritto a mano in **48 punti** — quaranta `formatMoney` che si affidavano al parametro di default,
+  più otto `€` dentro il JSX. Con il solo default nel form, scegliere il franco avrebbe scritto
+  `currency: 'CHF'` nel documento e lasciato a schermo `12,00 €`: un numero giusto con accanto una
+  parola falsa, esattamente ciò che il progetto rifiuta da «Metà e metà». Il passaggio del simbolo
+  è parte dello step.
+- **Seconda correzione: «l'utente può cambiarla spesa per spesa» non era vero.** `Expense.currency`
+  esiste nel modello dallo Step 0, ma il form non ha mai avuto un campo valuta e `ExpenseFormValues`
+  non la portava: `addExpense` riceveva `undefined` e `store.ts` metteva `'EUR'`. Adesso la porta,
+  presa dal profilo.
+- **JuTrack non converte, e va detto dove si sceglie.** Il campo resta locale al telefono e non entra
+  mai nel documento condiviso — su questo il piano ha ragione, non c'è nulla da fondere fra due
+  membri. Ma senza tassi di cambio, due persone dello stesso gruppo con valute diverse registrano
+  importi in unità diverse e ogni totale li somma come se fossero la stessa cosa. **Il campo è locale
+  nel codice, la scelta è comune di fatto**, e la riga sotto il selettore lo dice invece di lasciarlo
+  scoprire a un saldo sbagliato.
+- **`ExpenseRow` è l'unica riga che non guarda il profilo**: lì il simbolo viene da
+  `expense.currency`, perché mostra un importo preciso scritto un giorno preciso. Dove si somma —
+  totali, saldi, grafici, budget — vale quella del profilo, perché una somma non ha una valuta
+  propria. Per la stessa ragione **modificare una spesa non riscrive `currency`**.
+- **Il simbolo passa dal profilo, non da un contesto nuovo.** `useCurrencySymbol()` sta accanto a
+  `useProfile()`, già montato sopra tutta l'app. I moduli puri (`split-text.ts`, `balance-line.ts`,
+  `stats/format.ts`, `queryParts` nel core) non possono chiamare un hook e lo ricevono come ultimo
+  parametro con default `'€'`: è ciò che ha tenuto verdi i loro test senza riscriverli.
+- **Sei valute, e le esclusioni sono le decisioni.** Fuori quelle a zero decimali (JPY): il progetto è
+  in centesimi e `formatCents` stampa sempre due cifre. Fuori i simboli ambigui: `kr` vale per tre
+  corone, e dove il simbolo non distingue si scrive il codice. Un codice sconosciuto — da una spesa
+  vecchia o dall'altro telefono — si scrive **com'è**, senza ripiegare sull'euro.
+- **Posizione del simbolo e virgola decimale non cambiano**, di proposito: sono convenzioni della
+  **lingua**, non della moneta, e vanno con `Intl.NumberFormat` allo Step 37.
+- **Una valuta illeggibile non fa cadere il profilo**, a differenza di un `profileId` vuoto: si torna
+  al default e si continua. Non c'è nessun danno che si propaghi all'altro telefono.
+
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
 Entrambi nel codice e coperti dai test. **Nessuno dei due è ancora stato visto risolto su due
@@ -613,8 +654,9 @@ relay in produzione, invito di pairing, QR, fotocamera.
 ## Cosa non è ancora stato verificato su hardware reale
 
 Va detto con precisione, perché è la differenza fra «testato» e «funzionante». Dopo la diagnostica
-la lista si è accorciata parecchio, ma non è vuota — e con il redesign chiuso è tornata a essere
-**la sola cosa che resta da fare su questo progetto**.
+la lista si è accorciata parecchio, ma non è vuota — ed è **la sola cosa che resta da fare sui primi
+quattro piani e sul redesign**. Il piano v5 aggiunge codice nuovo e quindi righe nuove a questa
+lista, non le toglie.
 
 > **Da dove cominciare, se si ha un telefono in mano e mezz'ora.** Nell'ordine, perché è l'ordine in
 > cui un guasto rende inutile provare il resto: **(1)** l'app si apre e la home mostra le spese del
@@ -749,13 +791,22 @@ la lista si è accorciata parecchio, ma non è vuota — e con il redesign chius
 - **Tutto lo Step 14**: che la cancellazione dal relay risponda davvero — è la prima richiesta di
   rete che parte da un gesto dell'utente e non dal motore di sync — e che dopo una rigenerazione
   l'altro telefono entri nel gruppo nuovo col link e ci ritrovi le spese di prima
+- **Lo Step 29, e le due prove che contano vogliono un riavvio e una spesa vecchia.** La prima:
+  scegliere una valuta in Tu, **chiudere e riaprire l'app**, e ritrovarla — il campo sta in
+  `app_meta` come il layout della dashboard, e come quello non lo si vede senza chiudere. La seconda:
+  che una spesa registrata **prima** dello step conservi il proprio simbolo nella lista mentre tutto
+  il resto della schermata usa quello nuovo; è l'unico punto in cui le due regole convivono a video,
+  e se `ExpenseRow` leggesse il profilo invece della spesa non si noterebbe finché non si cambia
+  valuta. Poi le cose che si vedono a occhio: che il simbolo sia cambiato **anche nei grafici e nel
+  foglio dei filtri** (sono i punti più lontani da dove si sceglie), e che le sei pillole del
+  selettore stiano in larghezza senza troncarsi — «AUD A$» è la più lunga
 
 > **La development build installata sul telefono non contiene i due moduli nuovi.** È stata
 > compilata prima che venissero aggiunti. L'app si apre lo stesso — sono caricati con `require` in
 > `try/catch` proprio per questo — e l'export ripiega sugli appunti, dichiarandolo nell'interfaccia.
 > Il foglio di condivisione comparirà solo dopo una build aggiornata.
 
-Tutto il resto è verificato: 872 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 970 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 > **Lo Step 25 è entrato in questa lista attraverso il 26**, come era stato scritto: la geometria

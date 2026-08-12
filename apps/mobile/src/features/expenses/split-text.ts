@@ -27,15 +27,27 @@ export function splitModeLabel(mode: SplitMode, memberCount: number): string {
   return 'Solo chi paga';
 }
 
-/** Dice quanto manca o quanto avanza rispetto al totale, in parole. */
-export function describeGap(gap: number, amountCents: number | null): string {
+/**
+ * Dice quanto manca o quanto avanza rispetto al totale, in parole.
+ *
+ * Il simbolo arriva da fuori — dal profilo, attraverso `ExpenseForm` — perché un modulo puro
+ * non può leggere un hook. Il default `'€'` non è una scorciatoia: è ciò che rende additiva
+ * questa firma per i test che c'erano già.
+ */
+export function describeGap(gap: number, amountCents: number | null, symbol = '€'): string {
   if (amountCents === null || amountCents <= 0) return 'Inserisci prima l’importo della spesa';
   if (gap === 0) return 'Le quote coprono esattamente il totale';
-  return gap > 0 ? `Mancano ${formatMoney(gap)}` : `Eccedono di ${formatMoney(-gap)}`;
+  return gap > 0
+    ? `Mancano ${formatMoney(gap, symbol)}`
+    : `Eccedono di ${formatMoney(-gap, symbol)}`;
 }
 
 /** Anteprima della quota per persona, per rendere concreto l'effetto dello split. */
-export function splitPreview(amountCents: number | null, memberCount: number): string {
+export function splitPreview(
+  amountCents: number | null,
+  memberCount: number,
+  symbol = '€',
+): string {
   if (amountCents === null || amountCents <= 0 || memberCount < 2) {
     return 'Diviso in parti uguali';
   }
@@ -50,8 +62,8 @@ export function splitPreview(amountCents: number | null, memberCount: number): s
   // Quando l'importo non è divisibile esattamente le quote differiscono di un
   // centesimo: mostrarlo evita che sembri un errore di calcolo.
   return min === max
-    ? `${formatCents(min)} € a testa`
-    : `${formatCents(min)} € / ${formatCents(max)} € a testa`;
+    ? `${formatCents(min)} ${symbol} a testa`
+    : `${formatCents(min)} ${symbol} / ${formatCents(max)} ${symbol} a testa`;
 }
 
 /**

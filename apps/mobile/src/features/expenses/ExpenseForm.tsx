@@ -12,6 +12,7 @@ import {
 import Feather from '@expo/vector-icons/Feather';
 import {
   buildSplit,
+  currencySymbol,
   formatCents,
   knownStores,
   knownTags,
@@ -29,7 +30,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
 import { CategoryIcon } from '@/features/categories/CategoryIcon';
-import { useCategories, useExpenses, useMembers, useMyMemberId } from '@/state';
+import { useCategories, useCurrencyCode, useExpenses, useMembers, useMyMemberId } from '@/state';
 import { numeric, tightTitle, useTheme } from '@/theme';
 import { extraSummary, tagChoices } from './extra-fields';
 import { formatDayTitle, todayIso } from './grouping';
@@ -49,6 +50,14 @@ export interface ExpenseFormValues {
    */
   store: string;
   tags: string[];
+  /**
+   * La valuta con cui la spesa è stata scritta.
+   *
+   * Su una spesa nuova è quella del profilo (Step 29); su una spesa in modifica è **la
+   * sua**, non quella di adesso: cambiare valuta nel profilo non deve riscrivere il
+   * passato, o una spesa fatta in franchi diventerebbe la stessa cifra in euro.
+   */
+  currency: string;
   paidBy: string;
   /**
    * Quote già bilanciate sull'importo.
@@ -92,6 +101,13 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   // Il vocabolario di negozi e tag si deriva dalle spese del gruppo (Step 23): non esiste
   // un elenco da gestire, esiste ciò che è già stato scritto.
   const expenses = useExpenses();
+  const profileCurrency = useCurrencyCode();
+
+  // Una spesa già registrata conserva la propria valuta anche se nel frattempo il profilo
+  // ne ha scelta un'altra: il simbolo qui sopra dev'essere quello con cui l'importo è
+  // stato scritto, o la cifra resterebbe la stessa cambiando di significato.
+  const currency = initial?.currency ?? profileCurrency;
+  const symbol = currencySymbol(currency);
 
   const [amountText, setAmountText] = useState(
     initial === undefined ? '' : formatCents(initial.amountCents).replace(/\./g, ''),
@@ -197,6 +213,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
       // «fine» sulla tastiera si aspetta di ritrovarlo, non di averlo perso.
       store,
       tags: normalizeTags([...tags, tagDraft]),
+      currency,
       paidBy,
       split: buildValues(amountCents),
     });
@@ -260,7 +277,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
                 fontWeight: fontWeight.heavy,
               }}
             >
-              €
+              {symbol}
             </Text>
           </View>
           {amountError !== undefined && (
@@ -293,6 +310,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
                     selected={member.id === paidBy}
                     isMe={member.id === myMemberId}
                     shareCents={previewShareCents(mode, amountCents, memberIds, member.id, paidBy)}
+                    symbol={symbol}
                     onPress={() => setPaidBy(member.id)}
                   />
                 ))}
@@ -311,7 +329,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
 
               {mode === 'equal' && (
                 <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-                  {splitPreview(amountCents, members.length)}
+                  {splitPreview(amountCents, members.length, symbol)}
                 </Text>
               )}
               {mode === 'single' && (
@@ -363,7 +381,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
                       fontSize: fontSize.xxs,
                     }}
                   >
-                    {describeGap(customGap, amountCents)}
+                    {describeGap(customGap, amountCents, symbol)}
                   </Text>
                 </View>
               )}
@@ -612,12 +630,14 @@ function PersonBox({
   selected,
   isMe,
   shareCents,
+  symbol,
   onPress,
 }: {
   member: Member;
   selected: boolean;
   isMe: boolean;
   shareCents: number | null;
+  symbol: string;
   onPress: () => void;
 }) {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
@@ -672,7 +692,7 @@ function PersonBox({
       {/* La quota si aggiorna mentre si scrive l'importo: è ciò che rende visibile la
           differenza fra le tre modalità senza doverle provare una a una. */}
       <Text style={[numeric, { color: colors.textFaint, fontSize: fontSize.xxs }]}>
-        {shareCents === null ? ' ' : `${formatCents(shareCents)} €`}
+        {shareCents === null ? ' ' : `${formatCents(shareCents)} ${symbol}`}
       </Text>
     </Pressable>
   );

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
 import { formatMoney, squarify, type TreemapRect } from '@jutrack/core';
+import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { compactAmount } from '../format';
 import { inkOn } from './ink';
@@ -31,6 +32,7 @@ const AMOUNT_FITS = { width: 40, height: 20 };
  */
 export function CategoryTreemap({ items, height = 180 }: CategoryTreemapProps) {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const symbol = useCurrencySymbol();
   const { width, onLayout } = useChartWidth();
   const [selected, setSelected] = useState<Slice | null>(null);
 
@@ -75,7 +77,7 @@ export function CategoryTreemap({ items, height = 180 }: CategoryTreemapProps) {
                   key={rect.id}
                   onPress={() => setSelected(selected?.key === item.key ? null : item)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${item.label}: ${formatMoney(item.valueCents)}`}
+                  accessibilityLabel={`${item.label}: ${formatMoney(item.valueCents, symbol)}`}
                   style={{
                     position: 'absolute',
                     left: rect.x,
@@ -100,7 +102,7 @@ export function CategoryTreemap({ items, height = 180 }: CategoryTreemapProps) {
                   )}
                   {showAmount && (
                     <Text numberOfLines={1} style={{ color: ink, fontSize: fontSize.xxs }}>
-                      {compactAmount(item.valueCents)} €
+                      {compactAmount(item.valueCents)} {symbol}
                     </Text>
                   )}
                 </Pressable>
@@ -117,7 +119,7 @@ export function CategoryTreemap({ items, height = 180 }: CategoryTreemapProps) {
               <>
                 {selected.label}{' '}
                 <Text style={{ fontWeight: fontWeight.semibold }}>
-                  · {formatMoney(selected.valueCents)}
+                  · {formatMoney(selected.valueCents, symbol)}
                 </Text>
               </>
             )}

@@ -11,7 +11,7 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
 import { formatDayTitle, todayIso } from '@/features/expenses/grouping';
-import { useExpenses, useMembers, useSettlements, useVaultStore } from '@/state';
+import { useCurrencySymbol, useExpenses, useMembers, useSettlements, useVaultStore } from '@/state';
 import { useTheme } from '@/theme';
 
 /**
@@ -24,6 +24,7 @@ import { useTheme } from '@/theme';
  */
 export default function SettleScreen() {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
+  const symbol = useCurrencySymbol();
   const store = useVaultStore();
   const members = useMembers();
   const expenses = useExpenses();
@@ -58,7 +59,7 @@ export default function SettleScreen() {
     if (amountCents > suggested) {
       Alert.alert(
         'Più del dovuto',
-        `Il debito è di ${formatMoney(suggested)}. Registrando ${formatMoney(amountCents)} il saldo si rovescerebbe a favore di chi paga.`,
+        `Il debito è di ${formatMoney(suggested, symbol)}. Registrando ${formatMoney(amountCents, symbol)} il saldo si rovescerebbe a favore di chi paga.`,
         [
           { text: 'Annulla', style: 'cancel' },
           { text: 'Registra comunque', onPress: () => commit(fromMember, toMember, amountCents) },
@@ -102,7 +103,7 @@ export default function SettleScreen() {
                 <Text style={{ color: colors.text, fontSize: fontSize.md, lineHeight: 22 }}>
                   {nameOf(transfer.fromMember)} deve{' '}
                   <Text style={{ fontWeight: fontWeight.semibold }}>
-                    {formatMoney(transfer.amountCents)}
+                    {formatMoney(transfer.amountCents, symbol)}
                   </Text>{' '}
                   a {nameOf(transfer.toMember)}
                 </Text>
@@ -126,7 +127,7 @@ export default function SettleScreen() {
                       padding: spacing.md,
                     }}
                   />
-                  <Text style={{ color: colors.textMuted, fontSize: fontSize.md }}>€</Text>
+                  <Text style={{ color: colors.textMuted, fontSize: fontSize.md }}>{symbol}</Text>
                 </View>
 
                 <Button
@@ -152,7 +153,7 @@ export default function SettleScreen() {
             </Text>
           ) : (
             settlements.map((settlement) => {
-              const description = `${nameOf(settlement.fromMember)} → ${nameOf(settlement.toMember)}, ${formatMoney(settlement.amountCents)}`;
+              const description = `${nameOf(settlement.fromMember)} → ${nameOf(settlement.toMember)}, ${formatMoney(settlement.amountCents, symbol)}`;
               return (
                 <View key={settlement.id} style={styles.rowBetween}>
                   <View style={{ flex: 1, gap: 2 }}>

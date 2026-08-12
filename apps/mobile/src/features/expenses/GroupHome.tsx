@@ -25,6 +25,7 @@ import { describeSync, syncTone } from '@/features/sync/describe';
 import { useEngineActivity } from '@/features/sync/useEngineActivity';
 import {
   useCategories,
+  useCurrencySymbol,
   useExpenses,
   useMembers,
   useMyMemberId,
@@ -56,6 +57,7 @@ import { numeric, tightTitle, useTheme } from '@/theme';
  */
 export function GroupHome({ group }: { group: GroupRecord }) {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
+  const symbol = useCurrencySymbol();
   const insets = useSafeAreaInsets();
   // Qui si guardano le spese dell'altro: è il posto in cui il poll deve essere stretto.
   useEngineActivity();
@@ -112,8 +114,9 @@ export function GroupHome({ group }: { group: GroupRecord }) {
         ),
         myMemberId,
         (id) => membersById.get(id)?.name ?? 'qualcuno',
+        symbol,
       ),
-    [expenses, settlements, members, membersById, myMemberId],
+    [expenses, settlements, members, membersById, myMemberId, symbol],
   );
 
   const balanceColor =
@@ -209,7 +212,7 @@ export function GroupHome({ group }: { group: GroupRecord }) {
               { color: colors.text, fontSize: 38, fontWeight: fontWeight.heavy },
             ]}
           >
-            {formatCents(monthTotal)} <Text style={{ color: colors.textMuted }}>€</Text>
+            {formatCents(monthTotal)} <Text style={{ color: colors.textMuted }}>{symbol}</Text>
           </Text>
         </View>
         <View
@@ -329,7 +332,7 @@ export function GroupHome({ group }: { group: GroupRecord }) {
                 {section.title}
               </Text>
               <Text style={[numeric, { color: colors.textMuted, fontSize: fontSize.xs }]}>
-                {formatMoney(section.totalCents)}
+                {formatMoney(section.totalCents, symbol)}
               </Text>
             </View>
           )}
@@ -402,7 +405,10 @@ export function GroupHome({ group }: { group: GroupRecord }) {
       <GroupSwitcherSheet
         visible={switching}
         onClose={() => setSwitching(false)}
-        currentStats={{ expenseCount: expenses.length, monthTotal: formatMoney(monthTotal) }}
+        currentStats={{
+          expenseCount: expenses.length,
+          monthTotal: formatMoney(monthTotal, symbol),
+        }}
       />
     </Screen>
   );

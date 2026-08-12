@@ -61,6 +61,20 @@ describe('splitPreview', () => {
   it('non calcola nulla con una persona sola', () => {
     expect(splitPreview(5000, 1)).toBe('Diviso in parti uguali');
   });
+
+  it('scrive il simbolo che riceve, su entrambi gli estremi', () => {
+    // Step 29: il simbolo arriva dal profilo attraverso il form. Il caso col resto è
+    // quello che conta — un solo estremo convertito sarebbe passato inosservato.
+    expect(splitPreview(5000, 2, 'CHF')).toBe('25,00 CHF a testa');
+    expect(splitPreview(1000, 3, 'CHF')).toBe('3,33 CHF / 3,34 CHF a testa');
+  });
+});
+
+describe('la valuta arriva alle frasi', () => {
+  it('vale anche per lo scarto delle quote', () => {
+    expect(describeGap(1500, 5000, '£')).toBe('Mancano 15,00 £');
+    expect(describeGap(-1500, 5000, '£')).toBe('Eccedono di 15,00 £');
+  });
 });
 
 describe('previewShareCents', () => {

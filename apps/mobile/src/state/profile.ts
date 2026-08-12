@@ -27,6 +27,19 @@ export interface Profile {
   profileId: string;
   name: string;
   color: string;
+  /**
+   * Codice ISO della valuta con cui **questo telefono** scrive e legge gli importi.
+   *
+   * Assente finché non la si sceglie, e allora vale `DEFAULT_CURRENCY`. Sta qui e non nel
+   * documento del gruppo perché è una preferenza di chi guarda, non un dato del gruppo:
+   * scriverla nel vault costringerebbe tutti i membri alla scelta di uno solo.
+   *
+   * Il prezzo, che va detto: **JuTrack non converte**. Due membri che scelgono valute
+   * diverse registrano nello stesso gruppo importi in unità diverse, e ogni totale li
+   * somma come se fossero la stessa cosa. La valuta è locale nel codice ed è una scelta
+   * comune di fatto.
+   */
+  currency?: string;
   /** Previsto e non usato: il posto dove un provider d'identità si aggancerebbe. */
   identity?: { provider: string; subject: string };
 }
@@ -104,7 +117,7 @@ export async function loadProfile(meta: KeyValueStore): Promise<Profile | null> 
   try {
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== 'object' || parsed === null) return null;
-    const { profileId, name, color, identity } = parsed as Record<string, unknown>;
+    const { profileId, name, color, currency, identity } = parsed as Record<string, unknown>;
     if (typeof profileId !== 'string' || profileId === '') return null;
     if (typeof name !== 'string' || name === '') return null;
     if (typeof color !== 'string' || color === '') return null;
@@ -112,6 +125,10 @@ export async function loadProfile(meta: KeyValueStore): Promise<Profile | null> 
       profileId,
       name,
       color,
+      // Una valuta illeggibile non fa cadere il profilo, a differenza di `profileId`: si
+      // torna al default e si continua. È una preferenza di formattazione, e rimandare
+      // all'onboarding per un simbolo sbagliato costerebbe molto più di quanto vale.
+      ...(typeof currency === 'string' && currency !== '' && { currency }),
       ...(isIdentity(identity) && { identity }),
     };
   } catch {

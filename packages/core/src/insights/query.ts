@@ -131,8 +131,14 @@ export interface QueryLabels {
   member?: (id: string) => string;
 }
 
-/** Una frase per filtro attivo, nell'ordine in cui la barra dei chip le mostra. */
-export function queryParts(query: ExpenseQuery, labels: QueryLabels = {}): string[] {
+/**
+ * Una frase per filtro attivo, nell'ordine in cui la barra dei chip le mostra.
+ *
+ * `symbol` è l'unico pezzo di formattazione che entra qui: le fasce di importo si leggono
+ * come importi, e con la valuta scelta nel profilo (Step 29). Default `'€'`, così i
+ * chiamanti che non ne hanno una restano identici.
+ */
+export function queryParts(query: ExpenseQuery, labels: QueryLabels = {}, symbol = '€'): string[] {
   const parts: string[] = [];
 
   if (query.from !== undefined || query.to !== undefined) {
@@ -161,19 +167,19 @@ export function queryParts(query: ExpenseQuery, labels: QueryLabels = {}): strin
 
   const { minCents, maxCents } = query;
   if (minCents !== undefined && maxCents !== undefined) {
-    parts.push(`${formatMoney(minCents)} – ${formatMoney(maxCents)}`);
+    parts.push(`${formatMoney(minCents, symbol)} – ${formatMoney(maxCents, symbol)}`);
   } else if (minCents !== undefined) {
-    parts.push(`Da ${formatMoney(minCents)}`);
+    parts.push(`Da ${formatMoney(minCents, symbol)}`);
   } else if (maxCents !== undefined) {
-    parts.push(`Fino a ${formatMoney(maxCents)}`);
+    parts.push(`Fino a ${formatMoney(maxCents, symbol)}`);
   }
 
   return parts;
 }
 
 /** Le stesse frasi in una riga sola, per un sottotitolo. «Tutte le spese» se non filtra. */
-export function describeQuery(query: ExpenseQuery, labels: QueryLabels = {}): string {
-  const parts = queryParts(query, labels);
+export function describeQuery(query: ExpenseQuery, labels: QueryLabels = {}, symbol = '€'): string {
+  const parts = queryParts(query, labels, symbol);
   return parts.length === 0 ? 'Tutte le spese' : parts.join(' · ');
 }
 
