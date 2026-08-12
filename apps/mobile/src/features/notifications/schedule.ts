@@ -1,4 +1,5 @@
 import { markError } from '@/diagnostics';
+import type { AlertContent } from './budget';
 import { loadNotificationsModule } from './module';
 import { nextReminderAt, reminderContent } from './reminder';
 
@@ -16,13 +17,18 @@ import { nextReminderAt, reminderContent } from './reminder';
  * L'etichetta con cui si riconoscono le proprie notifiche.
  *
  * Serve a disdire **solo** il promemoria quando si riprogramma. `cancelAllScheduled` sarebbe
- * una riga sola e sarebbe sbagliata già dallo Step 32: cancellerebbe anche l'avviso di
- * budget di qualcun altro. Passare dai `data` invece che da un identificatore salvato in
- * `app_meta` toglie di mezzo un secondo stato da tenere allineato — e uno salvato che non
+ * una riga sola e sarebbe sbagliata: cancellerebbe qualunque altro avviso in programma.
+ * (Lo Step 32 non l'ha ancora messa alla prova — il suo avviso parte subito e non resta in
+ * coda — ma il 33 sì, e la riga giusta è già qui.) Passare dai `data` invece che da un
+ * identificatore salvato in `app_meta` toglie di mezzo un secondo stato da tenere
+ * allineato — e uno salvato che non
  * corrisponde più a niente (app reinstallata, notifica già scattata) lascerebbe promemoria
  * fantasma impossibili da disdire.
  */
 const REMINDER_KIND = 'reminder';
+
+/** L'etichetta dell'avviso di budget. Lo legge anche il gestore di `foreground.ts`. */
+const BUDGET_KIND = 'budget';
 
 /**
  * Il canale Android su cui esce il promemoria.
@@ -33,6 +39,16 @@ const REMINDER_KIND = 'reminder';
  * cercarlo, prima ancora che nella nostra schermata.
  */
 const REMINDER_CHANNEL = 'promemoria';
+
+/**
+ * Il canale dell'avviso di budget, separato da quello dei promemoria.
+ *
+ * È la stessa ragione per cui il promemoria ne ha uno suo, applicata di nuovo: chi trova
+ * insistente il promemoria delle spese deve poterlo zittire dalle impostazioni di Android
+ * **senza** perdere l'avviso che sta sforando un limite. Due canali sono due interruttori
+ * di sistema, e sono lì che la gente va a cercarli.
+ */
+const BUDGET_CHANNEL = 'budget';
 
 /** Disdice i promemoria già programmati, e nient'altro. */
 export async function cancelReminder(): Promise<void> {
@@ -98,6 +114,46 @@ export async function rescheduleReminder(
   } catch (error) {
     markError('programmazione del promemoria', error);
     return null;
+  }
+}
+
+/**
+ * Manda l'avviso di budget **adesso**, senza programmarlo.
+ *
+ * È la differenza di forma fra questo step e il precedente, scritta in una riga: il
+ * promemoria è una data futura da riarmare, l'avviso di budget è un fatto appena
+ * accaduto. Non c'è niente da disdire, e infatti non esiste un `cancelBudget`: una
+ * notifica già consegnata resta nella tendina anche se l'interruttore si spegne dopo,
+ * perché quello che dice era vero quando è stata scritta.
+ *
+ * `trigger` è un `ChannelAwareTriggerInput` — solo `channelId` — e **non `null`**: `null`
+ * consegna subito ma sul canale di default, cioè fuori dall'interruttore di sistema che
+ * questo step si è preso la cura di creare.
+ *
+ * Restituisce se è partita, così chi chiama può distinguere «detto» da «non c'è il
+ * modulo» senza interpretare un'eccezione.
+ */
+export async function notifyBudget(content: AlertContent): Promise<boolean> {
+  const module = loadNotificationsModule();
+  if (module === null) return false;
+
+  try {
+    // `DEFAULT` e non `LOW` come il promemoria: quello è un invito che si è chiesto, questo
+    // è un numero che è appena cambiato e su cui si può ancora fare qualcosa nel resto del
+    // mese. Un avviso di soldi che non si fa notare arriva quando il mese è già deciso.
+    await module.setNotificationChannelAsync(BUDGET_CHANNEL, {
+      name: 'Budget del mese',
+      importance: module.AndroidImportance.DEFAULT,
+    });
+
+    await module.scheduleNotificationAsync({
+      content: { ...content, data: { kind: BUDGET_KIND } },
+      trigger: { channelId: BUDGET_CHANNEL },
+    });
+    return true;
+  } catch (error) {
+    markError('invio dell’avviso di budget', error);
+    return false;
   }
 }
 

@@ -11,13 +11,16 @@ import {
   View,
 } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { CORE_VERSION } from '@jutrack/core';
+import { BUDGET_NEAR_THRESHOLD, CORE_VERSION } from '@jutrack/core';
 import { initialOf } from '@/components/avatar';
 import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
 import { SectionLabel } from '@/components/SectionLabel';
 import { REMINDER_DAYS } from '@/features/notifications/reminder';
-import { useNotificationSettings } from '@/features/notifications/useNotifications';
+import {
+  useNotificationSettings,
+  type NotificationKind,
+} from '@/features/notifications/useNotifications';
 import { ColorChoice } from '@/features/profile/ColorChoice';
 import { CurrencyPicker } from '@/features/profile/CurrencyPicker';
 import { describeSync, syncTone } from '@/features/sync/describe';
@@ -85,13 +88,16 @@ export default function TuScreen() {
   /**
    * L'interruttore non si accende da solo: prima il permesso, poi la scelta.
    *
-   * Se il permesso non arriva, `setReminder` non salva niente e l'interruttore resta giù —
-   * ma **va detto perché**, o sembrerebbe un tocco non registrato. I due rifiuti mandano in
-   * due posti diversi: uno alle impostazioni di Android, l'altro alla build.
+   * Se il permesso non arriva, `set` non salva niente e l'interruttore resta giù — ma **va
+   * detto perché**, o sembrerebbe un tocco non registrato. I due rifiuti mandano in due
+   * posti diversi: uno alle impostazioni di Android, l'altro alla build.
+   *
+   * Uno solo per tutti gli avvisi: il permesso è dell'app, non della singola voce, e i due
+   * messaggi sarebbero identici riga per riga.
    */
-  const toggleReminder = (on: boolean): void => {
+  const toggle = (kind: NotificationKind, on: boolean): void => {
     void (async () => {
-      const refusal = await notifications.setReminder(on);
+      const refusal = await notifications.set(kind, on);
       if (refusal === 'denied') {
         Alert.alert(
           'Permesso non concesso',
@@ -194,7 +200,9 @@ export default function TuScreen() {
         <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
 
         <SectionLabel>Avvisi</SectionLabel>
-        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.xs }}>
+        {/* `sm` e non `xs`: con due interruttori uno sotto l'altro, quattro punti di stacco
+            farebbero leggere le due righe come un blocco solo. */}
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
           <View style={styles.switchRow}>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={{ color: colors.text, fontSize: fontSize.sm }}>Promemoria spese</Text>
@@ -204,11 +212,38 @@ export default function TuScreen() {
             </View>
             <Switch
               value={notifications.settings.reminder}
-              onValueChange={toggleReminder}
+              onValueChange={(on) => toggle('reminder', on)}
               disabled={!notifications.ready}
               accessibilityLabel="Promemoria spese"
             />
           </View>
+
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>Budget del mese</Text>
+              {/* La soglia si legge dal core invece di scriverla qui: è la stessa che
+                  colora le barre nei Grafici, e due numeri da tenere allineati sarebbero
+                  due numeri che prima o poi divergono. */}
+              <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+                Quando una categoria arriva al {Math.round(BUDGET_NEAR_THRESHOLD * 100)}% del
+                limite, e quando lo supera
+              </Text>
+            </View>
+            <Switch
+              value={notifications.settings.budget}
+              onValueChange={(on) => toggle('budget', on)}
+              disabled={!notifications.ready}
+              accessibilityLabel="Budget del mese"
+            />
+          </View>
+
+          {/* Il limite va detto, non scoperto: l'avviso lo produce l'app guardando il
+              documento, quindi arriva quando l'app è aperta — subito se la spesa la
+              registri tu, all'apertura successiva se la registra l'altro telefono. */}
+          <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+            Gli avvisi sui budget riguardano il gruppo aperto e arrivano mentre l’app è in uso.
+          </Text>
+
           {/* L'interruttore resta acceso perché la scelta è di chi l'ha fatta: spegnerlo
               d'ufficio la farebbe sparire senza spiegazione. A dire che non funziona è
               questa riga, non un tocco che si disfa da solo. */}

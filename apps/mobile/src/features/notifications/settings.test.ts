@@ -3,12 +3,14 @@ import { DEFAULT_SETTINGS, parseSettings, serializeSettings } from './settings';
 
 describe('parseSettings', () => {
   it('rilegge quello che ha scritto', () => {
-    expect(parseSettings(serializeSettings({ reminder: true }))).toEqual({ reminder: true });
+    const settings = { reminder: true, budget: true };
+    expect(parseSettings(serializeSettings(settings))).toEqual(settings);
   });
 
   it('parte da tutto spento quando non c è ancora niente', () => {
     expect(parseSettings(null)).toEqual(DEFAULT_SETTINGS);
     expect(DEFAULT_SETTINGS.reminder).toBe(false);
+    expect(DEFAULT_SETTINGS.budget).toBe(false);
   });
 
   it.each([
@@ -24,11 +26,15 @@ describe('parseSettings', () => {
   it('accetta solo il booleano vero, non un valore che gli somiglia', () => {
     expect(parseSettings('{"reminder":"true"}').reminder).toBe(false);
     expect(parseSettings('{"reminder":1}').reminder).toBe(false);
+    expect(parseSettings('{"budget":"true"}').budget).toBe(false);
   });
 
-  it('legge le chiavi una per una, così gli Step 32 e 33 possono aggiungere le proprie', () => {
+  it('legge le chiavi una per una, così lo Step 33 può aggiungere la propria', () => {
     // Un campo sconosciuto non fa cadere il resto, e un campo mancante vale spento: è ciò
     // che permette a un telefono con le impostazioni di oggi di leggere quelle di domani.
-    expect(parseSettings('{"reminder":true,"budget":true}')).toEqual({ reminder: true });
+    expect(parseSettings('{"reminder":true,"sync":true}')).toEqual({
+      reminder: true,
+      budget: false,
+    });
   });
 });

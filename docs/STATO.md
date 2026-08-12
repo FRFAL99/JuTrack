@@ -6,14 +6,14 @@ quinto piano è cominciato**. Il quarto — [piano-v4-grafici-e-dashboard.md](pi
 sono chiusi da prima ([visualdesign.md](visualdesign.md)). Lo stesso giorno è stato scritto il
 **quinto piano**, [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md) —
 notifiche locali, due widget Android, valuta e lingua nel profilo — e oggi ne sono entrati nel codice
-i **primi tre step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa e il
-promemoria spese.
+i **primi quattro step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa, il
+promemoria spese e l'avviso di budget.
 
 > **La build EAS dello [Step 30](#linfrastruttura-nativa-step-30) è installata e verificata** — la
 > diagnostica dice **16 passaggi su 16** — e con lei i due moduli nativi sono sul telefono. Gli
-> Step 31–35 lavorano in JS sopra quella build e **non ne chiedono altre**. Lo
-> [Step 31](#il-promemoria-spese-step-31) è chiuso; il prossimo è il 32, l'avviso di soglia di
-> budget superata.
+> Step 32–35 lavorano in JS sopra quella build e **non ne chiedono altre**. Lo
+> [Step 31](#il-promemoria-spese-step-31) e lo [Step 32](#lavviso-di-budget-step-32) sono chiusi; il
+> prossimo è il 33, la notifica di sync bloccato.
 >
 > **Fra i primi quattro piani non c'è più uno step scritto da fare: quello che resta è la prova su
 > due telefoni veri**, e i criteri di «fatto» di tutti e quattro ci passano in mezzo. Il piano v5 è
@@ -61,15 +61,16 @@ Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 | 27 — I sei filtri              | ✅    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
 | 28 — La dashboard componibile  | ✅    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
 
-Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **uno step
-su dodici nel codice**:
+Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **quattro
+step su dodici nel codice**:
 
 | Step                               | Stato | Cosa contiene                                                          |
 | ---------------------------------- | ----- | ---------------------------------------------------------------------- |
 | 29 — Valuta di default nel profilo | ✅    | Campo `currency` sul `Profile`, selettore in `tu.tsx`, simbolo ovunque |
 | 30 — Infrastruttura nativa         | ✅    | Plugin, permesso, build EAS installata, diagnostica 16/16              |
 | 31 — Promemoria spesa              | ✅    | Interruttore in Tu, scadenza riarmata a ogni apertura                  |
-| 32–33 — Notifiche locali           | ⬜    | Soglia budget, sync bloccato                                           |
+| 32 — Avviso di budget              | ✅    | Watcher sul documento, segni in `app_meta`, gestore di primo piano     |
+| 33 — Sync bloccato                 | ⬜    | Terzo interruttore, sopra `features/sync/describe.ts`                  |
 | 34–35 — I due widget               | ⬜    | Saldo del gruppo aperto, totale del mese                               |
 | 36 — Refresh in background         | ⬜    | Opzionale, solo se il refresh ad apertura app non basta                |
 | 37 — Infrastruttura i18n           | ⬜    | `i18next`, campo `language` sul `Profile`, selettore in `tu.tsx`       |
@@ -88,7 +89,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**986 test verdi** (588 core + 355 app + 43 relay), typecheck, lint e `format:check` puliti.
+**1016 test verdi** (588 core + 385 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -676,6 +677,58 @@ Primo dei tre contenuti di notifica, tutto JS sopra la build dello Step 30.
   L'aritmetica passa dai componenti del `Date`, o l'ultima domenica di ottobre l'avviso arriverebbe
   alle 19 — c'è il test.
 
+## L'avviso di budget (Step 32)
+
+Un secondo interruttore in Tu e una notifica che arriva quando una categoria tocca l'80% del limite
+del mese o lo supera. Secondo dei tre contenuti di notifica, tutto JS sopra la build dello Step 30.
+
+- **È l'opposto esatto dello Step 31, e vale la pena dirlo.** Il promemoria non poteva essere una
+  condizione ed è diventato una scadenza; qui «hai superato il budget» **è** una condizione, e per di
+  più una che cambia solo quando cambia il documento. Non c'è nessuna data da calcolare: si guarda, e
+  se è appena successo si avvisa subito con un `ChannelAwareTriggerInput`, che consegna nell'istante
+  ma **sul canale scelto** — `trigger: null` consegnerebbe altrettanto subito sul canale di default,
+  cioè fuori dall'interruttore di sistema che questo step si è preso la cura di creare.
+- **Ne segue il limite onesto, e sta scritto sotto l'interruttore.** L'avviso lo produce l'app
+  guardando il documento, quindi **l'app deve essere aperta**: subito per una spesa registrata qui,
+  alla prima apertura per una arrivata dall'altro telefono col sync. Un avviso in differita resta
+  vero — il limite è superato adesso — e l'alternativa è lo Step 36, opzionale.
+- **Il watcher si iscrive al documento, non a un gesto.** `useExpenseRegistered` dello Step 31 va
+  chiamata dal form perché il promemoria dipende da un'azione; un budget dipende dal **documento** e
+  sfonda anche per una spesa che nessuno ha toccato su questo telefono. `BudgetWatcher` sta accanto
+  allo `Stack` e non nei Grafici: lì i budget si controllerebbero solo aprendo la scheda dove sono
+  già disegnati.
+- **Senza il gestore di primo piano lo step sarebbe invisibile.** `expo-notifications` di default non
+  mostra niente mentre l'app è aperta, ed è esattamente lì che questo avviso nasce. `foreground.ts`
+  decide **per tipo**: budget sì, promemoria no — quello inviterebbe ad aprire un'app già aperta — e
+  ciò che non riconosce non lo mostra. Mai un suono in primo piano: il suono serve a chi non sta
+  guardando lo schermo, e in primo piano quel caso non esiste.
+- **Tre regole contro tre modi di ripetersi**, e i segni stanno in `app_meta` (`budget_alerts`),
+  chiave `vaultId|mese|categoria`. **Il livello sale e non scende**, o un budget che oscilla intorno
+  all'80% suonerebbe a ogni scontrino. **La prima volta si guarda e basta** — gruppo appena aperto,
+  mese appena cominciato — perché «era già sforato quando ho cominciato a guardare» non è una notizia;
+  è la ragione per cui i segni hanno due campi e non uno: senza `watched`, «tutto a posto» e «non ho
+  mai guardato» sarebbero entrambi un elenco vuoto. **I segni si aggiornano anche a interruttore
+  spento**, o riaccenderlo produrrebbe la raffica degli arretrati.
+- **Si scrive prima e si avvisa dopo.** L'ordine inverso rifarebbe lo stesso avviso a ogni giro se la
+  scrittura fallisse: un avviso perso si nota una volta, uno ripetuto fa spegnere l'interruttore.
+- **I segni si potano al mese in corso**, e si può perché un mese finito non può più essere sforato:
+  la spesa porta la data del giorno in cui viene registrata, e il form non ha un selettore di date. Si
+  pota per mese e **non** per gruppo — i gruppi aperti sono più d'uno e ciascuno tiene il suo conto.
+- **Anche l'80%, non solo il superamento**, benché il piano dicesse «soglia superata»: la soglia
+  `near` esiste già nel core e il suo commento dice perché — «avvisare al 95% sarebbe inutile, a quel
+  punto il mese è deciso». In Tu la percentuale si legge da `BUDGET_NEAR_THRESHOLD` invece di
+  riscriverla a mano.
+- **Un avviso solo anche quando i budget sono tre**, perché tre notifiche identiche in fila sono il
+  modo in cui si smette di leggerle. Il caso singolo dice i numeri — sapere _quanto_ si è sforato
+  distingue un avviso da un rimprovero — e il titolo del caso multiplo dice «superati» solo se lo sono
+  tutti: con uno soltanto vicino sarebbe la solita frase falsa accanto a un numero.
+- **Canale separato, importanza `DEFAULT`**: separato perché chi zittisce i promemoria dalle
+  impostazioni di Android non deve perdere l'avviso di sforamento; `DEFAULT` e non `LOW` perché quello
+  è un invito che ci si è chiesti, questo è un numero appena cambiato su cui si può ancora agire.
+- **`packages/core` non è stato toccato.** `budgetStatuses` e `stateOf` decidono se un limite è vicino
+  o superato; qui si decide solo se quello stato **è nuovo**. E `setReminder` è diventata
+  `set(kind, on)`, la firma che lo Step 33 userà senza modificarla.
+
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
 Entrambi nel codice e coperti dai test. **Nessuno dei due è ancora stato visto risolto su due
@@ -911,13 +964,25 @@ lista, non le toglie.
   l'orologio del telefono: la logica della scadenza ha i test — incluso il cambio di ora legale — e
   quello che il telefono deve confermare è il permesso e il canale. Da guardare anche che, revocando
   il permesso dalle impostazioni di sistema, riaprendo Tu compaia la riga «Android sta bloccando»
+- **Lo Step 32, che al contrario del 31 si vede in un minuto** — e proprio per questo va provato
+  bene. Serve un budget basso su una categoria e una spesa che lo supera: la notifica deve comparire
+  **mentre si è ancora nell'app**, ed è il pezzo che senza il gestore di primo piano non si
+  vedrebbe affatto (il difetto peggiore, perché non lascia traccia). Poi le tre cose che possono
+  rompersi in silenzio: che registrando una **seconda** spesa nella stessa categoria l'avviso **non**
+  si ripeta, che cancellando la spesa e rifacendola non ne arrivi un altro (è il livello che non
+  scende), e che nelle impostazioni di sistema il canale «Budget del mese» esista **separato** da
+  «Promemoria spese». Da guardare anche l'80%: portare una categoria appena sopra la soglia senza
+  superare il limite deve dare «Budget quasi finito», e il superamento successivo un secondo avviso
+  diverso. E la prova che richiede un riavvio: aprire un gruppo mai guardato in questo mese con un
+  budget **già** sforato **non** deve avvisare — è il primo giro silenzioso, ed è l'unica regola
+  dello step che si nota solo quando manca
 - **Il selettore di widget di Android**, che la diagnostica non può guardare: tenendo premuto sulla
   home devono comparire «JuTrack — saldo» e «JuTrack — speso questo mese» con le loro descrizioni.
   `getWidgetInfo` prova che i provider **rispondono**; solo il selettore prova che etichette e
   dimensioni sono quelle scritte in `app.json`. Un widget aggiunto adesso resta **vuoto**, ed è
   atteso: il contenuto arriva agli Step 34–35
 
-Tutto il resto è verificato: 970 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 1016 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 > **Lo Step 25 è entrato in questa lista attraverso il 26**, come era stato scritto: la geometria

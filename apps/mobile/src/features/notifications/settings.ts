@@ -9,13 +9,16 @@
  *
  * **Un interruttore per avviso, non uno solo.** Sono tre motivi diversi di essere
  * interrotti — non registri spese, hai sforato un budget, la sincronizzazione è ferma — e
- * chi ne vuole uno non vuole necessariamente gli altri tre. Qui ce n'è uno: gli Step 32 e 33
- * aggiungono i propri, e `parseSettings` è scritta perché aggiungerli non tocchi questa riga.
+ * chi ne vuole uno non vuole necessariamente gli altri tre. Qui ce ne sono due: lo Step 33
+ * aggiunge il proprio, e `parseSettings` è scritta perché aggiungerlo non tocchi le righe
+ * degli altri.
  */
 
 export interface NotificationSettings {
   /** Promemoria «non registri una spesa da un po'» (Step 31). */
   reminder: boolean;
+  /** Avviso «una categoria è vicina al limite del mese, o l'ha superato» (Step 32). */
+  budget: boolean;
 }
 
 /** La chiave in `app_meta`. Una sola per tutti gli avvisi. */
@@ -28,7 +31,7 @@ export const SETTINGS_KEY = 'notification_settings';
  * notificare a chi aggiorna l'app senza aver chiesto niente, e mandare il primo avviso tre
  * giorni dopo a qualcuno che non sa da dove arrivi.
  */
-export const DEFAULT_SETTINGS: NotificationSettings = { reminder: false };
+export const DEFAULT_SETTINGS: NotificationSettings = { reminder: false, budget: false };
 
 /**
  * Rilegge le impostazioni, **trattando come spento tutto ciò che non si capisce**.
@@ -38,7 +41,7 @@ export const DEFAULT_SETTINGS: NotificationSettings = { reminder: false };
  * ripiegare su «acceso» farebbe comparire notifiche che nessuno ha chiesto, e un avviso di
  * troppo si nota molto più di uno mancante.
  *
- * Ogni chiave si legge per conto suo: un campo aggiunto dallo Step 32 su un telefono che
+ * Ogni chiave si legge per conto suo: un campo aggiunto dallo Step 33 su un telefono che
  * ha ancora le impostazioni di oggi si legge come spento, senza che il resto cada.
  */
 export function parseSettings(raw: string | null): NotificationSettings {
@@ -52,8 +55,8 @@ export function parseSettings(raw: string | null): NotificationSettings {
   }
   if (typeof parsed !== 'object' || parsed === null) return DEFAULT_SETTINGS;
 
-  const { reminder } = parsed as Record<string, unknown>;
-  return { reminder: reminder === true };
+  const { reminder, budget } = parsed as Record<string, unknown>;
+  return { reminder: reminder === true, budget: budget === true };
 }
 
 export function serializeSettings(settings: NotificationSettings): string {

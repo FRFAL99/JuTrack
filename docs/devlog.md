@@ -4,6 +4,130 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-12 — Step 32: l'avviso di budget, che è una condizione e non una scadenza
+
+Un secondo interruttore in Tu, e una notifica che arriva quando una categoria arriva all'80%
+del limite del mese o lo supera. Secondo dei tre contenuti di notifica del piano v5, ancora
+tutto JS sopra la build dello Step 30.
+
+**È l'esatto opposto dello Step 31, ed è la cosa più interessante dello step.** Il
+promemoria non poteva essere una condizione — nessuno la rilegge quando la notifica suona —
+e per questo è diventato una scadenza. Qui è il contrario: «hai superato il budget» **è** una
+condizione, e per di più una condizione che cambia solo quando cambia il documento. Non c'è
+nessuna data da calcolare. Si guarda il documento, e se è appena successo si avvisa subito,
+con un `ChannelAwareTriggerInput` che consegna nell'istante.
+
+**Ne segue il limite onesto della cosa, e sta scritto sotto l'interruttore.** L'avviso lo
+produce l'app guardando il documento, quindi **l'app deve essere aperta**. Una spesa
+registrata qui avvisa subito; una registrata sull'altro telefono avvisa quando arriva col
+sync, cioè alla prima apertura. Un avviso in differita resta vero — il limite è superato
+adesso — e l'alternativa sarebbe un processo in background, che è lo Step 36 e resta
+opzionale. Quello che non si fa è lasciarlo scoprire: la riga sotto i due interruttori dice
+che gli avvisi sui budget riguardano il gruppo aperto e arrivano mentre l'app è in uso.
+
+**Il watcher si iscrive al documento, non a un gesto**, ed è la differenza che si vede nel
+codice. `useExpenseRegistered` dello Step 31 va **chiamata** dal form, perché il promemoria
+dipende da un'azione. Un budget invece dipende dal documento: sfonda tanto per una spesa
+scritta qui quanto per una arrivata col sync, e le due cose non hanno un punto di chiamata in
+comune. `BudgetWatcher` legge la versione del documento e le prende entrambe, senza che
+nessuna schermata debba ricordarsi di dire niente. Sta accanto allo `Stack` in `_layout.tsx`
+e non dentro i Grafici: lì i budget si controllerebbero solo aprendo la scheda dove sono già
+disegnati, cioè proprio dove un avviso non serve.
+
+**Senza il gestore di primo piano lo step sarebbe invisibile, e ci si accorgerebbe tardi.**
+Di default `expo-notifications` non mostra nulla mentre l'app è aperta — ed è esattamente lì
+che questo avviso nasce, per costruzione. `foreground.ts` installa un gestore unico che
+decide **per tipo**: l'avviso di budget in primo piano si mostra, perché dice qualcosa che la
+schermata aperta non mostra; il promemoria dello Step 31 no, perché inviterebbe ad aprire
+un'app già aperta. Quello che non si riconosce non si mostra, che è il comportamento che
+`expo-notifications` avrebbe senza gestore. Mai un suono in primo piano: il suono serve a
+farsi notare da chi non sta guardando lo schermo, e in primo piano quel caso non esiste.
+
+**Il problema vero è non ripetersi**, e si risolve con dei segni in `app_meta`. Un budget
+superato resta superato per tutto il mese: senza memoria, ogni modifica del documento
+rifarebbe lo stesso avviso. `budget_alerts` tiene il livello più alto raggiunto per ogni
+`vaultId|mese|categoria`, e tre regole lo governano, ognuna contro un modo diverso di
+sbagliare:
+
+- **Il livello sale e non scende.** Cancellare una spesa riporta una categoria da `over` a
+  `near`, e senza questa regola la spesa dopo riavviserebbe: un budget che oscilla intorno
+  all'80% suonerebbe a ogni scontrino, che è il modo più rapido di far spegnere
+  l'interruttore.
+- **La prima volta si guarda e basta.** Un gruppo mai visto in questo mese — appena creato,
+  appena aperto, o semplicemente il primo giorno del mese nuovo — registra lo stato di adesso
+  senza dire niente. Un avviso deve raccontare qualcosa di appena successo, e «questo budget
+  era già sforato quando ho cominciato a guardare» non lo è. È la ragione per cui i segni
+  hanno due campi e non uno: senza `watched`, «tutto sotto controllo» e «non ho mai
+  guardato» sarebbero lo stesso stato, cioè un elenco di livelli vuoto.
+- **I segni si aggiornano anche a interruttore spento.** Sembra sprecato e non lo è: se si
+  smettesse di guardare mentre è spento, riaccenderlo produrrebbe una raffica di avvisi su
+  sforamenti avvenuti mentre si era deciso di non essere disturbati. Il watcher tiene il
+  conto sempre; a decidere se diventa una notifica è la lettura delle impostazioni, fatta
+  **dopo**.
+
+**Si scrive prima e si avvisa dopo.** L'ordine inverso — notifica riuscita, scrittura
+fallita — rifarebbe lo stesso avviso al giro successivo, e poi ancora. Un avviso perso si
+nota una volta; uno ripetuto fa spegnere l'interruttore.
+
+**I segni si potano al mese in corso**, o crescerebbero di una riga per categoria per mese
+per sempre dentro una tabella che nessuno guarda. Si può fare perché un mese finito non può
+più essere sforato: la spesa porta la data del giorno in cui viene registrata, e il form non
+ha un selettore di date — la scelta del passo 7 del redesign, che qui torna utile. Si pota
+per mese e **non** per gruppo: i gruppi aperti sono più d'uno e ciascuno tiene il proprio
+conto nello stesso mese, con lo stesso `first` silenzioso alla prima apertura.
+
+**Anche l'80%, non solo il superamento**, benché il piano dicesse «soglia superata». La
+soglia `near` esiste già in `insights/budget.ts` e il suo commento è la ragione:
+«avvisare al 95% sarebbe inutile — a quel punto il mese è deciso». Un avviso che arriva solo
+a limite sfondato arriva quando non si può più fare niente. La soglia si legge dal core anche
+nella riga di Tu, invece di riscrivere `80%` a mano: due numeri da tenere allineati sono due
+numeri che prima o poi divergono.
+
+**Un avviso solo anche quando i budget sono tre.** Aprendo l'app dopo un sync possono essere
+passate di livello più categorie insieme, e tre notifiche identiche in fila sono il modo in
+cui si smette di leggerle. Il caso singolo però dice i numeri — `Spesa: 214,00 € su 200,00 €
+questo mese, 14,00 € in più` — perché sapere _quanto_ si è sforato è ciò che distingue un
+avviso da un rimprovero. E il titolo del caso multiplo dice «superati» solo se lo sono tutti:
+con uno soltanto vicino sarebbe una frase falsa accanto a un numero, cioè la cosa che il
+progetto rifiuta da «Metà e metà».
+
+**Il simbolo viene dal profilo**, non dall'euro scritto a mano: `budgetContent` lo riceve come
+ultimo parametro con default `'€'`, esattamente come `describeBudget` e gli altri moduli puri
+dello Step 29. Una notifica che dicesse `200,00 €` a chi ha scelto il franco sarebbe un
+numero giusto accanto a una parola falsa.
+
+**Canale `budget` separato, importanza `DEFAULT`.** Separato perché chi trova insistente il
+promemoria deve poterlo zittire dalle impostazioni di Android senza perdere l'avviso che sta
+sforando un limite: due canali sono due interruttori di sistema. `DEFAULT` e non `LOW` come
+il promemoria, perché quello è un invito che ci si è chiesti, questo è un numero appena
+cambiato su cui si può ancora fare qualcosa nel resto del mese.
+
+**Un interruttore in più, non una schermata in più.** `NotificationSettings` guadagna
+`budget`, `parseSettings` lo legge per conto suo — un telefono con le impostazioni di ieri lo
+trova spento senza che il resto cada — e `setReminder` diventa `set(kind, on)`, che è la
+firma che lo Step 33 userà senza toccarla. Il messaggio di permesso negato resta **uno solo**:
+il permesso è dell'app, non della singola voce, e ripeterlo accanto a ogni riga farebbe
+sembrare che i rimedi siano tre.
+
+**`packages/core` non è stato toccato.** `budgetStatuses` e `stateOf` c'erano già e decidono
+loro se un limite è vicino o superato. Qui si decide una cosa sola, che il core non può
+sapere: se quello stato **è nuovo**.
+
+**Verifica:** 1016 test verdi (588 core + 385 app + 43 relay, di cui 30 nuovi), typecheck,
+lint e `format:check` puliti, `expo export --platform android` completato.
+
+**Sul telefono si vede tutto, e in fretta.** A differenza dello Step 31 non c'è niente da
+aspettare tre giorni: basta un budget basso su una categoria e una spesa che lo supera, e
+l'avviso deve comparire mentre si è ancora nell'app. Da controllare in quest'ordine: la
+notifica compare in primo piano (è il pezzo che senza il gestore non si vedrebbe), non si
+ripete registrando una seconda spesa nella stessa categoria, e il canale «Budget del mese»
+esiste nelle impostazioni di sistema separato da «Promemoria spese».
+
+**Prossimo:** Step 33 — la notifica di sync bloccato, che riusa lo stato già derivato in
+`features/sync/describe.ts`.
+
+---
+
 ## 2026-08-12 — Step 31: il promemoria, che è una scadenza e non una condizione
 
 Un interruttore in Tu, e una notifica locale che arriva se passano tre giorni senza

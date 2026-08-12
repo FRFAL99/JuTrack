@@ -12,22 +12,34 @@ import {
 } from './settings';
 
 /** Perché l'interruttore non si è acceso. `null` quando si è acceso davvero. */
-export type ReminderRefusal = 'denied' | 'blocked' | 'unavailable';
+export type NotificationRefusal = 'denied' | 'blocked' | 'unavailable';
+
+/** Quale avviso: le chiavi di `NotificationSettings`, non una seconda lista da allineare. */
+export type NotificationKind = keyof NotificationSettings;
 
 interface NotificationSettingsHandle {
   settings: NotificationSettings;
   /** Falso finché la lettura da `app_meta` non è tornata: evita che l'interruttore sfarfalli. */
   ready: boolean;
   /**
-   * Il promemoria è acceso ma il sistema non ci lascia notificare.
+   * Almeno un avviso è acceso ma il sistema non ci lascia notificare.
    *
    * Succede a chi revoca il permesso dalle impostazioni di Android dopo averlo dato. Non si
    * spegne l'interruttore d'ufficio — la scelta è di chi l'ha fatta, e spegnerla di
    * nascosto la farebbe sparire senza spiegazione — ma la schermata lo dice.
+   *
+   * **Uno solo per tutta la sezione**, e non uno per riga: il permesso di notificare è uno
+   * per l'app, quindi ripetere la stessa frase accanto a ogni interruttore acceso direbbe
+   * tre volte la stessa cosa e farebbe sembrare che i rimedi siano tre.
    */
   blocked: boolean;
   /** `null` se è andata bene, altrimenti il motivo per cui l'interruttore è tornato giù. */
-  setReminder(on: boolean): Promise<ReminderRefusal | null>;
+  set(kind: NotificationKind, on: boolean): Promise<NotificationRefusal | null>;
+}
+
+/** Se c'è almeno un avviso acceso, il permesso serve davvero. */
+function anyEnabled(settings: NotificationSettings): boolean {
+  return Object.values(settings).some((on) => on);
 }
 
 /**
@@ -55,10 +67,10 @@ export function useNotificationSettings(): NotificationSettingsHandle {
         // Una lettura fallita è indistinguibile da «mai scritto», e porta allo stesso
         // posto: tutto spento, che è il default giusto.
       }
-      const permission = stored.reminder ? await readNotificationPermission() : null;
+      const permission = anyEnabled(stored) ? await readNotificationPermission() : null;
       if (cancelled) return;
       setSettings(stored);
-      setBlocked(stored.reminder && permission !== 'granted');
+      setBlocked(anyEnabled(stored) && permission !== 'granted');
       setReady(true);
     }
 
@@ -68,8 +80,8 @@ export function useNotificationSettings(): NotificationSettingsHandle {
     };
   }, [meta]);
 
-  const setReminder = useCallback(
-    async (on: boolean): Promise<ReminderRefusal | null> => {
+  const set = useCallback(
+    async (kind: NotificationKind, on: boolean): Promise<NotificationRefusal | null> => {
       if (on && !(await requestNotificationPermission())) {
         // Il permesso non è arrivato: non si salva niente. Distinguere «negato adesso» da
         // «non chiedibile più» serve a chi chiama per dire dove andare a rimediare.
@@ -78,20 +90,24 @@ export function useNotificationSettings(): NotificationSettingsHandle {
         return permission === null ? 'unavailable' : 'denied';
       }
 
-      const next: NotificationSettings = { ...settings, reminder: on };
+      const next: NotificationSettings = { ...settings, [kind]: on };
       setSettings(next);
       setBlocked(false);
       await meta.set(SETTINGS_KEY, serializeSettings(next)).catch(() => {
         /* al riavvio si ritrova lo stato di prima: la notifica programmata resta, ma
            `ReminderScheduler` la disdice alla prima apertura, perché legge da qui. */
       });
-      await rescheduleReminder(on, await readLastActivity(meta));
+      // Solo il promemoria ha qualcosa da riprogrammare: l'avviso di budget non vive in
+      // coda, lo produce `BudgetWatcher` guardando il documento. Spegnerlo non lascia
+      // niente da disdire, e accenderlo non ha niente da recuperare — i segni in
+      // `app_meta` sono stati tenuti aggiornati anche mentre era spento.
+      if (kind === 'reminder') await rescheduleReminder(on, await readLastActivity(meta));
       return null;
     },
     [meta, settings],
   );
 
-  return { settings, ready, blocked, setReminder };
+  return { settings, ready, blocked, set };
 }
 
 /**

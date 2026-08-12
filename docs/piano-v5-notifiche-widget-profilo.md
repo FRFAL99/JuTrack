@@ -3,17 +3,27 @@
 > Punto d'ingresso del progetto: [STATO.md](STATO.md). Piano approvato:
 > `~/.claude/plans/ho-appena-fatto-delle-nested-conway.md`.
 >
-> **Tre step su dodici chiusi**, tutti il 12 agosto 2026: lo
+> **Quattro step su dodici chiusi**, tutti il 12 agosto 2026: lo
 > [Step 29](#step-29--valuta-di-default-nel-profilo), lo
 > [Step 30](#step-30--infrastruttura-nativa-condivisa) — **build EAS compresa**, installata e
-> verificata con la diagnostica a 16 passaggi su 16 — e lo Step 31, il promemoria spese. Gli
-> Step 32–35 lavorano in JS sopra quella build e non ne chiedono altre.
+> verificata con la diagnostica a 16 passaggi su 16 — lo Step 31, il promemoria spese, e lo
+> Step 32, l'avviso di budget. Gli Step 33–35 lavorano in JS sopra quella build e non ne chiedono
+> altre.
 >
 > **Sullo Step 31 il piano diceva «promemoria periodico», e periodico non è.** Una notifica locale
 > si programma prima e scatta da sola, senza che nessuno possa rivalutare la condizione al momento
 > in cui suona: la regola è diventata una **scadenza** ricalcolata alle tre occasioni che l'app
 > vede — apertura, spesa registrata, interruttore toccato. Il dettaglio è in
-> [STATO.md](STATO.md#il-promemoria-spese-step-31), e riguarda anche il 32 e il 33.
+> [STATO.md](STATO.md#il-promemoria-spese-step-31).
+>
+> **Lo Step 32 è l'opposto, e le due cose vanno lette insieme**: «hai superato il budget» **è** una
+> condizione, valutabile solo mentre l'app è aperta, e l'avviso parte nell'istante. Ne segue tutto
+> il resto dello step — un watcher iscritto al documento invece di una chiamata dal form, i segni in
+> `app_meta` per non ripetersi, e un gestore di primo piano senza il quale la notifica non si
+> vedrebbe affatto. Due punti in cui il piano andava oltre quel che diceva: l'avviso scatta **anche
+> all'80%** e non solo a limite superato (la soglia `near` esiste già nel core, e il suo commento
+> dice perché), e **`packages/core` non è stato toccato**. Il dettaglio è in
+> [STATO.md](STATO.md#lavviso-di-budget-step-32), e riguarda anche il 33.
 >
 > **Due punti dello Step 30 erano scritti male qui**, e vanno letti da
 > [STATO.md](STATO.md#linfrastruttura-nativa-step-30):
@@ -195,6 +205,12 @@ perché derivabili da dati già presenti nel codice:
 - **Promemoria periodico** se non si registra una spesa da N giorni.
 - **Soglia di budget superata**, riusando i calcoli già in `packages/core/src/insights/`.
 - **Sync bloccato da tempo**, riusando lo stato già derivato in `features/sync/describe.ts`.
+
+I primi due sono chiusi, e sono usciti diversi l'uno dall'altro in forma prima che in contenuto: il
+31 è una **scadenza** programmata in anticipo, il 32 una **condizione** valutata mentre l'app è
+aperta. Il 33 somiglia al 32 — lo stato di sync si legge quando c'è qualcuno a guardarlo — ma con una
+differenza da decidere: «bloccato da tempo» ha dentro una durata, quindi è una condizione **su una
+scadenza**, e conviene leggere entrambe le sezioni di [STATO.md](STATO.md) prima di scriverlo.
 
 Ogni notifica va dietro un interruttore proprio (non un solo "notifiche sì/no"), perché sono tre
 motivi diversi di essere avvisati e non tutti li vorranno tutti e tre.

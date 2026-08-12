@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GroupIdentityGate } from '@/features/groups/GroupIdentityGate';
+import { BudgetWatcher } from '@/features/notifications/BudgetWatcher';
 import { ReminderScheduler } from '@/features/notifications/ReminderScheduler';
 import { ProfileOnboarding } from '@/features/profile/ProfileOnboarding';
 import {
@@ -136,6 +137,10 @@ function Shell() {
           <GroupsGate>
             <VaultProvider>
               <VaultGate>
+                {/* Guarda i budget del gruppo aperto e avvisa quando uno cambia livello.
+                    Sta qui e non in una schermata: dentro i Grafici si controllerebbero
+                    solo aprendo la scheda dove sono già disegnati. */}
+                <BudgetWatcher />
                 <Stack
                   screenOptions={{
                     headerShown: false,
