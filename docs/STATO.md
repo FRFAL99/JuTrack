@@ -6,12 +6,14 @@ quinto piano è cominciato**. Il quarto — [piano-v4-grafici-e-dashboard.md](pi
 sono chiusi da prima ([visualdesign.md](visualdesign.md)). Lo stesso giorno è stato scritto il
 **quinto piano**, [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md) —
 notifiche locali, due widget Android, valuta e lingua nel profilo — e oggi ne sono entrati nel codice
-i **primi due step su dodici**: la valuta di default nel profilo e l'infrastruttura nativa.
+i **primi tre step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa e il
+promemoria spese.
 
 > **La build EAS dello [Step 30](#linfrastruttura-nativa-step-30) è installata e verificata** — la
 > diagnostica dice **16 passaggi su 16** — e con lei i due moduli nativi sono sul telefono. Gli
-> Step 31–35 lavorano in JS sopra quella build e **non ne chiedono altre**: il prossimo lavoro è lo
-> [Step 31](piano-v5-notifiche-widget-profilo.md#step-3133--notifiche-locali), il promemoria locale.
+> Step 31–35 lavorano in JS sopra quella build e **non ne chiedono altre**. Lo
+> [Step 31](#il-promemoria-spese-step-31) è chiuso; il prossimo è il 32, l'avviso di soglia di
+> budget superata.
 >
 > **Fra i primi quattro piani non c'è più uno step scritto da fare: quello che resta è la prova su
 > due telefoni veri**, e i criteri di «fatto» di tutti e quattro ci passano in mezzo. Il piano v5 è
@@ -66,7 +68,8 @@ su dodici nel codice**:
 | ---------------------------------- | ----- | ---------------------------------------------------------------------- |
 | 29 — Valuta di default nel profilo | ✅    | Campo `currency` sul `Profile`, selettore in `tu.tsx`, simbolo ovunque |
 | 30 — Infrastruttura nativa         | ✅    | Plugin, permesso, build EAS installata, diagnostica 16/16              |
-| 31–33 — Notifiche locali           | ⬜    | Promemoria spesa, soglia budget, sync bloccato                         |
+| 31 — Promemoria spesa              | ✅    | Interruttore in Tu, scadenza riarmata a ogni apertura                  |
+| 32–33 — Notifiche locali           | ⬜    | Soglia budget, sync bloccato                                           |
 | 34–35 — I due widget               | ⬜    | Saldo del gruppo aperto, totale del mese                               |
 | 36 — Refresh in background         | ⬜    | Opzionale, solo se il refresh ad apertura app non basta                |
 | 37 — Infrastruttura i18n           | ⬜    | `i18next`, campo `language` sul `Profile`, selettore in `tu.tsx`       |
@@ -85,7 +88,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**970 test verdi** (588 core + 339 app + 43 relay), typecheck, lint e `format:check` puliti.
+**986 test verdi** (588 core + 355 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -630,6 +633,49 @@ diagnostica risponde 16 su 16: `modulo disponibile, permesso non concesso` e `2 
   dipende da `expo`, che dipende dalla catena metro/`image-size` già segnalata. Le «0 vulnerabilità»
   dello Step 0 sono ferme a quel giorno.
 
+## Il promemoria spese (Step 31)
+
+Un interruttore in Tu e una notifica locale che arriva dopo tre giorni senza registrare nulla.
+Primo dei tre contenuti di notifica, tutto JS sopra la build dello Step 30.
+
+- **È una scadenza, non una condizione, e non poteva essere altro.** Una notifica locale si
+  programma **prima** e scatta da sola: nessuno la rilegge quando suona, e non c'è un processo in
+  background che possa valutare lì per lì se ha ancora senso — quello è lo Step 36, opzionale.
+  Quindi la regola si scrive come una data, ricalcolata nelle tre occasioni che l'app vede:
+  apertura, spesa registrata, interruttore toccato. Ne segue che **il testo è vero per
+  costruzione**: se una spesa fosse arrivata nel frattempo, quella notifica sarebbe stata disdetta.
+- **Senza il riarmo all'avvio scatterebbe una volta sola**: una notifica programmata sparisce
+  quando suona. `ReminderScheduler` sta sotto `ProfileGate`, non disegna niente, riarma a ogni
+  apertura — e **rilegge il timestamp invece di scrivere «adesso»**, perché aprire l'app non è
+  registrare una spesa: se lo fosse, il promemoria non arriverebbe mai a chi apre, guarda e non
+  annota, cioè esattamente a chi l'ha chiesto.
+- **L'ultima spesa sta in `app_meta`, non nel vault.** Di documenti Yjs ne è montato uno per
+  volta: cercare la spesa più recente fra tutti i gruppi vorrebbe dire aprire ogni vault, N chiavi
+  dal portachiavi e il motore da riassegnare. **Conta chi scrive, non chi riceve**: una spesa che
+  arriva dall'altro telefono non sposta la scadenza, perché il promemoria riguarda l'abitudine di
+  annotare. Il prezzo: in una coppia dove registra uno solo, l'avviso arriva a entrambi — ma a
+  quello che non registra è vero.
+- **Si disdice per tipo (`data.kind`), non per identificatore salvato.**
+  `cancelAllScheduledNotificationsAsync` sarebbe già sbagliata allo Step 32; un id in `app_meta`
+  sarebbe un secondo stato da tenere allineato, e uno rimasto indietro lascerebbe promemoria
+  fantasma impossibili da disdire.
+- **Il permesso si chiede accendendo l'interruttore, mai all'avvio**: su Android 13 il dialogo si
+  rifiuta una volta sola, e spenderlo al boot vuol dire non poterlo più chiedere quando servirà.
+- **La scrittura non è ottimistica**, al contrario del riordino della dashboard: prima il
+  permesso, poi il salvataggio. Un interruttore acceso che non produce mai una notifica è peggio di
+  uno che torna giù, perché non c'è modo di accorgersene se non aspettando invano.
+- **Un permesso revocato non spegne l'interruttore di nascosto**: la voce resta accesa e una riga
+  dice che è il sistema a bloccarla. Spegnerla d'ufficio farebbe sparire una scelta senza spiegarla.
+- **Canale `LOW`**: compare senza suonare. `MIN` resterebbe ripiegato in fondo alla tendina, cioè
+  invisibile a chi ha acceso l'interruttore per vederlo. Un canale per motivo, così si può zittire
+  il promemoria dalle impostazioni di sistema senza perdere gli altri avvisi.
+- **Due testi**: chi non ha mai registrato niente non ha «smesso», e dirgli «da 3 giorni» sarebbe
+  falso. Stesso criterio di «Metà e metà».
+- **Le venti in ora locale, ed è l'unico posto in cui l'ora locale è giusta**: `calendar.ts` sta in
+  UTC perché confronta giorni fra due telefoni, qui «le venti» sono quelle di chi legge.
+  L'aritmetica passa dai componenti del `Date`, o l'ultima domenica di ottobre l'avviso arriverebbe
+  alle 19 — c'è il test.
+
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
 Entrambi nel codice e coperti dai test. **Nessuno dei due è ancora stato visto risolto su due
@@ -857,6 +903,14 @@ lista, non le toglie.
   build che lo conteneva non esisteva, e l'export ripiegava sugli appunti dichiarandolo
   nell'interfaccia. La build dello Step 30 porta `expo-file-system` ed `expo-sharing`, quindi adesso
   la prova si può fare: esportare un CSV e vedere se compare il foglio di sistema invece del ripiego
+- **Lo Step 31, di cui sul telefono si vede quasi tutto subito — tranne la notifica.** Accendere
+  «Promemoria spese» deve far comparire il dialogo di Android, e da lì il passaggio 15 della
+  diagnostica deve passare a «permesso concesso»; l'interruttore deve sopravvivere a un riavvio, e
+  negando il permesso deve **restare giù** con l'avviso che spiega perché. L'avviso vero però
+  arriva **tre giorni dopo**, e non c'è modo di affrettarlo se non toccando `REMINDER_DAYS` o
+  l'orologio del telefono: la logica della scadenza ha i test — incluso il cambio di ora legale — e
+  quello che il telefono deve confermare è il permesso e il canale. Da guardare anche che, revocando
+  il permesso dalle impostazioni di sistema, riaprendo Tu compaia la riga «Android sta bloccando»
 - **Il selettore di widget di Android**, che la diagnostica non può guardare: tenendo premuto sulla
   home devono comparire «JuTrack — saldo» e «JuTrack — speso questo mese» con le loro descrizioni.
   `getWidgetInfo` prova che i provider **rispondono**; solo il selettore prova che etichette e

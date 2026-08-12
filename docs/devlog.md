@@ -4,6 +4,100 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-12 — Step 31: il promemoria, che è una scadenza e non una condizione
+
+Un interruttore in Tu, e una notifica locale che arriva se passano tre giorni senza
+registrare una spesa. È il primo dei tre contenuti di notifica del piano v5, ed è tutto JS
+sopra la build dello Step 30.
+
+**Il problema vero non è mandare la notifica, è che la notifica si programma prima.** Una
+notifica locale si mette in calendario adesso e scatta da sola: nessuno la rilegge quando
+suona, e non c'è un processo in background che possa decidere in quel momento se ha ancora
+senso — quello sarebbe lo Step 36, dichiarato opzionale. Quindi «avvisami se non registro
+una spesa da tre giorni» **non si può scrivere come una condizione**: va scritto come una
+**data di scadenza**, calcolata adesso e rifatta ogni volta che succede qualcosa che l'app
+vede. Le occasioni sono tre e sono tutte quelle che esistono: l'app si apre, una spesa viene
+registrata, l'interruttore viene toccato.
+
+Ne segue una proprietà che vale la pena nominare: **il testo dell'avviso è vero per
+costruzione**. Se una spesa fosse stata registrata nel frattempo, quella notifica sarebbe
+stata disdetta e rifatta con una scadenza nuova. Non c'è nessun caso in cui la tendina dice
+«non registri una spesa da tre giorni» a chi ne ha appena registrata una.
+
+**Senza il riarmo all'avvio il promemoria scatterebbe una volta sola**, e questa è la parte
+che si dimentica. Una notifica programmata **sparisce quando suona**: se nessuno la rifà,
+chi non registra spese viene avvisato il primo giorno e mai più. `ReminderScheduler` sta
+sotto `ProfileGate`, non disegna niente e riarma a ogni apertura.
+
+**Aprire l'app non è registrare una spesa.** Il riarmo rilegge il timestamp salvato invece
+di scrivere «adesso», ed è la differenza fra un promemoria che funziona e uno che non
+arriva mai: se bastasse aprire l'app a spostare la scadenza, l'avviso non raggiungerebbe
+**esattamente chi l'ha chiesto** — quello che l'app la apre, guarda, e non annota niente.
+
+**L'ultima spesa è un fatto del telefono, non del vault.** Sta in `app_meta` e non si
+ricava dalle spese, perché di documenti Yjs ne è montato uno per volta: trovare la più
+recente fra tutti i gruppi vorrebbe dire aprire ogni vault, N chiavi dal portachiavi e il
+motore di sync da riassegnare — la stessa ragione per cui il sottotitolo ricco delle righe
+vale solo per il gruppo aperto. E **conta chi scrive, non chi riceve**: una spesa che arriva
+dall'altro telefono non sposta la scadenza, perché il promemoria riguarda l'abitudine di
+annotare. Il prezzo, accettato: in una coppia dove registra uno solo, l'avviso arriva anche
+all'altro — ma a quello dei due che non registra è **vero**.
+
+**Le notifiche si disdicono per tipo, non per identificatore.** Ogni promemoria porta
+`data: { kind: 'reminder' }`, e riprogrammare vuol dire cancellare quelli con
+quell'etichetta. `cancelAllScheduledNotificationsAsync` sarebbe una riga sola e sarebbe già
+sbagliata allo Step 32, che cancellerebbe l'avviso di budget insieme al proprio. Un
+identificatore salvato in `app_meta` sarebbe un secondo stato da tenere allineato, e uno
+rimasto indietro — app reinstallata, notifica già scattata — lascerebbe promemoria fantasma
+impossibili da disdire.
+
+**Il permesso si chiede accendendo l'interruttore, mai all'avvio.** Su Android 13 il dialogo
+di sistema si rifiuta **una volta sola**: spenderlo al boot, quando nessuno ha ancora chiesto
+di essere avvisato di niente, vuol dire non poterlo più chiedere quando servirà. È la stessa
+regola per cui il passaggio 15 della diagnostica **legge** il permesso e non lo chiede.
+
+**Qui la scrittura non è ottimistica**, al contrario del riordino della dashboard: prima si
+chiede il permesso, e solo se arriva si salva e si accende. Un interruttore che scatta e
+torna giù è brutto; un interruttore acceso che non produce mai una notifica è peggio, perché
+non c'è modo di accorgersene se non aspettando invano.
+
+**Un permesso revocato non spegne l'interruttore di nascosto.** Chi lo toglie dalle
+impostazioni di Android trova la voce ancora accesa e una riga che dice che il sistema la
+sta bloccando. Spegnerla d'ufficio farebbe sparire una scelta che qualcuno aveva fatto,
+senza dire perché.
+
+**Canale `LOW`, non `DEFAULT`:** compare nella barra di stato e nella tendina, e **non
+suona**. `MIN` sarebbe l'eccesso opposto — resterebbe ripiegato in fondo alla tendina, cioè
+invisibile proprio a chi ha acceso l'interruttore per vederlo. Un canale per motivo e non uno
+per l'app, così chi vuole zittire i promemoria senza perdere gli altri avvisi può farlo dalle
+impostazioni di sistema, che è dove la gente va a cercarlo.
+
+**Due testi e non uno.** Chi non ha **mai** registrato una spesa non ha smesso di farlo:
+«non registri una spesa da 3 giorni» a chi ha installato l'app ieri sarebbe la solita frase
+falsa. È lo stesso criterio di «Metà e metà» al passo 7 del redesign.
+
+**Le venti, in ora locale, ed è l'unico posto in cui l'ora locale è la scelta giusta.**
+`calendar.ts` nel core sta in UTC perché confronta giorni fra due telefoni; qui «le venti»
+vuol dire le venti dove si trova chi legge. L'aritmetica passa dai componenti del `Date` e
+non da una somma di millisecondi, o l'ultima domenica di ottobre il promemoria arriverebbe
+alle 19 — c'è il test che ci passa sopra.
+
+**Verifica:** 986 test verdi (588 core + 355 app + 43 relay, di cui 16 nuovi), typecheck,
+lint e `format:check` puliti, `expo export --platform android` completato.
+
+**Sul telefono si può vedere quasi tutto subito, ma non la notifica.** Accendere
+l'interruttore fa comparire il dialogo di Android e porta il passaggio 15 della diagnostica
+da «permesso non concesso» a «concesso»; l'interruttore sopravvive a un riavvio. L'avviso
+vero però arriva **tre giorni dopo**, e non c'è modo di affrettarlo senza toccare
+`REMINDER_DAYS` o l'orologio del telefono. La logica della scadenza sta tutta in
+`reminder.ts` e ha i test, incluso il caso dell'ora legale: quello che il telefono deve
+confermare è che il permesso arriva e che la notifica esce dal canale giusto.
+
+**Prossimo:** Step 32 — l'avviso di soglia di budget superata, che riusa i calcoli già in
+`packages/core/src/insights/` e il secondo interruttore.
+
+---
+
 ## 2026-08-12 — Step 30: l'infrastruttura nativa, in un colpo solo
 
 `expo-notifications` e `react-native-android-widget` insieme in `app.json`, i due moduli

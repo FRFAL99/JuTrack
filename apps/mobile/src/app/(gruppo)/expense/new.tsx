@@ -1,10 +1,12 @@
 import { router } from 'expo-router';
 import { ModalScreen } from '@/components/ModalScreen';
 import { ExpenseForm, type ExpenseFormValues } from '@/features/expenses/ExpenseForm';
+import { useExpenseRegistered } from '@/features/notifications/useNotifications';
 import { useVaultStore } from '@/state';
 
 export default function NewExpenseScreen() {
   const store = useVaultStore();
+  const noteRegistered = useExpenseRegistered();
 
   const handleSubmit = (values: ExpenseFormValues): void => {
     store.addExpense({
@@ -20,6 +22,11 @@ export default function NewExpenseScreen() {
       paidBy: values.paidBy,
       split: values.split,
     });
+
+    // Sposta in avanti la scadenza del promemoria (Step 31): è **questo** il gesto che
+    // «registrare una spesa» significa, non l'apertura dell'app. Non si attende — al
+    // massimo il promemoria arriverebbe un giorno prima del dovuto.
+    noteRegistered();
 
     router.back();
   };

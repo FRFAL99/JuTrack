@@ -3,11 +3,17 @@
 > Punto d'ingresso del progetto: [STATO.md](STATO.md). Piano approvato:
 > `~/.claude/plans/ho-appena-fatto-delle-nested-conway.md`.
 >
-> **Due step su dodici chiusi.** Lo [Step 29](#step-29--valuta-di-default-nel-profilo) e lo
-> [Step 30](#step-30--infrastruttura-nativa-condivisa) sono chiusi il 12 agosto 2026, il secondo
-> **build EAS compresa**: installata e verificata con la diagnostica a 16 passaggi su 16. Gli
-> Step 31–35 lavorano in JS sopra quella build e non ne chiedono altre. L'implementazione procede
-> uno step alla volta, come per i piani precedenti.
+> **Tre step su dodici chiusi**, tutti il 12 agosto 2026: lo
+> [Step 29](#step-29--valuta-di-default-nel-profilo), lo
+> [Step 30](#step-30--infrastruttura-nativa-condivisa) — **build EAS compresa**, installata e
+> verificata con la diagnostica a 16 passaggi su 16 — e lo Step 31, il promemoria spese. Gli
+> Step 32–35 lavorano in JS sopra quella build e non ne chiedono altre.
+>
+> **Sullo Step 31 il piano diceva «promemoria periodico», e periodico non è.** Una notifica locale
+> si programma prima e scatta da sola, senza che nessuno possa rivalutare la condizione al momento
+> in cui suona: la regola è diventata una **scadenza** ricalcolata alle tre occasioni che l'app
+> vede — apertura, spesa registrata, interruttore toccato. Il dettaglio è in
+> [STATO.md](STATO.md#il-promemoria-spese-step-31), e riguarda anche il 32 e il 33.
 >
 > **Due punti dello Step 30 erano scritti male qui**, e vanno letti da
 > [STATO.md](STATO.md#linfrastruttura-nativa-step-30):

@@ -1,12 +1,23 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  Alert,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { CORE_VERSION } from '@jutrack/core';
 import { initialOf } from '@/components/avatar';
 import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
 import { SectionLabel } from '@/components/SectionLabel';
+import { REMINDER_DAYS } from '@/features/notifications/reminder';
+import { useNotificationSettings } from '@/features/notifications/useNotifications';
 import { ColorChoice } from '@/features/profile/ColorChoice';
 import { CurrencyPicker } from '@/features/profile/CurrencyPicker';
 import { describeSync, syncTone } from '@/features/sync/describe';
@@ -42,6 +53,7 @@ export default function TuScreen() {
   const vault = useVaultStatus();
   const syncState = useSyncState();
   const currency = useCurrencyCode();
+  const notifications = useNotificationSettings();
 
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(profile.name);
@@ -69,6 +81,32 @@ export default function TuScreen() {
   const dotColor =
     tone === 'warn' ? colors.warning : tone === 'ok' ? colors.income : colors.textMuted;
   const syncReady = vault.phase === 'ready';
+
+  /**
+   * L'interruttore non si accende da solo: prima il permesso, poi la scelta.
+   *
+   * Se il permesso non arriva, `setReminder` non salva niente e l'interruttore resta giù —
+   * ma **va detto perché**, o sembrerebbe un tocco non registrato. I due rifiuti mandano in
+   * due posti diversi: uno alle impostazioni di Android, l'altro alla build.
+   */
+  const toggleReminder = (on: boolean): void => {
+    void (async () => {
+      const refusal = await notifications.setReminder(on);
+      if (refusal === 'denied') {
+        Alert.alert(
+          'Permesso non concesso',
+          'Android non lascia mandare notifiche a JuTrack. Puoi cambiarlo dalle impostazioni ' +
+            'di sistema, alla voce Notifiche dell’app.',
+        );
+      } else if (refusal === 'unavailable') {
+        Alert.alert(
+          'Non disponibile su questa versione',
+          'Le notifiche arrivano con una versione più recente dell’app. Tutto il resto ' +
+            'funziona come prima.',
+        );
+      }
+    })();
+  };
 
   const showIdInfo = (): void => {
     Alert.alert(
@@ -151,6 +189,35 @@ export default function TuScreen() {
             Vale solo su questo telefono, e per le spese che registri da qui. JuTrack non converte
             fra valute: in un gruppo conviene sceglierne una sola.
           </Text>
+        </View>
+
+        <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
+
+        <SectionLabel>Avvisi</SectionLabel>
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.xs }}>
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>Promemoria spese</Text>
+              <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+                Se passano {REMINDER_DAYS} giorni senza che tu registri una spesa
+              </Text>
+            </View>
+            <Switch
+              value={notifications.settings.reminder}
+              onValueChange={toggleReminder}
+              disabled={!notifications.ready}
+              accessibilityLabel="Promemoria spese"
+            />
+          </View>
+          {/* L'interruttore resta acceso perché la scelta è di chi l'ha fatta: spegnerlo
+              d'ufficio la farebbe sparire senza spiegazione. A dire che non funziona è
+              questa riga, non un tocco che si disfa da solo. */}
+          {notifications.blocked && (
+            <Text style={{ color: colors.warning, fontSize: fontSize.xxs }}>
+              Android sta bloccando le notifiche di JuTrack: riattivale dalle impostazioni di
+              sistema.
+            </Text>
+          )}
         </View>
 
         <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
@@ -246,5 +313,6 @@ const styles = StyleSheet.create({
   avatar: { alignItems: 'center', justifyContent: 'center' },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 7, height: 7, borderRadius: 3.5 },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   rule: { height: StyleSheet.hairlineWidth },
 });

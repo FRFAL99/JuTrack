@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GroupIdentityGate } from '@/features/groups/GroupIdentityGate';
+import { ReminderScheduler } from '@/features/notifications/ReminderScheduler';
 import { ProfileOnboarding } from '@/features/profile/ProfileOnboarding';
 import {
   GroupsProvider,
@@ -127,6 +128,10 @@ function Shell() {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <StatusBar style={isDark ? 'light' : 'dark'} />
       <ProfileGate>
+        {/* Riarma il promemoria a ogni avvio: una notifica programmata sparisce quando
+            suona, e senza questo scatterebbe una volta sola. Non disegna niente e non
+            dipende dai gruppi. */}
+        <ReminderScheduler />
         <GroupsProvider>
           <GroupsGate>
             <VaultProvider>
