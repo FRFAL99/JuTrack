@@ -43,6 +43,42 @@ import type { WidgetName } from './module';
 /** La chiave in `app_meta`. Una sola per tutti i widget. */
 export const SNAPSHOT_KEY = 'widget_snapshot';
 
+/** Quando il task headless ha fatto l'ultimo giro di rete. Il foglietto sta nell'altra chiave. */
+export const REFRESH_KEY = 'widget_refreshed_at';
+
+/**
+ * Quanto deve passare prima che valga la pena rifare un giro in background.
+ *
+ * Venticinque minuti contro i trenta di `updatePeriodMillis`, e i cinque di scarto sono la
+ * ragione per cui questo numero non è trenta: Android non promette la puntualità — sotto Doze
+ * i risvegli si accorpano e possono arrivare **prima** o molto dopo — e una soglia uguale al
+ * periodo scarterebbe proprio il giro che è arrivato con qualche minuto di anticipo.
+ *
+ * Serve soprattutto a un caso banale e frequente: **due widget sulla home sono due risvegli**.
+ * Android chiama un provider per volta, quindi a ogni scadenza il task parte due volte, e senza
+ * questa soglia farebbe due giri di rete identici a distanza di un istante.
+ */
+export const REFRESH_COOLDOWN_MS = 25 * 60 * 1000;
+
+/**
+ * Se è passato abbastanza tempo dall'ultimo giro.
+ *
+ * Un valore illeggibile o assente vale «mai fatto», quindi si parte: è la direzione giusta
+ * dell'errore, perché il costo è un giro di rete di troppo una volta sola, mentre sbagliare
+ * di là — trattarlo come appena fatto — vorrebbe dire un widget che non si aggiorna mai e non
+ * dice perché.
+ *
+ * **Anche un istante nel futuro vale «mai fatto»**: capita spostando l'orologio del telefono,
+ * e ripiegare sull'attesa lascerebbe i widget fermi fino a quando quell'istante non arriva
+ * davvero.
+ */
+export function dueForRefresh(raw: string | null, now: number): boolean {
+  if (raw === null) return true;
+  const last = Number(raw);
+  if (!Number.isFinite(last) || last <= 0 || last > now) return true;
+  return now - last >= REFRESH_COOLDOWN_MS;
+}
+
 /**
  * Le tre righe che un widget disegna, uguali per tutti e due.
  *

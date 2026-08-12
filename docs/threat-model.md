@@ -170,6 +170,39 @@ funzionante offline.
 Il relay osserva quando e quanto sincronizzi. Dalla frequenza si può inferire qualcosa sui ritmi
 d'uso dell'app. Non lo consideriamo rilevante per questo caso d'uso; sarebbe rilevante in altri.
 
+Dallo **Step 36** questa inferenza è cambiata di segno, e vale la pena dirlo: con un widget sulla
+schermata home il telefono contatta il relay ogni mezz'ora **anche quando l'app non viene aperta**.
+Il relay quindi vede più traffico, ma quel traffico dice **meno** di prima su quando la persona sta
+usando l'app — un ritmo regolare copre i picchi. Resta vero il contrario per la presenza: un
+dispositivo con un widget si annuncia periodicamente, mentre prima taceva per giorni.
+
+### I widget mostrano importi fuori dall'app
+
+I due widget (Step 34 e 35) scrivono saldo e totale del mese sulla **schermata home**, cioè fuori
+dall'app e senza che nessuno li apra. Non c'è una nuova falla crittografica — la home di Android è
+raggiungibile solo a telefono sbloccato, come l'app — ma la superficie visiva è diversa: chi guarda
+lo schermo da sopra la spalla legge un importo senza toccare niente. Chi non lo vuole ha un rimedio
+diretto e completo: non aggiungere i widget, o toglierli.
+
+Il foglietto che li alimenta (`widget_snapshot` in `app_meta`) contiene **frasi già formattate** —
+un nome di gruppo, un nome di membro, due importi — in chiaro nel database locale. Non è una
+categoria nuova di esposizione: il documento Yjs è già in chiaro su disco, e la cifratura di questo
+progetto protegge ciò che transita dal relay, non il database di un telefono sbloccato.
+
+### Il refresh in background decifra il vault mentre nessuno guarda
+
+Lo Step 36 fa girare un task headless ogni mezz'ora, quando c'è un widget sulla home: legge la
+chiave da SecureStore, decifra quello che arriva dal relay e riscrive il foglietto. **Non concede
+un permesso nuovo** — su Android la chiave è già leggibile dal processo dell'app in qualunque
+momento, perché `expo-secure-store` è usato senza `requireAuthentication` — ma sposta il momento in
+cui quella lettura avviene: prima solo con l'app aperta, ora anche a telefono in tasca.
+
+La conseguenza da tenere a mente è per il futuro: **un lock applicativo con biometria** (fra i
+miglioramenti qui sotto) o un `requireAuthentication` su SecureStore renderebbero il refresh in
+background impossibile per costruzione, perché non c'è nessuno che possa autenticarsi. Sono due
+funzioni che si escludono a vicenda, e la scelta fra loro va fatta consapevolmente, non scoprendola
+quando la seconda smette di funzionare.
+
 ## Scelte crittografiche
 
 | Elemento                 | Scelta                              | Perché                                                                                                             |

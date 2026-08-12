@@ -1,6 +1,16 @@
 import type { GroupRecord } from './groups';
 
 /**
+ * Dove è scritto il gruppo aperto, in `app_meta`.
+ *
+ * Sta qui e non dentro `GroupsProvider` dallo Step 36: il refresh in background deve
+ * rispondere alla **stessa domanda** — quale gruppo mostrare — e deve rispondere uguale,
+ * altrimenti il widget racconterebbe un gruppo diverso da quello che si apre toccandolo. Una
+ * costante duplicata sarebbe il modo più silenzioso di farli divergere.
+ */
+export const CURRENT_GROUP_KEY = 'current_group';
+
+/**
  * Quale gruppo aprire, e quale aprire dopo esserne usciti.
  *
  * Due funzioni di poche righe, estratte da `GroupsProvider` perché sono l'unica parte di

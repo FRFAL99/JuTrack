@@ -6,17 +6,25 @@ quinto piano è cominciato**. Il quarto — [piano-v4-grafici-e-dashboard.md](pi
 sono chiusi da prima ([visualdesign.md](visualdesign.md)). Lo stesso giorno è stato scritto il
 **quinto piano**, [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md) —
 notifiche locali, due widget Android, valuta e lingua nel profilo — e oggi ne sono entrati nel codice
-i **primi sette step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa, il
-promemoria spese, l'avviso di budget, quello di sincronizzazione ferma e **tutti e due i widget**.
+i **primi otto step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa, il
+promemoria spese, l'avviso di budget, quello di sincronizzazione ferma, **tutti e due i widget** e
+il refresh in background che li tiene vivi.
 
-> **La build EAS dello [Step 30](#linfrastruttura-nativa-step-30) è installata e verificata** — la
-> diagnostica dice **16 passaggi su 16** — e con lei i due moduli nativi sono sul telefono.
+> ⚠️ **Serve una build EAS nuova, ed è la seconda del piano v5.** Lo
+> [Step 36](#il-refresh-in-background-step-36) ha messo `updatePeriodMillis: 1800000` in
+> `app.json`, e quel numero finisce nell'XML del provider dei widget: **sulla build installata
+> oggi la sveglia non suona**, e il refresh in background non parte. Tutto il resto — notifiche,
+> widget, disegno — funziona già sulla build dello Step 30.
+>
+> ```bash
+> cd apps/mobile && npx eas-cli build -p android --profile development
+> ```
+>
 > **Notifiche e widget sono tutti nel codice**: lo [Step 31](#il-promemoria-spese-step-31), lo
 > [Step 32](#lavviso-di-budget-step-32) e lo [Step 33](#la-sincronizzazione-ferma-step-33) per le
-> tre notifiche, il [34](#il-widget-del-saldo-step-34) e il
-> [35](#il-totale-del-mese-step-35) per i due widget. **Il prossimo passo è una decisione, non
-> del codice**: lo Step 36 è dichiarato opzionale dal piano e va deciso **dopo** aver usato i
-> widget su un telefono vero. Se il refresh ad apertura app basta, si salta e si va al 37, l'i18n.
+> tre notifiche, il [34](#il-widget-del-saldo-step-34), il [35](#il-totale-del-mese-step-35) e il
+> [36](#il-refresh-in-background-step-36) per i widget. Il prossimo è il **37**, l'infrastruttura
+> i18n, che è di nuovo JS puro.
 >
 > **Fra i primi quattro piani non c'è più uno step scritto da fare: quello che resta è la prova su
 > due telefoni veri**, e i criteri di «fatto» di tutti e quattro ci passano in mezzo. Il piano v5 è
@@ -64,7 +72,7 @@ Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 | 27 — I sei filtri              | ✅    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
 | 28 — La dashboard componibile  | ✅    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
 
-Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **sette
+Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **otto
 step su dodici nel codice**:
 
 | Step                               | Stato | Cosa contiene                                                          |
@@ -76,7 +84,7 @@ step su dodici nel codice**:
 | 33 — Sincronizzazione ferma        | ✅    | Terzo interruttore, watcher sulla fase, scadenza di 24 h su disco      |
 | 34 — Widget «Saldo»                | ✅    | Foglietto in `app_meta`, task headless, `index.js` come entry          |
 | 35 — Widget «Speso questo mese»    | ✅    | Stesso foglietto e stesso rettangolo, didascalia che nomina il mese    |
-| 36 — Refresh in background         | ⬜    | Opzionale, solo se il refresh ad apertura app non basta                |
+| 36 — Refresh in background         | ✅    | Sync ogni 30 min dal task headless. **Chiede una build EAS nuova**     |
 | 37 — Infrastruttura i18n           | ⬜    | `i18next`, campo `language` sul `Profile`, selettore in `tu.tsx`       |
 | 38–39 — Traduzione EN              | ⬜    | Schermata per schermata, un passo a sessione                           |
 | 40 — Verifica end-to-end           | ⬜    | Su telefono reale: notifiche, widget, lingua, valuta                   |
@@ -93,7 +101,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**1075 test verdi** (588 core + 444 app + 43 relay), typecheck, lint e `format:check` puliti.
+**1088 test verdi** (588 core + 457 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -860,6 +868,44 @@ widget del piano v5.
 - **Un rettangolo solo per due widget** (`WidgetCard.tsx`): la sola differenza è il colore della
   cifra, passato come funzione del tema. `BalanceWidget.tsx` è diventato `views.tsx`.
 
+## Il refresh in background (Step 36)
+
+I widget si aggiornano da soli ogni mezz'ora, ad app chiusa. Era l'unico step del piano v5 marcato
+opzionale, ed è l'unico che **chiede una build EAS nuova** dopo quella dello Step 30.
+
+- **Ricalcolare non sarebbe servito a niente, e questa è la scoperta dello step.** Il documento
+  locale non si muove da solo: il motore di sync gira solo dentro l'app. Un ricalcolo periodico
+  darebbe gli stessi numeri di prima, tranne il primo del mese. Quindi il task headless **fa un
+  giro di sync** — monta il vault, parla col relay, applica quello che arriva e riscrive il
+  foglietto: fuori dall'albero React, quello che `VaultProvider` fa dentro.
+- **Nessuna libreria nuova.** `expo-background-task` e `expo-task-manager` sarebbero stati due
+  moduli nativi in più; il provider dei widget ha già la sua sveglia (`updatePeriodMillis`, minimo
+  30 minuti), e quella sveglia entra dal `WIDGET_UPDATE` del task headless dello Step 34. Lo step è
+  una riga di configurazione e un file di logica. **Ma quella riga finisce nell'XML del provider**,
+  quindi serve una build.
+- **La sveglia esiste solo se un widget è davvero sulla home**, che una libreria di background
+  generica non avrebbe garantito: chi i widget non li usa non paga né batteria né rete.
+- **Solo `WIDGET_UPDATE`.** `WIDGET_ADDED` e `WIDGET_RESIZED` arrivano mentre qualcuno **guarda** il
+  rettangolo, e un giro di rete da qualche secondo davanti lo lascerebbe vuoto proprio allora.
+- **Tre guardie.** Se l'app è in primo piano non si fa niente — due `SyncEngine` sullo stesso vault
+  significano due scritture concorrenti, e la compattazione della persistenza non le regge.
+  Venticinque minuti fra un giro e l'altro, perché **due widget sulla home sono due risvegli** e
+  senza soglia sarebbero due giri identici. E il task **non semina**: seminare le categorie è una
+  scrittura nel documento condiviso, e un telefono che scrive nel vault mentre nessuno lo usa è
+  ciò che un refresh non deve fare.
+- **Metà del valore è nell'altra direzione**, e il nome dello step non lo dice: `engine.start()`
+  mette in coda il delta non ancora pubblicato, quindi le spese registrate mentre non c'era rete
+  **partono da qui**, senza aspettare che qualcuno riapra l'app.
+- **`composeSnapshot` e `CURRENT_GROUP_KEY` sono usciti allo scoperto** perché adesso hanno due
+  chiamanti lontanissimi fra loro: l'albero React e un task headless. Due copie che devono dare lo
+  stesso numero, di cui una impossibile da guardare mentre gira.
+- **Il threat model ha tre voci nuove**, e la più importante è una conseguenza da non scoprire
+  tardi: **un lock con biometria e il refresh in background si escludono a vicenda**, perché in
+  background non c'è nessuno che possa autenticarsi.
+- **`packages/core` non è stato toccato**, per il sesto step di fila — e stavolta è il fatto più
+  significativo: il task headless usa `SyncEngine`, `VaultStore` e `SqliteYPersistence` come li usa
+  l'app, senza una riga di adattamento. È la ricompensa della regola dello Step 0.
+
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
 Entrambi nel codice e coperti dai test. **Nessuno dei due è ancora stato visto risolto su due
@@ -1142,8 +1188,17 @@ lista, non le toglie.
   pazienza è il **primo del mese**: il totale deve ripartire da zero alla prima apertura dell'app, e
   fino ad allora la didascalia deve dire il mese giusto per il numero che mostra — è la ragione per
   cui non dice «questo mese»
+- **Lo Step 36, che prima della build EAS nuova non è provabile affatto**: sulla build installata
+  oggi `updatePeriodMillis` è 0 e la sveglia non suona. Dopo l'installazione, nell'ordine:
+  aggiungere un widget, registrare una spesa **sull'altro telefono** e lasciar passare mezz'ora
+  senza toccare il primo — il widget deve cambiare da solo. Poi il caso che vale il doppio, perché
+  prova la direzione che il nome dello step non nomina: chiudere l'app in aereo dopo aver registrato
+  una spesa, riaccendere la rete e **non riaprire l'app**, e vedere quella spesa arrivare all'altro
+  telefono lo stesso. Infine la guardia: con l'app aperta davanti, il giro periodico non deve fare
+  niente. Da tenere d'occhio nei giorni seguenti la voce di JuTrack nei consumi di sistema, che è
+  l'unico modo di sapere se mezz'ora è il numero giusto
 
-Tutto il resto è verificato: 1075 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 1088 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 > **Lo Step 25 è entrato in questa lista attraverso il 26**, come era stato scritto: la geometria

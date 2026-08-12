@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import type { ReactNode } from 'react';
 import { RELAY_URL } from '@/config';
 import { expoHttp, expoKeyStore, expoRandom } from '@/platform';
-import { chooseCurrentGroup, nextAfterLeave } from './current-group';
+import { chooseCurrentGroup, CURRENT_GROUP_KEY, nextAfterLeave } from './current-group';
 import { useAppData } from './ProfileProvider';
 import { GroupRegistry, httpRelayGateway, normalizeGroupName, type GroupRecord } from './groups';
 
@@ -72,8 +72,6 @@ export interface GroupsData {
 
 type GroupsStatus =
   { phase: 'loading' } | { phase: 'ready'; data: GroupsData } | { phase: 'error'; message: string };
-
-const CURRENT_GROUP_KEY = 'current_group';
 
 const GroupsContext = createContext<GroupsStatus>({ phase: 'loading' });
 

@@ -4,6 +4,102 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-12 — Step 36: il refresh in background, che senza sincronizzare non servirebbe a niente
+
+L'ultimo step del filone widget, e l'unico del piano v5 marcato **opzionale**: i widget si
+aggiornano da soli ogni mezz'ora, con l'app chiusa.
+
+**La prima cosa scoperta è che l'idea ovvia non funziona.** «Refresh in background» suona come
+«ogni tanto rifai i conti», e rifare i conti non cambierebbe **niente**: il documento locale non
+si muove da solo, perché il motore di sync gira solo dentro l'app. Un ricalcolo periodico
+darebbe gli stessi numeri di prima, con una sola eccezione — il primo del mese, quando il totale
+deve ripartire da zero. L'unica cosa che rende vivo un widget di spese **condivise** è andare a
+vedere se l'altro telefono ha scritto qualcosa: quindi il task headless non ricalcola, **fa un
+giro di sync**. Monta il vault, parla col relay, applica quello che arriva e riscrive il
+foglietto — cioè fa fuori dall'albero React quello che `VaultProvider` fa dentro.
+
+**La seconda scoperta è che non serviva nessuna libreria nuova.** `expo-background-task` e
+`expo-task-manager` non sono installati e sarebbero stati due moduli nativi in più; ma il
+provider dei widget ha già la sua sveglia — `updatePeriodMillis` in `app.json`, minimo trenta
+minuti — e quella sveglia entra dal `WIDGET_UPDATE` del task headless che esiste dallo Step 34.
+Lo step è quindi **una riga di configurazione e un file di logica**. Ha però un prezzo che va
+detto chiaro: `updatePeriodMillis` finisce nell'XML del provider, quindi **serve una build EAS
+nuova**, la seconda del piano v5.
+
+C'è anche un vantaggio che una libreria di background generica non avrebbe dato: la sveglia
+esiste **solo se un widget è davvero sulla home**. Chi non li usa non paga nulla — né batteria,
+né rete, né una riga di codice eseguita.
+
+**`WIDGET_UPDATE` e non tutti gli eventi.** Android manda `WIDGET_ADDED` quando il widget viene
+trascinato sulla home e `WIDGET_RESIZED` quando lo si ridimensiona: sono i due momenti in cui
+qualcuno **sta guardando** il rettangolo, e infilarci davanti un giro di rete da qualche secondo
+lo lascerebbe vuoto proprio allora. Quelli disegnano subito quello che c'è su disco. Il giro di
+rete sta sulla sveglia periodica, che arriva quando non guarda nessuno.
+
+**Tre guardie, e ognuna chiude un modo di fare danno:**
+
+- **Se l'app è in primo piano non si fa niente.** Con l'app aperta c'è già un `SyncEngine` su
+  quel vault, e un secondo motore vuol dire due scritture concorrenti sulla stessa
+  `y_updates_<id>`. Yjs regge la duplicazione — gli update sono commutativi e idempotenti — ma la
+  **compattazione** no: cancella la tabella e la riscrive, e un update infilato nel mezzo
+  dall'altro motore si perderebbe. E comunque sarebbe inutile: ad app aperta ci pensa
+  `WidgetPublisher`.
+- **Venticinque minuti di attesa fra un giro e l'altro**, contro i trenta della sveglia. Il
+  motivo principale è banale e frequente: **due widget sulla home sono due risvegli**, perché
+  Android chiama un provider per volta. Senza la soglia sarebbero due giri di rete identici a
+  distanza di un istante. I cinque minuti di scarto ci sono perché Android non promette la
+  puntualità, e una soglia uguale al periodo scarterebbe il giro arrivato in anticipo.
+- **Il task non semina niente.** `VaultProvider` chiama `seedDefaults` quando monta un gruppo;
+  qui no, e la differenza è di sostanza: seminare le categorie è una **scrittura nel documento
+  condiviso**, e un telefono che scrive nel vault mentre nessuno lo usa è esattamente ciò che un
+  refresh non deve fare. Qui si legge, si riceve, e si scrive solo su `app_meta`, che è locale.
+
+**Una cosa che lo step regala senza prometterla:** `engine.start()` mette in coda il delta fra il
+documento e l'ultima pubblicazione riuscita. Se l'app era stata chiusa senza rete, le spese
+registrate allora **partono da qui**, senza aspettare che qualcuno la riapra. Il nome dello step
+dice «refresh», ma metà del valore è nell'altra direzione.
+
+**`composeSnapshot` è nato da qui.** Fino al 35 il conto stava nel `useMemo` di
+`WidgetPublisher`, ed era il posto giusto con un chiamante solo. Adesso ce ne sono due, e sono i
+più lontani possibile fra loro: uno dentro React con gli hook sul vault montato, l'altro in un
+task headless che il vault se lo monta da sé. Due copie che devono dare lo stesso numero, di cui
+una impossibile da guardare mentre gira, sono la duplicazione che diverge in silenzio. Stessa
+ragione per `CURRENT_GROUP_KEY`, uscita da `GroupsProvider`: il task deve rispondere **con la
+stessa costante** alla domanda «quale gruppo mostrare», o il widget racconterebbe un gruppo
+diverso da quello che si apre toccandolo.
+
+**Il threat model è stato aggiornato, con tre voci e non una.** Il refresh decifra il vault
+mentre nessuno guarda — non è un permesso nuovo, su Android la chiave è già leggibile dal
+processo in qualunque momento, ma sposta il **quando**. Ne segue una conseguenza da non
+scoprire più tardi: **un lock con biometria e il refresh in background si escludono a vicenda**,
+perché in background non c'è nessuno che possa autenticarsi. E c'è la voce che mancava dallo
+Step 34: i widget mostrano importi sulla home, cioè fuori dall'app, e chi non lo vuole ha un
+rimedio completo — non aggiungerli. Sull'analisi del traffico la nota cambia di segno: più
+richieste al relay, ma un ritmo regolare dice **meno** di prima su quando si usa l'app.
+
+**`packages/core` non è stato toccato**, per il sesto step di fila — e stavolta è il fatto più
+significativo dei sei: il task headless usa `SyncEngine`, `VaultStore` e `SqliteYPersistence`
+esattamente come li usa l'app, senza una riga di adattamento. È la ricompensa della regola dello
+Step 0, che il core non dipende dalla piattaforma né da React.
+
+**Verifica:** 1088 test verdi (588 core + 457 app + 43 relay, di cui 13 nuovi), typecheck, lint e
+`format:check` puliti, `expo export --platform android` completato, e `expo config --type
+introspect` conferma `updatePeriodMillis: 1800000` su entrambi i provider.
+
+**Serve una build EAS nuova, ed è l'unico modo di provare questo step.** Fino a quando non è
+installata, sul telefono non cambia niente: la build attuale ha `updatePeriodMillis: 0` e la
+sveglia non suona. Dopo l'installazione, nell'ordine: aggiungere un widget, registrare una spesa
+**sull'altro telefono**, e lasciar passare mezz'ora senza toccare il primo — il widget deve
+cambiare da solo. Poi il caso che vale il doppio: chiudere l'app in aereo dopo aver registrato
+una spesa, riaccendere la rete e **non riaprire l'app** — quella spesa deve arrivare all'altro
+telefono lo stesso. E la guardia: con l'app aperta davanti, il giro periodico non deve fare
+niente.
+
+**Prossimo:** il filone widget è chiuso. Restano lo Step 37 (infrastruttura i18n), il 38–39
+(traduzione EN) e il 40, la verifica end-to-end su telefono reale che chiude il piano v5.
+
+---
+
 ## 2026-08-12 — Step 35: il totale del mese, e il conto che lo Step 34 aveva pagato in anticipo
 
 Il secondo dei due widget, e il piano v5 chiude il filone dei widget. Il totale speso nel mese

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { computeBalances, monthBounds, simplifyDebts } from '@jutrack/core';
+import { monthBounds } from '@jutrack/core';
 import { currentMonth, formatMonthTitle } from '@/features/expenses/grouping';
 import {
   useAppData,
@@ -11,8 +11,8 @@ import {
   useSettlements,
   useVaultStatus,
 } from '@/state';
+import { composeSnapshot } from './compose';
 import { publishSnapshot } from './publish';
-import { balanceSnapshot, monthSnapshot } from './snapshot';
 
 /**
  * Tiene aggiornato il foglietto dei widget. Non disegna niente **dentro** l'app.
@@ -76,35 +76,24 @@ function Publish({ vaultId }: { vaultId: string }) {
 
   const groupName = groups.find((group) => group.vaultId === vaultId)?.name ?? 'Gruppo';
 
-  const snapshot = useMemo(() => {
-    const namesById = new Map(members.map((member) => [member.id, member.name]));
-    return {
-      balance: balanceSnapshot({
+  // Il conto sta in `compose.ts` e non qui dallo Step 36: da allora ha un secondo chiamante,
+  // il task headless che rifà gli stessi numeri mentre l'app non esiste. Due copie che devono
+  // dare lo stesso risultato, di cui una impossibile da guardare mentre gira, sono il genere
+  // di duplicazione che diverge in silenzio.
+  const snapshot = useMemo(
+    () =>
+      composeSnapshot({
         groupName,
-        transfers: simplifyDebts(
-          computeBalances(
-            expenses,
-            settlements,
-            members.map((member) => member.id),
-          ),
-        ),
+        expenses,
+        monthExpenses,
+        settlements,
+        members,
         myMemberId,
-        memberCount: members.length,
-        // Lo stesso ripiego della card in cima alle spese: un membro mai sincronizzato dà
-        // una frase incompleta, non un widget che non si disegna.
-        nameOf: (id) => namesById.get(id) ?? 'qualcuno',
-        symbol,
-      }),
-      month: monthSnapshot({
-        groupName,
-        // Il totale del **gruppo**, non la mia quota: è il numero grande della card in cima
-        // alle spese, e non può essere due numeri diversi in due posti.
-        totalCents: monthExpenses.reduce((sum, expense) => sum + expense.amountCents, 0),
         monthTitle: formatMonthTitle(month),
         symbol,
       }),
-    };
-  }, [groupName, expenses, settlements, members, myMemberId, symbol, monthExpenses, month]);
+    [groupName, expenses, monthExpenses, settlements, members, myMemberId, month, symbol],
+  );
 
   /**
    * I giri si mettono in fila, non in parallelo — stessa ragione dei due watcher.

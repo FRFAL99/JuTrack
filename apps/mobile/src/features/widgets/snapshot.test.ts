@@ -3,8 +3,10 @@ import type { Transfer } from '@jutrack/core';
 import {
   balanceSnapshot,
   changedWidgets,
+  dueForRefresh,
   monthSnapshot,
   parseSnapshot,
+  REFRESH_COOLDOWN_MS,
   serializeSnapshot,
   type BalanceSnapshot,
   type WidgetSnapshot,
@@ -234,5 +236,41 @@ describe('changedWidgets', () => {
       'Balance',
       'MonthTotal',
     ]);
+  });
+});
+
+describe('dueForRefresh', () => {
+  const ORA = 1_760_000_000_000;
+
+  it('parte se non è mai stato fatto un giro', () => {
+    expect(dueForRefresh(null, ORA)).toBe(true);
+  });
+
+  it('aspetta se il giro è appena stato fatto', () => {
+    // È il caso di tutti i giorni: due widget sulla home sono **due** risvegli, e senza
+    // questa riga sarebbero due giri di rete identici a distanza di un istante.
+    expect(dueForRefresh(String(ORA - 60_000), ORA)).toBe(false);
+  });
+
+  it('riparte appena passata la soglia', () => {
+    expect(dueForRefresh(String(ORA - REFRESH_COOLDOWN_MS), ORA)).toBe(true);
+  });
+
+  it('resta sotto la soglia un istante prima', () => {
+    expect(dueForRefresh(String(ORA - REFRESH_COOLDOWN_MS + 1), ORA)).toBe(false);
+  });
+
+  it('parte su un valore illeggibile invece di restare fermo per sempre', () => {
+    // La direzione dell'errore che costa meno: un giro di troppo una volta sola, invece di
+    // widget che non si aggiornano mai e non dicono perché.
+    expect(dueForRefresh('ieri', ORA)).toBe(true);
+    expect(dueForRefresh('', ORA)).toBe(true);
+    expect(dueForRefresh('0', ORA)).toBe(true);
+  });
+
+  it('parte anche se l’ultimo giro risulta nel futuro', () => {
+    // Capita spostando l'orologio del telefono: aspettare vorrebbe dire widget fermi fino a
+    // quando quell'istante arriva davvero.
+    expect(dueForRefresh(String(ORA + 3_600_000), ORA)).toBe(true);
   });
 });

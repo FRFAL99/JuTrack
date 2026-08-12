@@ -1,6 +1,7 @@
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 import { markError } from '@/diagnostics';
 import { ExpoSqliteDatabase, SqliteAppMeta } from '@/platform';
+import { refreshWidgetsInBackground } from './refresh';
 import { NOTHING_KNOWN, parseSnapshot, SNAPSHOT_KEY, type WidgetSnapshot } from './snapshot';
 import { balanceView, monthView } from './views';
 
@@ -32,6 +33,16 @@ export async function handleWidgetTask({
   // senza un contenuto qui, e mostrargli il saldo vorrebbe dire un numero giusto sotto
   // l'etichetta sbagliata.
   if (widgetName !== 'Balance' && widgetName !== 'MonthTotal') return;
+
+  // **`WIDGET_UPDATE` è la sveglia periodica, e solo lei** (Step 36). Android la manda ogni
+  // `updatePeriodMillis`, e dopo un riavvio del telefono; `WIDGET_ADDED` e `WIDGET_RESIZED`
+  // arrivano invece con qualcuno che sta **guardando** il rettangolo, e lì un giro di rete da
+  // qualche secondo lascerebbe il widget vuoto proprio nell'istante in cui viene aggiunto.
+  // Quelli si disegnano subito con ciò che c'è su disco.
+  //
+  // Non si attende con ansia l'esito: se il giro fallisce o viene saltato, sotto si disegna
+  // comunque il foglietto di prima, che era vero quando è stato scritto.
+  if (widgetAction === 'WIDGET_UPDATE') await refreshWidgetsInBackground();
 
   let snapshot: WidgetSnapshot = NOTHING_KNOWN;
   try {
