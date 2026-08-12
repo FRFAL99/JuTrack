@@ -5,10 +5,10 @@ import {
   type WidgetRepresentation,
 } from 'react-native-android-widget';
 import { darkPalette, fontSize, lightPalette, radius, spacing, type Palette } from '@/theme/tokens';
-import { UNKNOWN_BALANCE, type BalanceSnapshot } from './snapshot';
+import type { WidgetLines } from './snapshot';
 
 /**
- * Il widget «Saldo del gruppo aperto», disegnato sulla home di Android.
+ * Il rettangolo che entrambi i widget disegnano sulla home di Android.
  *
  * **Non è React Native**, benché sia JSX: `FlexWidget` e `TextWidget` non producono viste ma
  * un albero che il modulo nativo traduce in `RemoteViews`, cioè nell'unico linguaggio che il
@@ -17,7 +17,7 @@ import { UNKNOWN_BALANCE, type BalanceSnapshot } from './snapshot';
  * un sottoinsieme di stili, e i colori come stringhe esadecimali letterali.
  *
  * Perciò dell'app si riusa la sola cosa che si può riusare davvero: i **token**. Se domani
- * la palette cambia, cambia anche il widget — mentre i tre `<Text>` della card in cima alle
+ * la palette cambia, cambiano anche i widget — mentre i tre `<Text>` della card in cima alle
  * spese non sono riusabili qui nemmeno volendo.
  *
  * **Due palette e non una.** `WidgetRepresentation` accetta `{ light, dark }` e Android
@@ -26,8 +26,14 @@ import { UNKNOWN_BALANCE, type BalanceSnapshot } from './snapshot';
  * chiusa. Non è un caso di margine: il tema si cambia molto più spesso di quanto si riapra
  * un'app.
  *
- * Tutto il rettangolo apre l'app (`OPEN_APP`): un widget di saldo che non si può toccare
+ * Tutto il rettangolo apre l'app (`OPEN_APP`): un widget di soldi che non si può toccare
  * costringe a cercare l'icona altrove, e non c'è nessun'altra azione da offrire qui.
+ *
+ * **Un solo rettangolo per due widget**, e non è una scorciatoia: il saldo e il totale del
+ * mese sono due numeri diversi nello stesso posto — gruppo sopra, cifra in mezzo, spiegazione
+ * sotto — e due copie del file avrebbero fatto divergere il secondo dal primo alla prima
+ * ritoccata. La sola differenza è il **colore della cifra**, che chi chiama passa: il saldo ha
+ * un verso, una somma di spese no.
  */
 
 /**
@@ -39,20 +45,16 @@ import { UNKNOWN_BALANCE, type BalanceSnapshot } from './snapshot';
  * l'alternativa, riscrivere la palette a mano in questo file, sarebbe la duplicazione che
  * l'intero passo 1 del redesign esiste per evitare.
  */
-const hex = (color: string): HexColor => color as HexColor;
+export const hex = (color: string): HexColor => color as HexColor;
 
-/** Il colore del numero grande: il segno del saldo, con i colori di entrate e uscite. */
-function amountColor(palette: Palette, tone: BalanceSnapshot['tone']): HexColor {
-  if (tone === 'credit') return hex(palette.income);
-  if (tone === 'debt') return hex(palette.expense);
-  return hex(palette.text);
-}
+/** Da che colore si scrive la cifra grande, dato il tema. */
+export type InkOf = (palette: Palette) => HexColor;
 
-function BalanceCard({ balance, palette }: { balance: BalanceSnapshot; palette: Palette }) {
+function Card({ lines, ink, palette }: { lines: WidgetLines; ink: InkOf; palette: Palette }) {
   return (
     <FlexWidget
       clickAction="OPEN_APP"
-      accessibilityLabel={`${balance.group}: ${balance.caption} ${balance.amount}`}
+      accessibilityLabel={`${lines.group}: ${lines.caption} ${lines.amount}`}
       style={{
         height: 'match_parent',
         width: 'match_parent',
@@ -64,7 +66,7 @@ function BalanceCard({ balance, palette }: { balance: BalanceSnapshot; palette: 
       }}
     >
       <TextWidget
-        text={balance.group}
+        text={lines.group}
         maxLines={1}
         truncate="END"
         style={{ fontSize: fontSize.xs, color: hex(palette.textMuted) }}
@@ -73,17 +75,17 @@ function BalanceCard({ balance, palette }: { balance: BalanceSnapshot; palette: 
           e «1.234,56 €» in una cella stretta verrebbe troncato proprio sulle cifre che
           sono la ragione per cui il widget è lì. */}
       <TextWidget
-        text={balance.amount}
+        text={lines.amount}
         maxLines={1}
         style={{
           fontSize: fontSize.xl,
           fontWeight: 'bold',
           adjustsFontSizeToFit: true,
-          color: amountColor(palette, balance.tone),
+          color: ink(palette),
         }}
       />
       <TextWidget
-        text={balance.caption}
+        text={lines.caption}
         maxLines={2}
         truncate="END"
         style={{ fontSize: fontSize.xs, color: hex(palette.textMuted) }}
@@ -92,16 +94,10 @@ function BalanceCard({ balance, palette }: { balance: BalanceSnapshot; palette: 
   );
 }
 
-/**
- * Il widget pronto da consegnare al sistema, in tema chiaro e scuro.
- *
- * `null` non è un errore: è il primo avvio e il telefono appena azzerato, e in entrambi i
- * casi c'è una frase giusta da mostrare invece di un rettangolo vuoto.
- */
-export function balanceView(balance: BalanceSnapshot | null): WidgetRepresentation {
-  const shown = balance ?? UNKNOWN_BALANCE;
+/** Il rettangolo pronto da consegnare al sistema, nei due temi. */
+export function widgetCard(lines: WidgetLines, ink: InkOf): WidgetRepresentation {
   return {
-    light: <BalanceCard balance={shown} palette={lightPalette} />,
-    dark: <BalanceCard balance={shown} palette={darkPalette} />,
+    light: <Card lines={lines} ink={ink} palette={lightPalette} />,
+    dark: <Card lines={lines} ink={ink} palette={darkPalette} />,
   };
 }

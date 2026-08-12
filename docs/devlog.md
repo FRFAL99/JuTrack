@@ -4,6 +4,76 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-12 — Step 35: il totale del mese, e il conto che lo Step 34 aveva pagato in anticipo
+
+Il secondo dei due widget, e il piano v5 chiude il filone dei widget. Il totale speso nel mese
+dal gruppo aperto, sulla home di Android, accanto al saldo.
+
+**Lo step è piccolo, e questa è la notizia.** Lo Step 34 aveva scritto tre cose prevedendo
+questa sessione — un campo per widget nel foglietto, la lettura difensiva campo per campo, il
+rettangolo con gruppo/cifra/didascalia — e tutte e tre hanno retto: `month` è entrato accanto a
+`balance` **senza toccare una riga del saldo**, e un telefono rimasto al foglietto dello Step 34
+continua a disegnare il saldo con il totale assente, invece del foglietto intero illeggibile.
+C'è il test che lo dice. È la stessa promessa che `parseSettings` aveva mantenuto quando lo
+Step 33 ha aggiunto il terzo interruttore.
+
+**La didascalia nomina il mese, e non dice «questo mese».** È la decisione dello step, e vale
+più del numero che le sta sopra: senza refresh in background il widget resta fermo all'ultima
+apertura dell'app, quindi il primo di settembre «speso questo mese» sopra il totale di agosto
+sarebbe una **frase falsa scritta da noi**. «Speso in agosto» resta vero anche vecchio di un
+giorno — dice qualcosa di meno, non qualcosa di sbagliato. È la stessa regola dei due testi del
+promemoria (Step 31) e di «Metà e metà»: si sceglie la frase che il tempo non può smentire. E
+`in` invece di `a` regge tutti e dodici i mesi senza dover scegliere fra «a gennaio» e «ad
+agosto», che è un modo di sbagliare che si presenterebbe una volta l'anno.
+
+**Il totale è quello del gruppo, non la mia quota.** È il numero grande della card in cima alle
+spese, contato sulle stesse spese e con lo stesso taglio del mese: due posti che mostrano lo
+stesso importo devono mostrare lo stesso importo, e la quota personale ha già il suo posto — il
+saldo, cioè l'altro widget.
+
+**Il totale del mese non è rosso, e non è una dimenticanza.** `colors.expense` è il colore di
+**un'uscita**; tingere di rosso la somma di tutte le spese del mese la trasformerebbe in un
+allarme. A dire se si sta spendendo troppo c'è il budget, che ha una soglia, un colore e una
+notifica sua (Step 32). Questo è un numero, e un numero non giudica.
+
+**`changedWidgets` ha sostituito `sameSnapshot`, ed è la stessa domanda fatta meglio.** Con un
+widget solo bastava sapere **se** qualcosa era cambiato; con due serve sapere **quali**, perché
+i due numeri cambiano in momenti diversi: una spesa che pago io e tengo per me sposta il totale
+del mese e non il saldo, un pareggio sposta il saldo e non il totale. Senza la distinzione, ogni
+spesa manderebbe due giri di `RemoteViews` al launcher invece di uno — cioè il doppio del costo
+per metà dell'informazione.
+
+**Un `WidgetPublisher` solo, e non uno per widget.** I due numeri dipendono dallo stesso
+documento e cambiano nello stesso istante: due componenti avrebbero letto e riscritto lo stesso
+`app_meta` a turno, con le due letture accavallate che `chain` esiste per evitare. Distinguere
+chi è cambiato è un lavoro da fare **dopo** aver calcolato entrambi.
+
+**Il rettangolo è uno solo per due widget** (`WidgetCard.tsx`), e la sola differenza fra i due è
+il colore della cifra, che chi disegna passa come funzione del tema. Due copie del file avrebbero
+fatto divergere il secondo widget dal primo alla prima ritoccata. `BalanceWidget.tsx` è diventato
+`views.tsx`: venti righe che dicono soltanto quale numero va di che colore.
+
+**`packages/core` non è stato toccato**, per il quinto step di fila.
+
+**Verifica:** 1075 test verdi (588 core + 444 app + 43 relay, di cui 7 nuovi), typecheck, lint e
+`format:check` puliti, `expo export --platform android` completato, con «Speso in» e `MonthTotal`
+verificati dentro il bundle.
+
+**Sul telefono, e stavolta c'è una prova che il 34 non poteva fare.** Nell'ordine: aggiungere
+«JuTrack — speso questo mese» e vedere se si popola; registrare una spesa e guardare **quale dei
+due widget si aggiorna** — una spesa tutta mia deve muovere il totale e lasciare fermo il saldo;
+riavviare il telefono, che è il caso del task headless con due nomi da distinguere invece di
+uno; e i due widget affiancati sulla home, che devono leggersi come due cose diverse e non come
+lo stesso rettangolo ripetuto. La prova che chiede pazienza è il **primo del mese**: il totale
+deve ripartire da zero alla prima apertura dell'app, e fino ad allora la didascalia deve dire il
+mese giusto per il numero che mostra.
+
+**Prossimo:** il piano v5 arriva allo Step 36, dichiarato **opzionale**: il refresh in background
+via `WorkManager`. Va deciso dopo l'uso reale dei due widget, non prima — e se il refresh ad
+apertura app basta, si salta e si va allo Step 37, l'infrastruttura i18n.
+
+---
+
 ## 2026-08-12 — Step 34: il widget del saldo, che si disegna senza l'app
 
 Il primo dei due widget dichiarati in `app.json` allo Step 30: il saldo del gruppo aperto,

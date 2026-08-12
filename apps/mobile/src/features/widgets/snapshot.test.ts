@@ -2,10 +2,12 @@ import { describe, expect, it } from 'vitest';
 import type { Transfer } from '@jutrack/core';
 import {
   balanceSnapshot,
+  changedWidgets,
+  monthSnapshot,
   parseSnapshot,
-  sameSnapshot,
   serializeSnapshot,
   type BalanceSnapshot,
+  type WidgetSnapshot,
 } from './snapshot';
 
 const IO = 'membro-io';
@@ -28,6 +30,10 @@ function snapshotOf(transfers: Transfer[], memberCount = 2): BalanceSnapshot {
     nameOf,
     symbol: '€',
   });
+}
+
+function monthOf(totalCents: number, monthTitle = 'agosto'): WidgetSnapshot['month'] {
+  return monthSnapshot({ groupName: 'Casa', totalCents, monthTitle, symbol: '€' });
 }
 
 describe('balanceSnapshot', () => {
@@ -89,23 +95,58 @@ describe('balanceSnapshot', () => {
   });
 });
 
+describe('monthSnapshot', () => {
+  it('nomina il mese invece di dire «questo mese»', () => {
+    // È la frase che il tempo non può smentire: il primo di settembre, un widget fermo a
+    // ieri direbbe comunque il vero — «speso in agosto» sopra il totale di agosto.
+    expect(monthOf(34050)?.caption).toBe('Speso in agosto');
+  });
+
+  it('regge tutti i mesi senza scegliere fra «a» e «ad»', () => {
+    expect(monthOf(0, 'gennaio')?.caption).toBe('Speso in gennaio');
+    expect(monthOf(0, 'ottobre')?.caption).toBe('Speso in ottobre');
+  });
+
+  it('porta l’anno quando la schermata glielo dà', () => {
+    // `formatMonthTitle` aggiunge l'anno solo se non è quello in corso: qui non si decide
+    // niente, si scrive quello che arriva.
+    expect(monthOf(0, 'agosto 2025')?.caption).toBe('Speso in agosto 2025');
+  });
+
+  it('mostra un totale a zero come importo, non come assenza', () => {
+    // «0,00 €» in un mese appena cominciato è un'informazione; un trattino sarebbe un
+    // guasto.
+    expect(monthOf(0)?.amount).toBe('0,00 €');
+  });
+
+  it('usa il simbolo della valuta scelta nel profilo', () => {
+    const snapshot = monthSnapshot({
+      groupName: 'Casa',
+      totalCents: 34050,
+      monthTitle: 'agosto',
+      symbol: '£',
+    });
+    expect(snapshot.amount).toBe('340,50 £');
+  });
+});
+
 describe('parseSnapshot', () => {
   it('rilegge quello che ha scritto', () => {
-    const snapshot = { balance: snapshotOf([transfer(JUJU, IO, 2500)]) };
+    const snapshot = { balance: snapshotOf([transfer(JUJU, IO, 2500)]), month: monthOf(34050) };
     expect(parseSnapshot(serializeSnapshot(snapshot))).toEqual(snapshot);
   });
 
   it('legge «non lo so» dove non c’è ancora niente', () => {
-    expect(parseSnapshot(null)).toEqual({ balance: null });
+    expect(parseSnapshot(null)).toEqual({ balance: null, month: null });
   });
 
   it('non cade su un foglietto illeggibile', () => {
-    expect(parseSnapshot('{')).toEqual({ balance: null });
-    expect(parseSnapshot('[]')).toEqual({ balance: null });
-    expect(parseSnapshot('"Casa"')).toEqual({ balance: null });
+    expect(parseSnapshot('{')).toEqual({ balance: null, month: null });
+    expect(parseSnapshot('[]')).toEqual({ balance: null, month: null });
+    expect(parseSnapshot('"Casa"')).toEqual({ balance: null, month: null });
   });
 
-  it('scarta un saldo a cui manca una delle tre righe', () => {
+  it('scarta un widget a cui manca una delle tre righe', () => {
     // Mezza riga disegnata si legge come un guasto; «apri l'app» si legge come un'attesa.
     const raw = JSON.stringify({ balance: { group: 'Casa', amount: '25,00 €' } });
     expect(parseSnapshot(raw).balance).toBeNull();
@@ -121,35 +162,55 @@ describe('parseSnapshot', () => {
     expect(parseSnapshot(raw).balance?.amount).toBe('25,00 €');
   });
 
-  it('legge il saldo anche da un foglietto con campi che non conosce', () => {
-    // Lo Step 35 ne aggiungerà uno accanto: un telefono rimasto indietro deve continuare a
-    // disegnare il saldo, non a spegnersi perché è comparsa una chiave in più.
+  it('legge il saldo da un foglietto scritto prima che il mese esistesse', () => {
+    // È la promessa che lo Step 34 aveva fatto al 35: il campo nuovo entra accanto, e un
+    // telefono rimasto indietro continua a disegnare il saldo invece di spegnersi.
     const raw = JSON.stringify({
       balance: { group: 'Casa', amount: '25,00 €', caption: 'Juju ti deve', tone: 'credit' },
-      month: { total: '120,00 €' },
     });
     expect(parseSnapshot(raw).balance?.caption).toBe('Juju ti deve');
+    expect(parseSnapshot(raw).month).toBeNull();
+  });
+
+  it('non lascia che un mese scritto male porti via il saldo', () => {
+    const raw = JSON.stringify({
+      balance: { group: 'Casa', amount: '25,00 €', caption: 'Juju ti deve', tone: 'credit' },
+      month: 'agosto',
+    });
+    expect(parseSnapshot(raw).balance).not.toBeNull();
+    expect(parseSnapshot(raw).month).toBeNull();
   });
 });
 
-describe('sameSnapshot', () => {
-  it('riconosce due foglietti identici, e non sveglia il widget', () => {
-    const a = { balance: snapshotOf([transfer(JUJU, IO, 2500)]) };
-    const b = { balance: snapshotOf([transfer(JUJU, IO, 2500)]) };
-    expect(sameSnapshot(a, b)).toBe(true);
+describe('changedWidgets', () => {
+  const empty: WidgetSnapshot = { balance: null, month: null };
+
+  it('non sveglia nessuno quando non è cambiato niente', () => {
+    const snapshot = { balance: snapshotOf([transfer(JUJU, IO, 2500)]), month: monthOf(34050) };
+    const identical = { balance: snapshotOf([transfer(JUJU, IO, 2500)]), month: monthOf(34050) };
+    expect(changedWidgets(snapshot, identical)).toEqual([]);
   });
 
-  it('vede la differenza quando cambia il saldo', () => {
-    const a = { balance: snapshotOf([transfer(JUJU, IO, 2500)]) };
-    const b = { balance: snapshotOf([transfer(JUJU, IO, 3000)]) };
-    expect(sameSnapshot(a, b)).toBe(false);
+  it('sveglia il solo mese quando una spesa non tocca il saldo', () => {
+    // Una spesa che pago io e tengo per me sposta il totale del mese e non il saldo: è il
+    // caso per cui questa funzione risponde «quali» invece di «sì o no».
+    const before = { balance: snapshotOf([]), month: monthOf(1000) };
+    const after = { balance: snapshotOf([]), month: monthOf(2500) };
+    expect(changedWidgets(before, after)).toEqual(['MonthTotal']);
   });
 
-  it('vede la differenza quando cambia il gruppo aperto', () => {
-    // Cambiare gruppo non cambia i numeri di nessuno dei due, ma cambia quale dei due si
-    // guarda: se questo confronto non lo vedesse, il widget resterebbe sul gruppo di prima.
-    const a = { balance: snapshotOf([]) };
-    const b = {
+  it('sveglia il solo saldo quando cambia un pareggio', () => {
+    // Un pareggio azzera un debito senza aggiungere spese: il totale del mese resta quello.
+    const before = { balance: snapshotOf([transfer(JUJU, IO, 2500)]), month: monthOf(1000) };
+    const after = { balance: snapshotOf([]), month: monthOf(1000) };
+    expect(changedWidgets(before, after)).toEqual(['Balance']);
+  });
+
+  it('sveglia entrambi quando cambia il gruppo aperto', () => {
+    // Cambiare gruppo non cambia i numeri di nessuno dei due gruppi, ma cambia quale dei due
+    // si guarda: se il confronto non lo vedesse, i widget resterebbero sul gruppo di prima.
+    const before = { balance: snapshotOf([]), month: monthOf(1000) };
+    const after = {
       balance: balanceSnapshot({
         groupName: 'Vacanza',
         transfers: [],
@@ -158,11 +219,20 @@ describe('sameSnapshot', () => {
         nameOf,
         symbol: '€',
       }),
+      month: monthSnapshot({
+        groupName: 'Vacanza',
+        totalCents: 1000,
+        monthTitle: 'agosto',
+        symbol: '€',
+      }),
     };
-    expect(sameSnapshot(a, b)).toBe(false);
+    expect(changedWidgets(before, after)).toEqual(['Balance', 'MonthTotal']);
   });
 
-  it('vede la differenza fra «non lo so» e un saldo', () => {
-    expect(sameSnapshot({ balance: null }, { balance: snapshotOf([]) })).toBe(false);
+  it('vede la differenza fra «non lo so» e un numero', () => {
+    expect(changedWidgets(empty, { balance: snapshotOf([]), month: monthOf(0) })).toEqual([
+      'Balance',
+      'MonthTotal',
+    ]);
   });
 });

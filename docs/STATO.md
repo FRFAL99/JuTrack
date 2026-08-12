@@ -6,16 +6,17 @@ quinto piano è cominciato**. Il quarto — [piano-v4-grafici-e-dashboard.md](pi
 sono chiusi da prima ([visualdesign.md](visualdesign.md)). Lo stesso giorno è stato scritto il
 **quinto piano**, [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md) —
 notifiche locali, due widget Android, valuta e lingua nel profilo — e oggi ne sono entrati nel codice
-i **primi sei step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa, il
-promemoria spese, l'avviso di budget, quello di sincronizzazione ferma e il primo dei due widget.
+i **primi sette step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa, il
+promemoria spese, l'avviso di budget, quello di sincronizzazione ferma e **tutti e due i widget**.
 
 > **La build EAS dello [Step 30](#linfrastruttura-nativa-step-30) è installata e verificata** — la
-> diagnostica dice **16 passaggi su 16** — e con lei i due moduli nativi sono sul telefono. Lo
-> Step 35 lavora in JS sopra quella build e **non ne chiede altre**. **Le tre notifiche sono
-> tutte nel codice**: lo [Step 31](#il-promemoria-spese-step-31), lo
-> [Step 32](#lavviso-di-budget-step-32) e lo [Step 33](#la-sincronizzazione-ferma-step-33) sono
-> chiusi, e con loro il [34](#il-widget-del-saldo-step-34), il widget del saldo; il prossimo è il
-> 35, il secondo widget.
+> diagnostica dice **16 passaggi su 16** — e con lei i due moduli nativi sono sul telefono.
+> **Notifiche e widget sono tutti nel codice**: lo [Step 31](#il-promemoria-spese-step-31), lo
+> [Step 32](#lavviso-di-budget-step-32) e lo [Step 33](#la-sincronizzazione-ferma-step-33) per le
+> tre notifiche, il [34](#il-widget-del-saldo-step-34) e il
+> [35](#il-totale-del-mese-step-35) per i due widget. **Il prossimo passo è una decisione, non
+> del codice**: lo Step 36 è dichiarato opzionale dal piano e va deciso **dopo** aver usato i
+> widget su un telefono vero. Se il refresh ad apertura app basta, si salta e si va al 37, l'i18n.
 >
 > **Fra i primi quattro piani non c'è più uno step scritto da fare: quello che resta è la prova su
 > due telefoni veri**, e i criteri di «fatto» di tutti e quattro ci passano in mezzo. Il piano v5 è
@@ -63,7 +64,7 @@ Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 | 27 — I sei filtri              | ✅    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
 | 28 — La dashboard componibile  | ✅    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
 
-Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **sei
+Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **sette
 step su dodici nel codice**:
 
 | Step                               | Stato | Cosa contiene                                                          |
@@ -74,7 +75,7 @@ step su dodici nel codice**:
 | 32 — Avviso di budget              | ✅    | Watcher sul documento, segni in `app_meta`, gestore di primo piano     |
 | 33 — Sincronizzazione ferma        | ✅    | Terzo interruttore, watcher sulla fase, scadenza di 24 h su disco      |
 | 34 — Widget «Saldo»                | ✅    | Foglietto in `app_meta`, task headless, `index.js` come entry          |
-| 35 — Widget «Speso questo mese»    | ⬜    | Stesso foglietto, stesso meccanismo di refresh                         |
+| 35 — Widget «Speso questo mese»    | ✅    | Stesso foglietto e stesso rettangolo, didascalia che nomina il mese    |
 | 36 — Refresh in background         | ⬜    | Opzionale, solo se il refresh ad apertura app non basta                |
 | 37 — Infrastruttura i18n           | ⬜    | `i18next`, campo `language` sul `Profile`, selettore in `tu.tsx`       |
 | 38–39 — Traduzione EN              | ⬜    | Schermata per schermata, un passo a sessione                           |
@@ -92,7 +93,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**1068 test verdi** (588 core + 437 app + 43 relay), typecheck, lint e `format:check` puliti.
+**1075 test verdi** (588 core + 444 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -827,9 +828,37 @@ Il saldo del gruppo aperto sulla schermata home di Android, primo dei due widget
   ad app chiusa. Dei componenti non si riusa niente (`RemoteViews`, non viste), dei token sì — e
   la palette ha ora un test che pretende `#RRGGBB`, perché il cast in `BalanceWidget.tsx` si fida
   di quello.
-- **`MonthTotal` risponde ma non disegna**: il provider è nel manifest dallo Step 30, il contenuto
-  è lo Step 35. Chi lo aggiunge oggi trova il rettangolo vuoto del launcher, che è meglio del
-  saldo mostrato sotto l'etichetta «speso questo mese».
+- **`MonthTotal` rispondeva ma non disegnava** fino allo Step 35, che gli ha dato un contenuto.
+
+## Il totale del mese (Step 35)
+
+Il secondo widget: quanto ha speso il gruppo aperto nel mese in corso. Chiude il filone dei
+widget del piano v5.
+
+- **Lo step è piccolo, ed è la notizia.** Le tre scelte dello Step 34 fatte prevedendo questa
+  sessione — un campo per widget nel foglietto, la lettura difensiva campo per campo, il
+  rettangolo condiviso — hanno retto tutte e tre: `month` è entrato accanto a `balance` **senza
+  toccare una riga del saldo**, e c'è il test che dice che un foglietto scritto dal 34 continua a
+  disegnare il saldo con il totale assente.
+- **La didascalia nomina il mese e non dice «questo mese»**, ed è la decisione dello step. Senza
+  refresh in background il numero resta quello dell'ultima apertura, quindi il primo di settembre
+  «speso questo mese» sopra il totale di agosto sarebbe una frase falsa scritta da noi. «Speso in
+  agosto» resta vero anche vecchio di un giorno. `in` e non `a` regge tutti e dodici i mesi senza
+  scegliere fra «a gennaio» e «ad agosto».
+- **Il totale è quello del gruppo, non la mia quota**: è lo stesso numero della card in cima alle
+  spese, contato sulle stesse spese. La quota personale ha già il suo posto, ed è il saldo.
+- **Non è rosso, e non è una dimenticanza.** `colors.expense` è il colore di un'uscita; la somma
+  di tutte le spese del mese tinta di rosso diventerebbe un allarme. A dire se si sta spendendo
+  troppo c'è il budget, che ha una soglia e una notifica sua.
+- **`changedWidgets` ha sostituito `sameSnapshot`.** Con un widget bastava sapere **se** qualcosa
+  era cambiato, con due serve sapere **quali**: una spesa tutta mia sposta il totale e non il
+  saldo, un pareggio il saldo e non il totale. Senza la distinzione ogni spesa manderebbe due
+  giri di `RemoteViews` al launcher invece di uno.
+- **Un `WidgetPublisher` solo**, perché i due numeri dipendono dallo stesso documento e cambiano
+  nello stesso istante: due componenti avrebbero riscritto lo stesso `app_meta` a turno, con le
+  letture accavallate che `chain` esiste per evitare.
+- **Un rettangolo solo per due widget** (`WidgetCard.tsx`): la sola differenza è il colore della
+  cifra, passato come funzione del tema. `BalanceWidget.tsx` è diventato `views.tsx`.
 
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
@@ -1093,8 +1122,8 @@ lista, non le toglie.
 - **Il selettore di widget di Android**, che la diagnostica non può guardare: tenendo premuto sulla
   home devono comparire «JuTrack — saldo» e «JuTrack — speso questo mese» con le loro descrizioni.
   `getWidgetInfo` prova che i provider **rispondono**; solo il selettore prova che etichette e
-  dimensioni sono quelle scritte in `app.json`. «Speso questo mese» aggiunto adesso resta **vuoto**,
-  ed è atteso: il suo contenuto è lo Step 35
+  dimensioni sono quelle scritte in `app.json`. Da qui in poi **entrambi** hanno un contenuto: un
+  widget che resta vuoto adesso è un difetto, non un'attesa
 - **Lo Step 34, che è il primo pezzo di JuTrack che vive fuori dall'app e non è verificabile
   altrimenti.** Nell'ordine: che il widget «JuTrack — saldo» aggiunto alla home **si popoli** invece
   di restare vuoto; che una spesa che sposta il saldo si veda sulla home **senza riaprire l'app**;
@@ -1105,8 +1134,16 @@ lista, non le toglie.
   non percorre mai, e il tocco sul rettangolo, che deve aprire l'app. Il primo avvio dopo questo
   step è anche la prima esecuzione di `index.js` come entry: se l'app si apre, quel cambio ha
   funzionato
+- **Lo Step 35, che aggiunge al 34 una prova che con un widget solo non si poteva fare**: registrare
+  una spesa e guardare **quale dei due si aggiorna** — una spesa tutta mia deve muovere il totale
+  del mese e lasciare fermo il saldo, un pareggio il contrario. Poi i due widget **affiancati sulla
+  home**, che devono leggersi come due cose diverse e non come lo stesso rettangolo ripetuto; e il
+  riavvio, che qui è il task headless con due nomi da distinguere invece di uno. La prova che chiede
+  pazienza è il **primo del mese**: il totale deve ripartire da zero alla prima apertura dell'app, e
+  fino ad allora la didascalia deve dire il mese giusto per il numero che mostra — è la ragione per
+  cui non dice «questo mese»
 
-Tutto il resto è verificato: 1068 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 1075 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 > **Lo Step 25 è entrato in questa lista attraverso il 26**, come era stato scritto: la geometria

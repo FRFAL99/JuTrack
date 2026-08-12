@@ -1,11 +1,11 @@
 import type { WidgetTaskHandlerProps } from 'react-native-android-widget';
 import { markError } from '@/diagnostics';
 import { ExpoSqliteDatabase, SqliteAppMeta } from '@/platform';
-import { balanceView } from './BalanceWidget';
-import { parseSnapshot, SNAPSHOT_KEY } from './snapshot';
+import { NOTHING_KNOWN, parseSnapshot, SNAPSHOT_KEY, type WidgetSnapshot } from './snapshot';
+import { balanceView, monthView } from './views';
 
 /**
- * Chi risponde quando è il **sistema** a chiedere il widget.
+ * Chi risponde quando è il **sistema** a chiedere un widget.
  *
  * Le occasioni sono quelle in cui l'app non c'entra niente e quasi sempre non gira: il
  * widget appena trascinato sulla home, il telefono riacceso, il rettangolo ridimensionato.
@@ -13,10 +13,10 @@ import { parseSnapshot, SNAPSHOT_KEY } from './snapshot';
  * tutto ciò che c'è. Non ha provider, non ha il documento montato, non ha il profilo: ha il
  * foglietto in `app_meta` che `WidgetPublisher` ha lasciato, e lo disegna.
  *
- * `requestWidgetUpdate` **non passa di qui**: quando è l'app a voler aggiornare il widget si
+ * `requestWidgetUpdate` **non passa di qui**: quando è l'app a voler aggiornare un widget si
  * porta dietro il proprio `renderWidget`, e lo fa in `publish.ts`. I due percorsi sono
- * separati apposta, e disegnano lo stesso `balanceView` da due punti diversi della stessa
- * verità su disco.
+ * separati apposta, e disegnano le stesse viste da due punti diversi della stessa verità su
+ * disco.
  */
 export async function handleWidgetTask({
   widgetInfo,
@@ -27,13 +27,13 @@ export async function handleWidgetTask({
   // lo stesso vorrebbe dire aprire il database per un rettangolo che non esiste.
   if (widgetAction === 'WIDGET_DELETED') return;
 
-  // `MonthTotal` è dichiarato nel manifest dallo Step 30 — andava fatto lì o sarebbe servita
-  // una seconda build EAS — ma il suo contenuto è lo Step 35. Chi lo aggiunge oggi trova il
-  // rettangolo vuoto del launcher: è meglio di un widget che dice il saldo sotto l'etichetta
-  // «speso questo mese», che sarebbe un numero giusto al posto sbagliato.
-  if (widgetInfo.widgetName !== 'Balance') return;
+  const { widgetName } = widgetInfo;
+  // Un nome che non conosciamo non si disegna: sarebbe un provider comparso nel manifest
+  // senza un contenuto qui, e mostrargli il saldo vorrebbe dire un numero giusto sotto
+  // l'etichetta sbagliata.
+  if (widgetName !== 'Balance' && widgetName !== 'MonthTotal') return;
 
-  let balance = null;
+  let snapshot: WidgetSnapshot = NOTHING_KNOWN;
   try {
     // **Una connessione tutta sua** (`isolated`), e non è un dettaglio: questo task può
     // partire mentre l'app è aperta e condividere con lei il runtime JS. Senza, expo-sqlite
@@ -42,18 +42,20 @@ export async function handleWidgetTask({
     const db = await ExpoSqliteDatabase.open('jutrack.db', { isolated: true });
     try {
       const meta = await SqliteAppMeta.open(db);
-      balance = parseSnapshot(await meta.get(SNAPSHOT_KEY)).balance;
+      snapshot = parseSnapshot(await meta.get(SNAPSHOT_KEY));
     } finally {
       // Il task muore subito dopo, ma non è detto che il processo muoia con lui: una
       // connessione lasciata aperta a ogni riavvio del telefono non si chiude più da sola.
       await db.close();
     }
   } catch (error) {
-    markError('lettura del foglietto per il widget', error);
+    markError('lettura del foglietto per i widget', error);
   }
 
-  // Si disegna **sempre**, anche dopo un errore: `balance` resta `null` e il widget dice
+  // Si disegna **sempre**, anche dopo un errore: il foglietto resta vuoto e il widget dice
   // «apri l'app». Uscire senza chiamare `renderWidget` lascerebbe sulla home il rettangolo
   // vuoto del launcher, che si legge come un'app rotta e non come un dato mancante.
-  renderWidget(balanceView(balance));
+  renderWidget(
+    widgetName === 'Balance' ? balanceView(snapshot.balance) : monthView(snapshot.month),
+  );
 }

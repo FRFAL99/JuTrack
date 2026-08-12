@@ -56,9 +56,9 @@ export function useWipeDevice(): WipeDeviceControl {
     void wipeDevice({ db, meta, keyStore: expoKeyStore, registry })
       .then(() => {
         // `wipeDevice` porta via anche il foglietto dei widget insieme al resto di
-        // `app_meta`, ma **nessuno ridisegna la home**: senza questa riga il saldo
-        // dell'ultimo gruppo resterebbe scritto sullo schermo di un telefono che di quel
-        // gruppo non sa più niente. Non si attende — è un rettangolo, non un dato — e se
+        // `app_meta`, ma **nessuno ridisegna la home**: senza questa riga i numeri
+        // dell'ultimo gruppo resterebbero scritti sullo schermo di un telefono che di quel
+        // gruppo non sa più niente. Non si attende — sono due rettangoli, non un dato — e se
         // fallisce non deve trattenere un azzeramento già riuscito.
         void clearWidgets();
         // Via da questa schermata **prima** di smontare l'albero. `forgetProfile()` fa
