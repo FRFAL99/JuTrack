@@ -4,6 +4,92 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-12 — Step 30: l'infrastruttura nativa, in un colpo solo
+
+`expo-notifications` e `react-native-android-widget` insieme in `app.json`, i due moduli
+caricati pigramente come già la fotocamera, e due passaggi nuovi nella diagnostica. **La build
+EAS non è ancora stata fatta**: è l'unica parte dello step che non si può scrivere, e il
+comando è in fondo a questa entry.
+
+**I due widget vanno dichiarati adesso, non agli Step 34–35.** È la scoperta dello step, e
+cambia il piano. Il config plugin di `react-native-android-widget` ha `widgets: Widget[]`
+**obbligatorio**, e ogni voce diventa un `<receiver>` `AppWidgetProvider` nel manifest: nome,
+etichetta, dimensioni minime, modo di ridimensionamento. È configurazione **nativa**, quindi
+aggiungere un widget dopo vorrebbe dire una seconda build EAS — cioè esattamente ciò che questo
+step esiste per evitare. `Balance` e `MonthTotal` sono dichiarati qui, e gli Step 34–35 restano
+JS puro sopra provider che esistono già.
+
+**`POST_NOTIFICATIONS` era già dichiarato, e il piano diceva di aggiungerlo.** Lo mette il
+manifest di `expo-notifications`, che il merger di Android fonde da sé. È rimasto lo stesso in
+`app.json` accanto a `CAMERA` — che è ridondante per la stessa ragione, la mette il plugin della
+fotocamera — perché `app.json` è il file che una persona legge per sapere cosa chiede l'app, e
+un permesso che compare solo dentro `node_modules` non lo sa nessuno.
+
+**Verificato con un `prebuild` usa e getta, non con la build.** `expo config --type introspect`
+**non espande l'AndroidManifest** — restituisce l'elenco dei permessi e nient'altro — quindi non
+poteva dire se i receiver dei widget nascevano davvero. Un `expo prebuild --platform android
+--no-install` in un `android/` buttato via subito dopo l'ha mostrato: `POST_NOTIFICATIONS`, i due
+receiver `.widget.Balance` e `.widget.MonthTotal` con i rispettivi `@xml/widgetprovider_*`, e i
+quattro `meta-data` dell'icona e del colore delle notifiche. Una build EAS sono quindici minuti:
+scoprire lì un nome sbagliato sarebbe stato pagarli per niente.
+
+**Due permessi in più che non c'entrano con questo step.** Il manifest generato contiene anche
+`SYSTEM_ALERT_WINDOW` e `VIBRATE`, e la tentazione era attribuirli ai plugin nuovi. Rifatto il
+prebuild con l'`app.json` **di prima**: c'erano già — vengono dal manifest di debug di React
+Native e dal dev client. Lo step aggiunge esattamente un permesso, `POST_NOTIFICATIONS`.
+
+**Il prebuild ha riscritto due script, e sono stati rimessi a posto.** `expo start --android`
+era diventato `expo run:android`, cioè una build locale con Gradle: questo progetto non ha mai
+avuto una cartella `android/` e compila su EAS. È il tipo di effetto collaterale che passa
+inosservato finché qualcuno non esegue lo script e si trova a installare Android Studio.
+
+**I due moduli si caricano pigramente**, con `require` in `try/catch` come `expo-camera` dallo
+Step 7 e come export/sharing dal 9. Qui pesa di più che altrove: la development build installata
+sul telefono **è stata compilata prima che questi moduli esistessero**, e un import in cima a una
+rotta verrebbe eseguito al boot — expo-router le importa tutte — portando giù l'app intera invece
+della sola parte che avvisa.
+
+**La diagnostica passa da 14 a 16 passaggi, e il 16 è quello che conta.** `getWidgetInfo(nome)`
+interroga il provider nativo **per nome**: risponde con un elenco vuoto se il widget non è ancora
+sulla home, e fallisce se quel provider non esiste. È l'unico modo di accorgersi che la stringa
+in `WIDGET_NAMES` e quella in `app.json` hanno smesso di coincidere — uno scarto che non dà
+errore di compilazione, perché le due vivono in mondi diversi, e che allo Step 34 si vedrebbe
+solo come un widget che non si aggiorna mai. Il 15 legge il permesso delle notifiche con
+`getPermissionsAsync` e **non lo chiede**: una sonda che apre il dialogo di sistema lo fa nel
+momento in cui l'utente meno se lo aspetta, e su Android 13 lo si rifiuta una volta sola.
+
+**`updatePeriodMillis: 0`**, scritto esplicitamente: nessun aggiornamento automatico del widget.
+È la decisione del piano — refresh ad apertura app e a fine sync — e il refresh in background
+resta lo Step 36, opzionale.
+
+**L'icona della notifica è quella monocromatica**, non `icon.png`: nella tendina Android maschera
+l'icona a bianco pieno, e un'icona a colori diventa una macchia. `android-icon-monochrome.png` è
+già una sagoma bianca su trasparente, quindi non è stato aggiunto nessun asset.
+
+**`npm audit` passa da 28 a 29, e il +1 non è una vulnerabilità nuova**:
+`react-native-android-widget` viene segnalato perché _dipende_ da `expo`, che dipende dalla
+catena metro/`image-size` già segnalata da tempo. Nessun avviso nuovo alla radice. Le «0
+vulnerabilità» dello Step 0 sono ferme a quel giorno e vanno lette così.
+
+**Verifica:** 970 test verdi, typecheck, lint e `format:check` puliti,
+`expo export --platform android` completato, e il prebuild di controllo descritto sopra.
+
+**Quello che manca, e che nessuno può scrivere:**
+
+```bash
+cd apps/mobile
+npx eas-cli login            # l'account non è autenticato
+npx eas-cli build -p android --profile development
+```
+
+Poi si installa l'APK sul telefono e si apre **Diagnostica**: i passaggi 15 e 16 devono dire
+«modulo disponibile» e «2 provider rispondono», non «serve la build EAS dello Step 30».
+
+**Prossimo:** Step 31 — il promemoria locale «registra una spesa», il primo dei tre contenuti di
+notifica. È JS sopra la build di questo step, e non ne chiede un'altra.
+
+---
+
 ## 2026-08-12 — Step 29: la valuta di default nel profilo
 
 Un campo `currency` sul `Profile`, un selettore in Tu, e il simbolo che da lì arriva a ogni

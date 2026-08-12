@@ -105,6 +105,32 @@ export default function ProbeScreen() {
           `14. modulo fotocamera: ${loadCameraModule() === null ? 'NON disponibile (resta l’incolla manuale)' : 'disponibile'}`,
         );
 
+        // I due moduli dello Step 30. Su una build compilata prima non ci sono, e la
+        // riga lo dice invece di far cadere la sonda: è esattamente il caso che questa
+        // schermata serve a distinguere — «manca nella build» non è «rotto».
+        const { readNotificationPermission } = await import('@/features/notifications/module');
+        const permission = await readNotificationPermission();
+        log(
+          `15. notifiche locali: ${
+            permission === null
+              ? 'modulo NON nella build — serve la build EAS dello Step 30'
+              : `modulo disponibile, permesso ${permission === 'granted' ? 'concesso' : 'non concesso'}`
+          }`,
+        );
+
+        // `getWidgetInfo` interroga il provider nativo per nome: se il modulo c'è ma il
+        // nome non corrisponde a nessun provider generato dal plugin, fallisce qui invece
+        // che allo Step 34, quando il widget resterebbe semplicemente fermo.
+        const { countPlacedWidgets, WIDGET_NAMES } = await import('@/features/widgets/module');
+        const placed = await Promise.all(WIDGET_NAMES.map(countPlacedWidgets));
+        log(
+          `16. widget Android: ${
+            placed.some((count) => count === null)
+              ? 'provider NON raggiungibili — serve la build EAS dello Step 30'
+              : `${WIDGET_NAMES.length} provider rispondono (${placed.join(' + ')} sulla home)`
+          }`,
+        );
+
         await persistence.destroy();
         log('TUTTO OK — ogni sottosistema funziona su questo dispositivo');
       } catch (error) {

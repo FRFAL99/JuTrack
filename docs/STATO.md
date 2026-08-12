@@ -5,16 +5,19 @@ quinto piano è cominciato**. Il quarto — [piano-v4-grafici-e-dashboard.md](pi
 **Step 23–28** — si è chiuso l'11 agosto con la dashboard componibile, e i sette passi del redesign
 sono chiusi da prima ([visualdesign.md](visualdesign.md)). Lo stesso giorno è stato scritto il
 **quinto piano**, [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md) —
-notifiche locali, due widget Android, valuta e lingua nel profilo — e oggi ne è entrato nel codice il
-**primo step su dodici**: la valuta di default nel profilo.
+notifiche locali, due widget Android, valuta e lingua nel profilo — e oggi ne sono entrati nel codice
+i **primi due step su dodici**: la valuta di default nel profilo e l'infrastruttura nativa.
 
+> **C'è una cosa da fare che non è codice, ed è l'unica che blocca il seguito: la build EAS dello
+> [Step 30](#linfrastruttura-nativa-step-30).** Plugin, permesso, moduli e diagnostica sono scritti e
+> verificati con un prebuild di controllo, ma i due moduli nativi arrivano sul telefono solo con una
+> build nuova — e gli Step 31–35 lavorano in JS **sopra** quella build. Il comando è in
+> [Riferimenti operativi](#riferimenti-operativi); `eas-cli` **non è autenticato**, quindi il primo
+> passo è `npx eas-cli login`.
+>
 > **Fra i primi quattro piani non c'è più uno step scritto da fare: quello che resta è la prova su
 > due telefoni veri**, e i criteri di «fatto» di tutti e quattro ci passano in mezzo. Il piano v5 è
-> un'aggiunta di prodotto separata e procede in parallelo, uno step per sessione: lo
-> [Step 29](#la-valuta-di-default-nel-profilo-step-29) è chiuso, e il prossimo è lo
-> [Step 30](piano-v5-notifiche-widget-profilo.md#step-30--infrastruttura-nativa-condivisa) — i due
-> config plugin insieme e **una build EAS nuova**, l'unico dei dodici che non si può chiudere senza
-> reinstallare l'app.
+> un'aggiunta di prodotto separata e procede in parallelo, uno step per sessione.
 
 Documento di orientamento: cosa è fatto, cosa manca, cosa è bloccato. Per il dettaglio di ogni
 passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il lavoro**.
@@ -64,7 +67,7 @@ su dodici nel codice**:
 | Step                               | Stato | Cosa contiene                                                          |
 | ---------------------------------- | ----- | ---------------------------------------------------------------------- |
 | 29 — Valuta di default nel profilo | ✅    | Campo `currency` sul `Profile`, selettore in `tu.tsx`, simbolo ovunque |
-| 30 — Infrastruttura nativa         | ⬜    | Plugin `expo-notifications` + `react-native-android-widget`, build EAS |
+| 30 — Infrastruttura nativa         | 🟡    | Plugin, permesso e diagnostica fatti — **manca la build EAS**          |
 | 31–33 — Notifiche locali           | ⬜    | Promemoria spesa, soglia budget, sync bloccato                         |
 | 34–35 — I due widget               | ⬜    | Saldo del gruppo aperto, totale del mese                               |
 | 36 — Refresh in background         | ⬜    | Opzionale, solo se il refresh ad apertura app non basta                |
@@ -591,6 +594,44 @@ una build EAS né una libreria nuova.
 - **Una valuta illeggibile non fa cadere il profilo**, a differenza di un `profileId` vuoto: si torna
   al default e si continua. Non c'è nessun danno che si propaghi all'altro telefono.
 
+## L'infrastruttura nativa (Step 30)
+
+I due config plugin insieme in `app.json`, i moduli caricati pigramente e la diagnostica che passa
+da 14 a 16 passaggi. **Manca la build EAS**, che è l'unica parte non scrivibile: finché non è
+installata, i passaggi 15 e 16 rispondono «serve la build EAS dello Step 30» — e gli Step 31–35, che
+sono JS sopra quella build, non si possono verificare.
+
+- **I due widget vanno dichiarati adesso, non agli Step 34–35 — e il piano non lo diceva.** Il
+  plugin di `react-native-android-widget` ha `widgets: Widget[]` **obbligatorio**, e ogni voce
+  diventa un `<receiver>` nel manifest: è configurazione nativa, quindi aggiungerne uno dopo
+  vorrebbe dire una seconda build EAS, cioè esattamente ciò che questo step esiste per evitare.
+  `Balance` e `MonthTotal` sono dichiarati qui; il 34 e il 35 restano JS puro.
+- **`POST_NOTIFICATIONS` era già dichiarato dal manifest di `expo-notifications`**, che Android
+  fonde da sé: il piano diceva di aggiungerlo, ed è ridondante. Resta in `app.json` accanto a
+  `CAMERA` — ridondante per la stessa ragione — perché è il file che una persona legge per sapere
+  cosa chiede l'app.
+- **`expo config --type introspect` non espande l'AndroidManifest**: dà i permessi e basta. La
+  verifica è stata fatta con un `expo prebuild --no-install` in un `android/` cancellato subito
+  dopo, che ha mostrato i due receiver, i loro `@xml/widgetprovider_*` e i quattro `meta-data`
+  delle notifiche. Quindici minuti di build EAS non si spendono per scoprire un nome sbagliato.
+- **`SYSTEM_ALERT_WINDOW` e `VIBRATE` c'erano già.** Rifatto il prebuild con l'`app.json` di prima
+  per attribuirli: vengono dal manifest di debug di React Native e dal dev client. Lo step aggiunge
+  esattamente un permesso.
+- **Il prebuild riscrive `expo start --android` in `expo run:android`**, ed è stato rimesso a posto:
+  questo progetto non ha una cartella `android/` e compila su EAS.
+- **`WIDGET_NAMES` è la stessa stringa di `app.json`, e la diagnostica la prova.** Il nome in
+  `app.json` diventa una classe nativa, quello nel codice è la stringa con cui il JS la chiama: uno
+  scarto di una lettera non dà errore di compilazione e allo Step 34 si vedrebbe solo come un widget
+  che non si aggiorna mai. `getWidgetInfo` fallisce se il provider non esiste, e il passaggio 16 lo
+  riporta.
+- **Il passaggio 15 legge il permesso e non lo chiede** (`getPermissionsAsync`): su Android 13 il
+  dialogo si rifiuta una volta sola, e una sonda non deve consumarlo.
+- **`updatePeriodMillis: 0`**: nessun aggiornamento automatico. Il refresh in background è lo
+  Step 36, dichiarato opzionale.
+- **`npm audit` 28 → 29, e il +1 non è nuovo**: `react-native-android-widget` è segnalato perché
+  dipende da `expo`, che dipende dalla catena metro/`image-size` già segnalata. Le «0 vulnerabilità»
+  dello Step 0 sono ferme a quel giorno.
+
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
 Entrambi nel codice e coperti dai test. **Nessuno dei due è ancora stato visto risolto su due
@@ -650,6 +691,19 @@ relay in produzione, invito di pairing, QR, fotocamera.
 
 - Progetto EAS: `@frfal/jutrack`, build con `npx eas-cli build -p android --profile development`
 - Il keystore Android è custodito da EAS: serve per ogni aggiornamento futuro dell'app installata
+
+> **La build installata è ferma al 1º agosto e non contiene i moduli dello Step 30.** Serve una
+> build nuova, ed è il passo che sblocca gli Step 31–35. `eas-cli` non è autenticato:
+>
+> ```bash
+> cd apps/mobile
+> npx eas-cli login
+> npx eas-cli build -p android --profile development
+> ```
+>
+> Installato l'APK, aprire **Diagnostica**: i passaggi 15 e 16 devono dire «modulo disponibile» e
+> «2 provider rispondono». Finché dicono «serve la build EAS dello Step 30», l'app funziona
+> esattamente come prima — i moduli si caricano pigramente apposta.
 
 ## Cosa non è ancora stato verificato su hardware reale
 
