@@ -18,6 +18,7 @@
  * sola, che il core non può sapere: se quello stato **è nuovo**.
  */
 import { formatMoney, type BudgetState, type BudgetStatus, type IsoMonth } from '@jutrack/core';
+import type { AlertContent } from './content';
 
 /** La chiave in `app_meta`. Una sola per tutti i gruppi e tutti i mesi. */
 export const MARKS_KEY = 'budget_alerts';
@@ -220,11 +221,6 @@ export function detectCrossings(args: {
     Object.keys(pruned.levels).length !== Object.keys(marks.levels).length;
 
   return { alerts, marks: pruned, changed };
-}
-
-export interface AlertContent {
-  title: string;
-  body: string;
 }
 
 /**

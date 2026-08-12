@@ -3,12 +3,12 @@
 > Punto d'ingresso del progetto: [STATO.md](STATO.md). Piano approvato:
 > `~/.claude/plans/ho-appena-fatto-delle-nested-conway.md`.
 >
-> **Quattro step su dodici chiusi**, tutti il 12 agosto 2026: lo
+> **Cinque step su dodici chiusi**, tutti il 12 agosto 2026: lo
 > [Step 29](#step-29--valuta-di-default-nel-profilo), lo
 > [Step 30](#step-30--infrastruttura-nativa-condivisa) — **build EAS compresa**, installata e
-> verificata con la diagnostica a 16 passaggi su 16 — lo Step 31, il promemoria spese, e lo
-> Step 32, l'avviso di budget. Gli Step 33–35 lavorano in JS sopra quella build e non ne chiedono
-> altre.
+> verificata con la diagnostica a 16 passaggi su 16 — e i tre contenuti di notifica, lo Step 31
+> (promemoria spese), lo Step 32 (avviso di budget) e lo Step 33 (sincronizzazione ferma). Gli
+> Step 34–35 lavorano in JS sopra quella build e non ne chiedono altre.
 >
 > **Sullo Step 31 il piano diceva «promemoria periodico», e periodico non è.** Una notifica locale
 > si programma prima e scatta da sola, senza che nessuno possa rivalutare la condizione al momento
@@ -23,7 +23,15 @@
 > vedrebbe affatto. Due punti in cui il piano andava oltre quel che diceva: l'avviso scatta **anche
 > all'80%** e non solo a limite superato (la soglia `near` esiste già nel core, e il suo commento
 > dice perché), e **`packages/core` non è stato toccato**. Il dettaglio è in
-> [STATO.md](STATO.md#lavviso-di-budget-step-32), e riguarda anche il 33.
+> [STATO.md](STATO.md#lavviso-di-budget-step-32).
+>
+> **Lo Step 33 è i due precedenti insieme, come il piano sospettava.** «Bloccato da tempo» è una
+> condizione **su una scadenza**: si guarda come il budget, ma quello che si guarda è da quanto
+> dura, e per questo i segni stanno su disco. Due cose che qui non erano decise: le tre fasi in
+> errore diventano **due** guai (`blocked` avvisa subito perché il motore ha smesso di ritentare,
+> `offline` ed `error` aspettano ventiquattr'ore), e **`offline` conta come `error`** benché lo
+> Step 17 li avesse distinti — cambia il rimedio, non il fatto, quindi cambia il testo e non la
+> regola. Il dettaglio è in [STATO.md](STATO.md#la-sincronizzazione-ferma-step-33).
 >
 > **Due punti dello Step 30 erano scritti male qui**, e vanno letti da
 > [STATO.md](STATO.md#linfrastruttura-nativa-step-30):
@@ -206,11 +214,10 @@ perché derivabili da dati già presenti nel codice:
 - **Soglia di budget superata**, riusando i calcoli già in `packages/core/src/insights/`.
 - **Sync bloccato da tempo**, riusando lo stato già derivato in `features/sync/describe.ts`.
 
-I primi due sono chiusi, e sono usciti diversi l'uno dall'altro in forma prima che in contenuto: il
+Tutti e tre sono chiusi, e sono usciti diversi l'uno dall'altro in forma prima che in contenuto: il
 31 è una **scadenza** programmata in anticipo, il 32 una **condizione** valutata mentre l'app è
-aperta. Il 33 somiglia al 32 — lo stato di sync si legge quando c'è qualcuno a guardarlo — ma con una
-differenza da decidere: «bloccato da tempo» ha dentro una durata, quindi è una condizione **su una
-scadenza**, e conviene leggere entrambe le sezioni di [STATO.md](STATO.md) prima di scriverlo.
+aperta, il 33 una condizione **su una scadenza** — si guarda quando c'è qualcuno a guardare, ma
+quello che si guarda è da quanto dura, e quella durata deve sopravvivere alla chiusura dell'app.
 
 Ogni notifica va dietro un interruttore proprio (non un solo "notifiche sì/no"), perché sono tre
 motivi diversi di essere avvisati e non tutti li vorranno tutti e tre.

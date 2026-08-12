@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { GroupIdentityGate } from '@/features/groups/GroupIdentityGate';
 import { BudgetWatcher } from '@/features/notifications/BudgetWatcher';
 import { ReminderScheduler } from '@/features/notifications/ReminderScheduler';
+import { SyncWatcher } from '@/features/notifications/SyncWatcher';
 import { ProfileOnboarding } from '@/features/profile/ProfileOnboarding';
 import {
   GroupsProvider,
@@ -141,6 +142,11 @@ function Shell() {
                     Sta qui e non in una schermata: dentro i Grafici si controllerebbero
                     solo aprendo la scheda dove sono già disegnati. */}
                 <BudgetWatcher />
+                {/* Guarda il motore del gruppo aperto e avvisa se resta fermo. Qui e non
+                    in una schermata per la ragione opposta e complementare: il pallino
+                    del sync vive in Tu e in fondo alla lista spese, cioè dove chi ha il
+                    sync rotto potrebbe non passare per giorni. */}
+                <SyncWatcher />
                 <Stack
                   screenOptions={{
                     headerShown: false,

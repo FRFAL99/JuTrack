@@ -97,10 +97,13 @@ export function useNotificationSettings(): NotificationSettingsHandle {
         /* al riavvio si ritrova lo stato di prima: la notifica programmata resta, ma
            `ReminderScheduler` la disdice alla prima apertura, perché legge da qui. */
       });
-      // Solo il promemoria ha qualcosa da riprogrammare: l'avviso di budget non vive in
-      // coda, lo produce `BudgetWatcher` guardando il documento. Spegnerlo non lascia
-      // niente da disdire, e accenderlo non ha niente da recuperare — i segni in
-      // `app_meta` sono stati tenuti aggiornati anche mentre era spento.
+      // Solo il promemoria ha qualcosa da riprogrammare: gli altri due non vivono in coda,
+      // li producono `BudgetWatcher` e `SyncWatcher` guardando il documento e il motore.
+      // Spegnerli non lascia niente da disdire, e accenderli non ha niente da recuperare —
+      // i segni in `app_meta` sono stati tenuti aggiornati anche mentre erano spenti, che è
+      // ciò che evita la raffica degli arretrati. Il prezzo, uguale per entrambi: chi
+      // accende l'interruttore mentre il guaio è già in corso non riceve niente per quel
+      // guaio lì, e lo legge dalla schermata invece che dalla tendina.
       if (kind === 'reminder') await rescheduleReminder(on, await readLastActivity(meta));
       return null;
     },

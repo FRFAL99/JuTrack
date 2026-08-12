@@ -4,6 +4,112 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-12 — Step 33: la sincronizzazione ferma, che è una condizione su una scadenza
+
+Un terzo interruttore in Tu, e una notifica che arriva quando le spese non raggiungono più
+gli altri telefoni. Ultimo dei tre contenuti di notifica del piano v5, ancora tutto JS sopra
+la build dello Step 30.
+
+**Il piano aveva lasciato una domanda aperta, e la risposta è «tutte e due».** Lo Step 31 non
+poteva essere una condizione ed è diventato una scadenza; lo Step 32 era una condizione e
+basta. Qui il piano diceva: «bloccato da tempo» ha dentro una durata, quindi è una condizione
+**su una scadenza** — e conviene rileggere entrambe le sezioni prima di scriverlo. È
+esattamente così che è venuto: si guarda come il budget, ma quello che si guarda è **da
+quanto dura**, e la durata da misurare è più lunga di una sessione dell'app. Ne segue la
+scelta che regge tutto il resto: i segni stanno su disco (`sync_alerts` in `app_meta`), non in
+memoria, perché un contatore che riparte a ogni apertura non arriverebbe mai a
+ventiquattr'ore proprio per chi apre l'app tutti i giorni.
+
+**Due guai e non tre, benché le fasi in errore siano tre.** `SyncState` ne ha tre che non
+vanno bene, e si dividono in due per il momento in cui vale la pena parlare:
+
+- **`blocked` è fermo.** Il relay rifiuta la chiave (`RelayError.fatal`, cioè 401/403), il
+  motore ha **smesso** di ritentare, e nessuna attesa cambierà l'esito. Aspettare un giorno
+  per dirlo vuol dire regalare un giorno di divergenza: si avvisa subito.
+- **`offline` ed `error` sono in ritardo.** Il motore riprova da solo, e nove volte su dieci
+  passa da sé. Un avviso a ogni singhiozzo è il modo più rapido di far spegnere
+  l'interruttore: si aspettano ventiquattr'ore.
+
+**`offline` conta come `error`, ed è la decisione discutibile dello step.** Lo Step 17 aveva
+stabilito che offline **non** è un errore del relay, e la schermata infatti lo dice senza
+allarme. Ma quello che questo avviso serve a evitare — credere che i due telefoni siano
+allineati quando non lo sono — succede identico nei due casi, e dopo un giorno intero «sono
+in aereo» non è più una spiegazione. Cambia il rimedio, non il fatto: infatti a cambiare è il
+testo, non la regola. Tre testi per due livelli — la connessione è una cosa dell'utente, il
+relay che non risponde è una cosa che passa da sé, la chiave rifiutata è l'unica che chiede
+di fare qualcosa (un invito nuovo).
+
+**`idle` e `syncing` non dicono niente, e il codice le tratta come tali.** Sono il prima e il
+durante di ogni giro, e l'app ci passa a ogni avvio: trattarle come «tutto a posto»
+azzererebbe il conto a ogni apertura. È la riga più facile da scrivere male in tutto lo step,
+perché sbagliata non rompe niente — semplicemente l'avviso non arriva mai, e non c'è modo di
+accorgersene se non aspettando invano.
+
+**Il watcher si iscrive alla fase, non allo stato intero.** `SyncState` porta con sé `at` e
+`retryAt`, che cambiano a ogni giro di poll: dipendere dall'oggetto vorrebbe dire una lettura
+di `app_meta` ogni due secondi mentre tutto funziona. La fase invece cambia solo quando
+succede qualcosa — e succede abbastanza, perché ogni ciclo passa da `syncing` prima di
+ricadere in `error` o `offline`, quindi la scadenza viene ricontrollata a ogni tentativo anche
+restando fermi sulla stessa schermata.
+
+**Le regole contro il ripetersi sono le stesse dello Step 32, riscritte su un altro asse.** Il
+livello **sale e non scende**: un episodio che comincia in `offline` e finisce in `blocked`
+merita il secondo avviso, perché è un fatto diverso con un rimedio diverso, ma un `blocked`
+che al riavvio ricade in `error` no — è lo stesso guaio visto da un'altra angolazione, e
+ridirlo insegna a non leggere. **Un avviso per episodio**, e l'episodio finisce al primo
+`synced`: solo allora il segno sparisce e il prossimo guaio può parlare di nuovo. **I segni
+si aggiornano anche a interruttore spento**, con lo stesso prezzo accettato del 32: chi
+accende l'interruttore mentre il guaio è già in corso non riceve niente per quel guaio lì, e
+lo legge dalla schermata invece che dalla tendina. **Si scrive prima e si avvisa dopo**, per
+la solita ragione: un avviso perso si nota una volta, uno ripetuto fa spegnere l'interruttore.
+
+**La potatura c'è anche qui, su un asse diverso.** I budget si potano al mese in corso perché
+un mese finito non può più essere sforato; i segni del sync si potano ai gruppi che esistono
+ancora, perché un gruppo da cui si è usciti non può più sincronizzarsi. Senza, uscire da un
+gruppo mentre il relay era giù lascerebbe una riga per sempre dentro una tabella che nessuno
+guarda.
+
+**Il nome del gruppo entra nel testo, a differenza dell'avviso di budget.** Quello si legge
+mentre lo si è appena provocato; questo si legge ore dopo, e con più gruppi sul telefono «non
+si sincronizza» senza dire _cosa_ obbliga ad aprire l'app per scoprirlo. Il titolo del caso
+fermo è la stessa frase del pallino in Tu — «Sincronizzazione fermata», da `describe.ts` —
+perché chi l'ha già vista lì deve riconoscerla, non chiedersi se sono due guasti diversi.
+
+**Il gestore di primo piano vale anche per questo avviso**, e per la ragione opposta a quella
+che si direbbe: lo stato del sync **si vede già** in Tu e in fondo alla lista spese, ma solo
+lì, e chi ha il sync rotto potrebbe non passarci per giorni. È anche perché `SyncWatcher` sta
+accanto allo `Stack` e non dentro una schermata: un guasto che si vede solo dove si va a
+cercarlo non ha bisogno di una notifica.
+
+**Tre righe di refactoring, non di più.** `AlertContent` esce da `budget.ts` e va in
+`content.ts`: è in comune fra due avvisi che non hanno in comune nient'altro, e lasciarlo lì
+avrebbe costretto `sync.ts` a importarlo da un modulo con cui non ha niente da spartire. E
+l'invio immediato — canale, `ChannelAwareTriggerInput`, `data.kind` — diventa un `notifyNow`
+privato con due entrate nominate sopra, invece di due copie della stessa funzione.
+`setReminder` era già diventata `set(kind, on)` allo Step 32 apposta, e infatti non è stata
+toccata; `parseSettings` era già scritta per leggere le chiavi una per una, e infatti la terza
+è entrata senza toccare le altre due.
+
+**`packages/core` non è stato toccato**, per il terzo step di fila. `SyncState` e `describe.ts`
+c'erano già e dicono **cosa** sta succedendo; qui si decide una cosa sola, che nessuno dei due
+può sapere: da quanto sta succedendo, e se è già stato detto.
+
+**Verifica:** 1046 test verdi (588 core + 415 app + 43 relay, di cui 30 nuovi), typecheck,
+lint e `format:check` puliti, `expo export --platform android` completato.
+
+**Sul telefono, un caso è facile e l'altro no.** Il fermo si prova in due minuti: si esce da
+un gruppo con la rigenerazione della chiave da un telefono e si guarda l'altro, che deve
+ricevere «Sincronizzazione fermata» quasi subito e in primo piano. Il ritardo invece richiede
+ventiquattr'ore vere — oppure la modalità aereo tenuta accesa e l'app riaperta il giorno
+dopo — ed è il caso in cui l'avviso deve dire «da un giorno» e non ripetersi il giorno
+successivo. Da controllare anche che il canale «Sincronizzazione» esista nelle impostazioni di
+sistema separato dagli altri due.
+
+**Prossimo:** Step 34 — il widget «Saldo del gruppo aperto», il primo dei due già dichiarati
+in `app.json` allo Step 30.
+
+---
+
 ## 2026-08-12 — Step 32: l'avviso di budget, che è una condizione e non una scadenza
 
 Un secondo interruttore in Tu, e una notifica che arriva quando una categoria arriva all'80%

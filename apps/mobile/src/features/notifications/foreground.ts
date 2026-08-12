@@ -19,13 +19,18 @@ import { loadNotificationsModule } from './module';
 /**
  * Il `data.kind` decide, e quello che non si riconosce non si mostra.
  *
+ * L'avviso di sincronizzazione ferma sta con quello di budget e per la stessa ragione:
+ * nasce mentre l'app è aperta — è l'app che guarda il motore — e dice un fatto che dalla
+ * schermata aperta non si vede. Il pallino in Tu lo direbbe, ma solo a chi è in Tu, e la
+ * riga in fondo alla lista spese non dice da quanto dura.
+ *
  * Il default prudente vale in entrambe le direzioni: una notifica senza `kind` non l'ha
  * scritta questo codice, e comportarsi come `expo-notifications` si comporterebbe senza
  * gestore è il modo di non cambiare, per sbaglio, il destino di qualcosa che arriverà in
  * futuro da un altro pezzo dell'app.
  */
 export function shouldShowInForeground(kind: unknown): boolean {
-  return kind === 'budget';
+  return kind === 'budget' || kind === 'sync';
 }
 
 let installed = false;

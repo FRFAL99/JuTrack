@@ -17,6 +17,7 @@ import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
 import { SectionLabel } from '@/components/SectionLabel';
 import { REMINDER_DAYS } from '@/features/notifications/reminder';
+import { SYNC_STALL_HOURS } from '@/features/notifications/sync';
 import {
   useNotificationSettings,
   type NotificationKind,
@@ -200,8 +201,8 @@ export default function TuScreen() {
         <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
 
         <SectionLabel>Avvisi</SectionLabel>
-        {/* `sm` e non `xs`: con due interruttori uno sotto l'altro, quattro punti di stacco
-            farebbero leggere le due righe come un blocco solo. */}
+        {/* `sm` e non `xs`: con tre interruttori uno sotto l'altro, quattro punti di stacco
+            farebbero leggere le righe come un blocco solo. */}
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
           <View style={styles.switchRow}>
             <View style={{ flex: 1, gap: 2 }}>
@@ -237,11 +238,32 @@ export default function TuScreen() {
             />
           </View>
 
-          {/* Il limite va detto, non scoperto: l'avviso lo produce l'app guardando il
-              documento, quindi arriva quando l'app è aperta — subito se la spesa la
-              registri tu, all'apertura successiva se la registra l'altro telefono. */}
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
+                Sincronizzazione ferma
+              </Text>
+              {/* Le ore si leggono dalla costante, come la soglia dei budget si legge dal
+                  core: un numero scritto due volte è un numero che prima o poi diverge. */}
+              <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+                Se le spese non arrivano agli altri telefoni per più di {SYNC_STALL_HOURS} ore, o se
+                il relay rifiuta la chiave
+              </Text>
+            </View>
+            <Switch
+              value={notifications.settings.sync}
+              onValueChange={(on) => toggle('sync', on)}
+              disabled={!notifications.ready}
+              accessibilityLabel="Sincronizzazione ferma"
+            />
+          </View>
+
+          {/* Il limite va detto, non scoperto: i due avvisi li produce l'app guardando il
+              documento e il motore, quindi arrivano quando l'app è aperta — subito per
+              quello che succede qui, all'apertura successiva per il resto. */}
           <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            Gli avvisi sui budget riguardano il gruppo aperto e arrivano mentre l’app è in uso.
+            Gli avvisi sui budget e sulla sincronizzazione riguardano il gruppo aperto e arrivano
+            mentre l’app è in uso.
           </Text>
 
           {/* L'interruttore resta acceso perché la scelta è di chi l'ha fatta: spegnerlo

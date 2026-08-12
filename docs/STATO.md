@@ -6,14 +6,15 @@ quinto piano è cominciato**. Il quarto — [piano-v4-grafici-e-dashboard.md](pi
 sono chiusi da prima ([visualdesign.md](visualdesign.md)). Lo stesso giorno è stato scritto il
 **quinto piano**, [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md) —
 notifiche locali, due widget Android, valuta e lingua nel profilo — e oggi ne sono entrati nel codice
-i **primi quattro step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa, il
-promemoria spese e l'avviso di budget.
+i **primi cinque step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa, il
+promemoria spese, l'avviso di budget e quello di sincronizzazione ferma.
 
 > **La build EAS dello [Step 30](#linfrastruttura-nativa-step-30) è installata e verificata** — la
 > diagnostica dice **16 passaggi su 16** — e con lei i due moduli nativi sono sul telefono. Gli
-> Step 32–35 lavorano in JS sopra quella build e **non ne chiedono altre**. Lo
-> [Step 31](#il-promemoria-spese-step-31) e lo [Step 32](#lavviso-di-budget-step-32) sono chiusi; il
-> prossimo è il 33, la notifica di sync bloccato.
+> Step 34–35 lavorano in JS sopra quella build e **non ne chiedono altre**. **Le tre notifiche sono
+> tutte nel codice**: lo [Step 31](#il-promemoria-spese-step-31), lo
+> [Step 32](#lavviso-di-budget-step-32) e lo [Step 33](#la-sincronizzazione-ferma-step-33) sono
+> chiusi; il prossimo è il 34, il primo dei due widget.
 >
 > **Fra i primi quattro piani non c'è più uno step scritto da fare: quello che resta è la prova su
 > due telefoni veri**, e i criteri di «fatto» di tutti e quattro ci passano in mezzo. Il piano v5 è
@@ -61,7 +62,7 @@ Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 | 27 — I sei filtri              | ✅    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
 | 28 — La dashboard componibile  | ✅    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
 
-Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **quattro
+Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **cinque
 step su dodici nel codice**:
 
 | Step                               | Stato | Cosa contiene                                                          |
@@ -70,7 +71,7 @@ step su dodici nel codice**:
 | 30 — Infrastruttura nativa         | ✅    | Plugin, permesso, build EAS installata, diagnostica 16/16              |
 | 31 — Promemoria spesa              | ✅    | Interruttore in Tu, scadenza riarmata a ogni apertura                  |
 | 32 — Avviso di budget              | ✅    | Watcher sul documento, segni in `app_meta`, gestore di primo piano     |
-| 33 — Sync bloccato                 | ⬜    | Terzo interruttore, sopra `features/sync/describe.ts`                  |
+| 33 — Sincronizzazione ferma        | ✅    | Terzo interruttore, watcher sulla fase, scadenza di 24 h su disco      |
 | 34–35 — I due widget               | ⬜    | Saldo del gruppo aperto, totale del mese                               |
 | 36 — Refresh in background         | ⬜    | Opzionale, solo se il refresh ad apertura app non basta                |
 | 37 — Infrastruttura i18n           | ⬜    | `i18next`, campo `language` sul `Profile`, selettore in `tu.tsx`       |
@@ -89,7 +90,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**1016 test verdi** (588 core + 385 app + 43 relay), typecheck, lint e `format:check` puliti.
+**1046 test verdi** (588 core + 415 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -727,7 +728,55 @@ del mese o lo supera. Secondo dei tre contenuti di notifica, tutto JS sopra la b
   è un invito che ci si è chiesti, questo è un numero appena cambiato su cui si può ancora agire.
 - **`packages/core` non è stato toccato.** `budgetStatuses` e `stateOf` decidono se un limite è vicino
   o superato; qui si decide solo se quello stato **è nuovo**. E `setReminder` è diventata
-  `set(kind, on)`, la firma che lo Step 33 userà senza modificarla.
+  `set(kind, on)`, la firma che lo Step 33 ha poi usato senza modificarla.
+
+## La sincronizzazione ferma (Step 33)
+
+Un terzo interruttore in Tu e una notifica che arriva quando le spese non raggiungono più gli altri
+telefoni. Ultimo dei tre contenuti di notifica, tutto JS sopra la build dello Step 30.
+
+- **È una condizione su una scadenza, cioè i due step precedenti insieme** — e il piano lo aveva
+  previsto senza deciderlo. Si guarda come il budget (`SyncWatcher` accanto allo `Stack`), ma quello
+  che si guarda è **da quanto dura**. Ne segue la scelta che regge tutto: i segni stanno su disco
+  (`sync_alerts` in `app_meta`) e non in memoria, perché la durata da misurare è più lunga di una
+  sessione dell'app e un contatore che riparte a ogni apertura non arriverebbe mai a
+  ventiquattr'ore proprio per chi apre l'app tutti i giorni.
+- **Due guai e non tre**, benché le fasi in errore siano tre. `blocked` è **fermo**: il relay
+  rifiuta la chiave (401/403), il motore ha smesso di ritentare, e aspettare un giorno per dirlo
+  regalerebbe un giorno di divergenza — si avvisa **subito**. `offline` ed `error` sono **in
+  ritardo**: il motore riprova da solo e nove volte su dieci passa da sé, quindi si aspettano
+  **ventiquattr'ore**.
+- **`offline` conta come `error`, ed è la scelta discutibile dello step.** Lo Step 17 aveva stabilito
+  che offline non è un errore del relay, e la schermata infatti lo dice senza allarme. Ma quello che
+  l'avviso serve a evitare — credere che i due telefoni siano allineati quando non lo sono — succede
+  identico nei due casi, e dopo un giorno «sono in aereo» non è più una spiegazione. Cambia il
+  rimedio, non il fatto: a cambiare è il testo, non la regola.
+- **`idle` e `syncing` non toccano niente**, ed è la riga più facile da sbagliare in silenzio:
+  trattarle come «tutto a posto» azzererebbe il conto a ogni avvio, l'avviso non arriverebbe mai e
+  non ci sarebbe modo di accorgersene se non aspettando invano.
+- **Il watcher si iscrive alla fase, non allo stato intero.** `at` e `retryAt` cambiano a ogni giro
+  di poll: dipendere dall'oggetto vorrebbe dire una lettura di `app_meta` ogni due secondi mentre
+  tutto funziona. La fase basta perché ogni ciclo passa da `syncing` prima di ricadere in `error` o
+  `offline`, quindi la scadenza si ricontrolla a ogni tentativo anche restando fermi su una
+  schermata.
+- **Le regole contro il ripetersi sono quelle del 32, su un altro asse.** Il livello **sale e non
+  scende** (`offline`→`blocked` riavvisa, `blocked`→`error` no); **un avviso per episodio**, e
+  l'episodio finisce al primo `synced`; **i segni si aggiornano anche a interruttore spento**, col
+  solito prezzo — chi accende mentre il guaio è in corso non riceve niente per quel guaio lì.
+  **Si scrive prima e si avvisa dopo.**
+- **La potatura è ai gruppi che esistono ancora**, non ai mesi: un gruppo da cui si è usciti non può
+  più sincronizzarsi, e senza potatura uscirne mentre il relay era giù lascerebbe una riga per
+  sempre.
+- **Il nome del gruppo entra nel testo**, a differenza dell'avviso di budget: quello si legge mentre
+  lo si è appena provocato, questo si legge ore dopo, e con più gruppi «non si sincronizza» senza
+  dire cosa obbliga ad aprire l'app. Il titolo del caso fermo è la stessa frase del pallino in Tu,
+  presa da `describe.ts`.
+- **Canale `sincronizzazione` separato, importanza `DEFAULT`**, e gestore di primo piano anche per
+  questo: lo stato del sync si vede già, ma solo in Tu e in fondo alla lista spese, cioè dove chi ha
+  il sync rotto potrebbe non passare per giorni. È la stessa ragione per cui il watcher non vive in
+  una schermata.
+- **`packages/core` non è stato toccato**, per il terzo step di fila. `SyncState` e `describe.ts`
+  dicono **cosa** sta succedendo; qui si decide solo da quanto, e se è già stato detto.
 
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
@@ -976,13 +1025,24 @@ lista, non le toglie.
   diverso. E la prova che richiede un riavvio: aprire un gruppo mai guardato in questo mese con un
   budget **già** sforato **non** deve avvisare — è il primo giro silenzioso, ed è l'unica regola
   dello step che si nota solo quando manca
+- **Lo Step 33, dove un caso si prova in due minuti e l'altro chiede un giorno vero.** Il caso
+  **fermo** è quello facile e va provato per primo: si rigenera un gruppo da un telefono e si guarda
+  l'altro, che deve ricevere «Sincronizzazione fermata» quasi subito e **in primo piano**. Il caso
+  **in ritardo** richiede ventiquattr'ore effettive — o la modalità aereo tenuta accesa e l'app
+  riaperta il giorno dopo — e la cosa da guardare è che il testo dica «da un giorno» e che il giorno
+  successivo **non** si ripeta. Poi le tre che possono rompersi in silenzio: che riaprendo l'app la
+  scadenza sia contata **anche sul tempo a app chiusa** (è la ragione per cui i segni stanno in
+  `app_meta`, e in memoria non si vedrebbe mai); che dopo un sync riuscito un guasto **nuovo** possa
+  avvisare di nuovo; e che nelle impostazioni di sistema il canale «Sincronizzazione» esista separato
+  dagli altri due. La logica ha i test, incluso il tempo a app chiusa; quello che il telefono deve
+  confermare è che l'avviso compaia davvero e che non si ripeta
 - **Il selettore di widget di Android**, che la diagnostica non può guardare: tenendo premuto sulla
   home devono comparire «JuTrack — saldo» e «JuTrack — speso questo mese» con le loro descrizioni.
   `getWidgetInfo` prova che i provider **rispondono**; solo il selettore prova che etichette e
   dimensioni sono quelle scritte in `app.json`. Un widget aggiunto adesso resta **vuoto**, ed è
   atteso: il contenuto arriva agli Step 34–35
 
-Tutto il resto è verificato: 1016 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 1046 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 > **Lo Step 25 è entrato in questa lista attraverso il 26**, come era stato scritto: la geometria

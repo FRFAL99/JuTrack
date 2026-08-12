@@ -9,6 +9,12 @@ describe('shouldShowInForeground', () => {
     expect(shouldShowInForeground('budget')).toBe(true);
   });
 
+  it('mostra l’avviso di sincronizzazione ferma, per la stessa ragione', () => {
+    // Anche questo lo produce l'app mentre è aperta, e dice una cosa che dalla schermata
+    // aperta non si vede: da quanto dura.
+    expect(shouldShowInForeground('sync')).toBe(true);
+  });
+
   it('non mostra il promemoria: inviterebbe ad aprire un’app già aperta', () => {
     expect(shouldShowInForeground('reminder')).toBe(false);
   });

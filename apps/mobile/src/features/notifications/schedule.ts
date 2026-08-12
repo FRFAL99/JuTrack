@@ -1,13 +1,14 @@
 import { markError } from '@/diagnostics';
-import type { AlertContent } from './budget';
+import type { AlertContent } from './content';
 import { loadNotificationsModule } from './module';
 import { nextReminderAt, reminderContent } from './reminder';
 
 /**
  * Programmare e disdire gli avvisi, per davvero.
  *
- * È la metà imperativa dello Step 31: `reminder.ts` decide **quando** e **cosa**, e ha i
- * test; qui si parla con il modulo nativo, che nei test dell'app non esiste.
+ * È la metà imperativa dei tre contenuti: `reminder.ts`, `budget.ts` e `sync.ts` decidono
+ * **quando** e **cosa**, e hanno i test; qui si parla con il modulo nativo, che nei test
+ * dell'app non esiste.
  *
  * Ogni funzione è **innocua se il modulo non c'è**: la build che lo contiene è quella dello
  * Step 30, e chi non l'ha installata deve poter usare l'app senza accorgersi di nulla.
@@ -18,8 +19,10 @@ import { nextReminderAt, reminderContent } from './reminder';
  *
  * Serve a disdire **solo** il promemoria quando si riprogramma. `cancelAllScheduled` sarebbe
  * una riga sola e sarebbe sbagliata: cancellerebbe qualunque altro avviso in programma.
- * (Lo Step 32 non l'ha ancora messa alla prova — il suo avviso parte subito e non resta in
- * coda — ma il 33 sì, e la riga giusta è già qui.) Passare dai `data` invece che da un
+ * (A oggi non c'è ancora niente da proteggere, e la previsione dello Step 31 era sbagliata:
+ * si aspettava che il 33 mettesse qualcosa in coda, e invece anche lui consegna sul momento.
+ * La riga resta perché il primo avviso programmato che si aggiungerà non dovrà accorgersi di
+ * niente.) Passare dai `data` invece che da un
  * identificatore salvato in `app_meta` toglie di mezzo un secondo stato da tenere
  * allineato — e uno salvato che non
  * corrisponde più a niente (app reinstallata, notifica già scattata) lascerebbe promemoria
@@ -29,6 +32,9 @@ const REMINDER_KIND = 'reminder';
 
 /** L'etichetta dell'avviso di budget. Lo legge anche il gestore di `foreground.ts`. */
 const BUDGET_KIND = 'budget';
+
+/** L'etichetta dell'avviso di sincronizzazione ferma (Step 33). */
+const SYNC_KIND = 'sync';
 
 /**
  * Il canale Android su cui esce il promemoria.
@@ -49,6 +55,16 @@ const REMINDER_CHANNEL = 'promemoria';
  * di sistema, e sono lì che la gente va a cercarli.
  */
 const BUDGET_CHANNEL = 'budget';
+
+/**
+ * Il canale dell'avviso di sincronizzazione ferma.
+ *
+ * Il terzo, per la terza volta la stessa ragione: chi ha zittito i promemoria e vuole sapere
+ * dei budget deve poter fare anche il contrario. Tre motivi di essere avvisati sono tre
+ * interruttori nella nostra schermata **e** tre nelle impostazioni di Android, o il secondo
+ * posto smentirebbe il primo.
+ */
+const SYNC_CHANNEL = 'sincronizzazione';
 
 /** Disdice i promemoria già programmati, e nient'altro. */
 export async function cancelReminder(): Promise<void> {
@@ -118,43 +134,71 @@ export async function rescheduleReminder(
 }
 
 /**
- * Manda l'avviso di budget **adesso**, senza programmarlo.
+ * Manda un avviso **adesso**, senza programmarlo.
  *
- * È la differenza di forma fra questo step e il precedente, scritta in una riga: il
- * promemoria è una data futura da riarmare, l'avviso di budget è un fatto appena
- * accaduto. Non c'è niente da disdire, e infatti non esiste un `cancelBudget`: una
- * notifica già consegnata resta nella tendina anche se l'interruttore si spegne dopo,
- * perché quello che dice era vero quando è stata scritta.
+ * È la differenza di forma fra il promemoria e gli altri due, scritta in una funzione: il
+ * primo è una data futura da riarmare, questi sono fatti appena accaduti. Non c'è niente da
+ * disdire, e infatti non esistono né `cancelBudget` né `cancelSync`: una notifica già
+ * consegnata resta nella tendina anche se l'interruttore si spegne dopo, perché quello che
+ * dice era vero quando è stata scritta.
  *
  * `trigger` è un `ChannelAwareTriggerInput` — solo `channelId` — e **non `null`**: `null`
- * consegna subito ma sul canale di default, cioè fuori dall'interruttore di sistema che
- * questo step si è preso la cura di creare.
+ * consegna subito ma sul canale di default, cioè fuori dagli interruttori di sistema che gli
+ * Step 32 e 33 si sono presi la cura di creare.
+ *
+ * Il canale si crea qui a ogni invio, e ricrearlo è innocuo: Android aggiorna quello che c'è
+ * già e le preferenze che l'utente ci ha messo sopra restano sue.
  *
  * Restituisce se è partita, così chi chiama può distinguere «detto» da «non c'è il
  * modulo» senza interpretare un'eccezione.
  */
-export async function notifyBudget(content: AlertContent): Promise<boolean> {
+async function notifyNow(
+  kind: string,
+  channel: { id: string; name: string },
+  content: AlertContent,
+  failure: string,
+): Promise<boolean> {
   const module = loadNotificationsModule();
   if (module === null) return false;
 
   try {
-    // `DEFAULT` e non `LOW` come il promemoria: quello è un invito che si è chiesto, questo
-    // è un numero che è appena cambiato e su cui si può ancora fare qualcosa nel resto del
-    // mese. Un avviso di soldi che non si fa notare arriva quando il mese è già deciso.
-    await module.setNotificationChannelAsync(BUDGET_CHANNEL, {
-      name: 'Budget del mese',
+    // `DEFAULT` e non `LOW` come il promemoria: quello è un invito che ci si è chiesti,
+    // questi sono fatti appena cambiati su cui si può ancora agire. Un avviso di soldi o di
+    // spese che non arrivano, se non si fa notare, arriva quando non serve più.
+    await module.setNotificationChannelAsync(channel.id, {
+      name: channel.name,
       importance: module.AndroidImportance.DEFAULT,
     });
 
     await module.scheduleNotificationAsync({
-      content: { ...content, data: { kind: BUDGET_KIND } },
-      trigger: { channelId: BUDGET_CHANNEL },
+      content: { ...content, data: { kind } },
+      trigger: { channelId: channel.id },
     });
     return true;
   } catch (error) {
-    markError('invio dell’avviso di budget', error);
+    markError(failure, error);
     return false;
   }
+}
+
+/** L'avviso che una categoria ha toccato o superato il limite del mese (Step 32). */
+export async function notifyBudget(content: AlertContent): Promise<boolean> {
+  return notifyNow(
+    BUDGET_KIND,
+    { id: BUDGET_CHANNEL, name: 'Budget del mese' },
+    content,
+    'invio dell’avviso di budget',
+  );
+}
+
+/** L'avviso che le spese non stanno arrivando agli altri telefoni (Step 33). */
+export async function notifySync(content: AlertContent): Promise<boolean> {
+  return notifyNow(
+    SYNC_KIND,
+    { id: SYNC_CHANNEL, name: 'Sincronizzazione' },
+    content,
+    'invio dell’avviso di sincronizzazione',
+  );
 }
 
 /**

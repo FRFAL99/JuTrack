@@ -3,14 +3,13 @@ import { DEFAULT_SETTINGS, parseSettings, serializeSettings } from './settings';
 
 describe('parseSettings', () => {
   it('rilegge quello che ha scritto', () => {
-    const settings = { reminder: true, budget: true };
+    const settings = { reminder: true, budget: true, sync: true };
     expect(parseSettings(serializeSettings(settings))).toEqual(settings);
   });
 
   it('parte da tutto spento quando non c è ancora niente', () => {
     expect(parseSettings(null)).toEqual(DEFAULT_SETTINGS);
-    expect(DEFAULT_SETTINGS.reminder).toBe(false);
-    expect(DEFAULT_SETTINGS.budget).toBe(false);
+    expect(Object.values(DEFAULT_SETTINGS).every((on) => on === false)).toBe(true);
   });
 
   it.each([
@@ -27,14 +26,16 @@ describe('parseSettings', () => {
     expect(parseSettings('{"reminder":"true"}').reminder).toBe(false);
     expect(parseSettings('{"reminder":1}').reminder).toBe(false);
     expect(parseSettings('{"budget":"true"}').budget).toBe(false);
+    expect(parseSettings('{"sync":1}').sync).toBe(false);
   });
 
-  it('legge le chiavi una per una, così lo Step 33 può aggiungere la propria', () => {
-    // Un campo sconosciuto non fa cadere il resto, e un campo mancante vale spento: è ciò
-    // che permette a un telefono con le impostazioni di oggi di leggere quelle di domani.
+  it('legge le chiavi una per una, e quella che manca vale spento', () => {
+    // È ciò che ha permesso allo Step 33 di aggiungere la sua senza toccare le altre due,
+    // e ciò che permette a un telefono aggiornato di leggere le impostazioni scritte prima.
     expect(parseSettings('{"reminder":true,"sync":true}')).toEqual({
       reminder: true,
       budget: false,
+      sync: true,
     });
   });
 });
