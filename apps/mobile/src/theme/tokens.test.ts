@@ -22,6 +22,15 @@ describe('palette', () => {
     expect(Object.keys(lightPalette).sort()).toEqual(Object.keys(darkPalette).sort());
   });
 
+  it('tiene ogni colore in forma #RRGGBB', () => {
+    // Dallo Step 34 non è più solo una convenzione: il widget Android vuole i colori nel
+    // tipo `#${string}`, e il cast in `BalanceWidget.tsx` si fida di questa riga. Un
+    // `rgba(…)` scritto qui compilerebbe in tutta l'app e finirebbe sulla home come un
+    // colore che il launcher non sa leggere. `luminance`, qui sopra, dà per vero lo stesso.
+    const all = [...Object.values(lightPalette), ...Object.values(darkPalette)];
+    expect(all.filter((color) => !/^#[0-9A-Fa-f]{6}$/.test(color))).toEqual([]);
+  });
+
   it('tiene il fondo più scuro di ogni superficie sul tema scuro', () => {
     // È la ragione dei grigi nuovi: con fondo e superficie alla stessa luminanza le
     // card non si staccano e la gerarchia della schermata sparisce.

@@ -7,6 +7,7 @@ import { BudgetWatcher } from '@/features/notifications/BudgetWatcher';
 import { ReminderScheduler } from '@/features/notifications/ReminderScheduler';
 import { SyncWatcher } from '@/features/notifications/SyncWatcher';
 import { ProfileOnboarding } from '@/features/profile/ProfileOnboarding';
+import { WidgetPublisher } from '@/features/widgets/WidgetPublisher';
 import {
   GroupsProvider,
   ProfileProvider,
@@ -147,6 +148,11 @@ function Shell() {
                     del sync vive in Tu e in fondo alla lista spese, cioè dove chi ha il
                     sync rotto potrebbe non passare per giorni. */}
                 <SyncWatcher />
+                {/* Tiene aggiornato il saldo che si legge sulla home di Android. Qui e non
+                    in una schermata per la ragione più forte delle tre: quel saldo si
+                    guarda **fuori** dall'app, e chi apre l'app solo per registrare una
+                    spesa non passa da dove lo si potrebbe ricalcolare. */}
+                <WidgetPublisher />
                 <Stack
                   screenOptions={{
                     headerShown: false,

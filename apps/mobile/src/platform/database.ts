@@ -10,8 +10,20 @@ import type { SqlValue, SqliteDatabase } from '@jutrack/core';
 export class ExpoSqliteDatabase implements SqliteDatabase {
   private constructor(private readonly db: SQLite.SQLiteDatabase) {}
 
-  static async open(name = 'jutrack.db'): Promise<ExpoSqliteDatabase> {
-    const db = await SQLite.openDatabaseAsync(name);
+  /**
+   * Apre il database.
+   *
+   * `isolated` esiste per il solo task headless del widget (Step 34). Senza
+   * `useNewConnection`, expo-sqlite **riusa la connessione nativa già aperta** per lo stesso
+   * file: il task può partire mentre l'app gira, nello stesso runtime JS, e la sua `close()`
+   * chiuderebbe il database sotto i piedi all'app. Con una connessione propria chiude la
+   * sua e basta. Legge e non scrive, quindi in WAL non dà fastidio a nessuno.
+   */
+  static async open(
+    name = 'jutrack.db',
+    { isolated = false }: { isolated?: boolean } = {},
+  ): Promise<ExpoSqliteDatabase> {
+    const db = await SQLite.openDatabaseAsync(name, isolated ? { useNewConnection: true } : {});
     // WAL: letture e scritture concorrenti senza bloccarsi a vicenda. Senza, il
     // salvataggio di una spesa può far attendere il rendering della lista.
     await db.execAsync('PRAGMA journal_mode = WAL;');

@@ -6,15 +6,16 @@ quinto piano è cominciato**. Il quarto — [piano-v4-grafici-e-dashboard.md](pi
 sono chiusi da prima ([visualdesign.md](visualdesign.md)). Lo stesso giorno è stato scritto il
 **quinto piano**, [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md) —
 notifiche locali, due widget Android, valuta e lingua nel profilo — e oggi ne sono entrati nel codice
-i **primi cinque step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa, il
-promemoria spese, l'avviso di budget e quello di sincronizzazione ferma.
+i **primi sei step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa, il
+promemoria spese, l'avviso di budget, quello di sincronizzazione ferma e il primo dei due widget.
 
 > **La build EAS dello [Step 30](#linfrastruttura-nativa-step-30) è installata e verificata** — la
-> diagnostica dice **16 passaggi su 16** — e con lei i due moduli nativi sono sul telefono. Gli
-> Step 34–35 lavorano in JS sopra quella build e **non ne chiedono altre**. **Le tre notifiche sono
+> diagnostica dice **16 passaggi su 16** — e con lei i due moduli nativi sono sul telefono. Lo
+> Step 35 lavora in JS sopra quella build e **non ne chiede altre**. **Le tre notifiche sono
 > tutte nel codice**: lo [Step 31](#il-promemoria-spese-step-31), lo
 > [Step 32](#lavviso-di-budget-step-32) e lo [Step 33](#la-sincronizzazione-ferma-step-33) sono
-> chiusi; il prossimo è il 34, il primo dei due widget.
+> chiusi, e con loro il [34](#il-widget-del-saldo-step-34), il widget del saldo; il prossimo è il
+> 35, il secondo widget.
 >
 > **Fra i primi quattro piani non c'è più uno step scritto da fare: quello che resta è la prova su
 > due telefoni veri**, e i criteri di «fatto» di tutti e quattro ci passano in mezzo. Il piano v5 è
@@ -62,7 +63,7 @@ Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 | 27 — I sei filtri              | ✅    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
 | 28 — La dashboard componibile  | ✅    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
 
-Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **cinque
+Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **sei
 step su dodici nel codice**:
 
 | Step                               | Stato | Cosa contiene                                                          |
@@ -72,7 +73,8 @@ step su dodici nel codice**:
 | 31 — Promemoria spesa              | ✅    | Interruttore in Tu, scadenza riarmata a ogni apertura                  |
 | 32 — Avviso di budget              | ✅    | Watcher sul documento, segni in `app_meta`, gestore di primo piano     |
 | 33 — Sincronizzazione ferma        | ✅    | Terzo interruttore, watcher sulla fase, scadenza di 24 h su disco      |
-| 34–35 — I due widget               | ⬜    | Saldo del gruppo aperto, totale del mese                               |
+| 34 — Widget «Saldo»                | ✅    | Foglietto in `app_meta`, task headless, `index.js` come entry          |
+| 35 — Widget «Speso questo mese»    | ⬜    | Stesso foglietto, stesso meccanismo di refresh                         |
 | 36 — Refresh in background         | ⬜    | Opzionale, solo se il refresh ad apertura app non basta                |
 | 37 — Infrastruttura i18n           | ⬜    | `i18next`, campo `language` sul `Profile`, selettore in `tu.tsx`       |
 | 38–39 — Traduzione EN              | ⬜    | Schermata per schermata, un passo a sessione                           |
@@ -90,7 +92,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**1046 test verdi** (588 core + 415 app + 43 relay), typecheck, lint e `format:check` puliti.
+**1068 test verdi** (588 core + 437 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -778,6 +780,57 @@ telefoni. Ultimo dei tre contenuti di notifica, tutto JS sopra la build dello St
 - **`packages/core` non è stato toccato**, per il terzo step di fila. `SyncState` e `describe.ts`
   dicono **cosa** sta succedendo; qui si decide solo da quanto, e se è già stato detto.
 
+## Il widget del saldo (Step 34)
+
+Il saldo del gruppo aperto sulla schermata home di Android, primo dei due widget dichiarati in
+`app.json` allo Step 30. Tutto JS sopra quella build, e senza chiederne un'altra.
+
+- **Il widget non lo disegna l'app, e da qui viene tutto il resto.** Lo disegna il sistema quando
+  lo chiede lui — widget appena aggiunto, telefono riacceso, rettangolo ridimensionato — cioè
+  quasi sempre ad app chiusa. Risponde un **task headless**: il bundle JS senza provider, senza
+  `Y.Doc` montato, senza chiave dal portachiavi. Quindi il disegno **non calcola, legge**: l'app
+  calcola quando ha già tutto in mano (`WidgetPublisher` accanto allo `Stack`, dove stanno i due
+  watcher) e lascia un foglietto in `app_meta` (`widget_snapshot`); il task lo raccoglie e lo
+  disegna. Stessa divisione dei tre step di notifica, fra due lati che non sono nemmeno vivi
+  nello stesso momento.
+- **Nel foglietto ci sono frasi già fatte, non numeri.** Formattare un importo vuole il simbolo
+  della valuta del profilo (Step 29), dire chi deve a chi vuole i nomi dei membri: le due cose
+  che il task headless non ha. Salvare `cents` significherebbe rimontare metà app per riscoprire
+  ciò che l'app sapeva già un istante prima.
+- **`myBalance` è l'unico refactoring, e nasce da una differenza di forma.** La card in cima alle
+  spese dice «Juju ti deve 25,00 €» in una riga; il widget ha un numero grande e una didascalia,
+  quindi l'importo esce dalla frase. I fatti si decidono una volta sola, le parole due.
+- **Da solo in un gruppo non si è «pari» con nessuno.** La card nasconde il saldo con un membro
+  solo; il widget non può nascondere niente — è tutta la sua superficie — e dice «Solo tu in
+  questo gruppo». Il widget che serve a chi è da solo è quello dello Step 35.
+- **Niente data di aggiornamento, ed è una scelta.** Senza refresh in background il widget resta
+  fermo finché l'app non si riapre; datarlo sarebbe onesto ma è un campo che nessuno legge, e il
+  problema è quello che lo **Step 36** esiste per risolvere. Se dopo l'uso reale risulterà troppo
+  vecchio, la risposta è aggiornarlo, non datarlo.
+- **`apps/mobile/index.js` esiste per una ragione sola**: il task va registrato **all'ingresso del
+  bundle**, perché ad app chiusa React Native cerca un task headless già registrato prima che
+  qualunque componente esista. `main` non è più `expo-router/entry`. **Non serve una build EAS
+  nuova**: l'app nativa apre l'entry virtuale di Metro, che risolve `main` al momento del bundle.
+- **Il task apre il database con una connessione tutta sua** (`isolated`). Può partire mentre
+  l'app gira, nello stesso runtime JS, ed expo-sqlite senza `useNewConnection` riusa la
+  connessione già aperta: la `close()` del task l'avrebbe chiusa sotto i piedi all'app.
+- **«Azzera questo telefono» adesso azzera anche la home.** `wipeDevice` porta via il foglietto
+  con il resto di `app_meta`, ma nessuno ridisegnava il widget: il saldo dell'ultimo gruppo
+  sarebbe rimasto sullo schermo fino al riavvio. `clearWidgets()` in `useWipeDevice` chiude il
+  buco, ed è lo Step 22 applicato a una superficie che allora non c'era.
+- **Il freno è nella scrittura, non nel calcolo.** Il saldo si rifà a ogni modifica del documento
+  — lo stesso `computeBalances` della home, pagato anche a home chiusa — ma `publishSnapshot`
+  confronta con il disco e quasi sempre non scrive: il documento cambia a ogni spesa, il saldo
+  mostrato molto più di rado.
+- **Due palette e non il tema dell'app**: Android sceglie fra `light` e `dark` **nel momento in
+  cui disegna**, e un tema letto dall'app resterebbe chiaro sulla home scura di chi l'ha cambiato
+  ad app chiusa. Dei componenti non si riusa niente (`RemoteViews`, non viste), dei token sì — e
+  la palette ha ora un test che pretende `#RRGGBB`, perché il cast in `BalanceWidget.tsx` si fida
+  di quello.
+- **`MonthTotal` risponde ma non disegna**: il provider è nel manifest dallo Step 30, il contenuto
+  è lo Step 35. Chi lo aggiunge oggi trova il rettangolo vuoto del launcher, che è meglio del
+  saldo mostrato sotto l'etichetta «speso questo mese».
+
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
 Entrambi nel codice e coperti dai test. **Nessuno dei due è ancora stato visto risolto su due
@@ -841,11 +894,12 @@ relay in produzione, invito di pairing, QR, fotocamera, **notifiche locali e wid
 > **La build del 12 agosto 2026 è quella dello Step 30**, installata e verificata: la diagnostica
 > risponde `15. notifiche locali: modulo disponibile, permesso non concesso` e
 > `16. widget Android: 2 provider rispondono (0 + 0 sulla home)`. «Permesso non concesso» e gli zeri
-> sono **l'esito atteso**, non un difetto: il permesso lo chiederà lo Step 31, e i widget non hanno
-> ancora un contenuto da disegnare — quello arriva agli Step 34–35.
+> erano **l'esito atteso** di allora: il permesso l'ha poi chiesto lo Step 31, il saldo ha ricevuto
+> un contenuto con lo Step 34, e «speso questo mese» lo riceve col 35.
 >
-> **Questa build sblocca gli Step 31–35, che sono JS e non ne chiedono altre.** Ne resta fuori il
-> solo Step 36, opzionale e da riaprire solo se il refresh ad apertura app non basta.
+> **Questa build sblocca gli Step 31–35, che sono JS e non ne chiedono altre** — lo Step 34 lo ha
+> confermato anche per il cambio di `main`, che Metro risolve al momento del bundle. Ne resta fuori
+> il solo Step 36, opzionale e da riaprire solo se il refresh ad apertura app non basta.
 >
 > **Ha portato con sé anche `expo-file-system` ed `expo-sharing`**, aggiunti allo Step 9 e mai finiti
 > in una build: il foglio di condivisione dell'export dovrebbe funzionare adesso, invece di ripiegare
@@ -1039,10 +1093,20 @@ lista, non le toglie.
 - **Il selettore di widget di Android**, che la diagnostica non può guardare: tenendo premuto sulla
   home devono comparire «JuTrack — saldo» e «JuTrack — speso questo mese» con le loro descrizioni.
   `getWidgetInfo` prova che i provider **rispondono**; solo il selettore prova che etichette e
-  dimensioni sono quelle scritte in `app.json`. Un widget aggiunto adesso resta **vuoto**, ed è
-  atteso: il contenuto arriva agli Step 34–35
+  dimensioni sono quelle scritte in `app.json`. «Speso questo mese» aggiunto adesso resta **vuoto**,
+  ed è atteso: il suo contenuto è lo Step 35
+- **Lo Step 34, che è il primo pezzo di JuTrack che vive fuori dall'app e non è verificabile
+  altrimenti.** Nell'ordine: che il widget «JuTrack — saldo» aggiunto alla home **si popoli** invece
+  di restare vuoto; che una spesa che sposta il saldo si veda sulla home **senza riaprire l'app**;
+  che dopo un **riavvio del telefono** il widget si ridisegni da solo — è il caso per cui esiste il
+  task headless, ed è quello che fallirebbe in silenzio se la registrazione all'ingresso del bundle
+  non funzionasse; che cambiando gruppo dalla pill il widget **segua**; e che azzerando il telefono
+  il saldo **sparisca dalla home**. Da guardare anche il tema scuro, disegnato da un ramo che l'app
+  non percorre mai, e il tocco sul rettangolo, che deve aprire l'app. Il primo avvio dopo questo
+  step è anche la prima esecuzione di `index.js` come entry: se l'app si apre, quel cambio ha
+  funzionato
 
-Tutto il resto è verificato: 1046 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 1068 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 > **Lo Step 25 è entrato in questa lista attraverso il 26**, come era stato scritto: la geometria

@@ -4,6 +4,116 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-12 — Step 34: il widget del saldo, che si disegna senza l'app
+
+Il primo dei due widget dichiarati in `app.json` allo Step 30: il saldo del gruppo aperto,
+sulla schermata home di Android. Ancora tutto JS sopra quella build, e senza chiederne
+un'altra.
+
+**Il fatto che decide tutto lo step è che il widget non lo disegna l'app.** Lo disegna il
+sistema, quando lo chiede lui: appena trascinato sulla home, dopo un riavvio del telefono, a
+ogni ridimensionamento — cioè quasi sempre ad app chiusa. Chi risponde è un **task headless**,
+il bundle JS senza l'app dentro: niente provider, nessun `Y.Doc` montato, nessuna chiave
+presa dal portachiavi. Rimontargli il vault sotto vorrebbe dire aprire SecureStore e
+ricostruire il documento per scrivere due righe di testo su un rettangolo, ogni volta che
+qualcuno accende il telefono.
+
+Quindi il disegno **non calcola: legge**. L'app calcola quando ha già tutto in mano —
+`WidgetPublisher` accanto allo `Stack`, dove stanno i due watcher delle notifiche — e lascia
+un foglietto in `app_meta` (`widget_snapshot`); il task headless lo raccoglie e lo disegna. È
+la stessa divisione dei tre step di notifica (`reminder.ts`, `budget.ts` e `sync.ts` decidono,
+il modulo nativo esegue) applicata a un caso in cui i due lati **non sono nemmeno vivi nello
+stesso momento**.
+
+**Nel foglietto ci sono frasi già fatte, non numeri**, e non è pigrizia. Formattare un importo
+vuole il simbolo della valuta scelta nel profilo (Step 29); dire chi deve a chi vuole i nomi
+dei membri. Sono le due cose che il task headless non ha, ed è precisamente ciò che rende la
+scelta obbligata: salvare `cents` e ricostruire la frase di là significherebbe rimontare metà
+app per riscoprire quello che l'app sapeva già un istante prima.
+
+**`myBalance` è nato da qui, ed è l'unico refactoring dello step.** La card in cima alle spese
+scrive «Juju ti deve 25,00 €» in una riga sola; un widget ha un numero grande e una didascalia
+sotto, quindi l'importo deve uscire dalla frase. Due frasi, gli stessi fatti: chi deve a chi si
+decide una volta in `myBalance`, e `describeMyBalance` sceglie soltanto le parole. Senza, la
+seconda sarebbe stata una copia della prima con le parole spostate — cioè un secondo posto in
+cui sbagliare il verso di un debito.
+
+**Da solo in un gruppo non si è «pari» con nessuno.** La card sulla home nasconde il saldo
+quando il membro è uno solo; il widget non può nascondere niente, perché quella è tutta la sua
+superficie, e «Siete pari» parlerebbe di gente che non c'è. Chi è da solo legge «Solo tu in
+questo gruppo», e il widget che gli serve è il totale del mese, cioè lo Step 35.
+
+**Non c'è una data di aggiornamento, ed è una decisione, non una dimenticanza.** Senza refresh
+in background il widget resta fermo finché l'app non si riapre, e datarlo sarebbe l'unico modo
+onesto di dirlo — ma un campo che cambia a ogni scrittura e che nessuno legge è peso morto, e
+il problema che risolverebbe è quello che lo **Step 36** esiste per risolvere davvero. Il piano
+lo tiene esplicitamente in sospeso: se dopo l'uso reale il widget si dimostra troppo vecchio,
+la risposta è aggiornarlo, non datarlo.
+
+**Tre trappole trovate leggendo, non provando.** Nessuna delle tre dà un errore di
+compilazione, e tutte e tre si sarebbero viste solo sul telefono:
+
+- **Il task va registrato all'ingresso del bundle**, non in un componente. Quando il sistema
+  chiede un widget ad app chiusa, React Native esegue il bundle e cerca subito un task headless
+  già registrato: registrarlo dentro l'albero React vorrebbe dire registrarlo solo dopo che
+  l'app è partita, cioè mai nel caso che conta. È l'unica ragione per cui `apps/mobile/index.js`
+  esiste al posto di `main: "expo-router/entry"`. **E non serve una build EAS nuova**: l'app
+  nativa non nomina `index.js`, apre l'entry virtuale di Metro che risolve `main` al momento del
+  bundle. Se così non fosse, questo step avrebbe smentito lo Step 30.
+- **Il database va aperto con una connessione tutta sua.** Il task può partire mentre l'app è
+  aperta e condividere con lei il runtime JS, ed expo-sqlite senza `useNewConnection` **riusa la
+  connessione nativa già aperta** per lo stesso file: la `close()` del task l'avrebbe chiusa
+  sotto i piedi a chi stava registrando una spesa. `ExpoSqliteDatabase.open` ha imparato
+  `isolated`, e lo usa solo il task.
+- **«Azzera questo telefono» non azzerava la home.** `wipeDevice` cancella `app_meta`, foglietto
+  compreso, ma nessuno ridisegna il widget: il saldo dell'ultimo gruppo sarebbe rimasto scritto
+  sullo schermo di un telefono che di quel gruppo non sa più niente, fino al riavvio successivo.
+  `clearWidgets()` in `useWipeDevice` chiude il buco. Lo Step 22 aveva stabilito che azzerare
+  azzera davvero, e da oggi la home fa parte di ciò che si vede.
+
+**Il freno non è nel calcolo, è nella scrittura.** Il saldo si rifà a ogni modifica del
+documento — lo stesso `computeBalances` su tutta la storia che fa la home — e adesso si paga
+anche quando la home non è aperta. È accettato: quello che non si fa è **scrivere**.
+`publishSnapshot` confronta il foglietto nuovo con quello su disco e quasi sempre non fa
+niente, perché il documento cambia a ogni spesa ma il saldo mostrato molto più di rado — una
+spesa che pago io e dividiamo a metà lo sposta, una che pago per me solo no. Senza quel
+confronto, ogni spesa costerebbe una scrittura su `app_meta` e un giro di `RemoteViews` verso
+il launcher, che è il modo in cui un widget diventa una voce nella classifica dei consumi.
+
+**Due palette e non il tema dell'app.** `WidgetRepresentation` accetta `{ light, dark }` e
+Android sceglie **nel momento in cui disegna**: un widget che portasse con sé il tema letto
+dall'app resterebbe chiaro sulla home scura di chi ha cambiato tema ad app chiusa. Del resto
+dell'app non si riusa niente — `FlexWidget` e `TextWidget` producono `RemoteViews`, non viste,
+e i `<Text>` della card non sono riusabili qui nemmeno volendo — ma i **token** sì, e la
+palette è diventata verificabile: c'è un test nuovo che pretende `#RRGGBB` su ogni colore,
+perché il tipo della libreria è `` `#${string}` `` e il cast in `BalanceWidget.tsx` si fida di
+quella riga.
+
+**`MonthTotal` risponde ma non disegna**, e va detto: il provider è nel manifest dallo Step 30
+— andava dichiarato lì o sarebbe servita una seconda build — mentre il contenuto è lo Step 35.
+Chi lo aggiunge oggi trova il rettangolo vuoto del launcher. È meglio di un widget che mostra
+il saldo sotto l'etichetta «speso questo mese»: un numero giusto al posto sbagliato.
+
+**`packages/core` non è stato toccato**, per il quarto step di fila.
+
+**Verifica:** 1068 test verdi (588 core + 437 app + 43 relay, di cui 22 nuovi), typecheck, lint
+e `format:check` puliti, `expo export --platform android` completato — e il bundle esportato
+contiene davvero `registerWidgetTask`, che è la prova che il cambio di `main` ha preso: quel
+codice non è raggiungibile da nessun altro punto dell'app.
+
+**Sul telefono resta la prova vera, e questo step non è verificabile altrimenti.** Nell'ordine:
+aggiungere il widget dalla tendina dei widget e vedere se si popola invece di restare vuoto;
+registrare una spesa che sposta il saldo e guardare la home senza riaprire l'app; **riavviare
+il telefono**, che è il caso per cui esiste il task headless; cambiare gruppo dalla pill e
+controllare che il widget segua; azzerare il telefono e verificare che il saldo sparisca dalla
+home. Da controllare anche il tema scuro, che è disegnato da un ramo di codice che l'app non
+percorre mai.
+
+**Prossimo:** Step 35 — il widget «Totale speso nel mese», che entra nello stesso foglietto
+accanto al saldo.
+
+---
+
 ## 2026-08-12 — Step 33: la sincronizzazione ferma, che è una condizione su una scadenza
 
 Un terzo interruttore in Tu, e una notifica che arriva quando le spese non raggiungono più

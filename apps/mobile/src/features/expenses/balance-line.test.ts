@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Transfer } from '@jutrack/core';
-import { describeMyBalance } from './balance-line';
+import { describeMyBalance, myBalance } from './balance-line';
 
 const IO = 'membro-io';
 const JUJU = 'membro-juju';
@@ -78,5 +78,35 @@ describe('describeMyBalance', () => {
       nameOf,
     );
     expect(line.tone).toBe('credit');
+  });
+});
+
+describe('myBalance', () => {
+  // I fatti sotto le due frasi: la riga della card e il widget dello Step 34 li dicono in
+  // due modi diversi, ma chi deve a chi si decide qui una volta sola.
+
+  it('somma i crediti e tiene chi sono', () => {
+    const balance = myBalance([transfer(JUJU, IO, 2500), transfer(TERZO, IO, 1000)], IO);
+    expect(balance).toEqual({ tone: 'credit', cents: 3500, counterparties: [JUJU, TERZO] });
+  });
+
+  it('somma i debiti e tiene verso chi sono', () => {
+    const balance = myBalance([transfer(IO, JUJU, 2500)], IO);
+    expect(balance).toEqual({ tone: 'debt', cents: 2500, counterparties: [JUJU] });
+  });
+
+  it('restituisce un importo positivo anche quando devo io', () => {
+    // Il verso lo dice `tone`: un numero negativo passerebbe da `formatMoney` con il segno,
+    // e il widget mostrerebbe «-25,00 €» sotto la scritta «Devi a Juju», che lo dice due
+    // volte e la seconda al contrario.
+    expect(myBalance([transfer(IO, JUJU, 2500)], IO).cents).toBeGreaterThan(0);
+  });
+
+  it('non mi riguarda un debito fra altre due persone', () => {
+    expect(myBalance([transfer(JUJU, TERZO, 2500)], IO)).toEqual({
+      tone: 'even',
+      cents: 0,
+      counterparties: [],
+    });
   });
 });

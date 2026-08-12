@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { router } from 'expo-router';
 import { expoKeyStore } from '@/platform';
+import { clearWidgets } from '@/features/widgets/publish';
 import { useAppData, useGroups, useVaultStatus, wipeDevice } from '@/state';
 
 /**
@@ -54,6 +55,12 @@ export function useWipeDevice(): WipeDeviceControl {
 
     void wipeDevice({ db, meta, keyStore: expoKeyStore, registry })
       .then(() => {
+        // `wipeDevice` porta via anche il foglietto dei widget insieme al resto di
+        // `app_meta`, ma **nessuno ridisegna la home**: senza questa riga il saldo
+        // dell'ultimo gruppo resterebbe scritto sullo schermo di un telefono che di quel
+        // gruppo non sa più niente. Non si attende — è un rettangolo, non un dato — e se
+        // fallisce non deve trattenere un azzeramento già riuscito.
+        void clearWidgets();
         // Via da questa schermata **prima** di smontare l'albero. `forgetProfile()` fa
         // sparire il navigatore intero dietro l'onboarding, e al ritorno lo rimonterebbe
         // sull'ultima rotta: chi registra il profilo nuovo si ritroverebbe davanti
