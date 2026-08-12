@@ -8,12 +8,10 @@ sono chiusi da prima ([visualdesign.md](visualdesign.md)). Lo stesso giorno è s
 notifiche locali, due widget Android, valuta e lingua nel profilo — e oggi ne sono entrati nel codice
 i **primi due step su dodici**: la valuta di default nel profilo e l'infrastruttura nativa.
 
-> **C'è una cosa da fare che non è codice, ed è l'unica che blocca il seguito: la build EAS dello
-> [Step 30](#linfrastruttura-nativa-step-30).** Plugin, permesso, moduli e diagnostica sono scritti e
-> verificati con un prebuild di controllo, ma i due moduli nativi arrivano sul telefono solo con una
-> build nuova — e gli Step 31–35 lavorano in JS **sopra** quella build. Il comando è in
-> [Riferimenti operativi](#riferimenti-operativi); `eas-cli` **non è autenticato**, quindi il primo
-> passo è `npx eas-cli login`.
+> **La build EAS dello [Step 30](#linfrastruttura-nativa-step-30) è installata e verificata** — la
+> diagnostica dice **16 passaggi su 16** — e con lei i due moduli nativi sono sul telefono. Gli
+> Step 31–35 lavorano in JS sopra quella build e **non ne chiedono altre**: il prossimo lavoro è lo
+> [Step 31](piano-v5-notifiche-widget-profilo.md#step-3133--notifiche-locali), il promemoria locale.
 >
 > **Fra i primi quattro piani non c'è più uno step scritto da fare: quello che resta è la prova su
 > due telefoni veri**, e i criteri di «fatto» di tutti e quattro ci passano in mezzo. Il piano v5 è
@@ -67,7 +65,7 @@ su dodici nel codice**:
 | Step                               | Stato | Cosa contiene                                                          |
 | ---------------------------------- | ----- | ---------------------------------------------------------------------- |
 | 29 — Valuta di default nel profilo | ✅    | Campo `currency` sul `Profile`, selettore in `tu.tsx`, simbolo ovunque |
-| 30 — Infrastruttura nativa         | 🟡    | Plugin, permesso e diagnostica fatti — **manca la build EAS**          |
+| 30 — Infrastruttura nativa         | ✅    | Plugin, permesso, build EAS installata, diagnostica 16/16              |
 | 31–33 — Notifiche locali           | ⬜    | Promemoria spesa, soglia budget, sync bloccato                         |
 | 34–35 — I due widget               | ⬜    | Saldo del gruppo aperto, totale del mese                               |
 | 36 — Refresh in background         | ⬜    | Opzionale, solo se il refresh ad apertura app non basta                |
@@ -597,9 +595,9 @@ una build EAS né una libreria nuova.
 ## L'infrastruttura nativa (Step 30)
 
 I due config plugin insieme in `app.json`, i moduli caricati pigramente e la diagnostica che passa
-da 14 a 16 passaggi. **Manca la build EAS**, che è l'unica parte non scrivibile: finché non è
-installata, i passaggi 15 e 16 rispondono «serve la build EAS dello Step 30» — e gli Step 31–35, che
-sono JS sopra quella build, non si possono verificare.
+da 14 a 16 passaggi. **La build EAS è stata fatta e installata il 12 agosto 2026**, e la
+diagnostica risponde 16 su 16: `modulo disponibile, permesso non concesso` e `2 provider rispondono
+(0 + 0 sulla home)`. Gli Step 31–35 sono JS sopra questa build e non ne chiedono altre.
 
 - **I due widget vanno dichiarati adesso, non agli Step 34–35 — e il piano non lo diceva.** Il
   plugin di `react-native-android-widget` ha `widgets: Widget[]` **obbligatorio**, e ogni voce
@@ -685,25 +683,25 @@ lezione di metodo in [troubleshooting-avvio-app.md](troubleshooting-avvio-app.md
 cd apps/mobile && npx expo start --dev-client    # MAI dalla root del monorepo
 ```
 
-Development build EAS installata su Android. **Diagnostica: 14 passaggi su 14, «TUTTO OK»** — Yjs,
+Development build EAS installata su Android. **Diagnostica: 16 passaggi su 16, «TUTTO OK»** — Yjs,
 `Y.Doc` con lo shim lib0/webcrypto, crypto su Hermes vero, XChaCha20-Poly1305, SQLite, SecureStore,
-relay in produzione, invito di pairing, QR, fotocamera.
+relay in produzione, invito di pairing, QR, fotocamera, **notifiche locali e widget Android**.
 
 - Progetto EAS: `@frfal/jutrack`, build con `npx eas-cli build -p android --profile development`
 - Il keystore Android è custodito da EAS: serve per ogni aggiornamento futuro dell'app installata
 
-> **La build installata è ferma al 1º agosto e non contiene i moduli dello Step 30.** Serve una
-> build nuova, ed è il passo che sblocca gli Step 31–35. `eas-cli` non è autenticato:
+> **La build del 12 agosto 2026 è quella dello Step 30**, installata e verificata: la diagnostica
+> risponde `15. notifiche locali: modulo disponibile, permesso non concesso` e
+> `16. widget Android: 2 provider rispondono (0 + 0 sulla home)`. «Permesso non concesso» e gli zeri
+> sono **l'esito atteso**, non un difetto: il permesso lo chiederà lo Step 31, e i widget non hanno
+> ancora un contenuto da disegnare — quello arriva agli Step 34–35.
 >
-> ```bash
-> cd apps/mobile
-> npx eas-cli login
-> npx eas-cli build -p android --profile development
-> ```
+> **Questa build sblocca gli Step 31–35, che sono JS e non ne chiedono altre.** Ne resta fuori il
+> solo Step 36, opzionale e da riaprire solo se il refresh ad apertura app non basta.
 >
-> Installato l'APK, aprire **Diagnostica**: i passaggi 15 e 16 devono dire «modulo disponibile» e
-> «2 provider rispondono». Finché dicono «serve la build EAS dello Step 30», l'app funziona
-> esattamente come prima — i moduli si caricano pigramente apposta.
+> **Ha portato con sé anche `expo-file-system` ed `expo-sharing`**, aggiunti allo Step 9 e mai finiti
+> in una build: il foglio di condivisione dell'export dovrebbe funzionare adesso, invece di ripiegare
+> sugli appunti. Non è stato ancora guardato — vedi la lista qui sotto.
 
 ## Cosa non è ancora stato verificato su hardware reale
 
@@ -855,10 +853,15 @@ lista, non le toglie.
   foglio dei filtri** (sono i punti più lontani da dove si sceglie), e che le sei pillole del
   selettore stiano in larghezza senza troncarsi — «AUD A$» è la più lunga
 
-> **La development build installata sul telefono non contiene i due moduli nuovi.** È stata
-> compilata prima che venissero aggiunti. L'app si apre lo stesso — sono caricati con `require` in
-> `try/catch` proprio per questo — e l'export ripiega sugli appunti, dichiarandolo nell'interfaccia.
-> Il foglio di condivisione comparirà solo dopo una build aggiornata.
+- **Il foglio di condivisione dell'export**, che fino all'11 agosto era impossibile da provare: la
+  build che lo conteneva non esisteva, e l'export ripiegava sugli appunti dichiarandolo
+  nell'interfaccia. La build dello Step 30 porta `expo-file-system` ed `expo-sharing`, quindi adesso
+  la prova si può fare: esportare un CSV e vedere se compare il foglio di sistema invece del ripiego
+- **Il selettore di widget di Android**, che la diagnostica non può guardare: tenendo premuto sulla
+  home devono comparire «JuTrack — saldo» e «JuTrack — speso questo mese» con le loro descrizioni.
+  `getWidgetInfo` prova che i provider **rispondono**; solo il selettore prova che etichette e
+  dimensioni sono quelle scritte in `app.json`. Un widget aggiunto adesso resta **vuoto**, ed è
+  atteso: il contenuto arriva agli Step 34–35
 
 Tutto il resto è verificato: 970 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.

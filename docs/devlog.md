@@ -74,16 +74,24 @@ vulnerabilità» dello Step 0 sono ferme a quel giorno e vanno lette così.
 **Verifica:** 970 test verdi, typecheck, lint e `format:check` puliti,
 `expo export --platform android` completato, e il prebuild di controllo descritto sopra.
 
-**Quello che manca, e che nessuno può scrivere:**
+**La build è stata fatta e installata lo stesso giorno, e la diagnostica dice 16 su 16:**
 
-```bash
-cd apps/mobile
-npx eas-cli login            # l'account non è autenticato
-npx eas-cli build -p android --profile development
+```
+15. notifiche locali: modulo disponibile, permesso non concesso
+16. widget Android: 2 provider rispondono (0 + 0 sulla home)
 ```
 
-Poi si installa l'APK sul telefono e si apre **Diagnostica**: i passaggi 15 e 16 devono dire
-«modulo disponibile» e «2 provider rispondono», non «serve la build EAS dello Step 30».
+Le due formule che sembrano un difetto sono l'esito atteso, e vale la pena dirlo perché la
+prossima volta che si legge questa riga non sarà ovvio: **«permesso non concesso» è giusto**
+— nessuno l'ha ancora chiesto, lo farà lo Step 31 — e **gli zeri sono giusti**, perché nessun
+widget è ancora sulla home. Quello che si voleva sapere è che i due moduli sono linkati e che i
+provider rispondono **al nome** con cui il JS li chiamerà: entrambe le cose ci sono.
+
+**Un effetto collaterale che vale più di quanto costa:** questa build porta anche
+`expo-file-system` ed `expo-sharing`, aggiunti allo Step 9 e mai finiti in una build installata.
+Il foglio di condivisione dell'export dovrebbe funzionare adesso invece di ripiegare sugli
+appunti — è una riga che era in «non verificato su hardware reale» da undici giorni, e adesso è
+verificabile.
 
 **Prossimo:** Step 31 — il promemoria locale «registra una spesa», il primo dei tre contenuti di
 notifica. È JS sopra la build di questo step, e non ne chiede un'altra.

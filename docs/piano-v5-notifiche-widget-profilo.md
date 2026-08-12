@@ -3,10 +3,11 @@
 > Punto d'ingresso del progetto: [STATO.md](STATO.md). Piano approvato:
 > `~/.claude/plans/ho-appena-fatto-delle-nested-conway.md`.
 >
-> **Due step su dodici nel codice.** Lo [Step 29](#step-29--valuta-di-default-nel-profilo) è chiuso
-> il 12 agosto 2026; lo [Step 30](#step-30--infrastruttura-nativa-condivisa) è scritto e verificato
-> lo stesso giorno, ma **la build EAS non è ancora stata fatta** — e senza quella gli Step 31–35 non
-> sono verificabili. L'implementazione procede uno step alla volta, come per i piani precedenti.
+> **Due step su dodici chiusi.** Lo [Step 29](#step-29--valuta-di-default-nel-profilo) e lo
+> [Step 30](#step-30--infrastruttura-nativa-condivisa) sono chiusi il 12 agosto 2026, il secondo
+> **build EAS compresa**: installata e verificata con la diagnostica a 16 passaggi su 16. Gli
+> Step 31–35 lavorano in JS sopra quella build e non ne chiedono altre. L'implementazione procede
+> uno step alla volta, come per i piani precedenti.
 >
 > **Due punti dello Step 30 erano scritti male qui**, e vanno letti da
 > [STATO.md](STATO.md#linfrastruttura-nativa-step-30):
