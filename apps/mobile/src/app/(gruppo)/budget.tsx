@@ -1,13 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import {
-  budgetStatuses,
-  formatCents,
-  formatMoney,
-  monthBounds,
-  parseAmount,
-  shiftMonth,
-} from '@jutrack/core';
+import { budgetStatuses, monthBounds, parseAmount, shiftMonth } from '@jutrack/core';
+import { formatCents, formatMoney } from '@/i18n/money';
 import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
 import { currentMonth, formatMonthTitle } from '@/features/expenses/grouping';

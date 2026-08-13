@@ -4,17 +4,12 @@ import { useTranslation } from 'react-i18next';
 import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
-import {
-  computeBalances,
-  formatCents,
-  formatMoney,
-  monthBounds,
-  simplifyDebts,
-  totalsByCategory,
-} from '@jutrack/core';
+import { computeBalances, monthBounds, simplifyDebts, totalsByCategory } from '@jutrack/core';
+import { formatMoney } from '@/i18n/money';
 import { initialOf } from '@/components/avatar';
 import { AvatarStack } from '@/components/AvatarStack';
 import { Card } from '@/components/Card';
+import { HeroAmount } from '@/components/HeroAmount';
 import { Screen } from '@/components/Screen';
 import { ExpenseRow } from '@/features/expenses/ExpenseRow';
 import { describeMyBalance } from '@/features/expenses/balance-line';
@@ -87,10 +82,8 @@ export function GroupHome({ group }: { group: GroupRecord }) {
   // Senza, al cambio di lingua il componente si ridisegnerebbe — `useTranslation` lo fa — ma
   // le intestazioni dei giorni e la riga del saldo resterebbero quelle memoizzate prima, cioè
   // nella lingua di prima. `t` cambia identità a ogni cambio di lingua, ed è il solo appiglio
-  // che React ha per accorgersene.
-  // `t` non compare nel corpo, ma `groupByDay` legge la lingua da i18next: senza questa
-  // dipendenza le intestazioni dei giorni resterebbero memoizzate nella lingua di prima.
-  // La regola vede solo le variabili citate, quindi la chiama di troppo.
+  // che React ha per accorgersene; la regola vede solo le variabili citate nel corpo, quindi
+  // qui la chiama di troppo.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const sections = useMemo(() => groupByDay(expenses), [expenses, t]);
   const monthTotal = useMemo(
@@ -217,15 +210,16 @@ export function GroupHome({ group }: { group: GroupRecord }) {
           <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
             {formatMonthTitle(month)}
           </Text>
-          <Text
+          <HeroAmount
+            cents={monthTotal}
+            symbol={symbol}
+            symbolColor={colors.textMuted}
             style={[
               numeric,
               tightTitle,
               { color: colors.text, fontSize: 38, fontWeight: fontWeight.heavy },
             ]}
-          >
-            {formatCents(monthTotal)} <Text style={{ color: colors.textMuted }}>{symbol}</Text>
-          </Text>
+          />
         </View>
         <View
           style={{

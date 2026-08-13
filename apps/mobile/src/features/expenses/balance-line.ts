@@ -1,4 +1,5 @@
-import { formatMoney, type Transfer } from '@jutrack/core';
+import { type Transfer } from '@jutrack/core';
+import { formatMoney } from '@/i18n/money';
 import { t } from '@/i18n/translate';
 
 /** Di che segno è il saldo, per scegliere il colore senza che il chiamante lo deduca dal testo. */

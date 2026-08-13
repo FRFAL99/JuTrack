@@ -128,13 +128,13 @@ describe('in inglese', () => {
     // In italiano «Mancano 5,00 €», in inglese «5,00 € missing»: il verbo sta da parti
     // opposte, ed è la ragione per cui la frase intera è una chiave e non un pezzo cucito
     // attorno a un numero.
-    expect(describeGap(500, 10_000)).toBe('5,00 € missing');
-    expect(describeGap(-500, 10_000)).toBe('5,00 € too much');
+    expect(describeGap(500, 10_000)).toBe('€5.00 missing');
+    expect(describeGap(-500, 10_000)).toBe('€5.00 too much');
     expect(describeGap(0, 10_000)).toBe('The shares cover the total exactly');
   });
 
   it('traduce l anteprima delle quote', () => {
-    expect(splitPreview(10_000, 2)).toBe('50,00 € each');
+    expect(splitPreview(10_000, 2)).toBe('€50.00 each');
     expect(splitPreview(null, 2)).toBe('Split evenly');
   });
 });

@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
-import { formatMoney, HEATMAP_LEVELS, type HeatmapCell } from '@jutrack/core';
+import { HEATMAP_LEVELS, type HeatmapCell } from '@jutrack/core';
+import { formatMoney } from '@/i18n/money';
 import { formatDayTitle } from '@/features/expenses/grouping';
 import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';

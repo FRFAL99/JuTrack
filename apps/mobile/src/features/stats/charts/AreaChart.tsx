@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 import Svg, { Line, Path } from 'react-native-svg';
-import { areaPath, formatMoney, linearScale, linePath, niceTicks, type Point } from '@jutrack/core';
+import { areaPath, linearScale, linePath, niceTicks, type Point } from '@jutrack/core';
+import { formatMoney } from '@/i18n/money';
 import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { compactAmount } from '../format';

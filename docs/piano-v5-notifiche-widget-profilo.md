@@ -185,8 +185,14 @@ schermate.
 | 36   | Widget    | _(opzionale, da valutare dopo l'uso reale)_ refresh periodico in background via WorkManager                                                   |   Forse   |
 | 37   | Lingua    | Infrastruttura i18n (libreria, provider, dizionari IT/EN), campo `language` nel `Profile`, selettore in `tu.tsx`                              |    No     |
 | 38   | Lingua    | Traduzione EN delle tre schermate più aperte: home spese, nuova spesa, gruppi                                                                 |    No     |
-| 39   | Lingua    | Traduzione EN del resto: grafici/dashboard, Tu/impostazioni, onboarding, pairing, backup/export, azzera                                       |    No     |
-| 40   | Verifica  | Prova end-to-end su telefono reale: notifiche mostrate davvero, widget che si aggiornano, cambio lingua visibile, valuta di default applicata |    No     |
+| 39   | Lingua    | **Formato dei numeri per lingua**: separatore decimale e posizione del simbolo in `packages/core`                                             |    No     |
+| 40   | Lingua    | Traduzione EN del resto: grafici/dashboard, Tu/impostazioni, onboarding, pairing, backup/export, azzera                                       |    No     |
+| 41   | Verifica  | Prova end-to-end su telefono reale: notifiche mostrate davvero, widget che si aggiornano, cambio lingua visibile, valuta di default applicata |    No     |
+
+> **La numerazione da 39 in poi è scalata di uno** rispetto al piano scritto l'11 agosto: lo Step
+> 39 di allora — «traduzione EN del resto» — è diventato il 40, e la verifica end-to-end il 41. Le
+> entry del devlog precedenti al 13 agosto usano ancora i numeri vecchi quando nominano il futuro,
+> e vanno lette con questo scarto. Il motivo dell'inserimento è nella sezione qui sotto.
 
 ### Step 29 — Valuta di default nel profilo
 
@@ -261,7 +267,65 @@ visibile, non a coprire l'app.
 > esce da dove lo si è toccato. Resta fuori `features/sync/describe.ts`, che scrive anche in fondo
 > alla lista spese: è il primo pezzo dello Step 38.
 
-### Step 38–39 — Traduzione EN
+### Step 39 — Formato dei numeri per lingua
+
+> **Chiuso il 13 agosto, e ha portato due cose che questa sezione non prevedeva.** La prima:
+> quattro punti dell'app componevano importo e simbolo **a mano** (`${formatCents(x)} ${symbol}`),
+> e sembravano formattazione mentre erano la decisione «il simbolo va dopo» — vera in italiano,
+> falsa in inglese. Uno dei quattro era JSX con il simbolo in un colore proprio, che
+> `formatMoney` non può produrre: da lì è nato `HeroAmount`. La seconda: `ExpenseForm` toglieva
+> il raggruppamento con `replace(/./g, '')`, e in inglese quel punto **è il separatore
+> decimale** — aprire una spesa da 12,30 avrebbe mostrato `1230`.
+>
+> Un dettaglio in più rispetto al previsto: dove il simbolo è un codice e non un segno, lo spazio
+> ci vuole comunque («CHF 5.00»), e la regola guarda il carattere di confine invece di un elenco
+> di valute.
+>
+> **L'export CSV non è stato toccato**, e la previsione «tocca l'export CSV» scritta qui era
+> sbagliata: `csv.ts` ha già una sua `centsToDecimal`, con un commento che dice di essere diversa
+> da `formatCents` perché quella è la forma italiana leggibile. Quel commento è di molto prima che
+> esistesse una seconda lingua, e ha retto.
+
+**Non era nel piano dell'11 agosto, e ci entra perché lo Step 38 lo ha reso visibile.** Le tre
+schermate tradotte mostrano ancora «1.234,56»: punto per le migliaia, virgola per i decimali,
+simbolo in coda. È la convenzione italiana, e a un lettore inglese quella stringa si legge male —
+`1.234` sembra un numero con la virgola decimale sbagliata. Non è un dettaglio tipografico: è
+l'unico posto in cui la traduzione dice ancora qualcosa di **falso**, invece che qualcosa di
+meno.
+
+Era già previsto, ma nel posto sbagliato: il commento in cima a `packages/core/src/model/currency.ts`
+dice da settimane che «la posizione del simbolo e il separatore decimale sono convenzioni della
+**lingua**, non della moneta, e vivono nello Step 37 insieme al resto dell'i18n». Lo Step 37 non
+li ha toccati — era infrastruttura — e il 38 li ha lasciati fuori di proposito, per non infilare
+un cambiamento a `packages/core` in coda a una sessione di traduzione.
+
+**Va fatto prima del resto della traduzione**, perché rende giuste le schermate già tradotte
+invece di aggiungerne altre con lo stesso difetto.
+
+**Il vincolo che decide la forma della soluzione:** `packages/core` non può dipendere da
+`i18next` — è la regola dello Step 0, verificata da una regola ESLint. Quindi il core **riceve**
+il formato come parametro, esattamente come dallo Step 29 riceve il simbolo della valuta, e non
+va a leggerselo.
+
+Quello che cambia:
+
+- **`packages/core`**: un `NumberFormat` (separatore delle migliaia, separatore decimale,
+  posizione del simbolo e cosa ci va in mezzo), due formati concreti, e `formatCents`/`formatMoney`
+  che lo accettano con default italiano — così i test del core che ci sono già restano validi.
+- **`apps/mobile`**: un modulo sottile che lega quel parametro alla lingua corrente, e da cui
+  l'app importa `formatCents`/`formatMoney` al posto del core. Il cambiamento su ognuno dei
+  venticinque file che formattano denaro è **una riga di import**, non un argomento in più a ogni
+  chiamata.
+- **Una regola ESLint** che vieta ad `apps/mobile` di importare quelle due funzioni dal core,
+  indicando il modulo giusto: senza, la prossima chiamata scritta per abitudine tornerebbe
+  all'italiano fisso e nessuno se ne accorgerebbe. È lo stesso meccanismo già usato per
+  `utf8ToBytes` di noble.
+
+Fuori dallo step, di proposito: `parseAmount` — che accetta già sia la virgola sia il punto, ed è
+quindi indipendente dalla lingua — e le frasi italiane dentro `insights/query.ts`, che sono
+traduzione di schermate e appartengono allo Step 40.
+
+### Step 38, 40 — Traduzione EN
 
 > **Lo Step 38 è chiuso il 13 agosto, e ha portato con sé tre cose non previste qui.** I sei
 > moduli condivisi sotto le tre schermate (date, sync, saldo, divisione, campi extra, sottotitoli
@@ -270,18 +334,17 @@ visibile, non a coprire l'app.
 > fuori avrebbe dato «Speso in August». E un `setupFiles` per i test, che senza sarebbero passati
 > qui e falliti in CI — 66 di essi — perché la lingua di partenza è quella di sistema.
 >
-> **Resta aperto il formato dei numeri:** `formatCents` scrive «1.234,56» anche in inglese. Sta in
-> `packages/core`, tocca ogni importo e l'export CSV, ed è lavoro suo. Conviene farlo **prima**
-> dello Step 39, perché rende giuste le schermate già tradotte invece di aggiungerne altre con lo
-> stesso difetto.
+> **Il formato dei numeri, che restava aperto, è diventato lo Step 39** qui sopra — ed è la ragione
+> per cui la numerazione da lì in poi è scalata di uno.
 
 Schermata per schermata, non tutta insieme, con lo stesso ritmo "un passo a sessione" già rodato nel
 redesign visivo. Lo Step 38 copre le tre schermate più aperte (home spese, nuova spesa, gruppi) — le
 stesse che il passo 6 e 7 del redesign avevano identificato come quelle che si aprono più spesso. Lo
-Step 39 copre il resto: grafici/dashboard, Tu/impostazioni, onboarding, pairing, backup/export,
-azzera.
+Step 40 copre il resto: grafici/dashboard, Tu/impostazioni, onboarding, pairing, backup/export,
+azzera — comprese le frasi italiane rimaste dentro `insights/query.ts`, che è core ma scrive
+descrizioni di filtri.
 
-### Step 40 — Verifica end-to-end
+### Step 41 — Verifica end-to-end
 
 Notifiche e widget sono per natura non verificabili senza telefono: vanno nella lista di "verificato
 su hardware reale" di [STATO.md](STATO.md#cosa-non-è-ancora-stato-verificato-su-hardware-reale), non

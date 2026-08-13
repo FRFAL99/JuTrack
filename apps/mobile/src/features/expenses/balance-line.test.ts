@@ -122,10 +122,10 @@ describe('in inglese', () => {
     // 25,00 € to Juju»: nel secondo caso compare un soggetto che l'italiano non scrive. Una
     // frase cucita attorno ai pezzi non avrebbe potuto farlo.
     expect(describeMyBalance([transfer(JUJU, IO, 2500)], IO, nameOf).text).toBe(
-      'Juju owes you 25,00 €',
+      'Juju owes you €25.00',
     );
     expect(describeMyBalance([transfer(IO, JUJU, 2500)], IO, nameOf).text).toBe(
-      'You owe 25,00 € to Juju',
+      'You owe €25.00 to Juju',
     );
   });
 
@@ -135,7 +135,7 @@ describe('in inglese', () => {
       IO,
       nameOf,
     );
-    expect(line.text).toBe('2 people owe you 40,00 €');
+    expect(line.text).toBe('2 people owe you €40.00');
   });
 
   it('traduce il pari', () => {

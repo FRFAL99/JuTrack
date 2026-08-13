@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
-import { formatMoney, squarify, type TreemapRect } from '@jutrack/core';
+import { squarify, type TreemapRect } from '@jutrack/core';
+import { formatMoney } from '@/i18n/money';
 import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { compactAmount } from '../format';

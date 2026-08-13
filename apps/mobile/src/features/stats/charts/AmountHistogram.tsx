@@ -1,6 +1,7 @@
 import { Text, View } from 'react-native';
 import Svg, { Rect } from 'react-native-svg';
-import { bandScale, formatMoney, type AmountBin } from '@jutrack/core';
+import { bandScale, type AmountBin } from '@jutrack/core';
+import { formatMoney } from '@/i18n/money';
 import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { useChartWidth } from './useChartWidth';

@@ -1,5 +1,6 @@
 import { Text, View } from 'react-native';
-import { formatMoney, type Member, type MemberSeries } from '@jutrack/core';
+import { type Member, type MemberSeries } from '@jutrack/core';
+import { formatMoney } from '@/i18n/money';
 import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 

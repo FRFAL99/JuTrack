@@ -132,7 +132,7 @@ export const en: Dictionary = {
     deleteBody: 'This applies to the other device too.',
     deleteConfirm: 'Delete',
     amount: 'Amount',
-    amountPlaceholder: '0,00',
+    amountPlaceholder: '0.00',
     amountLabel: 'Expense amount',
     amountError: 'Enter an amount greater than zero',
     whoAndHow: 'Who pays and how it splits',

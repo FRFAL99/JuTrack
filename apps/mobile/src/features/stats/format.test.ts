@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import i18n from '@/i18n';
 import { compactAmount, describeBudget, describeChange, formatShare } from './format';
 
 describe('describeChange', () => {
@@ -51,5 +52,27 @@ describe('describeBudget', () => {
   it('parla di superamento solo quando il limite è stato superato', () => {
     expect(describeBudget('over', -500)).toMatch(/Superato/);
     expect(describeBudget('under', 500)).toMatch(/Restano/);
+  });
+});
+
+describe('in inglese', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it('abbrevia le migliaia col punto decimale, non con la virgola', () => {
+    // «1,2k» in inglese si legge come milleduecento scritto male. Il separatore arriva dallo
+    // stesso `numberFormat()` degli importi interi, non da una seconda regola scritta qui.
+    expect(compactAmount(123_456)).toBe('1.2k');
+    expect(compactAmount(1_234_567)).toBe('12.3k');
+  });
+
+  it('non tocca le migliaia sotto il migliaio', () => {
+    expect(compactAmount(1250)).toBe('13');
+  });
+
+  it('scrive gli importi del budget nel formato giusto', () => {
+    expect(describeBudget('over', -1500)).toContain('€15.00');
+    expect(describeBudget('under', 1500)).toContain('€15.00');
   });
 });

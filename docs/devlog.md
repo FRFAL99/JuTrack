@@ -4,6 +4,110 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-13 — Step 39: il formato dei numeri, e il primo ingresso in `packages/core` da otto step
+
+Uno step che il piano dell'11 agosto non aveva: lo ha reso necessario lo Step 38, che ha
+tradotto tre schermate lasciandole a mostrare «1.234,56» anche in inglese. La numerazione da
+qui in poi è scalata di uno — la traduzione del resto diventa il 40, la verifica su telefono il
+41 — ed è scritto nel piano perché non si scopra rileggendo.
+
+**Non era un dettaglio tipografico, era l'unica cosa che la traduzione diceva ancora di
+falso.** A un lettore inglese «1.234,56» non è un numero scritto in un altro modo: è un numero
+diverso, perché per lui il punto è il decimale. Tutto il resto dello Step 38 diceva qualcosa di
+meno — la riga di stato del sync in italiano, i nomi dei gruppi non tradotti — e questo invece
+diceva qualcosa di sbagliato.
+
+**Era previsto da settimane, nel posto giusto e con la data sbagliata.** Il commento in cima a
+`packages/core/src/model/currency.ts` dice dallo Step 29 che «la posizione del simbolo e il
+separatore decimale sono convenzioni della **lingua**, non della moneta, e vivono nello Step 37
+insieme al resto dell'i18n». Il 37 era infrastruttura e non li ha toccati, il 38 li ha lasciati
+fuori di proposito: erano un cambiamento a `packages/core` da non infilare in coda a una
+sessione di traduzione.
+
+**Il vincolo che ha deciso la forma della soluzione è la regola dello Step 0.** `packages/core`
+non può dipendere da `i18next`, e non per gusto: è la condizione che gli permetterà di girare
+sul web, ed è verificata da una regola ESLint. Quindi il core **riceve** il formato come
+parametro — `NumberFormat`, con i due separatori, il lato del simbolo e cosa ci va in mezzo —
+esattamente come dallo Step 29 riceve il simbolo della valuta. I due parametri restano
+distinti, e non è pedanteria: **si può leggere in inglese una spesa in euro**, ed è anzi il caso
+normale per chi vive qui e non parla italiano.
+
+**La parte che poteva diventare un lavoro enorme è rimasta una riga per file.** I punti che
+formattano denaro sono venticinque, e in alcuni la chiamata è dentro un `map` dentro un
+grafico: infilarci un terzo argomento avrebbe voluto dire venticinque file da modificare **e**
+un argomento da ricordare per sempre. Al suo posto c'è `@/i18n/money`, un modulo di quaranta
+righe che espone `formatCents` e `formatMoney` **con la stessa firma di prima** e la lingua
+dentro. Il cambiamento su ogni file è stato l'import.
+
+**E una regola ESLint che vieta di tornare indietro.** Senza, la prossima chiamata scritta per
+abitudine importerebbe di nuovo dal core e stamperebbe l'italiano fisso, e nessuno se ne
+accorgerebbe: il guasto è silenzioso, come quello di `utf8ToBytes` dello Step 3 — stesso
+meccanismo, stessa ragione. L'unico file autorizzato a violarla è quello che le avvolge.
+
+**Quattro punti componevano importo e simbolo a mano, e sono la scoperta dello step.** Scritti
+come `` `${formatCents(x)} ${symbol}` ``, sembravano formattazione e invece erano una
+**decisione**: che il simbolo va dopo. In italiano è vero, in inglese no. Tre erano stringhe e
+sono diventate `formatMoney`; il quarto era JSX — la cifra grande in cima alle spese e ai
+Grafici, dove il simbolo ha un colore più tenue e quindi è un `<Text>` a parte, che
+`formatMoney` non può produrre. Da lì è nato `HeroAmount`, che è anche la fine di una
+duplicazione che c'era già: due copie dello stesso JSX diventano un problema il giorno in cui la
+regola che contengono cambia, ed è successo oggi.
+
+**Un bug che lo step avrebbe introdotto se non lo si fosse cercato.** `ExpenseForm` apriva una
+spesa esistente facendo `formatCents(...).replace(/\./g, '')`, per togliere il raggruppamento
+che `parseAmount` non accetta. Con il formato inglese quel punto **è il separatore decimale**:
+aprire in inglese una spesa da 12,30 avrebbe mostrato `1230` nel campo, e chi avesse salvato
+senza guardare avrebbe moltiplicato l'importo per cento. Adesso toglie
+`numberFormat().group`, cioè il carattere giusto per la lingua giusta. Stessa famiglia di
+problema in `compactAmount` dei grafici, che scriveva «1,2k» a mano.
+
+**«CHF5.00» ha meritato tre righe in più.** `ENGLISH_NUMBERS` non mette spazio fra simbolo e
+cifra perché `€`, `$` e `£` non lo vogliono — ma dove il simbolo _è_ un codice, senza spazio si
+legge come una sigla unica. La regola guarda il **carattere di confine**, non un elenco di
+valute: `CHF 5.00` e `CA$5.00` escono giusti tutti e due, e una valuta aggiunta domani non ha
+bisogno di essere prevista.
+
+**L'export CSV non è stato toccato, e la ragione è che era già stato deciso bene.** `csv.ts` ha
+una `centsToDecimal` sua — punto decimale, nessun raggruppamento — con un commento che dice
+esplicitamente di essere diversa da `formatCents` perché quella è «la forma italiana
+leggibile». Quel commento è stato scritto molto prima che esistesse una seconda lingua, e ha
+retto: il file esportato è **identico** in italiano e in inglese, che è l'unica cosa sensata per
+un file che un foglio di calcolo deve rileggere.
+
+**Fuori dallo step, di proposito:** `parseAmount`, che accetta già sia la virgola sia il punto e
+quindi è indipendente dalla lingua — c'è un test nuovo che lo fissa in entrambe — e le frasi
+italiane dentro `insights/query.ts`, che sono core ma sono **traduzione di schermate** e
+appartengono allo Step 40.
+
+**Verificato, non assunto**
+
+- **La guardia ESLint morde davvero.** Scritto un file di prova che importa `formatMoney` da
+  `@jutrack/core`, ottenuto l'errore atteso, cancellato il file. È la stessa verifica fatta
+  allo Step 2 per le regole su `packages/core`, e per la stessa ragione: una guardia che non si
+  prova non è una guardia.
+- **La resa è quella voluta**, stampata davvero e non dedotta: `1.234.567,89 €` / `€1,234,567.89`,
+  `-5,00 €` / `-€5.00`, `0,05` / `0.05`, `CHF 5.00`.
+- **I quattro test inglesi dello Step 38 sono falliti**, ed è la conferma che lo step fa
+  qualcosa: asserivano «Juju owes you 25,00 €» e adesso leggono «Juju owes you €25.00». Sono
+  stati aggiornati, non rilassati.
+- **Il segno meno resta davanti a tutto**, anche col simbolo in testa: `-€5.00` e non `€-5.00`.
+  Ha un test suo perché è la forma dei saldi, cioè il numero che più conta di tutti.
+
+**Ancora da verificare sul telefono**
+
+Che la cifra grande in cima alle spese non vada a capo con il simbolo davanti: in inglese
+`€1,234.56` è più stretto di `1.234,56 €` di un carattere, quindi il rischio è basso, ma è
+l'unico posto in cui il numero è a 38 punti. E il campo importo del form aperto **in inglese su
+una spesa vecchia**, che è il bug descritto sopra: deve mostrare `12.30`, non `1230`.
+
+**Verifica:** 1170 test verdi (601 core + 526 app + 43 relay, di cui 21 nuovi), typecheck, lint
+e `format:check` puliti, `expo export --platform android` completato.
+
+**Prossimo:** Step 40 — la traduzione del resto: grafici e dashboard, quel che resta di Tu,
+onboarding, pairing, backup/export, azzera, e le frasi di `insights/query.ts`.
+
+---
+
 ## 2026-08-13 — Step 38: la traduzione delle tre schermate, e i test diventati dipendenti dalla lingua della macchina
 
 Le tre schermate che si aprono più spesso — le spese del gruppo, la nuova spesa, l'elenco dei

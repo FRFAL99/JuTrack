@@ -55,20 +55,98 @@ export function parseAmount(input: string): Cents | null {
   return normalized.startsWith('-') ? -cents : cents;
 }
 
-/** Formatta centesimi come stringa nella convenzione italiana, senza simbolo di valuta. */
-export function formatCents(cents: Cents): string {
+/**
+ * Come si scrive un numero, e dove va il simbolo.
+ *
+ * **È una convenzione della lingua, non della moneta.** Mille euro e due si scrivono
+ * «1.000,02 €» leggendo in italiano e «€1,000.02» leggendo in inglese: cambiano i due
+ * separatori e cambia il lato del simbolo, ma la moneta è la stessa. Per questo il parametro
+ * di `formatMoney` è **doppio** — il simbolo viene dalla valuta scelta nel profilo (Step 29),
+ * il formato dalla lingua scelta nel profilo (Step 39) — e i due non si deducono l'uno
+ * dall'altro.
+ *
+ * Arriva da fuori come tutto il resto di ciò che il core non può sapere: qui non si importa
+ * `i18next`, per la stessa regola dello Step 0 che tiene fuori `react-native`. È lo stesso
+ * trattamento già riservato a `RandomSource` e `SecureKeyStore`, applicato a una cosa molto
+ * più piccola.
+ */
+export interface NumberFormat {
+  /** Fra le migliaia. */
+  group: string;
+  /** Prima dei centesimi. */
+  decimal: string;
+  /** Il simbolo va prima del numero? In inglese sì, in italiano no. */
+  symbolFirst: boolean;
+  /** Cosa sta fra numero e simbolo: uno spazio in italiano, niente in inglese. */
+  symbolSpace: string;
+}
+
+/** «1.234,56 €». */
+export const ITALIAN_NUMBERS: NumberFormat = {
+  group: '.',
+  decimal: ',',
+  symbolFirst: false,
+  symbolSpace: ' ',
+};
+
+/** «€1,234.56». */
+export const ENGLISH_NUMBERS: NumberFormat = {
+  group: ',',
+  decimal: '.',
+  symbolFirst: true,
+  symbolSpace: '',
+};
+
+/**
+ * Il formato di chi non ne indica uno.
+ *
+ * È l'italiano perché è la lingua in cui il progetto è scritto, e perché è ciò che tiene
+ * validi senza riscriverli i test che c'erano già — gli stessi che fissano `splitEvenly` e
+ * `splitByWeights`, dove il formato non c'entra ma le asserzioni passano da qui.
+ */
+export const DEFAULT_NUMBER_FORMAT = ITALIAN_NUMBERS;
+
+/** Formatta centesimi come stringa, senza simbolo di valuta. */
+export function formatCents(cents: Cents, format: NumberFormat = DEFAULT_NUMBER_FORMAT): string {
   assertCents(cents);
   const negative = cents < 0;
   const abs = Math.abs(cents);
   const whole = Math.floor(abs / 100);
   const frac = abs % 100;
-  const groupedWhole = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  return `${negative ? '-' : ''}${groupedWhole},${String(frac).padStart(2, '0')}`;
+  const groupedWhole = String(whole).replace(/\B(?=(\d{3})+(?!\d))/g, format.group);
+  return `${negative ? '-' : ''}${groupedWhole}${format.decimal}${String(frac).padStart(2, '0')}`;
 }
 
-/** Formatta centesimi con il simbolo di valuta. */
-export function formatMoney(cents: Cents, currency = '€'): string {
-  return `${formatCents(cents)} ${currency}`;
+/**
+ * Formatta centesimi con il simbolo di valuta.
+ *
+ * Il segno meno resta **davanti a tutto**, anche quando il simbolo precede il numero:
+ * «-€5,00» e non «€-5,00». È la forma che si legge in entrambe le convenzioni, e l'unica in
+ * cui il segno non rischia di sparire alla fine di una riga stretta.
+ *
+ * **Una lettera attaccata a una cifra prende comunque uno spazio**: «CHF 5.00» e non
+ * «CHF5.00». `ENGLISH_NUMBERS` non mette spazio perché i simboli veri — `€`, `$`, `£` — non
+ * lo vogliono, ma dove il simbolo *è* un codice (`CHF`, e domani chiunque altro) senza spazio
+ * si leggerebbe come una sigla unica. La regola guarda il carattere di confine, non l'elenco
+ * delle valute, così una valuta aggiunta in futuro non ha bisogno di essere prevista qui.
+ */
+export function formatMoney(
+  cents: Cents,
+  currency = '€',
+  format: NumberFormat = DEFAULT_NUMBER_FORMAT,
+): string {
+  const amount = formatCents(cents, format);
+  const border = format.symbolFirst ? currency.at(-1) : currency[0];
+  const space = format.symbolSpace === '' && isLetter(border) ? ' ' : format.symbolSpace;
+
+  if (!format.symbolFirst) return `${amount}${space}${currency}`;
+  const negative = amount.startsWith('-');
+  const digits = negative ? amount.slice(1) : amount;
+  return `${negative ? '-' : ''}${currency}${space}${digits}`;
+}
+
+function isLetter(char: string | undefined): boolean {
+  return char !== undefined && /\p{L}/u.test(char);
 }
 
 /**

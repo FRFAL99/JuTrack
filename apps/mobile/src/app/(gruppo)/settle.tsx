@@ -1,12 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
-import {
-  computeBalances,
-  formatCents,
-  formatMoney,
-  parseAmount,
-  simplifyDebts,
-} from '@jutrack/core';
+import { computeBalances, parseAmount, simplifyDebts } from '@jutrack/core';
+import { formatCents, formatMoney } from '@/i18n/money';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';

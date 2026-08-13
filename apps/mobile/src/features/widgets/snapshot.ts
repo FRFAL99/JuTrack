@@ -36,7 +36,8 @@
  * del problema in un altro modo: **dice di che mese parla**, così un widget vecchio di un
  * giorno resta vero anche il primo del mese dopo.
  */
-import { formatMoney, type Cents, type Transfer } from '@jutrack/core';
+import { type Cents, type Transfer } from '@jutrack/core';
+import { formatMoney } from '@/i18n/money';
 import { myBalance, type BalanceTone } from '@/features/expenses/balance-line';
 import type { WidgetName } from './module';
 import { t } from '@/i18n/translate';

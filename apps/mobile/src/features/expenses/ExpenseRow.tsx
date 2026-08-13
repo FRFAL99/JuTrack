@@ -1,13 +1,7 @@
 import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import {
-  currencySymbol,
-  formatCents,
-  formatMoney,
-  type Category,
-  type Expense,
-  type Member,
-} from '@jutrack/core';
+import { currencySymbol, type Category, type Expense, type Member } from '@jutrack/core';
+import { formatCents, formatMoney } from '@/i18n/money';
 import { CategoryIcon } from '@/features/categories/CategoryIcon';
 import { numeric, useTheme } from '@/theme';
 

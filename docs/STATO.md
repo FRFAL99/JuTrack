@@ -1,15 +1,17 @@
 # Stato del progetto — punto di partenza
 
 Aggiornato: 2026-08-13 — **tutti e quattro i piani e il redesign visivo sono finiti nel codice, e il
-quinto piano è a dieci step su dodici**. Il quarto — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
+quinto piano è a undici step su tredici**. Il quarto — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 **Step 23–28** — si è chiuso l'11 agosto con la dashboard componibile, e i sette passi del redesign
 sono chiusi da prima ([visualdesign.md](visualdesign.md)). Lo stesso giorno è stato scritto il
 **quinto piano**, [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md) —
 notifiche locali, due widget Android, valuta e lingua nel profilo — e ne sono entrati nel codice i
-**primi dieci step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa, il
+**primi undici step su tredici**: la valuta di default nel profilo, l'infrastruttura nativa, il
 promemoria spese, l'avviso di budget, quello di sincronizzazione ferma, **tutti e due i widget**, il
-refresh in background che li tiene vivi, l'**infrastruttura i18n** e la **traduzione EN delle tre
-schermate più aperte**. Restano il resto della traduzione (39) e la verifica su telefono (40).
+refresh in background che li tiene vivi, l'**infrastruttura i18n**, la **traduzione EN delle tre
+schermate più aperte** e il **formato dei numeri per lingua**. Restano il resto della traduzione
+(40) e la verifica su telefono (41). Il piano ne aveva dodici: il tredicesimo è lo Step 39, nato
+dallo Step 38 e inserito in mezzo.
 
 > ⚠️ **Serve una build EAS nuova, ed è la seconda del piano v5.** Lo
 > [Step 36](#il-refresh-in-background-step-36) ha messo `updatePeriodMillis: 1800000` in
@@ -25,14 +27,8 @@ schermate più aperte**. Restano il resto della traduzione (39) e la verifica su
 > **Notifiche e widget sono tutti nel codice**: lo [Step 31](#il-promemoria-spese-step-31), lo
 > [Step 32](#lavviso-di-budget-step-32) e lo [Step 33](#la-sincronizzazione-ferma-step-33) per le
 > tre notifiche, il [34](#il-widget-del-saldo-step-34), il [35](#il-totale-del-mese-step-35) e il
-> [36](#il-refresh-in-background-step-36) per i widget. Il prossimo è il **39**, il resto della
-> traduzione — ma prima conviene il separatore decimale, vedi sotto.
->
-> ⚠️ **Le schermate tradotte in inglese mostrano ancora numeri all'italiana**, «1.234,56», e a un
-> lettore inglese si leggono male. `formatCents` sta in `packages/core` e non conosce la lingua:
-> cambiarlo tocca ogni importo dell'app e l'export CSV, quindi è **un lavoro suo** e non è stato
-> infilato in coda allo Step 38. È la cosa più sensata da fare prima dello Step 39, perché rende
-> giuste le schermate già tradotte invece di aggiungerne altre con lo stesso difetto.
+> [36](#il-refresh-in-background-step-36) per i widget. Il prossimo è il **40**, il resto della
+> traduzione.
 >
 > **Lo Step 37 si è scostato dal piano su un punto, ed è scritto qui perché non si scopra dopo:**
 > `expo-localization` **non** è stato installato. Serviva solo a leggere la lingua del telefono al
@@ -102,8 +98,9 @@ step su dodici nel codice**:
 | 36 — Refresh in background         | ✅    | Sync ogni 30 min dal task headless. **Chiede una build EAS nuova**     |
 | 37 — Infrastruttura i18n           | ✅    | `i18next`, campo `language`, selettore in `tu.tsx`, Tu tradotta tutta  |
 | 38 — Traduzione EN, tre schermate  | ✅    | Spese, nuova spesa, gruppi, e i sei moduli condivisi sotto             |
-| 39 — Traduzione EN, il resto       | ⬜    | Grafici, dashboard, onboarding, pairing, backup/export, azzera         |
-| 40 — Verifica end-to-end           | ⬜    | Su telefono reale: notifiche, widget, lingua, valuta                   |
+| 39 — Formato dei numeri per lingua | ✅    | `NumberFormat` nel core, `@/i18n/money` nell app, guardia ESLint       |
+| 40 — Traduzione EN, il resto       | ⬜    | Grafici, dashboard, onboarding, pairing, backup/export, azzera         |
+| 41 — Verifica end-to-end           | ⬜    | Su telefono reale: notifiche, widget, lingua, valuta                   |
 
 Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette passi:
 
@@ -117,7 +114,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**1149 test verdi** (588 core + 518 app + 43 relay), typecheck, lint e `format:check` puliti.
+**1170 test verdi** (601 core + 526 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -1003,6 +1000,41 @@ moduli condivisi che ci scrivono dentro. Da una cinquantina di stringhe tradotte
 - **Resta italiano il formato dei numeri**, ed è il debito aperto dello step: vedi l'avviso in
   cima a questo documento.
 
+## Il formato dei numeri per lingua (Step 39)
+
+Non era nel piano dell'11 agosto: lo ha reso necessario lo Step 38, che ha tradotto tre
+schermate lasciandole a scrivere «1.234,56» anche in inglese. **La numerazione da qui in poi è
+scalata di uno**: la traduzione del resto è il 40, la verifica su telefono il 41.
+
+- **Era l'unica cosa che la traduzione diceva ancora di falso.** «1.234,56» per un lettore
+  inglese non è lo stesso numero scritto in un altro modo: è un numero diverso, perché per lui
+  il punto è il decimale. Il resto dello Step 38 diceva qualcosa di _meno_ — la riga del sync
+  in italiano, i nomi dei gruppi non tradotti — non qualcosa di sbagliato.
+- **Il core riceve il formato, non se lo va a prendere.** `NumberFormat` (i due separatori, il
+  lato del simbolo, cosa ci sta in mezzo) è un parametro di `formatCents`/`formatMoney` col
+  default italiano, come dallo Step 29 il simbolo è un parametro. `packages/core` non può
+  dipendere da `i18next` — regola dello Step 0, verificata da ESLint.
+- **Simbolo e formato restano due scelte separate**, e non è pedanteria: si legge in inglese una
+  spesa in euro, ed è il caso normale per chi vive qui e non parla italiano.
+- **Un modulo, non un argomento in più.** `@/i18n/money` espone le due funzioni con la stessa
+  firma di prima e la lingua dentro: il cambiamento su ognuno dei venticinque file che
+  formattano denaro è stato **l'import**. Una regola ESLint vieta di importarle dal core, perché
+  la prossima chiamata scritta per abitudine tornerebbe all'italiano fisso senza segnali — stesso
+  meccanismo di `utf8ToBytes` allo Step 3.
+- **Quattro punti componevano importo e simbolo a mano**, e sembravano formattazione: erano la
+  decisione «il simbolo va dopo», vera in italiano e falsa in inglese. Tre sono diventati
+  `formatMoney`; il quarto, la cifra grande dove il simbolo ha un colore suo, è diventato
+  `HeroAmount` — che chiude anche una duplicazione che c'era già.
+- **Un bug evitato**: `ExpenseForm` toglieva il raggruppamento con `replace(/\./g, '')`, e in
+  inglese quel punto **è il decimale**. Aprire una spesa da 12,30 avrebbe mostrato `1230`, e chi
+  avesse salvato senza guardare avrebbe moltiplicato per cento.
+- **«CHF5.00» prende uno spazio**, deciso guardando il carattere di confine e non un elenco di
+  valute: `CHF 5.00` e `CA$5.00` escono giusti tutti e due.
+- **L'export CSV non è cambiato**, ed era già stato deciso bene: `csv.ts` ha una
+  `centsToDecimal` sua, con un commento che dice di essere diversa da `formatCents` perché
+  quella è «la forma italiana leggibile». Il file esportato è identico nelle due lingue, che è
+  l'unica cosa sensata per un file che un foglio di calcolo deve rileggere.
+
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
 Entrambi nel codice e coperti dai test. **Nessuno dei due è ancora stato visto risolto su due
@@ -1316,6 +1348,13 @@ lista, non le toglie.
   l'app in inglese e **scorrere la lista spese**, dove le intestazioni dei giorni devono dire
   «Monday, August 3» e non «Monday 1 August» — e il totale del mese in cima «August», non
   «agosto»
+- **Lo Step 39, e la prova che conta è una sola.** Aprire **in inglese** una spesa registrata
+  prima: il campo importo deve mostrare `12.30`, non `1230`. Era il bug che lo step ha evitato,
+  e salvare senza accorgersene avrebbe moltiplicato l'importo per cento. Poi le due cose di
+  impaginazione: che la cifra grande in cima alle spese e ai Grafici non vada a capo col simbolo
+  davanti (`€1,234.56` è più stretto di `1.234,56 €`, quindi il rischio è basso, ma è l'unico
+  numero a 38 punti), e che nei grafici le etichette compatte dicano «1.2k» e non «1,2k». Da
+  guardare anche un gruppo in **franchi** letto in inglese: deve dire «CHF 5.00» con lo spazio
 
 Tutto il resto è verificato: 1088 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.

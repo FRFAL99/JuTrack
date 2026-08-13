@@ -1,4 +1,5 @@
-import { buildSplit, formatCents, formatMoney, type SplitMode } from '@jutrack/core';
+import { buildSplit, type SplitMode } from '@jutrack/core';
+import { formatMoney } from '@/i18n/money';
 import { t } from '@/i18n/translate';
 
 /**
@@ -64,11 +65,13 @@ export function splitPreview(
   const max = Math.max(...values);
   // Quando l'importo non è divisibile esattamente le quote differiscono di un
   // centesimo: mostrarlo evita che sembri un errore di calcolo.
+  // `formatMoney` e non `formatCents` con il simbolo appiccicato a mano: comporre qui
+  // vorrebbe dire decidere qui da che parte va il simbolo, e in inglese va dall'altra.
   return min === max
-    ? t('expense.preview.each', { amount: `${formatCents(min)} ${symbol}` })
+    ? t('expense.preview.each', { amount: formatMoney(min, symbol) })
     : t('expense.preview.range', {
-        min: `${formatCents(min)} ${symbol}`,
-        max: `${formatCents(max)} ${symbol}`,
+        min: formatMoney(min, symbol),
+        max: formatMoney(max, symbol),
       });
 }
 

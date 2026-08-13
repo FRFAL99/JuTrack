@@ -17,7 +17,8 @@
  * superato resta `insights/budget.ts`, con la sua soglia dell'80%. Qui si decide una cosa
  * sola, che il core non può sapere: se quello stato **è nuovo**.
  */
-import { formatMoney, type BudgetState, type BudgetStatus, type IsoMonth } from '@jutrack/core';
+import { type BudgetState, type BudgetStatus, type IsoMonth } from '@jutrack/core';
+import { formatMoney } from '@/i18n/money';
 import type { AlertContent } from './content';
 
 /** La chiave in `app_meta`. Una sola per tutti i gruppi e tutti i mesi. */

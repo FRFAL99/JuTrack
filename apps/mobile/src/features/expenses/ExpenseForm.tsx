@@ -14,7 +14,6 @@ import Feather from '@expo/vector-icons/Feather';
 import {
   buildSplit,
   currencySymbol,
-  formatCents,
   knownStores,
   knownTags,
   normalizeTags,
@@ -26,6 +25,7 @@ import {
   type Member,
   type SplitMode,
 } from '@jutrack/core';
+import { formatCents, formatMoney, numberFormat } from '@/i18n/money';
 import { initialOf } from '@/components/avatar';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -111,8 +111,14 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   const currency = initial?.currency ?? profileCurrency;
   const symbol = currencySymbol(currency);
 
+  // Il raggruppamento va tolto perché `parseAmount` non lo accetta, ma **quale** carattere
+  // togliere dipende dalla lingua: in italiano è il punto, in inglese la virgola. Scritto a
+  // mano com'era prima (`replace(/\./g, '')`), aprire in inglese una spesa da 12,30
+  // cancellerebbe il **separatore decimale** e il campo mostrerebbe 1230.
   const [amountText, setAmountText] = useState(
-    initial === undefined ? '' : formatCents(initial.amountCents).replace(/\./g, ''),
+    initial === undefined
+      ? ''
+      : formatCents(initial.amountCents).replaceAll(numberFormat().group, ''),
   );
   const [note, setNote] = useState(initial?.note ?? '');
   const [editingNote, setEditingNote] = useState(false);
@@ -701,7 +707,7 @@ function PersonBox({
       {/* La quota si aggiorna mentre si scrive l'importo: è ciò che rende visibile la
           differenza fra le tre modalità senza doverle provare una a una. */}
       <Text style={[numeric, { color: colors.textFaint, fontSize: fontSize.xxs }]}>
-        {shareCents === null ? ' ' : `${formatCents(shareCents)} ${symbol}`}
+        {shareCents === null ? ' ' : formatMoney(shareCents, symbol)}
       </Text>
     </Pressable>
   );

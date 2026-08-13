@@ -1,5 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
-import { formatMoney, type Category, type CategoryTotal } from '@jutrack/core';
+import { type Category, type CategoryTotal } from '@jutrack/core';
+import { formatMoney } from '@/i18n/money';
 import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { formatShare } from './format';

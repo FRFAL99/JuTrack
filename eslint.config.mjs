@@ -130,6 +130,40 @@ export default tseslint.config(
                 'I moduli di Node non esistono su Hermes. Sono ammessi solo in src/testing/ e nei test.',
             },
           ],
+          paths: [
+            {
+              // Le due del core scrivono sempre all'italiana, perché il core non può
+              // dipendere da i18next (regola dello Step 0). Quelle di `@/i18n/money` hanno
+              // la stessa firma e in più sanno in che lingua siamo. Senza questa regola la
+              // prossima chiamata scritta per abitudine tornerebbe a «1.234,56» in inglese,
+              // e nessuno se ne accorgerebbe: il guasto è silenzioso, come lo era quello di
+              // `utf8ToBytes` qui sopra.
+              name: '@jutrack/core',
+              importNames: ['formatCents', 'formatMoney'],
+              message:
+                'Importa formatCents/formatMoney da @/i18n/money: quelle del core non conoscono la lingua e scrivono sempre «1.234,56».',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  // L'unico file autorizzato a importare le due funzioni del core: è quello che le avvolge
+  // aggiungendoci la lingua, quindi è per definizione l'eccezione alla regola qui sopra. Il
+  // divieto su `node:*` va riscritto perché ridefinire `no-restricted-imports` sostituisce
+  // l'intera opzione invece di aggiungersi.
+  {
+    files: ['apps/mobile/src/i18n/money.ts'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['node:*'],
+              message: 'I moduli di Node non esistono su Hermes.',
+            },
+          ],
         },
       ],
     },

@@ -28,7 +28,11 @@ export {
   parseAmount,
   splitByWeights,
   splitEvenly,
+  DEFAULT_NUMBER_FORMAT,
+  ENGLISH_NUMBERS,
+  ITALIAN_NUMBERS,
   type Cents,
+  type NumberFormat,
 } from './money';
 
 export { newId, budgetKey, parseBudgetKey } from './ids';

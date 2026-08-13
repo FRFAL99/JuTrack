@@ -11,8 +11,6 @@ import {
   computeBalances,
   cumulativeByDay,
   dailyHeatmap,
-  formatCents,
-  formatMoney,
   isEmptyQuery,
   knownStores,
   knownTags,
@@ -32,6 +30,8 @@ import {
   type ExpenseQuery,
   type QueryLabels,
 } from '@jutrack/core';
+import { formatMoney } from '@/i18n/money';
+import { HeroAmount } from '@/components/HeroAmount';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
 import { Screen } from '@/components/Screen';
@@ -436,11 +436,12 @@ function StatsOfGroup() {
     total: {
       node: (
         <View style={{ alignItems: 'center', paddingHorizontal: spacing.lg, gap: 2 }}>
-          <Text
+          <HeroAmount
+            cents={periodTotal}
+            symbol={symbol}
+            symbolColor={colors.textMuted}
             style={{ color: colors.text, fontSize: fontSize.display, fontWeight: fontWeight.heavy }}
-          >
-            {formatCents(periodTotal)} <Text style={{ color: colors.textMuted }}>{symbol}</Text>
-          </Text>
+          />
           <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
             {describeChange(periodTotal, previous, previousLabel(period))}
           </Text>

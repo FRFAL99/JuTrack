@@ -1,4 +1,4 @@
-import { formatMoney } from '@jutrack/core';
+import { formatMoney, numberFormat } from '@/i18n/money';
 
 /**
  * Le frasi e i numeri che compaiono nei grafici.
@@ -35,7 +35,11 @@ export function describeChange(current: number, previous: number, previousLabel:
  */
 export function compactAmount(cents: number): string {
   const euro = Math.round(cents / 100);
-  return euro >= 1000 ? `${(euro / 1000).toFixed(1).replace('.', ',')}k` : String(euro);
+  if (euro < 1000) return String(euro);
+  // Il separatore decimale arriva dalla lingua, come per gli importi interi: scritto a mano
+  // com'era prima (`.replace('.', ',')`), «1,2k» sarebbe comparso anche sugli assi di un
+  // grafico letto in inglese, dove si scrive «1.2k».
+  return `${(euro / 1000).toFixed(1).replace('.', numberFormat().decimal)}k`;
 }
 
 /** Percentuale intera: i decimali su una quota non aggiungono nulla di azionabile. */
