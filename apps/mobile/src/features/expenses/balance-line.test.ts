@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import i18n from '@/i18n';
 import type { Transfer } from '@jutrack/core';
 import { describeMyBalance, myBalance } from './balance-line';
 
@@ -108,5 +109,36 @@ describe('myBalance', () => {
       cents: 0,
       counterparties: [],
     });
+  });
+});
+
+describe('in inglese', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it('inverte soggetto e complemento, che è quello che fa l inglese', () => {
+    // «Juju ti deve 25,00 €» → «Juju owes you 25,00 €», ma «Devi 25,00 € a Juju» → «You owe
+    // 25,00 € to Juju»: nel secondo caso compare un soggetto che l'italiano non scrive. Una
+    // frase cucita attorno ai pezzi non avrebbe potuto farlo.
+    expect(describeMyBalance([transfer(JUJU, IO, 2500)], IO, nameOf).text).toBe(
+      'Juju owes you 25,00 €',
+    );
+    expect(describeMyBalance([transfer(IO, JUJU, 2500)], IO, nameOf).text).toBe(
+      'You owe 25,00 € to Juju',
+    );
+  });
+
+  it('conta le controparti invece di elencarle, anche in inglese', () => {
+    const line = describeMyBalance(
+      [transfer(JUJU, IO, 2500), transfer(TERZO, IO, 1500)],
+      IO,
+      nameOf,
+    );
+    expect(line.text).toBe('2 people owe you 40,00 €');
+  });
+
+  it('traduce il pari', () => {
+    expect(describeMyBalance([], IO, nameOf).text).toBe('You are even');
   });
 });

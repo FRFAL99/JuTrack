@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 import type { SyncState } from '@jutrack/core';
 import { useTheme } from '@/theme';
@@ -5,8 +6,15 @@ import { describeSync, syncTone } from './describe';
 
 export { describeSync };
 
-/** Stato della sincronizzazione, in forma leggibile. */
+/**
+ * Stato della sincronizzazione, in forma leggibile.
+ *
+ * `useTranslation` senza usare `t`: non ha stringhe proprie — le scrive tutte
+ * `describeSync` — ma è l'hook che iscrive il componente al cambio di lingua. Senza,
+ * la riga resterebbe nella lingua di prima fino al prossimo ridisegno per altri motivi.
+ */
 export function SyncBadge({ state }: { state: SyncState }) {
+  useTranslation();
   const { colors, spacing, fontSize } = useTheme();
   const { icon, text } = describeSync(state);
 

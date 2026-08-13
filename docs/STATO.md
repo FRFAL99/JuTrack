@@ -1,15 +1,15 @@
 # Stato del progetto — punto di partenza
 
 Aggiornato: 2026-08-13 — **tutti e quattro i piani e il redesign visivo sono finiti nel codice, e il
-quinto piano è a nove step su dodici**. Il quarto — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
+quinto piano è a dieci step su dodici**. Il quarto — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 **Step 23–28** — si è chiuso l'11 agosto con la dashboard componibile, e i sette passi del redesign
 sono chiusi da prima ([visualdesign.md](visualdesign.md)). Lo stesso giorno è stato scritto il
 **quinto piano**, [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md) —
 notifiche locali, due widget Android, valuta e lingua nel profilo — e ne sono entrati nel codice i
-**primi nove step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa, il
+**primi dieci step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa, il
 promemoria spese, l'avviso di budget, quello di sincronizzazione ferma, **tutti e due i widget**, il
-refresh in background che li tiene vivi e, oggi, l'**infrastruttura i18n**. Restano solo la
-traduzione EN (38–39) e la verifica su telefono (40).
+refresh in background che li tiene vivi, l'**infrastruttura i18n** e la **traduzione EN delle tre
+schermate più aperte**. Restano il resto della traduzione (39) e la verifica su telefono (40).
 
 > ⚠️ **Serve una build EAS nuova, ed è la seconda del piano v5.** Lo
 > [Step 36](#il-refresh-in-background-step-36) ha messo `updatePeriodMillis: 1800000` in
@@ -25,8 +25,14 @@ traduzione EN (38–39) e la verifica su telefono (40).
 > **Notifiche e widget sono tutti nel codice**: lo [Step 31](#il-promemoria-spese-step-31), lo
 > [Step 32](#lavviso-di-budget-step-32) e lo [Step 33](#la-sincronizzazione-ferma-step-33) per le
 > tre notifiche, il [34](#il-widget-del-saldo-step-34), il [35](#il-totale-del-mese-step-35) e il
-> [36](#il-refresh-in-background-step-36) per i widget. Il prossimo è il **38**, la traduzione EN
-> delle tre schermate più aperte.
+> [36](#il-refresh-in-background-step-36) per i widget. Il prossimo è il **39**, il resto della
+> traduzione — ma prima conviene il separatore decimale, vedi sotto.
+>
+> ⚠️ **Le schermate tradotte in inglese mostrano ancora numeri all'italiana**, «1.234,56», e a un
+> lettore inglese si leggono male. `formatCents` sta in `packages/core` e non conosce la lingua:
+> cambiarlo tocca ogni importo dell'app e l'export CSV, quindi è **un lavoro suo** e non è stato
+> infilato in coda allo Step 38. È la cosa più sensata da fare prima dello Step 39, perché rende
+> giuste le schermate già tradotte invece di aggiungerne altre con lo stesso difetto.
 >
 > **Lo Step 37 si è scostato dal piano su un punto, ed è scritto qui perché non si scopra dopo:**
 > `expo-localization` **non** è stato installato. Serviva solo a leggere la lingua del telefono al
@@ -81,7 +87,7 @@ Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 | 27 — I sei filtri              | ✅    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
 | 28 — La dashboard componibile  | ✅    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
 
-Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **nove
+Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **dieci
 step su dodici nel codice**:
 
 | Step                               | Stato | Cosa contiene                                                          |
@@ -95,7 +101,8 @@ step su dodici nel codice**:
 | 35 — Widget «Speso questo mese»    | ✅    | Stesso foglietto e stesso rettangolo, didascalia che nomina il mese    |
 | 36 — Refresh in background         | ✅    | Sync ogni 30 min dal task headless. **Chiede una build EAS nuova**     |
 | 37 — Infrastruttura i18n           | ✅    | `i18next`, campo `language`, selettore in `tu.tsx`, Tu tradotta tutta  |
-| 38–39 — Traduzione EN              | ⬜    | Schermata per schermata, un passo a sessione                           |
+| 38 — Traduzione EN, tre schermate  | ✅    | Spese, nuova spesa, gruppi, e i sei moduli condivisi sotto             |
+| 39 — Traduzione EN, il resto       | ⬜    | Grafici, dashboard, onboarding, pairing, backup/export, azzera         |
 | 40 — Verifica end-to-end           | ⬜    | Su telefono reale: notifiche, widget, lingua, valuta                   |
 
 Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette passi:
@@ -110,7 +117,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**1125 test verdi** (588 core + 494 app + 43 relay), typecheck, lint e `format:check` puliti.
+**1149 test verdi** (588 core + 518 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -961,6 +968,41 @@ intero** — `tu.tsx`, più le tre etichette dei tab.
   valuta o il separatore decimale per lingua — la nota in `currency.ts` lo prevede — quello sì
   entrerebbe lì.
 
+## La traduzione delle tre schermate (Step 38)
+
+Le tre che si aprono più spesso — spese del gruppo, nuova spesa, elenco dei gruppi — e i sei
+moduli condivisi che ci scrivono dentro. Da una cinquantina di stringhe tradotte a duecento.
+
+- **Il problema erano i moduli sotto, non le schermate.** `describe.ts`, `grouping.ts`,
+  `balance-line.ts`, `split-text.ts`, `extra-fields.ts` e `list.ts` sono puri di proposito, ed è
+  lì che arrivano i test: un hook non ce lo si può mettere. Fanno `import i18n from '@/i18n'` —
+  il modulo che **inizializza** l'istanza, non il pacchetto `i18next` — così l'ordine è una
+  proprietà del grafo degli import e non una cosa da ricordare.
+- **La regola che ne segue, per tutto il resto della traduzione:** quelle funzioni leggono la
+  lingua quando girano e non avvisano nessuno quando cambia. A far ridisegnare è
+  `useTranslation()` nel componente, che quindi va chiamato **anche senza stringhe proprie**
+  (`SyncBadge`, `GroupRow`), e un `useMemo` attorno a quelle chiamate vuole `t` fra le
+  dipendenze.
+- **Le date sono modelli, non elenchi di parole.** Tradurre i soli nomi dei mesi avrebbe dato
+  «Monday 1 August»: in inglese il mese viene prima del giorno. Nel dizionario ci sono cinque
+  modelli, e quattro cambiano forma fra le due lingue.
+- **I plurali si contano a mano.** `PluralResolver.getRule` di i18next, letto nel sorgente,
+  ripiega su una **regola finta** quando `Intl` manca: sceglierebbe sempre la stessa forma e
+  scriverebbe «1 spese» senza dirlo. Lo stesso sorgente conferma però che `init` non può fallire
+  per assenza di `Intl` — è dentro un `try` — il che ridimensiona un rischio dello Step 37.
+- **I test erano diventati dipendenti dalla lingua della macchina**, ed è il guasto che lo step
+  ha scoperto in sé stesso: forzando l'inglese ne falliscono **66**, tutti scritti negli step
+  precedenti. Un `setupFiles` fissa adesso l'italiano prima di ogni test.
+- **I widget sono entrati per forza**, pur essendo dello Step 39: la loro didascalia contiene il
+  nome del mese, e sarebbe uscito «Speso in August». `UNKNOWN_BALANCE`/`UNKNOWN_MONTH` sono
+  diventate funzioni — una costante di modulo congelerebbe la lingua all'import — e il task
+  headless dello Step 36 applica la lingua del profilo.
+- **Due cose non passano mai da `t`:** i nomi scritti nel documento condiviso (gruppi, categorie,
+  persone, negozi, tag) e `state.message` del sync, che viene dal motore o dal relay — tradurlo
+  vorrebbe dire avere l'elenco dei guasti previsti.
+- **Resta italiano il formato dei numeri**, ed è il debito aperto dello step: vedi l'avviso in
+  cima a questo documento.
+
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
 Entrambi nel codice e coperti dai test. **Nessuno dei due è ancora stato visto risolto su due
@@ -1264,6 +1306,16 @@ lista, non le toglie.
   possono rompersi in silenzio: che la riga di stato del sync resti in italiano **di proposito**
   (è lo Step 38, non un guasto), e che i nomi di gruppi e categorie **non** cambino cambiando
   lingua — se cambiassero, vorrebbe dire che si sta traducendo il documento condiviso
+- **Lo Step 38, e il rischio non è il testo ma la tastiera.** Il form della spesa è stato toccato
+  in venti punti, tutti di stringhe, ma è la schermata in cui si **scrive** nel documento
+  condiviso: da rifare le prove del passo 7 del redesign — che il tastierino decimale non copra
+  «Salva la spesa», che la nota salvi uscendo dal campo, che un tag scritto e non confermato
+  finisca comunque nella spesa. Poi le cose che si vedono solo in inglese: che «Who pays and how
+  it splits» non sbordi dove «Chi paga e come si divide» stava, e che le tre pillole di divisione
+  ci stiano in riga con le etichette nuove. Infine la prova che tiene insieme lo step: mettere
+  l'app in inglese e **scorrere la lista spese**, dove le intestazioni dei giorni devono dire
+  «Monday, August 3» e non «Monday 1 August» — e il totale del mese in cima «August», non
+  «agosto»
 
 Tutto il resto è verificato: 1088 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.

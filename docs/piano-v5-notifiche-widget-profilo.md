@@ -263,6 +263,18 @@ visibile, non a coprire l'app.
 
 ### Step 38–39 — Traduzione EN
 
+> **Lo Step 38 è chiuso il 13 agosto, e ha portato con sé tre cose non previste qui.** I sei
+> moduli condivisi sotto le tre schermate (date, sync, saldo, divisione, campi extra, sottotitoli
+> dei gruppi), che sono la parte difficile perché sono puri e un hook non ce lo si può mettere. I
+> **widget**, che sarebbero stati Step 39 ma la cui didascalia contiene il nome del mese: lasciarli
+> fuori avrebbe dato «Speso in August». E un `setupFiles` per i test, che senza sarebbero passati
+> qui e falliti in CI — 66 di essi — perché la lingua di partenza è quella di sistema.
+>
+> **Resta aperto il formato dei numeri:** `formatCents` scrive «1.234,56» anche in inglese. Sta in
+> `packages/core`, tocca ogni importo e l'export CSV, ed è lavoro suo. Conviene farlo **prima**
+> dello Step 39, perché rende giuste le schermate già tradotte invece di aggiungerne altre con lo
+> stesso difetto.
+
 Schermata per schermata, non tutta insieme, con lo stesso ritmo "un passo a sessione" già rodato nel
 redesign visivo. Lo Step 38 copre le tre schermate più aperte (home spese, nuova spesa, gruppi) — le
 stesse che il passo 6 e 7 del redesign avevano identificato come quelle che si aprono più spesso. Lo

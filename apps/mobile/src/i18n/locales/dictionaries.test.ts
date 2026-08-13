@@ -83,6 +83,21 @@ describe('dizionari', () => {
     const identicalOnPurpose = new Set([
       // Nomi e segnaposto soltanto: non c'è niente da tradurre.
       'you.device.version',
+      // «vault» è il nome della cosa, non una parola italiana: si chiama così anche nel
+      // codice, nel threat model e nel nome delle tabelle.
+      'groups.vaultShort',
+      // Mese e anno stanno nello stesso ordine in tutte e due le lingue. È l'unico dei
+      // cinque modelli di data a non cambiare: gli altri quattro sì, ed è il motivo per cui
+      // stanno nel dizionario.
+      'date.monthYear',
+      // Il segnaposto di un campo numerico: mostra il **formato** in cui si scrive un
+      // importo, e quel formato oggi è italiano in entrambe le lingue. Sparirà da questo
+      // elenco quando `formatCents` imparerà il separatore decimale della lingua — che è
+      // lavoro in `packages/core`, non qui.
+      'expense.amountPlaceholder',
+      // «1 tag» al singolare si scrive uguale: in italiano «tag» è invariabile, in inglese
+      // la s arriva solo dal secondo in poi. La forma `.other` infatti differisce.
+      'expense.extra.tagCount.one',
     ]);
 
     for (const [key, italianText] of dictionaries.it!) {

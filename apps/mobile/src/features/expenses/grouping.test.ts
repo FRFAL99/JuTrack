@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import i18n from '@/i18n';
 import type { Expense } from '@jutrack/core';
 import {
   currentMonth,
+  formatDayShort,
   formatDayTitle,
   formatMonthTitle,
   groupByDay,
@@ -156,6 +158,43 @@ describe('shortMonthLabel', () => {
   });
 
   it('ripiega sull’input se il mese non esiste', () => {
+    expect(shortMonthLabel('2026-99')).toBe('2026-99');
+  });
+});
+
+describe('in inglese', () => {
+  const now = new Date(2026, 7, 1, 12); // sabato 1 agosto 2026
+
+  // La prova che le date non sono un elenco di parole tradotte: **l'ordine dei pezzi
+  // cambia**. Se il modello fosse rimasto nel codice, qui si leggerebbe «Monday 1 August»,
+  // che è inglese scritto da un italiano.
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it('mette il mese prima del giorno', () => {
+    expect(formatDayTitle('2026-08-03', now)).toBe('Monday, August 3');
+    expect(formatDayShort('2026-08-15', now)).toBe('August 15');
+  });
+
+  it('sposta l anno in fondo dopo la virgola, non in coda al mese', () => {
+    expect(formatDayTitle('2025-08-03', now)).toBe('August 3, 2025');
+  });
+
+  it('traduce oggi e ieri', () => {
+    expect(formatDayTitle('2026-08-01', now)).toBe('Today');
+    expect(formatDayTitle('2026-07-31', now)).toBe('Yesterday');
+  });
+
+  it('abbrevia i mesi tenendo la maiuscola inglese', () => {
+    // Il taglio a tre lettere non sa niente di maiuscole: la maiuscola arriva dal
+    // dizionario, che è il solo posto in cui quella regola è scritta.
+    expect(shortMonthLabel('2026-01')).toBe('Jan');
+    expect(shortMonthLabel('2026-08')).toBe('Aug');
+  });
+
+  it('ripiega ancora sull input se il mese non esiste', () => {
+    expect(formatMonthTitle('2026-13', now)).toBe('2026-13');
     expect(shortMonthLabel('2026-99')).toBe('2026-99');
   });
 });

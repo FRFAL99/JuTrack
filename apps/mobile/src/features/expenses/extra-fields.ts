@@ -1,4 +1,5 @@
 import { tagKey } from '@jutrack/core';
+import { plural, t } from '@/i18n/translate';
 
 /**
  * Le due regole della sezione «Informazioni aggiuntive».
@@ -27,13 +28,18 @@ const MAX_STORE_CHARS = 20;
 export function extraSummary(store: string, tags: string[]): string {
   const name = truncate(store.trim());
   const count = tags.filter((tag) => tag.trim() !== '').length;
-  // «tag» è invariabile in italiano: nessun plurale da costruire.
-  const tagged = count === 0 ? '' : `${count} tag`;
+  // «tag» è invariabile in italiano — le due forme del dizionario sono identiche — ma non in
+  // inglese, dove al plurale prende la s. Passare comunque da `plural` costa una chiave in
+  // più e toglie un caso particolare da ricordare.
+  const tagged = count === 0 ? '' : plural('expense.extra.tagCount', count);
 
+  // Il punto mediano resta nel codice: è punteggiatura, non una parola, e si scrive uguale
+  // in tutte e due le lingue. Una chiave per un separatore sarebbe una chiave da tenere
+  // allineata senza niente in cambio.
   if (name !== '' && tagged !== '') return `${name} · ${tagged}`;
   if (name !== '') return name;
   if (tagged !== '') return tagged;
-  return 'Facoltativi';
+  return t('expense.extra.optional');
 }
 
 /**

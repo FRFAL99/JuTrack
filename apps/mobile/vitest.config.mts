@@ -17,6 +17,10 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     include: ['src/**/*.test.ts'],
+    // Fissa la lingua prima di ogni test. Dallo Step 38 i moduli che scrivono testo la
+    // leggono da `i18next`, che parte da quella di **sistema**: senza questo, gli stessi
+    // test passerebbero su una macchina italiana e fallirebbero su un runner di CI inglese.
+    setupFiles: ['./src/testing/i18n-setup.ts'],
   },
   resolve: {
     alias: { '@': path.resolve(here, 'src') },

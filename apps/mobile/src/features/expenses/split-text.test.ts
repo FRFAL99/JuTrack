@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import i18n from '@/i18n';
 import { describeGap, previewShareCents, splitModeLabel, splitPreview } from './split-text';
 
 describe('splitModeLabel', () => {
@@ -109,5 +110,31 @@ describe('previewShareCents', () => {
 
   it('dà zero a un membro fuori dallo split invece di sollevare', () => {
     expect(previewShareCents('equal', 5000, IDS, 'membro-ignoto', 'a')).toBe(0);
+  });
+});
+
+describe('in inglese', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it('cambia etichetta alla divisione equa a seconda di quanti si è', () => {
+    expect(splitModeLabel('equal', 2)).toBe('Half and half');
+    expect(splitModeLabel('equal', 3)).toBe('Split evenly');
+    expect(splitModeLabel('single', 2)).toBe('Payer only');
+  });
+
+  it('mette l importo dove lo vuole la lingua', () => {
+    // In italiano «Mancano 5,00 €», in inglese «5,00 € missing»: il verbo sta da parti
+    // opposte, ed è la ragione per cui la frase intera è una chiave e non un pezzo cucito
+    // attorno a un numero.
+    expect(describeGap(500, 10_000)).toBe('5,00 € missing');
+    expect(describeGap(-500, 10_000)).toBe('5,00 € too much');
+    expect(describeGap(0, 10_000)).toBe('The shares cover the total exactly');
+  });
+
+  it('traduce l anteprima delle quote', () => {
+    expect(splitPreview(10_000, 2)).toBe('50,00 € each');
+    expect(splitPreview(null, 2)).toBe('Split evenly');
   });
 });

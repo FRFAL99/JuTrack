@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { MAX_GROUP_NAME, normalizeGroupName, useGroups, type GroupRecord } from '@/state';
@@ -23,6 +24,7 @@ interface NewGroupModalProps {
  * ritorno da gestire quando il gruppo nasce.
  */
 export function NewGroupModal({ visible, onClose, onCreated }: NewGroupModalProps) {
+  const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const { create } = useGroups();
 
@@ -45,7 +47,9 @@ export function NewGroupModal({ visible, onClose, onCreated }: NewGroupModalProp
         onCreated(group);
       })
       .catch((cause: unknown) => {
-        Alert.alert('Creazione fallita', cause instanceof Error ? cause.message : String(cause));
+        // Il messaggio dell'errore non passa dal dizionario, come per il sync: viene da
+        // sotto, e tradurlo vorrebbe dire riconoscerlo.
+        Alert.alert(t('groups.new.failed'), cause instanceof Error ? cause.message : String(cause));
       })
       .finally(() => setCreating(false));
   };
@@ -72,10 +76,10 @@ export function NewGroupModal({ visible, onClose, onCreated }: NewGroupModalProp
             <Text
               style={{ color: colors.text, fontSize: fontSize.lg, fontWeight: fontWeight.semibold }}
             >
-              Nuovo gruppo
+              {t('groups.new.title')}
             </Text>
             <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-              Nasce vuoto e solo tuo. Diventa condiviso quando inviti qualcuno dal gruppo stesso.
+              {t('groups.new.body')}
             </Text>
           </View>
 
@@ -84,11 +88,11 @@ export function NewGroupModal({ visible, onClose, onCreated }: NewGroupModalProp
             value={draft}
             onChangeText={setDraft}
             onSubmitEditing={handleCreate}
-            placeholder="Casa, Viaggio, Coinquilini…"
+            placeholder={t('groups.new.placeholder')}
             placeholderTextColor={colors.textMuted}
             maxLength={MAX_GROUP_NAME}
             returnKeyType="done"
-            accessibilityLabel="Nome del gruppo"
+            accessibilityLabel={t('groups.new.nameLabel')}
             style={{
               color: colors.text,
               fontSize: fontSize.md,
@@ -102,14 +106,14 @@ export function NewGroupModal({ visible, onClose, onCreated }: NewGroupModalProp
 
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             <Button
-              label="Annulla"
+              label={t('common.cancel')}
               variant="secondary"
               onPress={close}
               disabled={creating}
               style={{ flex: 1 }}
             />
             <Button
-              label={creating ? 'Creazione…' : 'Crea'}
+              label={creating ? t('groups.new.creating') : t('groups.new.create')}
               onPress={handleCreate}
               disabled={normalized === null}
               loading={creating}

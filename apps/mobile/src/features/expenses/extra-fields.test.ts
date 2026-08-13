@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import i18n from '@/i18n';
 import { extraSummary, tagChoices } from './extra-fields';
 
 describe('extraSummary', () => {
@@ -56,5 +57,27 @@ describe('tagChoices', () => {
 
   it('regge le due liste vuote', () => {
     expect(tagChoices([], [])).toEqual([]);
+  });
+});
+
+describe('in inglese', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it('mette la s ai tag dal secondo in poi', () => {
+    // In italiano «tag» è invariabile e le due forme del dizionario sono identiche; in
+    // inglese no. È il caso che giustifica la chiamata a `plural` anche dove sembrava
+    // inutile.
+    expect(extraSummary('', ['a'])).toBe('1 tag');
+    expect(extraSummary('', ['a', 'b'])).toBe('2 tags');
+  });
+
+  it('traduce il posto vuoto', () => {
+    expect(extraSummary('', [])).toBe('Optional');
+  });
+
+  it('non tocca il nome del negozio, che l ha scritto qualcuno', () => {
+    expect(extraSummary('Esselunga', ['a'])).toBe('Esselunga · 1 tag');
   });
 });

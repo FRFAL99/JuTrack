@@ -1,11 +1,6 @@
 import type { WidgetRepresentation } from 'react-native-android-widget';
 import { hex, widgetCard } from './WidgetCard';
-import {
-  UNKNOWN_BALANCE,
-  UNKNOWN_MONTH,
-  type BalanceSnapshot,
-  type MonthSnapshot,
-} from './snapshot';
+import { unknownBalance, unknownMonth, type BalanceSnapshot, type MonthSnapshot } from './snapshot';
 
 /**
  * I due widget, che sono lo stesso rettangolo con due numeri dentro.
@@ -21,7 +16,7 @@ import {
 
 /** Il saldo: verde se mi devono, rosso se devo, neutro se i conti tornano. */
 export function balanceView(balance: BalanceSnapshot | null): WidgetRepresentation {
-  const shown = balance ?? UNKNOWN_BALANCE;
+  const shown = balance ?? unknownBalance();
   return widgetCard(shown, (palette) => {
     if (shown.tone === 'credit') return hex(palette.income);
     if (shown.tone === 'debt') return hex(palette.expense);
@@ -38,5 +33,5 @@ export function balanceView(balance: BalanceSnapshot | null): WidgetRepresentati
  * un numero non giudica.
  */
 export function monthView(month: MonthSnapshot | null): WidgetRepresentation {
-  return widgetCard(month ?? UNKNOWN_MONTH, (palette) => hex(palette.text));
+  return widgetCard(month ?? unknownMonth(), (palette) => hex(palette.text));
 }

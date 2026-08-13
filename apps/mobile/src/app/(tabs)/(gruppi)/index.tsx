@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { ScrollView, View } from 'react-native';
 import { Screen } from '@/components/Screen';
 import { GroupHome } from '@/features/expenses/GroupHome';
@@ -22,6 +23,7 @@ import { useTheme } from '@/theme';
  * del foglio, montato a piena pagina. Un componente, due contenitori.
  */
 export default function GruppiRootScreen() {
+  const { t } = useTranslation();
   const { spacing } = useTheme();
   const group = useCurrentGroup();
 
@@ -29,7 +31,7 @@ export default function GruppiRootScreen() {
     // Titolo corto: a 34px «Non hai ancora nessun gruppo» andrebbe a tre righe, e a dirlo
     // per esteso c'è già il paragrafo dentro `GroupPicker`.
     return (
-      <Screen title="I tuoi gruppi">
+      <Screen title={t('groups.title')}>
         <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
           {/* `onDone` non ha nulla da chiudere: qui il selettore **è** la schermata. Le
               sue azioni navigano o cambiano il gruppo corrente, e in entrambi i casi

@@ -12,6 +12,8 @@ import {
 import { RELAY_URL } from '@/config';
 import { markError } from '@/diagnostics';
 import { currentMonth, formatMonthTitle } from '@/features/expenses/grouping';
+import i18n from '@/i18n';
+import { resolveLanguage, systemLocale } from '@/i18n/language';
 // Import puntuali e non dal barrel `@/state`: quello espone i provider, che tirerebbero
 // dentro l'albero React intero. Qui React non c'è, e non deve esserci. Stessa regola di
 // `state/wipe.ts`.
@@ -88,6 +90,12 @@ export async function refreshWidgetsInBackground(): Promise<RefreshOutcome> {
     // riempire.
     const profile = await loadProfile(meta);
     if (profile === null) return 'skipped';
+
+    // **E dice anche in che lingua leggo** (Step 38). Qui `LanguageSync` non arriva: quello è
+    // un componente, e in questo task di React non c'è niente. Senza questa riga il foglietto
+    // riscritto in background prenderebbe la lingua di **sistema**, e un widget potrebbe
+    // cambiare lingua da solo ogni mezz'ora rispetto all'app che gli sta sotto.
+    await i18n.changeLanguage(resolveLanguage(profile.language, systemLocale()));
 
     const registry = await GroupRegistry.open({
       db,

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -94,6 +95,7 @@ interface ExpenseFormProps {
  * dove hanno dei test.
  */
 export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: ExpenseFormProps) {
+  const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const categories = useCategories();
   const members = useMembers();
@@ -142,9 +144,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   // L'errore compare solo dopo il primo tentativo di invio: segnalare "importo non
   // valido" mentre l'utente sta ancora digitando la prima cifra è solo fastidioso.
   const amountError =
-    touched && (amountCents === null || amountCents <= 0)
-      ? 'Inserisci un importo maggiore di zero'
-      : undefined;
+    touched && (amountCents === null || amountCents <= 0) ? t('expense.amountError') : undefined;
 
   const memberIds = useMemo(() => members.map((m) => m.id), [members]);
 
@@ -247,16 +247,16 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
             gap: spacing.xs,
           }}
         >
-          <Text style={sectionTitle}>Importo</Text>
+          <Text style={sectionTitle}>{t('expense.amount')}</Text>
           <View style={styles.amountRow}>
             <TextInput
               value={amountText}
               onChangeText={setAmountText}
-              placeholder="0,00"
+              placeholder={t('expense.amountPlaceholder')}
               placeholderTextColor={colors.textFaint}
               keyboardType="decimal-pad"
               autoFocus={initial === undefined}
-              accessibilityLabel="Importo della spesa"
+              accessibilityLabel={t('expense.amountLabel')}
               style={[
                 numeric,
                 tightTitle,
@@ -290,7 +290,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
         {members.length > 1 && (
           <View style={{ paddingTop: spacing.lg }}>
             <Text style={[sectionTitle, { paddingHorizontal: spacing.lg + 2 }]}>
-              Chi paga e come si divide
+              {t('expense.whoAndHow')}
             </Text>
             <Card
               variant="flat"
@@ -334,7 +334,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
               )}
               {mode === 'single' && (
                 <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-                  Interamente a carico di chi ha pagato
+                  {t('expense.singleHint')}
                 </Text>
               )}
 
@@ -350,10 +350,10 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
                         onChangeText={(text) =>
                           setCustomShares((current) => ({ ...current, [member.id]: text }))
                         }
-                        placeholder="0,00"
+                        placeholder={t('expense.amountPlaceholder')}
                         placeholderTextColor={colors.textFaint}
                         keyboardType="decimal-pad"
-                        accessibilityLabel={`Quota a carico di ${member.name}`}
+                        accessibilityLabel={t('expense.shareOf', { name: member.name })}
                         style={[
                           numeric,
                           {
@@ -391,7 +391,9 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
 
         {/* 3. Categoria: pill col pallino del colore. */}
         <View style={{ paddingTop: spacing.lg }}>
-          <Text style={[sectionTitle, { paddingHorizontal: spacing.lg + 2 }]}>Categoria</Text>
+          <Text style={[sectionTitle, { paddingHorizontal: spacing.lg + 2 }]}>
+            {t('expense.category')}
+          </Text>
           <Card
             variant="flat"
             style={{
@@ -428,7 +430,9 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
                 quale giorno si sta parlando — e una riga che non si tocca è più onesta di
                 un campo che finge. */}
             <View style={[styles.detailRow, { paddingVertical: spacing.md }]}>
-              <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>Data</Text>
+              <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
+                {t('expense.date')}
+              </Text>
               <Text style={[numeric, { color: colors.text, fontSize: fontSize.sm }]}>
                 {formatDayTitle(initial?.date ?? todayIso())}
               </Text>
@@ -443,10 +447,10 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
                 onChangeText={setNote}
                 onBlur={() => setEditingNote(false)}
                 onSubmitEditing={() => setEditingNote(false)}
-                placeholder="Per esempio: spesa al supermercato"
+                placeholder={t('expense.notePlaceholder')}
                 placeholderTextColor={colors.textFaint}
                 returnKeyType="done"
-                accessibilityLabel="Nota della spesa"
+                accessibilityLabel={t('expense.noteLabel')}
                 style={{
                   color: colors.text,
                   fontSize: fontSize.sm,
@@ -457,10 +461,14 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
               <Pressable
                 onPress={() => setEditingNote(true)}
                 accessibilityRole="button"
-                accessibilityLabel={note === '' ? 'Aggiungi una nota' : `Nota: ${note}`}
+                accessibilityLabel={
+                  note === '' ? t('expense.noteAdd') : t('expense.noteRead', { note })
+                }
                 style={[styles.detailRow, { paddingVertical: spacing.md }]}
               >
-                <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>Nota</Text>
+                <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
+                  {t('expense.note')}
+                </Text>
                 <Text
                   numberOfLines={1}
                   style={{
@@ -470,7 +478,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
                     fontSize: fontSize.sm,
                   }}
                 >
-                  {note === '' ? 'Facoltativa' : note}
+                  {note === '' ? t('expense.noteOptional') : note}
                 </Text>
               </Pressable>
             )}
@@ -488,11 +496,11 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
               onPress={() => setExtraOpen((open) => !open)}
               accessibilityRole="button"
               accessibilityState={{ expanded: extraOpen }}
-              accessibilityLabel="Informazioni aggiuntive"
+              accessibilityLabel={t('expense.extra.title')}
               style={[styles.detailRow, { paddingVertical: spacing.md }]}
             >
               <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-                Informazioni aggiuntive
+                {t('expense.extra.title')}
               </Text>
               <View style={styles.summary}>
                 <Text
@@ -521,14 +529,14 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
                 />
 
                 <View style={{ gap: spacing.sm }}>
-                  <Text style={sectionTitle}>Negozio</Text>
+                  <Text style={sectionTitle}>{t('expense.extra.store')}</Text>
                   <TextInput
                     value={store}
                     onChangeText={setStore}
-                    placeholder="Dove è stata fatta"
+                    placeholder={t('expense.extra.storePlaceholder')}
                     placeholderTextColor={colors.textFaint}
                     autoCapitalize="words"
-                    accessibilityLabel="Negozio"
+                    accessibilityLabel={t('expense.extra.store')}
                     style={{
                       color: colors.text,
                       fontSize: fontSize.sm,
@@ -558,7 +566,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
                 </View>
 
                 <View style={{ gap: spacing.sm }}>
-                  <Text style={sectionTitle}>Tag</Text>
+                  <Text style={sectionTitle}>{t('expense.extra.tags')}</Text>
                   {tagHints.length > 0 && (
                     <View style={styles.chips}>
                       {tagHints.map((tag) => (
@@ -576,14 +584,14 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
                     onChangeText={setTagDraft}
                     onSubmitEditing={commitTagDraft}
                     onBlur={commitTagDraft}
-                    placeholder="Aggiungi un tag"
+                    placeholder={t('expense.extra.tagPlaceholder')}
                     placeholderTextColor={colors.textFaint}
                     autoCapitalize="none"
                     returnKeyType="done"
                     // `submit` e non il default `blurAndSubmit`: chi mette due tag di
                     // seguito non deve ritoccare il campo dopo il primo.
                     submitBehavior="submit"
-                    accessibilityLabel="Aggiungi un tag"
+                    accessibilityLabel={t('expense.extra.tagPlaceholder')}
                     style={{
                       color: colors.text,
                       fontSize: fontSize.sm,
@@ -609,7 +617,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
             style={{ minHeight: 54 }}
           />
           {onDelete !== undefined && (
-            <Button label="Elimina spesa" variant="danger" onPress={onDelete} />
+            <Button label={t('expense.deleteAction')} variant="danger" onPress={onDelete} />
           )}
         </View>
       </ScrollView>
@@ -640,6 +648,7 @@ function PersonBox({
   symbol: string;
   onPress: () => void;
 }) {
+  const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
 
   return (
@@ -647,7 +656,7 @@ function PersonBox({
       onPress={onPress}
       accessibilityRole="button"
       accessibilityState={{ selected }}
-      accessibilityLabel={`Ha pagato ${member.name}`}
+      accessibilityLabel={t('expense.paidBy', { name: member.name })}
       style={({ pressed }) => ({
         flexGrow: 1,
         flexBasis: 120,
@@ -687,7 +696,7 @@ function PersonBox({
           fontWeight: selected ? fontWeight.semibold : fontWeight.regular,
         }}
       >
-        {isMe ? 'Tu' : member.name}
+        {isMe ? t('expense.me') : member.name}
       </Text>
       {/* La quota si aggiorna mentre si scrive l'importo: è ciò che rende visibile la
           differenza fra le tre modalità senza doverle provare una a una. */}

@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import i18n from '@/i18n';
 import type { SyncState } from '@jutrack/core';
 import { describeSync, syncTone } from './describe';
 
@@ -67,5 +68,42 @@ describe('syncTone', () => {
     ['syncing', 'muted'],
   ] as const)('%s è %s', (phase, expected) => {
     expect(syncTone(phase)).toBe(expected);
+  });
+});
+
+describe('in inglese', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it('traduce le fasi senza numeri', () => {
+    expect(describeSync({ phase: 'idle' }, NOW).text).toBe('Waiting');
+    expect(describeSync({ phase: 'offline' }, NOW).text).toContain('Offline');
+    expect(describeSync({ phase: 'blocked', message: 'chiave rifiutata' }, NOW).text).toBe(
+      'Sync stopped: the relay rejects the key',
+    );
+  });
+
+  it.each([
+    [5_000, 'Updated just now'],
+    [60_000, 'Updated 1 minute ago'],
+    [180_000, 'Updated 3 minutes ago'],
+    [3_600_000, 'Updated 1 hour ago'],
+    [7_200_000, 'Updated 2 hours ago'],
+  ])('sceglie la forma giusta del plurale dopo %i ms', (elapsed, expected) => {
+    // È il punto per cui `plural()` conta a mano invece di lasciar fare a
+    // `Intl.PluralRules`: senza `Intl`, i18next sceglierebbe sempre la stessa forma e
+    // scriverebbe «1 minutes ago» senza dirlo a nessuno.
+    expect(describeSync({ phase: 'synced', at: NOW - elapsed }, NOW).text).toBe(expected);
+  });
+
+  it('lascia in chiaro il messaggio che arriva dal motore', () => {
+    // L'unica frase dell'app che non passa dal dizionario: tradurla vorrebbe dire avere un
+    // elenco dei guasti previsti, che è ciò che quel campo esiste per non avere.
+    const text = describeSync(
+      { phase: 'error', message: 'HTTP 503', retryAt: NOW + 5_000 },
+      NOW,
+    ).text;
+    expect(text).toBe('Not synced: HTTP 503');
   });
 });

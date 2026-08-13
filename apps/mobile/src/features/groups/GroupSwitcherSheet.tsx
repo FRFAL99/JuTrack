@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { GroupPicker } from '@/features/groups/GroupPicker';
@@ -25,6 +26,7 @@ interface GroupSwitcherSheetProps {
  * il dito; se un giorno servirà, è il momento di pagare quel prezzo, non prima.
  */
 export function GroupSwitcherSheet({ visible, onClose, currentStats }: GroupSwitcherSheetProps) {
+  const { t } = useTranslation();
   const { colors, spacing } = useTheme();
   const insets = useSafeAreaInsets();
 
@@ -32,7 +34,7 @@ export function GroupSwitcherSheet({ visible, onClose, currentStats }: GroupSwit
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       {/* Lo sfondo chiude, com'è convenzione per un foglio: è anche l'unico modo di
           chiuderlo senza un gesto di trascinamento, che questa implementazione non ha. */}
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Chiudi" />
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={t('common.close')} />
       <View
         style={{
           backgroundColor: colors.surface,

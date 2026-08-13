@@ -39,6 +39,7 @@
 import { formatMoney, type Cents, type Transfer } from '@jutrack/core';
 import { myBalance, type BalanceTone } from '@/features/expenses/balance-line';
 import type { WidgetName } from './module';
+import { t } from '@/i18n/translate';
 
 /** La chiave in `app_meta`. Una sola per tutti i widget. */
 export const SNAPSHOT_KEY = 'widget_snapshot';
@@ -124,20 +125,20 @@ export const NOTHING_KNOWN: WidgetSnapshot = { balance: null, month: null };
  *
  * Non è un caso d'errore: è il primo avvio, ed è anche il telefono appena azzerato. Un
  * rettangolo vuoto sembrerebbe un widget rotto; una cifra vecchia sarebbe peggio ancora.
+ *
+ * **Una funzione e non più una costante** (Step 38): una costante di modulo si calcola
+ * all'import, cioè prima che chiunque abbia scelto una lingua, e resterebbe congelata in
+ * quella di sistema per tutta la vita del processo. Il costo è una chiamata in più; il
+ * risparmio è non avere un widget che parla una lingua diversa dall'app che gli sta sotto.
  */
-export const UNKNOWN_BALANCE: BalanceSnapshot = {
-  group: 'JuTrack',
-  amount: '—',
-  caption: "Apri l'app per vedere il saldo",
-  tone: 'even',
-};
+export function unknownBalance(): BalanceSnapshot {
+  return { group: 'JuTrack', amount: '—', caption: t('widget.unknownBalance'), tone: 'even' };
+}
 
 /** Lo stesso, per il totale del mese. */
-export const UNKNOWN_MONTH: MonthSnapshot = {
-  group: 'JuTrack',
-  amount: '—',
-  caption: "Apri l'app per vedere il totale",
-};
+export function unknownMonth(): MonthSnapshot {
+  return { group: 'JuTrack', amount: '—', caption: t('widget.unknownMonth') };
+}
 
 /**
  * Il foglietto del saldo, dai fatti del gruppo aperto.
@@ -165,7 +166,7 @@ export function balanceSnapshot(args: {
     return {
       group: groupName,
       amount: formatMoney(0, symbol),
-      caption: 'Solo tu in questo gruppo',
+      caption: t('widget.alone'),
       tone: 'even',
     };
   }
@@ -176,13 +177,13 @@ export function balanceSnapshot(args: {
   const caption =
     tone === 'credit'
       ? alone
-        ? `${nameOf(counterparties[0]!)} ti deve`
-        : `In ${counterparties.length} ti devono`
+        ? t('widget.creditOne', { name: nameOf(counterparties[0]!) })
+        : t('widget.creditMany', { count: counterparties.length })
       : tone === 'debt'
         ? alone
-          ? `Devi a ${nameOf(counterparties[0]!)}`
-          : `Devi a ${counterparties.length} persone`
-        : 'Siete pari';
+          ? t('widget.debtOne', { name: nameOf(counterparties[0]!) })
+          : t('widget.debtMany', { count: counterparties.length })
+        : t('widget.even');
 
   return { group: groupName, amount: formatMoney(cents, symbol), caption, tone };
 }
@@ -215,7 +216,7 @@ export function monthSnapshot(args: {
   return {
     group: groupName,
     amount: formatMoney(totalCents, symbol),
-    caption: `Speso in ${monthTitle}`,
+    caption: t('widget.monthCaption', { month: monthTitle }),
   };
 }
 

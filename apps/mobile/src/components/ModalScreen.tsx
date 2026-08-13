@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, StyleSheet, Text, View, type ViewProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
@@ -29,13 +30,17 @@ interface ModalScreenProps extends ViewProps {
 /** Schermata a pagina intera con intestazione e pulsante di chiusura. */
 export function ModalScreen({
   title,
-  closeLabel = 'Chiudi',
+  closeLabel,
   compact = false,
   children,
   style,
   ...rest
 }: ModalScreenProps) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
+  // Il default non può più stare nella destrutturazione: `t` non esiste ancora lì, e un
+  // valore di default calcolato da un hook va preso dopo che l'hook è stato chiamato.
+  const close = closeLabel ?? t('common.close');
   const insets = useSafeAreaInsets();
 
   return (
@@ -52,7 +57,7 @@ export function ModalScreen({
           <Pressable
             onPress={() => router.back()}
             accessibilityRole="button"
-            accessibilityLabel={closeLabel}
+            accessibilityLabel={close}
             hitSlop={8}
             style={({ pressed }) => ({
               width: 32,
@@ -88,10 +93,10 @@ export function ModalScreen({
           <Pressable
             onPress={() => router.back()}
             accessibilityRole="button"
-            accessibilityLabel={closeLabel}
+            accessibilityLabel={close}
             hitSlop={12}
           >
-            <Text style={{ color: colors.accent, fontSize: fontSize.md }}>{closeLabel}</Text>
+            <Text style={{ color: colors.accent, fontSize: fontSize.md }}>{close}</Text>
           </Pressable>
         </View>
       )}

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, SectionList, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
@@ -56,6 +57,7 @@ import { numeric, tightTitle, useTheme } from '@/theme';
  * gruppo appena aperta. Un componente condiviso non naviga, e non ha quel modo di fallire.
  */
 export function GroupHome({ group }: { group: GroupRecord }) {
+  const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const symbol = useCurrencySymbol();
   const insets = useSafeAreaInsets();
@@ -80,7 +82,17 @@ export function GroupHome({ group }: { group: GroupRecord }) {
   const categoriesById = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
   const membersById = useMemo(() => new Map(members.map((m) => [m.id, m])), [members]);
 
-  const sections = useMemo(() => groupByDay(expenses), [expenses]);
+  // `t` fra le dipendenze di questo `useMemo` e del prossimo, e non è cerimonia: `groupByDay`
+  // e `describeMyBalance` scrivono testo leggendo la lingua **nel momento in cui girano**.
+  // Senza, al cambio di lingua il componente si ridisegnerebbe — `useTranslation` lo fa — ma
+  // le intestazioni dei giorni e la riga del saldo resterebbero quelle memoizzate prima, cioè
+  // nella lingua di prima. `t` cambia identità a ogni cambio di lingua, ed è il solo appiglio
+  // che React ha per accorgersene.
+  // `t` non compare nel corpo, ma `groupByDay` legge la lingua da i18next: senza questa
+  // dipendenza le intestazioni dei giorni resterebbero memoizzate nella lingua di prima.
+  // La regola vede solo le variabili citate, quindi la chiama di troppo.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const sections = useMemo(() => groupByDay(expenses), [expenses, t]);
   const monthTotal = useMemo(
     () => monthExpenses.reduce((sum, e) => sum + e.amountCents, 0),
     [monthExpenses],
@@ -113,10 +125,10 @@ export function GroupHome({ group }: { group: GroupRecord }) {
           ),
         ),
         myMemberId,
-        (id) => membersById.get(id)?.name ?? 'qualcuno',
+        (id) => membersById.get(id)?.name ?? t('common.someone'),
         symbol,
       ),
-    [expenses, settlements, members, membersById, myMemberId, symbol],
+    [expenses, settlements, members, membersById, myMemberId, symbol, t],
   );
 
   const balanceColor =
@@ -135,8 +147,8 @@ export function GroupHome({ group }: { group: GroupRecord }) {
       <Pressable
         onPress={() => setSwitching(true)}
         accessibilityRole="button"
-        accessibilityLabel={`Gruppo ${group.name}`}
-        accessibilityHint="Apre l'elenco dei gruppi per cambiare"
+        accessibilityLabel={t('home.groupLabel', { name: group.name })}
+        accessibilityHint={t('home.groupHint')}
         style={({ pressed }) => ({
           flexDirection: 'row',
           alignItems: 'center',
@@ -181,7 +193,7 @@ export function GroupHome({ group }: { group: GroupRecord }) {
       <Pressable
         onPress={() => router.push(`/groups/${group.vaultId}/manage`)}
         accessibilityRole="button"
-        accessibilityLabel="Impostazioni del gruppo"
+        accessibilityLabel={t('home.settings')}
         style={({ pressed }) => ({
           width: 34,
           height: 34,
@@ -238,7 +250,7 @@ export function GroupHome({ group }: { group: GroupRecord }) {
       {composition.length > 0 && (
         <View
           accessible
-          accessibilityLabel="Composizione della spesa del mese per categoria"
+          accessibilityLabel={t('home.composition')}
           style={{ flexDirection: 'row', gap: 2, height: 7 }}
         >
           {composition.map((segment) => (
@@ -276,7 +288,9 @@ export function GroupHome({ group }: { group: GroupRecord }) {
               accessibilityRole="button"
               hitSlop={8}
             >
-              <Text style={{ color: colors.accent, fontSize: fontSize.sm }}>Pareggia</Text>
+              <Text style={{ color: colors.accent, fontSize: fontSize.sm }}>
+                {t('home.settle')}
+              </Text>
             </Pressable>
           </View>
         </>
@@ -296,11 +310,15 @@ export function GroupHome({ group }: { group: GroupRecord }) {
             <Text
               style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
             >
-              Nessuna spesa
+              {t('home.emptyTitle')}
             </Text>
+            {/* Il nome del bottone era in grassetto dentro la frase, e adesso è fra
+                virgolette dentro una frase sola. Spezzare la frase in due chiavi per
+                tenere il grassetto avrebbe imposto al traduttore l'ordine italiano delle
+                parole, che è il modo più comune di rompere una traduzione. Le virgolette
+                citano il bottone, e la frase in cambio dice anche **dove** si trova. */}
             <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-              Tocca <Text style={{ fontWeight: fontWeight.semibold }}>Spesa</Text> per registrare la
-              prima.
+              {t('home.emptyBody', { action: t('home.fab') })}
             </Text>
           </View>
         </View>
@@ -379,7 +397,7 @@ export function GroupHome({ group }: { group: GroupRecord }) {
       <Pressable
         onPress={() => router.push('/expense/new')}
         accessibilityRole="button"
-        accessibilityLabel="Aggiungi una spesa"
+        accessibilityLabel={t('home.fabLabel')}
         style={({ pressed }) => [
           styles.fab,
           {
@@ -398,7 +416,7 @@ export function GroupHome({ group }: { group: GroupRecord }) {
             fontWeight: fontWeight.semibold,
           }}
         >
-          Spesa
+          {t('home.fab')}
         </Text>
       </Pressable>
 

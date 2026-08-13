@@ -1,10 +1,12 @@
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { ModalScreen } from '@/components/ModalScreen';
 import { ExpenseForm, type ExpenseFormValues } from '@/features/expenses/ExpenseForm';
 import { useExpenseRegistered } from '@/features/notifications/useNotifications';
 import { useVaultStore } from '@/state';
 
 export default function NewExpenseScreen() {
+  const { t } = useTranslation();
   const store = useVaultStore();
   const noteRegistered = useExpenseRegistered();
 
@@ -34,8 +36,8 @@ export default function NewExpenseScreen() {
   return (
     // `compact`: la x tonda a sinistra e il titolo al centro, perché l'azione che conclude
     // — «Salva la spesa» — è il bottone a piena larghezza in fondo al form.
-    <ModalScreen title="Nuova spesa" compact>
-      <ExpenseForm onSubmit={handleSubmit} submitLabel="Salva la spesa" />
+    <ModalScreen title={t('expense.newTitle')} compact>
+      <ExpenseForm onSubmit={handleSubmit} submitLabel={t('expense.submitNew')} />
     </ModalScreen>
   );
 }

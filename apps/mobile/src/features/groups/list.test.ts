@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
+import i18n from '@/i18n';
 import { groupColor, groupSubtitle, shortVaultId } from './list';
 
 const CASA = 'a1b2c3d4e5f60718293a4b5c6d7e8f90';
@@ -82,5 +83,30 @@ describe('groupColor', () => {
       ['00', '01', '02', '03', '04', '05'].map((prefix) => groupColor(`${prefix}${CASA.slice(2)}`)),
     );
     expect(colors.size).toBeGreaterThan(1);
+  });
+});
+
+describe('in inglese', () => {
+  beforeEach(async () => {
+    await i18n.changeLanguage('en');
+  });
+
+  it('traduce lo stato e il contorno, non l id del vault', () => {
+    // «vault» resta «vault»: è il nome della cosa, lo stesso che portano le tabelle e il
+    // threat model. Tradurlo sarebbe stato tradurre un identificatore.
+    expect(groupSubtitle(CASA, CASA)).toBe('Open now');
+    expect(groupSubtitle(VIAGGIO, CASA)).toBe('vault 0f9e8d7c…');
+  });
+
+  it('sceglie singolare e plurale delle spese', () => {
+    const stats = (expenseCount: number) => ({ expenseCount, monthTotal: '119,00 €' });
+    expect(groupSubtitle(CASA, CASA, stats(1))).toBe('Open now · 1 expense · 119,00 € this month');
+    expect(groupSubtitle(CASA, CASA, stats(2))).toBe('Open now · 2 expenses · 119,00 € this month');
+  });
+
+  it('dice a parole che non ce ne sono, invece di scrivere zero', () => {
+    expect(groupSubtitle(CASA, CASA, { expenseCount: 0, monthTotal: '0,00 €' })).toContain(
+      'no expenses',
+    );
   });
 });

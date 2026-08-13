@@ -1,4 +1,5 @@
 import type { Cents, Expense } from '@jutrack/core';
+import { t } from '@/i18n/translate';
 
 export interface DaySection {
   /** Data in formato `YYYY-MM-DD`. */
@@ -10,30 +11,20 @@ export interface DaySection {
   data: Expense[];
 }
 
-const WEEKDAYS = [
-  'domenica',
-  'lunedì',
-  'martedì',
-  'mercoledì',
-  'giovedì',
-  'venerdì',
-  'sabato',
-] as const;
-
-const MONTHS = [
-  'gennaio',
-  'febbraio',
-  'marzo',
-  'aprile',
-  'maggio',
-  'giugno',
-  'luglio',
-  'agosto',
-  'settembre',
-  'ottobre',
-  'novembre',
-  'dicembre',
-] as const;
+/**
+ * I nomi dei giorni e dei mesi vengono dal dizionario, **e con loro l'ordine dei pezzi**.
+ *
+ * Lo Step 38 ha tolto da qui due array di parole italiane. Tradurre solo quelli avrebbe
+ * prodotto «Monday 1 August»: in inglese il mese viene prima del giorno, e quell'ordine
+ * appartiene alla lingua esattamente quanto la parola «August». Sta quindi nel dizionario
+ * come modello — `date.dayTitle` — e qui restano solo i pezzi da infilarci.
+ *
+ * **Niente `Intl.DateTimeFormat`**, che pure saprebbe fare tutto: su Hermes non è verificato
+ * (vedi `systemLocale` allo Step 37), e ripiegherebbe in silenzio su un formato qualsiasi.
+ * Un modello scritto da noi si legge, si prova e non dipende dal motore.
+ */
+const weekdayName = (index: number): string => t(`date.weekdays.${index}`);
+const monthName = (month: number): string => t(`date.months.${month}`);
 
 /** Data locale del dispositivo in formato `YYYY-MM-DD`. */
 export function todayIso(now: Date = new Date()): string {
@@ -49,11 +40,11 @@ export function todayIso(now: Date = new Date()): string {
 /** Intestazione leggibile per una data. */
 export function formatDayTitle(isoDate: string, now: Date = new Date()): string {
   const today = todayIso(now);
-  if (isoDate === today) return 'Oggi';
+  if (isoDate === today) return t('date.today');
 
   const yesterday = new Date(now);
   yesterday.setDate(yesterday.getDate() - 1);
-  if (isoDate === todayIso(yesterday)) return 'Ieri';
+  if (isoDate === todayIso(yesterday)) return t('date.yesterday');
 
   const [yearPart, monthPart, dayPart] = isoDate.split('-');
   const year = Number(yearPart);
@@ -64,11 +55,10 @@ export function formatDayTitle(isoDate: string, now: Date = new Date()): string 
   // Mezzogiorno invece di mezzanotte: evita che l'ora legale sposti la data di un
   // giorno in alcuni fusi.
   const date = new Date(year, month - 1, day, 12);
-  const weekday = WEEKDAYS[date.getDay()] ?? '';
-  const monthName = MONTHS[month - 1] ?? '';
 
-  const sameYear = year === now.getFullYear();
-  return sameYear ? `${weekday} ${day} ${monthName}` : `${day} ${monthName} ${year}`;
+  return year === now.getFullYear()
+    ? t('date.dayTitle', { weekday: weekdayName(date.getDay()), day, month: monthName(month) })
+    : t('date.dayTitleOtherYear', { day, month: monthName(month), year });
 }
 
 /**
@@ -81,10 +71,12 @@ export function formatDayTitle(isoDate: string, now: Date = new Date()): string 
 export function formatDayShort(isoDate: string, now: Date = new Date()): string {
   const [yearPart, monthPart, dayPart] = isoDate.split('-');
   const year = Number(yearPart);
+  const month = Number(monthPart);
   const day = Number(dayPart);
-  const name = MONTHS[Number(monthPart) - 1];
-  if (!Number.isFinite(year) || !Number.isFinite(day) || name === undefined) return isoDate;
-  return year === now.getFullYear() ? `${day} ${name}` : `${day} ${name} ${year}`;
+  if (!Number.isFinite(year) || !Number.isFinite(day) || !isMonthNumber(month)) return isoDate;
+  return year === now.getFullYear()
+    ? t('date.dayShort', { day, month: monthName(month) })
+    : t('date.dayShortOtherYear', { day, month: monthName(month), year });
 }
 
 /** Mese corrente del dispositivo in formato `YYYY-MM`. */
@@ -101,16 +93,26 @@ export function currentMonth(now: Date = new Date()): string {
 export function formatMonthTitle(month: string, now: Date = new Date()): string {
   const [yearPart, monthPart] = month.split('-');
   const year = Number(yearPart);
-  const index = Number(monthPart) - 1;
-  const name = MONTHS[index];
-  if (!Number.isFinite(year) || name === undefined) return month;
-  return year === now.getFullYear() ? name : `${name} ${year}`;
+  const index = Number(monthPart);
+  if (!Number.isFinite(year) || !isMonthNumber(index)) return month;
+  const name = monthName(index);
+  return year === now.getFullYear() ? name : t('date.monthYear', { month: name, year });
 }
 
-/** Abbreviazione di tre lettere per gli assi dei grafici, dove lo spazio è poco. */
+/**
+ * Abbreviazione di tre lettere per gli assi dei grafici, dove lo spazio è poco.
+ *
+ * Tagliare a tre funziona in entrambe le lingue — «ago», «Aug» — e regge la maiuscola
+ * inglese senza doverla sapere, perché arriva già dal dizionario.
+ */
 export function shortMonthLabel(month: string): string {
-  const index = Number(month.split('-')[1]) - 1;
-  return MONTHS[index]?.slice(0, 3) ?? month;
+  const index = Number(month.split('-')[1]);
+  return isMonthNumber(index) ? monthName(index).slice(0, 3) : month;
+}
+
+/** Guardia unica sull'indice del mese: `date.months` ha esattamente le chiavi da 1 a 12. */
+function isMonthNumber(month: number): boolean {
+  return Number.isInteger(month) && month >= 1 && month <= 12;
 }
 
 /**

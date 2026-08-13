@@ -11,12 +11,184 @@ import type { Dictionary } from './it';
  * «Sync now», perché il verbo inglese senza complemento si legge come un'etichetta e non come
  * un comando; dove l'italiano nomina «il relay», l'inglese lo nomina uguale, perché è il nome
  * della cosa e non una parola italiana.
+ *
+ * **Le date cambiano ordine, non solo parole.** `date.dayTitle` qui è
+ * `{{weekday}}, {{month}} {{day}}` — «Monday, August 1» — contro il
+ * `{{weekday}} {{day}} {{month}}` italiano. È la ragione per cui quei modelli stanno nel
+ * dizionario e non nel codice.
+ *
+ * **Quello che resta italiano, e va detto:** i numeri. `formatCents` scrive «1.234,56» in
+ * entrambe le lingue, perché il separatore decimale sta in `packages/core` e cambiarlo tocca
+ * ogni importo dell'app e l'export CSV. Non è una svista dello Step 38, è un lavoro suo che
+ * non è ancora stato fatto.
  */
 export const en: Dictionary = {
+  common: {
+    close: 'Close',
+    cancel: 'Cancel',
+    someone: 'someone',
+  },
+  date: {
+    today: 'Today',
+    yesterday: 'Yesterday',
+    dayTitle: '{{weekday}}, {{month}} {{day}}',
+    dayTitleOtherYear: '{{month}} {{day}}, {{year}}',
+    dayShort: '{{month}} {{day}}',
+    dayShortOtherYear: '{{month}} {{day}}, {{year}}',
+    monthYear: '{{month}} {{year}}',
+    weekdays: {
+      0: 'Sunday',
+      1: 'Monday',
+      2: 'Tuesday',
+      3: 'Wednesday',
+      4: 'Thursday',
+      5: 'Friday',
+      6: 'Saturday',
+    },
+    months: {
+      1: 'January',
+      2: 'February',
+      3: 'March',
+      4: 'April',
+      5: 'May',
+      6: 'June',
+      7: 'July',
+      8: 'August',
+      9: 'September',
+      10: 'October',
+      11: 'November',
+      12: 'December',
+    },
+  },
+  sync: {
+    idle: 'Waiting',
+    syncing: 'Syncing…',
+    syncedAt: 'Updated {{when}}',
+    offline: 'Offline — your changes stay queued',
+    error: 'Not synced: {{message}}',
+    blocked: 'Sync stopped: the relay rejects the key',
+    now: 'just now',
+    secondsAgo: { one: '{{count}} second ago', other: '{{count}} seconds ago' },
+    minutesAgo: { one: '{{count}} minute ago', other: '{{count}} minutes ago' },
+    hoursAgo: { one: '{{count}} hour ago', other: '{{count}} hours ago' },
+  },
   tabs: {
     groups: 'Groups',
     charts: 'Charts',
     you: 'You',
+  },
+  groups: {
+    title: 'Your groups',
+    emptyIntro:
+      'A group is where the expenses you split end up, along with the people who split them. You can create one now, join someone else’s with an invite, or restore a key you had put aside.',
+    newGroup: 'New group',
+    joinInvite: 'Join with an invite',
+    restoreIntro:
+      'If you saved a group’s key and its passphrase, the group comes back here. The expenses arrive with the first sync, if it is still on the relay.',
+    restore: 'Restore a key',
+    openNow: 'Open now',
+    vaultShort: 'vault {{id}}',
+    noExpenses: 'no expenses',
+    expenseCount: { one: '{{count}} expense', other: '{{count}} expenses' },
+    subtitle: '{{state}} · {{count}} · {{total}} this month',
+    new: {
+      title: 'New group',
+      body: 'It starts empty and yours alone. It becomes shared when you invite someone from the group itself.',
+      placeholder: 'Home, Trip, Flatmates…',
+      nameLabel: 'Group name',
+      create: 'Create',
+      creating: 'Creating…',
+      failed: 'Could not create the group',
+    },
+  },
+  home: {
+    groupLabel: 'Group {{name}}',
+    groupHint: 'Opens the list of groups to switch',
+    settings: 'Group settings',
+    composition: 'Breakdown of this month’s spending by category',
+    settle: 'Settle up',
+    emptyTitle: 'No expenses',
+    emptyBody: 'Tap “{{action}}” at the bottom right to add the first one.',
+    fab: 'Expense',
+    fabLabel: 'Add an expense',
+    balance: {
+      creditOne: '{{name}} owes you {{amount}}',
+      creditMany: '{{count}} people owe you {{amount}}',
+      debtOne: 'You owe {{amount}} to {{name}}',
+      debtMany: 'You owe {{amount}} to {{count}} people',
+      even: 'You are even',
+    },
+  },
+  expense: {
+    newTitle: 'New expense',
+    submitNew: 'Save the expense',
+    editTitle: 'Edit expense',
+    submitEdit: 'Save changes',
+    notFoundTitle: 'Expense',
+    notFoundHeading: 'Expense not found',
+    notFoundHint: 'It may have been deleted from the other device.',
+    deleteAction: 'Delete expense',
+    deleteTitle: 'Delete this expense?',
+    deleteBody: 'This applies to the other device too.',
+    deleteConfirm: 'Delete',
+    amount: 'Amount',
+    amountPlaceholder: '0,00',
+    amountLabel: 'Expense amount',
+    amountError: 'Enter an amount greater than zero',
+    whoAndHow: 'Who pays and how it splits',
+    paidBy: '{{name}} paid',
+    me: 'You',
+    shareOf: 'Share owed by {{name}}',
+    split: {
+      equalTwo: 'Half and half',
+      equalMany: 'Split evenly',
+      custom: 'Shares',
+      single: 'Payer only',
+    },
+    singleHint: 'Entirely on whoever paid',
+    preview: {
+      none: 'Split evenly',
+      each: '{{amount}} each',
+      range: '{{min}} / {{max}} each',
+    },
+    gap: {
+      noAmount: 'Enter the expense amount first',
+      exact: 'The shares cover the total exactly',
+      missing: '{{amount}} missing',
+      excess: '{{amount}} too much',
+    },
+    category: 'Category',
+    date: 'Date',
+    note: 'Note',
+    noteOptional: 'Optional',
+    notePlaceholder: 'For example: groceries',
+    noteLabel: 'Expense note',
+    noteAdd: 'Add a note',
+    noteRead: 'Note: {{note}}',
+    extra: {
+      title: 'Additional details',
+      optional: 'Optional',
+      tagCount: { one: '{{count}} tag', other: '{{count}} tags' },
+      store: 'Store',
+      storePlaceholder: 'Where it happened',
+      tags: 'Tags',
+      tagPlaceholder: 'Add a tag',
+    },
+    row: {
+      uncategorized: 'Uncategorised',
+      share: '{{amount}} for you',
+    },
+  },
+  widget: {
+    unknownBalance: 'Open the app to see the balance',
+    unknownMonth: 'Open the app to see the total',
+    alone: 'Only you in this group',
+    creditOne: '{{name}} owes you',
+    creditMany: '{{count}} people owe you',
+    debtOne: 'You owe {{name}}',
+    debtMany: 'You owe {{count}} people',
+    even: 'You are even',
+    monthCaption: 'Spent in {{month}}',
   },
   you: {
     name: {

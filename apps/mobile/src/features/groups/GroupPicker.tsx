@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { SectionLabel } from '@/components/SectionLabel';
@@ -33,6 +34,7 @@ interface GroupPickerProps {
  * già smontata quando il gruppo corrente cambia.
  */
 export function GroupPicker({ currentStats, onDone }: GroupPickerProps) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize } = useTheme();
   const { groups, current, select } = useGroups();
   const [creating, setCreating] = useState(false);
@@ -52,14 +54,12 @@ export function GroupPicker({ currentStats, onDone }: GroupPickerProps) {
       {groups.length === 0 ? (
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: spacing.sm }}>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            Un gruppo è dove finiscono le spese da dividere, con le persone che le dividono. Puoi
-            crearne uno adesso, entrare in quello di qualcun altro con un invito, oppure
-            ripristinare una chiave che avevi messo da parte.
+            {t('groups.emptyIntro')}
           </Text>
         </View>
       ) : (
         <>
-          <SectionLabel>I tuoi gruppi</SectionLabel>
+          <SectionLabel>{t('groups.title')}</SectionLabel>
           {groups.map((group, index) => (
             <View key={group.vaultId}>
               {index > 0 && (
@@ -94,13 +94,13 @@ export function GroupPicker({ currentStats, onDone }: GroupPickerProps) {
         }}
       >
         <Button
-          label="Nuovo gruppo"
+          label={t('groups.newGroup')}
           variant="secondary"
           onPress={() => setCreating(true)}
           style={{ flex: 1 }}
         />
         <Button
-          label="Entra con invito"
+          label={t('groups.joinInvite')}
           variant="secondary"
           onPress={() => {
             onDone();
@@ -117,11 +117,10 @@ export function GroupPicker({ currentStats, onDone }: GroupPickerProps) {
       {groups.length === 0 && (
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
-            Se hai salvato la chiave di un gruppo e la sua passphrase, il gruppo torna qui. Le spese
-            arrivano col primo sync, se è ancora sul relay.
+            {t('groups.restoreIntro')}
           </Text>
           <Button
-            label="Ripristina una chiave"
+            label={t('groups.restore')}
             variant="secondary"
             onPress={() => {
               onDone();

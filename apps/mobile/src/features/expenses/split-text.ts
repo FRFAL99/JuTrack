@@ -1,4 +1,5 @@
 import { buildSplit, formatCents, formatMoney, type SplitMode } from '@jutrack/core';
+import { t } from '@/i18n/translate';
 
 /**
  * Le frasi che spiegano come si divide una spesa.
@@ -22,9 +23,11 @@ import { buildSplit, formatCents, formatMoney, type SplitMode } from '@jutrack/c
  * pagata da un altro. «Solo chi paga» è vero in entrambi i casi.
  */
 export function splitModeLabel(mode: SplitMode, memberCount: number): string {
-  if (mode === 'equal') return memberCount === 2 ? 'Metà e metà' : 'In parti uguali';
-  if (mode === 'custom') return 'Quote';
-  return 'Solo chi paga';
+  if (mode === 'equal') {
+    return memberCount === 2 ? t('expense.split.equalTwo') : t('expense.split.equalMany');
+  }
+  if (mode === 'custom') return t('expense.split.custom');
+  return t('expense.split.single');
 }
 
 /**
@@ -35,11 +38,11 @@ export function splitModeLabel(mode: SplitMode, memberCount: number): string {
  * questa firma per i test che c'erano già.
  */
 export function describeGap(gap: number, amountCents: number | null, symbol = '€'): string {
-  if (amountCents === null || amountCents <= 0) return 'Inserisci prima l’importo della spesa';
-  if (gap === 0) return 'Le quote coprono esattamente il totale';
+  if (amountCents === null || amountCents <= 0) return t('expense.gap.noAmount');
+  if (gap === 0) return t('expense.gap.exact');
   return gap > 0
-    ? `Mancano ${formatMoney(gap, symbol)}`
-    : `Eccedono di ${formatMoney(-gap, symbol)}`;
+    ? t('expense.gap.missing', { amount: formatMoney(gap, symbol) })
+    : t('expense.gap.excess', { amount: formatMoney(-gap, symbol) });
 }
 
 /** Anteprima della quota per persona, per rendere concreto l'effetto dello split. */
@@ -49,7 +52,7 @@ export function splitPreview(
   symbol = '€',
 ): string {
   if (amountCents === null || amountCents <= 0 || memberCount < 2) {
-    return 'Diviso in parti uguali';
+    return t('expense.preview.none');
   }
   const shares = buildSplit(
     'equal',
@@ -62,8 +65,11 @@ export function splitPreview(
   // Quando l'importo non è divisibile esattamente le quote differiscono di un
   // centesimo: mostrarlo evita che sembri un errore di calcolo.
   return min === max
-    ? `${formatCents(min)} ${symbol} a testa`
-    : `${formatCents(min)} ${symbol} / ${formatCents(max)} ${symbol} a testa`;
+    ? t('expense.preview.each', { amount: `${formatCents(min)} ${symbol}` })
+    : t('expense.preview.range', {
+        min: `${formatCents(min)} ${symbol}`,
+        max: `${formatCents(max)} ${symbol}`,
+      });
 }
 
 /**

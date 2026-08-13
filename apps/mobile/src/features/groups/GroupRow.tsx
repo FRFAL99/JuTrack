@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { Pressable, Text, View } from 'react-native';
 import { groupSubtitle, type GroupStats } from '@/features/groups/list';
 import type { GroupRecord } from '@/state';
@@ -22,6 +23,9 @@ interface GroupRowProps {
  * che è l'unico segnale che distingue a colpo d'occhio quello giusto da quello sbagliato.
  */
 export function GroupRow({ group, currentVaultId, stats, onPress }: GroupRowProps) {
+  // Il sottotitolo lo scrive `groupSubtitle`, che legge la lingua quando gira: senza questo
+  // hook la riga non si ridisegnerebbe al cambio, e resterebbe scritta in quella di prima.
+  useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const isCurrent = group.vaultId === currentVaultId;
 

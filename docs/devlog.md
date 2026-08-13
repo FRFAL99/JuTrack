@@ -4,6 +4,134 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-13 — Step 38: la traduzione delle tre schermate, e i test diventati dipendenti dalla lingua della macchina
+
+Le tre schermate che si aprono più spesso — le spese del gruppo, la nuova spesa, l'elenco dei
+gruppi — e con esse i sei moduli condivisi che ci scrivono dentro. Dopo lo Step 37 le stringhe
+tradotte erano una cinquantina; adesso sono duecento.
+
+**Il problema dello step non erano le schermate, erano i moduli sotto.** `describe.ts` dice da
+quanto non si sincronizza, `grouping.ts` scrive «lunedì 1 agosto», `balance-line.ts` decide se
+«ti deve» o «devi», `split-text.ts` spiega la divisione, `list.ts` scrive il sottotitolo di ogni
+gruppo. Sono moduli **puri di proposito**, perché è lì che stanno i casi limite ed è lì che i
+test dell'app arrivano — non importano `react-native`. Un hook non ce lo si può mettere.
+
+La soluzione è una riga: `import i18n from '@/i18n'`, e non `from 'i18next'` che pure sarebbe la
+**stessa istanza**. Importare il modulo che la _inizializza_ rende l'ordine una proprietà del
+grafo degli import invece che una cosa da ricordare: non esiste un percorso, in app o nei test,
+che ottenga una `t` capace di restituire le chiavi al posto delle frasi.
+
+**Ne segue una regola che vale per tutto il resto della traduzione, e va tenuta a mente
+disegnando.** Quelle funzioni leggono la lingua **quando girano**, e non avvisano nessuno quando
+cambia: a far ridisegnare è `useTranslation()` nel componente. Quindi un componente che mostra
+una data o un saldo deve chiamarlo **anche se non ha stringhe proprie** — `SyncBadge` e
+`GroupRow` lo fanno senza usare `t` — e un `useMemo` che avvolge una di quelle chiamate deve
+avere `t` fra le dipendenze, che è l'unico appiglio che React ha per accorgersi del cambio. In
+`GroupHome` quella dipendenza è l'unico `eslint-disable` dello step: la regola vede le variabili
+citate nel corpo, e `groupByDay` la lingua se la va a prendere da sé.
+
+**Le date sono la parte che sembrava facile e non lo era.** Da `grouping.ts` sono usciti due
+array di parole italiane, e tradurre solo quelli avrebbe prodotto **«Monday 1 August»**: in
+inglese il mese viene prima del giorno, e quell'ordine appartiene alla lingua esattamente quanto
+la parola «August». Nel dizionario sono finiti quindi cinque **modelli** — `date.dayTitle`,
+`dayTitleOtherYear`, `dayShort`, `dayShortOtherYear`, `monthYear` — e nel codice sono rimasti
+solo i pezzi da infilarci. Quattro dei cinque cambiano forma fra le due lingue; il quinto è nel
+piccolo elenco delle eccezioni del test, insieme a «vault» e a due altre.
+
+Niente `Intl.DateTimeFormat`, che pure saprebbe fare tutto: su Hermes non è verificato — è la
+stessa incognita dello Step 37 — e ripiegherebbe in silenzio su un formato qualsiasi. Un modello
+scritto da noi si legge, si prova, e non dipende dal motore.
+
+**I plurali si contano a mano, e il motivo è verificato leggendo il sorgente di i18next.**
+`plural()` sceglie `.one` o `.other` con un confronto, invece di lasciar fare a
+`Intl.PluralRules`. Non è diffidenza generica: `PluralResolver.getRule` intercetta l'errore e
+restituisce una **regola finta** quando `Intl` manca, e quella regola sceglie sempre la stessa
+forma. Non fallirebbe: scriverebbe «1 spese» senza dirlo a nessuno. Contare a mano è corretto
+per italiano e inglese, che dividono uno da molti allo stesso modo, ed è il limite dichiarato
+della funzione — il polacco ha tre forme, l'arabo sei, e a quel punto `Intl` va rimesso in mezzo.
+
+Lo stesso sorgente dice anche una cosa che **ridimensiona un rischio dello Step 37**: tutti gli
+usi di `Intl` in i18next stanno dentro un `try`, quindi `init` non può fallire per la sua
+assenza. Senza `Intl` l'app parte comunque; è solo il plurale che sceglierebbe male, e adesso
+non lo sceglie i18next.
+
+**Il guasto che questo step ha scoperto in sé stesso: i test erano diventati dipendenti dalla
+lingua della macchina.** L'istanza si inizializza con `resolveLanguage(null, systemLocale())`,
+cioè con la lingua di **sistema**: qui è `it-IT` e tutto passava. Forzando l'inglese, **66 test
+falliscono** — quelli di date, saldo, sync, divisione, campi extra e sottotitoli, cioè tutti
+quelli scritti negli step precedenti e mai toccati oggi. Su un runner di CI inglese sarebbero
+diventati rossi senza che dal messaggio si capisse perché. Il rimedio è un `setupFiles` che fissa
+l'italiano prima di **ogni** test, `beforeEach` e non `beforeAll` perché chi prova l'inglese
+cambia lingua a metà file e senza ripristino il test successivo erediterebbe la scelta secondo
+l'ordine di esecuzione.
+
+**Un difetto che lo step stava per introdurre nei widget, e che è stato chiuso qui.** La
+didascalia del widget del mese è «Speso in {mese}», e il nome del mese da oggi è tradotto:
+sarebbe uscito **«Speso in August»**, che è peggio di entrambe le lingue. I widget non erano
+nel piano dello Step 38 — sarebbero il 39 — ma ci sono entrati per forza. Due conseguenze:
+`UNKNOWN_BALANCE` e `UNKNOWN_MONTH` sono diventate **funzioni**, perché una costante di modulo
+si calcola all'import e resterebbe congelata nella lingua di sistema per tutta la vita del
+processo; e il task headless dello Step 36 adesso applica la lingua del profilo, che legge dallo
+stesso `loadProfile` che gli serviva già — senza, un widget avrebbe potuto cambiare lingua da
+solo ogni mezz'ora rispetto all'app sotto.
+
+**Due cose non passano da `t`, e non ci passeranno mai.** I nomi di gruppi, categorie, persone,
+negozi e tag stanno nel documento condiviso e li ha scritti qualcuno: tradurli vorrebbe dire
+mostrare all'altro telefono un gruppo con un altro nome. E `state.message` del sync, che viene
+dal motore o dal relay: tradurlo significherebbe avere un elenco dei guasti previsti, cioè
+esattamente ciò per cui quel campo esiste per non averlo. Meglio una diagnosi vera in inglese che
+una generica nella lingua giusta.
+
+**Una frase è stata riscritta invece che tradotta.** Lo stato vuoto diceva «Tocca **Spesa** per
+registrare la prima», col nome del bottone in grassetto dentro la frase. Tenere il grassetto
+avrebbe voluto dire spezzare la frase in due chiavi, imponendo al traduttore l'ordine italiano
+delle parole — che è il modo più comune di rompere una traduzione. Adesso è una frase sola con il
+bottone fra virgolette, e in cambio dice anche **dove** si trova.
+
+**Quello che resta italiano, e non è una svista: i numeri.** `formatCents` scrive «1.234,56» in
+tutte e due le lingue, perché il separatore decimale sta in `packages/core` e cambiarlo tocca
+ogni importo dell'app più l'export CSV. A un lettore inglese «1.234,56» si legge male, e va detto
+chiaro invece di nasconderlo: è un lavoro suo, e il posto naturale è prima dello Step 39.
+
+**`packages/core` non è stato toccato, per l'ottavo step di fila** — e stavolta con una tentazione
+vera: il separatore decimale sarebbe stato il primo motivo legittimo per entrarci da otto step. È
+rimasto fuori perché è un cambiamento che va misurato, non infilato in coda a un altro.
+
+**Verificato, non assunto**
+
+- **I 66 test che sarebbero falliti in CI.** Non è una stima: la prova è stata fatta forzando
+  `changeLanguage('en')` nel setup e contando. Il primo tentativo — rieseguire con
+  `LC_ALL=en_US` — **non provava niente**, perché su Windows Node ignora quelle variabili e
+  prende la lingua dal sistema: `Intl.DateTimeFormat().resolvedOptions().locale` restituiva
+  `it-IT` in entrambi i casi.
+- **L'inglese è davvero nel bundle Hermes**, non solo nei tipi: `expo export --platform android`
+  completa e il `.hbc` contiene «Split evenly», «owes you», «Wednesday», «Spent in»,
+  «Half and half» e «Uncategorised».
+- **`getRule` di i18next ripiega su una regola finta invece di sollevare**, letto nel sorgente
+  installato prima di decidere come fare i plurali. È la ragione per cui `plural()` conta a mano,
+  ed è anche ciò che rende `init` sicura senza `Intl`.
+- **Ventiquattro test nuovi provano la seconda lingua**, e non ripetono i primi: coprono i punti
+  dove le due lingue non sono la stessa frase con parole diverse — l'ordine dei pezzi nelle date,
+  il soggetto che l'inglese scrive e l'italiano no («You owe» contro «Devi»), la posizione del
+  verbo rispetto all'importo («Mancano 5,00 €» contro «5,00 € missing»), la s dei tag che in
+  italiano non c'è.
+
+**Ancora da verificare sul telefono**
+
+Che la tastiera decimale e i tre campi del form si comportino come prima: il form è stato toccato
+in venti punti, tutti di testo, ma è la schermata in cui si **scrive** nel documento condiviso.
+E che nessuna etichetta inglese sbordi dove l'italiana stava: «Who pays and how it splits» è più
+lunga di «Chi paga e come si divide», e le pillole di divisione cambiano larghezza.
+
+**Verifica:** 1149 test verdi (588 core + 518 app + 43 relay, di cui 24 nuovi), typecheck, lint e
+`format:check` puliti, `expo export --platform android` completato.
+
+**Prossimo:** lo Step 39 — grafici e dashboard, Tu che resta da finire, onboarding, pairing,
+backup/export, azzera. Prima però conviene il separatore decimale in `packages/core`: è l'unica
+cosa che rende ancora sbagliata la lettura inglese delle schermate già tradotte.
+
+---
+
 ## 2026-08-13 — Step 37: l'infrastruttura i18n, e la libreria che il piano nominava ma non serviva
 
 Il primo dei quattro step sulla lingua, e il primo posto in cui le frasi dell'app smettono di

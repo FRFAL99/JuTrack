@@ -1,4 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 import { EmptyState } from '@/components/EmptyState';
 import { ModalScreen } from '@/components/ModalScreen';
@@ -6,6 +7,7 @@ import { ExpenseForm, type ExpenseFormValues } from '@/features/expenses/Expense
 import { useExpense, useVaultStore } from '@/state';
 
 export default function EditExpenseScreen() {
+  const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const store = useVaultStore();
   const expense = useExpense(id);
@@ -14,11 +16,11 @@ export default function EditExpenseScreen() {
     // Può succedere davvero: l'altro dispositivo può aver cancellato la spesa
     // mentre questa schermata era aperta.
     return (
-      <ModalScreen title="Spesa">
+      <ModalScreen title={t('expense.notFoundTitle')}>
         <EmptyState
           icon="🔍"
-          title="Spesa non trovata"
-          hint="Potrebbe essere stata eliminata dall'altro dispositivo."
+          title={t('expense.notFoundHeading')}
+          hint={t('expense.notFoundHint')}
         />
       </ModalScreen>
     );
@@ -44,10 +46,10 @@ export default function EditExpenseScreen() {
   };
 
   const handleDelete = (): void => {
-    Alert.alert('Eliminare la spesa?', 'L azione si applica anche sull altro dispositivo.', [
-      { text: 'Annulla', style: 'cancel' },
+    Alert.alert(t('expense.deleteTitle'), t('expense.deleteBody'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Elimina',
+        text: t('expense.deleteConfirm'),
         style: 'destructive',
         onPress: () => {
           store.deleteExpense(expense.id);
@@ -58,12 +60,12 @@ export default function EditExpenseScreen() {
   };
 
   return (
-    <ModalScreen title="Modifica spesa" compact>
+    <ModalScreen title={t('expense.editTitle')} compact>
       <ExpenseForm
         initial={expense}
         onSubmit={handleSubmit}
         onDelete={handleDelete}
-        submitLabel="Salva le modifiche"
+        submitLabel={t('expense.submitEdit')}
       />
     </ModalScreen>
   );

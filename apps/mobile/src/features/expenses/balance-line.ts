@@ -1,4 +1,5 @@
 import { formatMoney, type Transfer } from '@jutrack/core';
+import { t } from '@/i18n/translate';
 
 /** Di che segno è il saldo, per scegliere il colore senza che il chiamante lo deduca dal testo. */
 export type BalanceTone = 'credit' | 'debt' | 'even';
@@ -79,22 +80,25 @@ export function describeMyBalance(
   const money = formatMoney(cents, symbol);
   const alone = counterparties.length === 1;
 
+  // Quattro chiavi e non due con un plurale: «{{name}} ti deve» e «In {{count}} ti devono»
+  // non sono la stessa frase al singolare e al plurale — cambiano soggetto, non numero. Una
+  // nomina una persona, l'altra la conta perché non c'è spazio per elencarle.
   if (tone === 'credit') {
     return {
       text: alone
-        ? `${nameOf(counterparties[0]!)} ti deve ${money}`
-        : `In ${counterparties.length} ti devono ${money}`,
+        ? t('home.balance.creditOne', { name: nameOf(counterparties[0]!), amount: money })
+        : t('home.balance.creditMany', { count: counterparties.length, amount: money }),
       tone,
     };
   }
   if (tone === 'debt') {
     return {
       text: alone
-        ? `Devi ${money} a ${nameOf(counterparties[0]!)}`
-        : `Devi ${money} a ${counterparties.length} persone`,
+        ? t('home.balance.debtOne', { name: nameOf(counterparties[0]!), amount: money })
+        : t('home.balance.debtMany', { count: counterparties.length, amount: money }),
       tone,
     };
   }
 
-  return { text: 'Siete pari', tone };
+  return { text: t('home.balance.even'), tone };
 }

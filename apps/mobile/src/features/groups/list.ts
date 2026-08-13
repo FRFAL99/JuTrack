@@ -1,3 +1,5 @@
+import { plural, t } from '@/i18n/translate';
+
 /**
  * Le etichette dell'elenco dei gruppi, fuori dal componente.
  *
@@ -74,12 +76,18 @@ export function groupSubtitle(
   currentVaultId: string | null,
   stats?: GroupStats,
 ): string {
-  if (vaultId !== currentVaultId) return `vault ${shortVaultId(vaultId)}`;
-  if (stats === undefined) return 'Aperto adesso';
+  if (vaultId !== currentVaultId) return t('groups.vaultShort', { id: shortVaultId(vaultId) });
+  if (stats === undefined) return t('groups.openNow');
 
+  // «nessuna spesa» non è il plurale di «spesa» con zero davanti: è l'assenza detta a
+  // parole, e «0 spese» sarebbe la stessa informazione scritta peggio.
   const count =
     stats.expenseCount === 0
-      ? 'nessuna spesa'
-      : `${stats.expenseCount} ${stats.expenseCount === 1 ? 'spesa' : 'spese'}`;
-  return `Aperto adesso · ${count} · ${stats.monthTotal} questo mese`;
+      ? t('groups.noExpenses')
+      : plural('groups.expenseCount', stats.expenseCount);
+  return t('groups.subtitle', {
+    state: t('groups.openNow'),
+    count,
+    total: stats.monthTotal,
+  });
 }
