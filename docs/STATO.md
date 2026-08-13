@@ -1,20 +1,22 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-12 — **tutti e quattro i piani e il redesign visivo sono finiti nel codice, e il
-quinto piano è cominciato**. Il quarto — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
+Aggiornato: 2026-08-13 — **tutti e quattro i piani e il redesign visivo sono finiti nel codice, e il
+quinto piano è a nove step su dodici**. Il quarto — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 **Step 23–28** — si è chiuso l'11 agosto con la dashboard componibile, e i sette passi del redesign
 sono chiusi da prima ([visualdesign.md](visualdesign.md)). Lo stesso giorno è stato scritto il
 **quinto piano**, [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md) —
-notifiche locali, due widget Android, valuta e lingua nel profilo — e oggi ne sono entrati nel codice
-i **primi otto step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa, il
-promemoria spese, l'avviso di budget, quello di sincronizzazione ferma, **tutti e due i widget** e
-il refresh in background che li tiene vivi.
+notifiche locali, due widget Android, valuta e lingua nel profilo — e ne sono entrati nel codice i
+**primi nove step su dodici**: la valuta di default nel profilo, l'infrastruttura nativa, il
+promemoria spese, l'avviso di budget, quello di sincronizzazione ferma, **tutti e due i widget**, il
+refresh in background che li tiene vivi e, oggi, l'**infrastruttura i18n**. Restano solo la
+traduzione EN (38–39) e la verifica su telefono (40).
 
 > ⚠️ **Serve una build EAS nuova, ed è la seconda del piano v5.** Lo
 > [Step 36](#il-refresh-in-background-step-36) ha messo `updatePeriodMillis: 1800000` in
 > `app.json`, e quel numero finisce nell'XML del provider dei widget: **sulla build installata
 > oggi la sveglia non suona**, e il refresh in background non parte. Tutto il resto — notifiche,
-> widget, disegno — funziona già sulla build dello Step 30.
+> widget, disegno, **e la lingua** — funziona già sulla build dello Step 30: lo Step 37 è JS puro
+> e non ha aggiunto moduli nativi, deliberatamente (vedi sotto).
 >
 > ```bash
 > cd apps/mobile && npx eas-cli build -p android --profile development
@@ -23,8 +25,15 @@ il refresh in background che li tiene vivi.
 > **Notifiche e widget sono tutti nel codice**: lo [Step 31](#il-promemoria-spese-step-31), lo
 > [Step 32](#lavviso-di-budget-step-32) e lo [Step 33](#la-sincronizzazione-ferma-step-33) per le
 > tre notifiche, il [34](#il-widget-del-saldo-step-34), il [35](#il-totale-del-mese-step-35) e il
-> [36](#il-refresh-in-background-step-36) per i widget. Il prossimo è il **37**, l'infrastruttura
-> i18n, che è di nuovo JS puro.
+> [36](#il-refresh-in-background-step-36) per i widget. Il prossimo è il **38**, la traduzione EN
+> delle tre schermate più aperte.
+>
+> **Lo Step 37 si è scostato dal piano su un punto, ed è scritto qui perché non si scopra dopo:**
+> `expo-localization` **non** è stato installato. Serviva solo a leggere la lingua del telefono al
+> primo avvio, è un modulo nativo, e avrebbe reso questo il terzo step a chiedere una build —
+> rompendo per giunta l'app sulla build oggi installata. Quella lettura la fa
+> `Intl.DateTimeFormat().resolvedOptions().locale`, che su Hermes c'è già, dentro un `try` che
+> ripiega sull'italiano. Entrate solo `i18next` e `react-i18next`, entrambe JS puro.
 >
 > **Fra i primi quattro piani non c'è più uno step scritto da fare: quello che resta è la prova su
 > due telefoni veri**, e i criteri di «fatto» di tutti e quattro ci passano in mezzo. Il piano v5 è
@@ -72,7 +81,7 @@ Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 | 27 — I sei filtri              | ✅    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
 | 28 — La dashboard componibile  | ✅    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
 
-Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **otto
+Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **nove
 step su dodici nel codice**:
 
 | Step                               | Stato | Cosa contiene                                                          |
@@ -85,7 +94,7 @@ step su dodici nel codice**:
 | 34 — Widget «Saldo»                | ✅    | Foglietto in `app_meta`, task headless, `index.js` come entry          |
 | 35 — Widget «Speso questo mese»    | ✅    | Stesso foglietto e stesso rettangolo, didascalia che nomina il mese    |
 | 36 — Refresh in background         | ✅    | Sync ogni 30 min dal task headless. **Chiede una build EAS nuova**     |
-| 37 — Infrastruttura i18n           | ⬜    | `i18next`, campo `language` sul `Profile`, selettore in `tu.tsx`       |
+| 37 — Infrastruttura i18n           | ✅    | `i18next`, campo `language`, selettore in `tu.tsx`, Tu tradotta tutta  |
 | 38–39 — Traduzione EN              | ⬜    | Schermata per schermata, un passo a sessione                           |
 | 40 — Verifica end-to-end           | ⬜    | Su telefono reale: notifiche, widget, lingua, valuta                   |
 
@@ -101,7 +110,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**1088 test verdi** (588 core + 457 app + 43 relay), typecheck, lint e `format:check` puliti.
+**1125 test verdi** (588 core + 494 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -906,6 +915,52 @@ opzionale, ed è l'unico che **chiede una build EAS nuova** dopo quella dello St
   significativo: il task headless usa `SyncEngine`, `VaultStore` e `SqliteYPersistence` come li usa
   l'app, senza una riga di adattamento. È la ricompensa della regola dello Step 0.
 
+## L'infrastruttura i18n (Step 37)
+
+Le frasi dell'app escono dai componenti ed entrano in due dizionari. `i18next` +
+`react-i18next`, campo `language` sul profilo, selettore in Tu, e **una schermata tradotta per
+intero** — `tu.tsx`, più le tre etichette dei tab.
+
+- **`expo-localization` non è entrato, ed è la decisione dello step.** Il piano lo nominava, ma
+  serviva a una cosa sola — sapere in che lingua è il telefono al primo avvio — ed è un modulo
+  nativo: avrebbe reso questo il terzo step a chiedere una build EAS, e avrebbe **rotto l'app
+  sulla build oggi installata**. Quella lettura la fa
+  `Intl.DateTimeFormat().resolvedOptions().locale`, che su Hermes c'è già, dentro un `try` che può
+  rispondere `null`. Stessa conclusione dello Step 36: la cosa che serviva c'era già.
+- **L'ordine delle sorgenti è tutto lo step: scelta, poi telefono, poi italiano.** La scelta
+  esplicita viene prima perché è l'unica fatta da una persona. `resolveLanguage` riceve la lingua
+  di sistema come parametro invece di andarsela a prendere, ed è ciò che rende verificabile senza
+  telefono la parte dove sta la decisione.
+- **La regione si butta via**: le impostazioni danno `en-GB`, non `en`, e non esiste un dizionario
+  `en-GB` distinto da `en-US`. Trattarli come lingue diverse vorrebbe dire non riconoscerne
+  nessuna delle due.
+- **L'italiano è la fonte, l'inglese la copia, e `fallbackLng` punta alla fonte.** `en.ts` si
+  dichiara della forma di `it.ts`, quindi una chiave dimenticata è un errore di `tsc`; e quando la
+  traduzione resterà indietro si leggerà la frase italiana, non la chiave grezza.
+- **Tre test guardano quello che il tipo non vede**: la frase vuota, che a schermo sembra un
+  problema di layout; il `{{segnaposto}}` perso in traduzione, che si legge come una frase senza
+  il numero e senza errori; e l'italiano ricopiato di sotto per fretta. Oggi sorvegliano una
+  cinquantina di stringhe, ma gli Step 38–39 ne porteranno qualche centinaio.
+- **Due cose non passano da `t`**, e sono la stessa regola: i nomi delle lingue nel selettore
+  («Italiano», «English») restano tali in ogni lingua, o chi apre quel selettore proprio perché
+  non capisce non riconoscerebbe la propria; e i nomi di gruppi, categorie e persone non si
+  traducono mai, perché stanno nel documento condiviso.
+- **Lingua e valuta qui si separano.** Sono due campi gemelli nel profilo, ma la valuta è una
+  scelta comune di fatto — valute diverse sommano unità diverse — mentre la lingua traduce l'app e
+  nient'altro: due persone possono leggere lo stesso gruppo in due lingue senza che un numero
+  cambi.
+- **Il confine di ciò che è tradotto è netto**, e serve a non scambiarlo per un guasto: `tu.tsx`
+  tutta, tab compresi; **non** la riga di stato del sync, che la scrive `describe.ts` e che
+  compare identica anche in fondo alla lista spese. Tradurre un modulo condiviso vuol dire
+  tradurre le schermate che lo usano, ed è lo Step 38.
+- **Il threat model non cambia**: la lingua è una preferenza locale in `app_meta`, non esce dal
+  telefono e non produce traffico. Le due librerie sono JS puro senza rete — nessun dizionario
+  scaricato, nessun permesso nuovo — e `npm audit` non è cambiato.
+- **`packages/core` non è stato toccato, per il settimo step di fila**: il core non ha stringhe da
+  tradurre perché non ne ha mai scritte. Se un giorno servissero la posizione del simbolo di
+  valuta o il separatore decimale per lingua — la nota in `currency.ts` lo prevede — quello sì
+  entrerebbe lì.
+
 ## I due bug che rendevano sbagliati i numeri sono corretti
 
 Entrambi nel codice e coperti dai test. **Nessuno dei due è ancora stato visto risolto su due
@@ -1197,6 +1252,18 @@ lista, non le toglie.
   telefono lo stesso. Infine la guardia: con l'app aperta davanti, il giro periodico non deve fare
   niente. Da tenere d'occhio nei giorni seguenti la voce di JuTrack nei consumi di sistema, che è
   l'unico modo di sapere se mezz'ora è il numero giusto
+- **Lo Step 37, dove la prova facile va fatta per prima e quella difficile richiede un telefono in
+  inglese.** La facile: toccare «English» in Tu e vedere cambiare **la schermata sotto le dita e le
+  tre etichette dei tab** — quelle sono la prova che il cambio esce da dove lo si è toccato — poi
+  chiudere e riaprire l'app e ritrovarlo, perché il campo sta in `app_meta` come la valuta e come
+  quella non lo si vede senza chiudere. La difficile è l'unica cosa dello step che i test non
+  possono toccare: **che `Intl` esista davvero su Hermes**. Si guarda su un telefono con la lingua
+  di sistema in inglese e **nessuna scelta salvata** — cioè dopo un azzeramento: se l'app parte in
+  inglese, `Intl` c'è; se parte in italiano, il ripiego ha funzionato e la lettura no. Nessuno dei
+  due casi rompe niente, ma solo il telefono dice quale dei due si sta percorrendo. Poi le due che
+  possono rompersi in silenzio: che la riga di stato del sync resti in italiano **di proposito**
+  (è lo Step 38, non un guasto), e che i nomi di gruppi e categorie **non** cambino cambiando
+  lingua — se cambiassero, vorrebbe dire che si sta traducendo il documento condiviso
 
 Tutto il resto è verificato: 1088 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.

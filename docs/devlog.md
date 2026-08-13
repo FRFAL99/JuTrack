@@ -4,6 +4,123 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-13 — Step 37: l'infrastruttura i18n, e la libreria che il piano nominava ma non serviva
+
+Il primo dei quattro step sulla lingua, e il primo posto in cui le frasi dell'app smettono di
+stare dentro i componenti. `i18next` + `react-i18next`, il campo `language` sul profilo, un
+selettore in Tu, e **una schermata tradotta per intero** per poter dire che funziona.
+
+**Delle tre librerie che il piano nominava ne sono entrate due, e la terza è la decisione dello
+step.** `expo-localization` serviva a una cosa sola — sapere in che lingua è il telefono al
+primo avvio — ed è **un modulo nativo**. Metterlo dentro avrebbe fatto due danni: reso questo
+il terzo step del piano v5 a chiedere una build EAS, mentre il piano lo dà per «Build EAS: No»,
+e soprattutto rotto l'app **sulla build oggi installata**, che quel modulo non ce l'ha. Un
+telefono che non riesce più ad aprire l'app per sapere se preferisce l'inglese è un prezzo fuori
+scala rispetto a quello che si compra. La lingua di sistema si legge invece da
+`Intl.DateTimeFormat().resolvedOptions().locale`, che su Hermes c'è già — ed è la stessa
+conclusione dello Step 36, dove la sveglia dei widget c'era già e la libreria di background non
+serviva.
+
+Serve a una cosa sola e per un momento solo: **il primo avvio, prima che qualcuno tocchi il
+selettore**. Sbagliare lì costa un tocco, non un dato, e per questo la sonda sta dentro un `try`
+e può rispondere `null`: su un motore senza `Intl` si parte in italiano invece di non partire.
+
+**L'ordine delle sorgenti è tutto lo step in una riga:** scelta, poi telefono, poi italiano.
+`resolveLanguage` riceve la lingua di sistema come **parametro** invece di andarsela a prendere,
+ed è ciò che rende verificabile senza telefono la parte dove sta davvero la decisione. La scelta
+esplicita viene prima perché è l'unica fatta da una persona: chi ha scelto l'italiano su un
+telefono in inglese non deve ritrovarsi l'inglese al riavvio.
+
+**`normalizeLanguage` butta via la regione, e non è pigrizia.** Le impostazioni di un telefono
+danno `en-GB`, non `en`. Non esiste un dizionario `en-GB` distinto da `en-US`, e trattarli come
+lingue diverse vorrebbe dire non riconoscerne **nessuna delle due** — cioè partire in italiano
+su ogni telefono inglese del mondo.
+
+**L'italiano è la fonte, l'inglese la copia, e `fallbackLng` punta alla fonte.** `en.ts` si
+dichiara `: Dictionary`, cioè della forma di `it.ts`: una chiave aggiunta di là e dimenticata di
+qua è un errore di `tsc`, non una schermata che un giorno mostra `you.sync.title` a qualcuno. E
+quando la traduzione resterà indietro — succederà, agli Step 38 e 39 — si leggerà la frase
+italiana, non la chiave grezza.
+
+**Il test sui dizionari guarda quello che il tipo non può vedere.** Per TypeScript i valori sono
+tutti `string`, quindi tutti uguali. A schermo non lo sono: c'è la frase vuota, che non sembra
+una traduzione mancante ma un problema di layout; c'è `{{days}}` che diventa `{{day}}` in
+traduzione, e si legge «If days go by» senza numero e senza errori da nessuna parte; e c'è
+l'italiano ricopiato di sotto per fretta. Sono tre test, e oggi sorvegliano una cinquantina di
+stringhe — ma gli Step 38 e 39 ne porteranno qualche centinaio, tradotte a mano.
+
+**Due cose non passano da `t`, e sono la stessa cosa detta due volte.** I nomi delle lingue nel
+selettore restano «Italiano» ed «English» in qualunque lingua sia l'app: chi apre quel selettore
+proprio perché non capisce quello che ha davanti deve poter riconoscere la propria, e «Inglese»
+non aiuta chi cerca «English». E i nomi di gruppi, categorie e persone non si traducono mai:
+stanno nel documento condiviso, e tradurli vorrebbe dire mostrare all'altro telefono un gruppo
+con un altro nome.
+
+**Qui la lingua e la valuta si separano.** Sono due campi gemelli nel profilo, scritti nello
+stesso modo, ma la valuta è **una scelta comune di fatto** — due membri con valute diverse
+sommano unità diverse, e la nota sotto il selettore lo dice — mentre la lingua no. Traduce l'app
+e nient'altro: due persone possono leggere lo stesso gruppo in due lingue senza che un solo
+numero cambi.
+
+**Tradotta `tu.tsx`, e per intero.** È la schermata che contiene l'interruttore, quindi l'unica
+in cui il cambio si vede senza andare da nessuna parte; le tre etichette dei tab sono lì a
+dimostrare che il cambio **esce** da dove lo si è toccato. Restano fuori due cose, e il confine è
+netto: la riga di stato del sync, che la scrive `describe.ts` e che compare identica anche in
+fondo alla lista spese — tradurre un modulo condiviso vuol dire tradurre le schermate che lo
+usano, ed è lo Step 38 — e i dati del gruppo, che non sono testo dell'app.
+
+**Il campo `language` si legge come la valuta, e la ragione vale il doppio.** Un valore
+illeggibile non fa cadere il profilo: si torna al default e si continua. Se mandasse
+all'onboarding, renderebbe irrecuperabile il telefono proprio a chi non capisce la lingua in cui
+l'onboarding è scritto.
+
+**`packages/core` non è stato toccato, per il settimo step di fila.** Il core non ha stringhe da
+tradurre perché non ne ha mai scritte: i mesi, le valute e i formati che produce sono dati, e le
+frasi stanno nelle schermate. Se un giorno servisse la posizione del simbolo di valuta o il
+separatore decimale per lingua — la nota in `currency.ts` lo prevede — quello sì che entrerebbe
+lì.
+
+**Il threat model non cambia, e vale la pena dire perché.** La lingua è una preferenza locale in
+`app_meta` accanto alla valuta e agli interruttori delle notifiche, non esce dal telefono, non
+entra nel documento cifrato e non produce traffico verso il relay. Le due librerie sono JS puro
+senza rete: nessun dizionario scaricato, nessuna telemetria, nessun permesso nuovo.
+
+**Verificato, non assunto**
+
+- **`i18next` entra davvero nel bundle Hermes**, e con lui i dizionari: `expo export --platform
+android` completa, e il `.hbc` contiene «Sync stalled», «people and invite» e la chiave
+  `you.alerts.reminderHint`. Il typecheck non avrebbe detto niente sul grafo dei moduli, e sono
+  le prime due dipendenze nuove da parecchi step.
+- **L'istanza vera risponde**, in un test che importa `index.ts` e non ne ricostruisce una copia:
+  se `init` sollevasse — risorse malformate, un'opzione che questa versione non accetta più — il
+  file non arriverebbe alla prima asserzione. Provati il cambio di lingua a caldo,
+  l'interpolazione in entrambe le lingue e il ripiego sull'italiano per una lingua senza
+  dizionario.
+- **`escapeValue: false` serve, e c'è un test che lo dice.** L'escape di default esiste per non
+  iniettare HTML in una pagina; qui pagina non ce n'è, e l'unico effetto sarebbe l'apostrofo
+  tipografico di «dell'app» che diventa `&#39;` dentro un `<Text>`.
+- **Le due librerie non hanno aggiunto vulnerabilità.** `npm audit` riporta le stesse di prima, e
+  sono tutte nella toolchain Expo (`image-size`, `nanoid`, `undici`, `uuid` via `xcode`): niente
+  che finisca nel bundle runtime.
+- **Un profilo scritto dallo Step 29 si carica intero**, con la valuta al suo posto e la lingua
+  assente. È la terza volta che questa promessa regge — `parseSettings` l'aveva mantenuta al 32 e
+  al 33, il foglietto dei widget al 35.
+
+**Ancora da verificare sul telefono**
+
+Che `Intl` ci sia davvero su Hermes. Il codice è scritto per non dipenderne — senza, si parte in
+italiano — ma quale dei due rami si percorre si vede solo sul dispositivo, con il telefono in
+inglese e nessuna scelta salvata. È lo stesso genere di dubbio che lo Step 3 aveva su
+`TextEncoder`, con la differenza che qui l'assenza non fa cadere niente.
+
+**Verifica:** 1125 test verdi (588 core + 494 app + 43 relay, di cui 37 nuovi), typecheck, lint e
+`format:check` puliti, `expo export --platform android` completato.
+
+**Prossimo:** Step 38 — traduzione EN delle tre schermate più aperte (home spese, nuova spesa,
+gruppi), e con esse i moduli condivisi che ci scrivono dentro, `describe.ts` per primo.
+
+---
+
 ## 2026-08-12 — Step 36: il refresh in background, che senza sincronizzare non servirebbe a niente
 
 L'ultimo step del filone widget, e l'unico del piano v5 marcato **opzionale**: i widget si

@@ -1,5 +1,6 @@
 import type { ComponentProps } from 'react';
 import { Tabs } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import type { ColorValue } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useTheme } from '@/theme';
@@ -15,7 +16,14 @@ function TabIcon({ name, color }: { name: FeatherName; color: ColorValue }) {
   return <Feather name={name} size={22} color={color} />;
 }
 
+/**
+ * `useTranslation` qui e non solo dentro le schermate: la tab bar è l'unica cosa che si vede
+ * da ogni schermata, quindi è la prova che il cambio di lingua **esce** da dove lo si è
+ * toccato. Le tre etichette sono anche le uniche stringhe che lo Step 37 traduce fuori da
+ * `tu.tsx`.
+ */
 export default function TabsLayout() {
+  const { t } = useTranslation();
   const { colors, fontSize, fontWeight } = useTheme();
 
   return (
@@ -39,14 +47,14 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="(gruppi)"
         options={{
-          title: 'Gruppi',
+          title: t('tabs.groups'),
           tabBarIcon: ({ color }) => <TabIcon name="users" color={color} />,
         }}
       />
       <Tabs.Screen
         name="stats"
         options={{
-          title: 'Grafici',
+          title: t('tabs.charts'),
           tabBarIcon: ({ color }) => <TabIcon name="bar-chart-2" color={color} />,
         }}
       />
@@ -58,7 +66,7 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="tu"
         options={{
-          title: 'Tu',
+          title: t('tabs.you'),
           tabBarIcon: ({ color }) => <TabIcon name="user" color={color} />,
         }}
       />

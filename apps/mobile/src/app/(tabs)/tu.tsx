@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import {
   Alert,
   Pressable,
@@ -24,6 +25,7 @@ import {
 } from '@/features/notifications/useNotifications';
 import { ColorChoice } from '@/features/profile/ColorChoice';
 import { CurrencyPicker } from '@/features/profile/CurrencyPicker';
+import { LanguagePicker } from '@/features/profile/LanguagePicker';
 import { describeSync, syncTone } from '@/features/sync/describe';
 import {
   MAX_PROFILE_NAME,
@@ -48,8 +50,15 @@ import { useTheme } from '@/theme';
  * Sta **fuori** da `app/(gruppo)/`: legge il gruppo aperto con `useCurrentGroup()`, che è
  * nullabile, e con `useVaultStatus()`, che non solleva — deve funzionare anche con zero
  * gruppi, com'era già per Impostazioni (Step 21).
+ *
+ * **È la prima schermata tradotta** (Step 37), e non per caso: è quella che contiene il
+ * selettore della lingua, quindi è l'unica in cui il cambio si vede senza andare da nessuna
+ * parte. Fanno eccezione due cose, ed entrambe arrivano da fuori: la riga di stato del sync,
+ * che la scrive `describe.ts` anche in fondo alla lista spese, e i nomi di gruppi e persone,
+ * che stanno nel documento condiviso e non sono testo dell'app.
  */
 export default function TuScreen() {
+  const { t, i18n } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const { update } = useAppData();
   const profile = useProfile();
@@ -100,29 +109,15 @@ export default function TuScreen() {
     void (async () => {
       const refusal = await notifications.set(kind, on);
       if (refusal === 'denied') {
-        Alert.alert(
-          'Permesso non concesso',
-          'Android non lascia mandare notifiche a JuTrack. Puoi cambiarlo dalle impostazioni ' +
-            'di sistema, alla voce Notifiche dell’app.',
-        );
+        Alert.alert(t('you.alerts.deniedTitle'), t('you.alerts.deniedBody'));
       } else if (refusal === 'unavailable') {
-        Alert.alert(
-          'Non disponibile su questa versione',
-          'Le notifiche arrivano con una versione più recente dell’app. Tutto il resto ' +
-            'funziona come prima.',
-        );
+        Alert.alert(t('you.alerts.unavailableTitle'), t('you.alerts.unavailableBody'));
       }
     })();
   };
 
   const showIdInfo = (): void => {
-    Alert.alert(
-      'Il tuo identificativo',
-      'È così che gli altri telefoni ti riconoscono dentro un gruppo. È un numero casuale, ' +
-        'generato una volta su questo telefono: non è un account, non c’è niente a cui ' +
-        'accedere, e da solo non dice nulla di te. Serve solo se qualcosa va storto e vuoi ' +
-        `dire di quale persona stiamo parlando.\n\n${profile.profileId}`,
-    );
+    Alert.alert(t('you.device.idLabel'), t('you.device.idBody', { id: profile.profileId }));
   };
 
   const identityHeader = (
@@ -145,11 +140,11 @@ export default function TuScreen() {
           onChangeText={setDraftName}
           onBlur={commitName}
           onSubmitEditing={commitName}
-          placeholder="Il tuo nome"
+          placeholder={t('you.name.label')}
           placeholderTextColor={colors.textMuted}
           maxLength={MAX_PROFILE_NAME}
           returnKeyType="done"
-          accessibilityLabel="Il tuo nome"
+          accessibilityLabel={t('you.name.label')}
           style={{
             color: colors.text,
             fontSize: fontSize.xxl,
@@ -162,7 +157,7 @@ export default function TuScreen() {
         <Pressable
           onPress={() => setEditingName(true)}
           accessibilityRole="button"
-          accessibilityLabel="Cambia nome"
+          accessibilityLabel={t('you.name.edit')}
           accessibilityHint={profile.name}
           style={styles.nameRow}
         >
@@ -173,9 +168,7 @@ export default function TuScreen() {
         </Pressable>
       )}
 
-      <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-        Stesso nome in tutti i tuoi gruppi
-      </Text>
+      <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>{t('you.name.hint')}</Text>
 
       <ColorChoice value={profile.color} onChange={(color) => void update({ color })} />
     </View>
@@ -186,75 +179,99 @@ export default function TuScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
         <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
 
-        <SectionLabel>Valuta</SectionLabel>
+        {/* Prima della valuta, e prima di tutto il resto: è la sezione che decide in che
+            lingua si legge ogni altra sezione, e chi la sta cercando perché non capisce
+            quello che ha davanti non deve scorrere per trovarla. Il valore mostrato è
+            quello **in uso** — `i18n.language` e non `profile.language` — così chi non ha
+            ancora scelto vede evidenziata la lingua che il telefono gli ha dato. */}
+        <SectionLabel>{t('you.language.title')}</SectionLabel>
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+          <LanguagePicker
+            value={i18n.language}
+            onChange={(next) => void update({ language: next })}
+          />
+          <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+            {t('you.language.hint')}
+          </Text>
+        </View>
+
+        <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
+
+        <SectionLabel>{t('you.currency.title')}</SectionLabel>
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
           <CurrencyPicker value={currency} onChange={(next) => void update({ currency: next })} />
           {/* La nota non è un dettaglio legale: JuTrack non ha tassi di cambio, quindi due
               persone dello stesso gruppo che scelgono valute diverse vedono totali che
               sommano unità diverse. Il campo è locale al telefono, la scelta no. */}
           <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            Vale solo su questo telefono, e per le spese che registri da qui. JuTrack non converte
-            fra valute: in un gruppo conviene sceglierne una sola.
+            {t('you.currency.hint')}
           </Text>
         </View>
 
         <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
 
-        <SectionLabel>Avvisi</SectionLabel>
+        <SectionLabel>{t('you.alerts.title')}</SectionLabel>
         {/* `sm` e non `xs`: con tre interruttori uno sotto l'altro, quattro punti di stacco
             farebbero leggere le righe come un blocco solo. */}
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
           <View style={styles.switchRow}>
             <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>Promemoria spese</Text>
+              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
+                {t('you.alerts.reminderTitle')}
+              </Text>
+              {/* I numeri restano costanti del codice e diventano segnaposto, non parole
+                  del dizionario: tradurre «3» non ha senso, e una lingua che lo scrivesse
+                  a mano lo lascerebbe indietro il giorno in cui `REMINDER_DAYS` cambia. */}
               <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-                Se passano {REMINDER_DAYS} giorni senza che tu registri una spesa
+                {t('you.alerts.reminderHint', { days: REMINDER_DAYS })}
               </Text>
             </View>
             <Switch
               value={notifications.settings.reminder}
               onValueChange={(on) => toggle('reminder', on)}
               disabled={!notifications.ready}
-              accessibilityLabel="Promemoria spese"
-            />
-          </View>
-
-          <View style={styles.switchRow}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>Budget del mese</Text>
-              {/* La soglia si legge dal core invece di scriverla qui: è la stessa che
-                  colora le barre nei Grafici, e due numeri da tenere allineati sarebbero
-                  due numeri che prima o poi divergono. */}
-              <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-                Quando una categoria arriva al {Math.round(BUDGET_NEAR_THRESHOLD * 100)}% del
-                limite, e quando lo supera
-              </Text>
-            </View>
-            <Switch
-              value={notifications.settings.budget}
-              onValueChange={(on) => toggle('budget', on)}
-              disabled={!notifications.ready}
-              accessibilityLabel="Budget del mese"
+              accessibilityLabel={t('you.alerts.reminderTitle')}
             />
           </View>
 
           <View style={styles.switchRow}>
             <View style={{ flex: 1, gap: 2 }}>
               <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
-                Sincronizzazione ferma
+                {t('you.alerts.budgetTitle')}
+              </Text>
+              {/* La soglia si legge dal core invece di scriverla qui: è la stessa che
+                  colora le barre nei Grafici, e due numeri da tenere allineati sarebbero
+                  due numeri che prima o poi divergono. */}
+              <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+                {t('you.alerts.budgetHint', {
+                  percent: Math.round(BUDGET_NEAR_THRESHOLD * 100),
+                })}
+              </Text>
+            </View>
+            <Switch
+              value={notifications.settings.budget}
+              onValueChange={(on) => toggle('budget', on)}
+              disabled={!notifications.ready}
+              accessibilityLabel={t('you.alerts.budgetTitle')}
+            />
+          </View>
+
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
+                {t('you.alerts.syncTitle')}
               </Text>
               {/* Le ore si leggono dalla costante, come la soglia dei budget si legge dal
                   core: un numero scritto due volte è un numero che prima o poi diverge. */}
               <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-                Se le spese non arrivano agli altri telefoni per più di {SYNC_STALL_HOURS} ore, o se
-                il relay rifiuta la chiave
+                {t('you.alerts.syncHint', { hours: SYNC_STALL_HOURS })}
               </Text>
             </View>
             <Switch
               value={notifications.settings.sync}
               onValueChange={(on) => toggle('sync', on)}
               disabled={!notifications.ready}
-              accessibilityLabel="Sincronizzazione ferma"
+              accessibilityLabel={t('you.alerts.syncTitle')}
             />
           </View>
 
@@ -262,8 +279,7 @@ export default function TuScreen() {
               documento e il motore, quindi arrivano quando l'app è aperta — subito per
               quello che succede qui, all'apertura successiva per il resto. */}
           <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            Gli avvisi sui budget e sulla sincronizzazione riguardano il gruppo aperto e arrivano
-            mentre l’app è in uso.
+            {t('you.alerts.scope')}
           </Text>
 
           {/* L'interruttore resta acceso perché la scelta è di chi l'ha fatta: spegnerlo
@@ -271,18 +287,20 @@ export default function TuScreen() {
               questa riga, non un tocco che si disfa da solo. */}
           {notifications.blocked && (
             <Text style={{ color: colors.warning, fontSize: fontSize.xxs }}>
-              Android sta bloccando le notifiche di JuTrack: riattivale dalle impostazioni di
-              sistema.
+              {t('you.alerts.blocked')}
             </Text>
           )}
         </View>
 
         <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
 
-        <SectionLabel>Sincronizzazione</SectionLabel>
+        <SectionLabel>{t('you.sync.title')}</SectionLabel>
         <View style={{ paddingHorizontal: spacing.lg, gap: 2 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <View style={[styles.dot, { backgroundColor: dotColor }]} />
+            {/* Resta in italiano fino allo Step 38, ed è deliberato: la frase la scrive
+                `describe.ts`, che la scrive anche in fondo alla lista spese. Tradurre un
+                modulo condiviso vuol dire tradurre le schermate che lo usano. */}
             <Text style={{ color: colors.text, fontSize: fontSize.sm, flex: 1 }} numberOfLines={2}>
               {syncText}
             </Text>
@@ -294,14 +312,14 @@ export default function TuScreen() {
                   opacity: syncReady ? 1 : 0.4,
                 }}
               >
-                Sincronizza
+                {t('you.sync.action')}
               </Text>
             </Pressable>
           </View>
           <Text
             style={{ color: colors.textFaint, fontSize: fontSize.xxs, paddingLeft: spacing.sm + 7 }}
           >
-            Cifrato end-to-end · il relay non legge nulla
+            {t('you.sync.privacy')}
           </Text>
         </View>
 
@@ -310,19 +328,25 @@ export default function TuScreen() {
             <View
               style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]}
             />
-            <SectionLabel>Il gruppo aperto</SectionLabel>
+            <SectionLabel>{t('you.group.title')}</SectionLabel>
+            {/* `group.name` non passa da `t`, e non passerà mai: è un nome che qualcuno ha
+                scritto nel documento condiviso. Tradurre i dati del gruppo vorrebbe dire
+                mostrare all'altro telefono un gruppo con un altro nome. */}
             <ListRow
               label={group.name}
-              value="persone e invito"
+              value={t('you.group.manage')}
               onPress={() => router.push(`/groups/${group.vaultId}/manage`)}
             />
             <Rule inset={spacing.lg} color={colors.divider} />
-            <ListRow label="Categorie e budget" onPress={() => router.push('/categories')} />
+            <ListRow label={t('you.group.categories')} onPress={() => router.push('/categories')} />
             <Rule inset={spacing.lg} color={colors.divider} />
-            <ListRow label="Backup della chiave" onPress={() => router.push('/backup')} />
+            <ListRow label={t('you.group.backup')} onPress={() => router.push('/backup')} />
             <Rule inset={spacing.lg} color={colors.divider} />
+            {/* «CSV · JSON» resta letterale: sono due nomi di formato, uguali in ogni
+                lingua, e una chiave di dizionario per una costante è una chiave in più da
+                tenere allineata senza niente in cambio. */}
             <ListRow
-              label="Esporta i dati"
+              label={t('you.group.export')}
               value="CSV · JSON"
               onPress={() => router.push('/export')}
             />
@@ -330,12 +354,12 @@ export default function TuScreen() {
         )}
 
         <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
-        <SectionLabel>Questo telefono</SectionLabel>
-        <ListRow label="Diagnostica" onPress={() => router.push('/probe')} />
+        <SectionLabel>{t('you.device.title')}</SectionLabel>
+        <ListRow label={t('you.device.probe')} onPress={() => router.push('/probe')} />
         <Rule inset={spacing.lg} color={colors.divider} />
         <ListRow
           tone="danger"
-          label="Azzera questo telefono"
+          label={t('you.device.wipe')}
           onPress={() => router.push('/azzera')}
         />
 
@@ -343,7 +367,7 @@ export default function TuScreen() {
           <Pressable
             onPress={showIdInfo}
             accessibilityRole="button"
-            accessibilityLabel="Il tuo identificativo"
+            accessibilityLabel={t('you.device.idLabel')}
           >
             <Text
               selectable
@@ -353,7 +377,7 @@ export default function TuScreen() {
             </Text>
           </Pressable>
           <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            JuTrack 0.1.0 · core {CORE_VERSION}
+            {t('you.device.version', { app: '0.1.0', core: CORE_VERSION })}
           </Text>
         </View>
       </ScrollView>

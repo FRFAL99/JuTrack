@@ -1,0 +1,93 @@
+import { describe, expect, it } from 'vitest';
+import { LANGUAGES } from '../language';
+import { en } from './en';
+import { it as italian } from './it';
+
+/**
+ * Quello che il tipo `Dictionary` non riesce a vedere.
+ *
+ * La parità delle **chiavi** è già un errore di compilazione: `en.ts` si dichiara della forma
+ * di `it.ts`, quindi una chiave mancante o di troppo non compila. Qui si verifica il resto —
+ * i valori — che per TypeScript sono tutti `string` e quindi tutti uguali.
+ *
+ * Servirà molto più dello Step 37, che di stringhe ne ha una cinquantina: gli Step 38 e 39 ne
+ * porteranno qualche centinaio, tradotte a mano, e i modi di sbagliare qui sotto sono
+ * esattamente quelli che si scoprirebbero altrimenti a schermo.
+ */
+
+type Nested = { [key: string]: string | Nested };
+
+/** Da `{ you: { sync: { title: 'x' } } }` a `{ 'you.sync.title': 'x' }`. */
+function flatten(node: Nested, prefix = ''): Map<string, string> {
+  const flat = new Map<string, string>();
+  for (const [key, value] of Object.entries(node)) {
+    const path = prefix === '' ? key : `${prefix}.${key}`;
+    if (typeof value === 'string') {
+      flat.set(path, value);
+    } else {
+      for (const [nestedPath, nestedValue] of flatten(value, path)) {
+        flat.set(nestedPath, nestedValue);
+      }
+    }
+  }
+  return flat;
+}
+
+/** I `{{segnaposto}}` che una frase si aspetta, in ordine, senza duplicati. */
+function placeholders(text: string): string[] {
+  return [...new Set(text.match(/{{\s*[\w.]+\s*}}/g) ?? [])].sort();
+}
+
+const dictionaries: Record<string, Map<string, string>> = {
+  it: flatten(italian),
+  en: flatten(en),
+};
+
+describe('dizionari', () => {
+  it('ce n è uno per ogni lingua che il selettore propone', () => {
+    // Una voce nel selettore senza dizionario dietro mostrerebbe l'italiano sotto
+    // un'etichetta straniera, che è peggio di non offrire quella lingua.
+    for (const { code } of LANGUAGES) {
+      expect(Object.keys(dictionaries)).toContain(code);
+    }
+  });
+
+  it('hanno le stesse chiavi', () => {
+    // Il tipo lo garantisce già, ma solo finché `en` resta dichiarato `: Dictionary`. Questo
+    // regge anche se qualcuno lo toglie per far compilare in fretta.
+    expect([...dictionaries.en!.keys()].sort()).toEqual([...dictionaries.it!.keys()].sort());
+  });
+
+  it.each(Object.keys(dictionaries))('in %s non c è nessuna frase vuota', (code) => {
+    // Una stringa vuota non è una traduzione mancante che si nota: è un'etichetta che
+    // sparisce, e a schermo sembra un problema di layout.
+    for (const [key, value] of dictionaries[code]!) {
+      expect(value.trim(), `${code}: ${key}`).not.toBe('');
+    }
+  });
+
+  it('usano gli stessi segnaposto nelle stesse frasi', () => {
+    // È il modo di sbagliare tipico di una traduzione fatta a mano: `{{days}}` che diventa
+    // `{{day}}`, o che sparisce del tutto. Il tipo non lo vede — sono due `string` — e a
+    // schermo si legge «If days go by», con il numero mancante e nessun errore da nessuna
+    // parte. Vale a maggior ragione per gli Step 38 e 39.
+    for (const [key, italianText] of dictionaries.it!) {
+      expect(placeholders(dictionaries.en!.get(key)!), key).toEqual(placeholders(italianText));
+    }
+  });
+
+  it('traducono davvero, invece di ricopiare l italiano', () => {
+    // Una frase inglese identica all'italiana è quasi sempre un copia-incolla dimenticato.
+    // Le eccezioni vere esistono e sono elencate a una a una: se l'elenco cresce senza
+    // motivo, è il segno che qualcuno lo sta usando per zittire il test.
+    const identicalOnPurpose = new Set([
+      // Nomi e segnaposto soltanto: non c'è niente da tradurre.
+      'you.device.version',
+    ]);
+
+    for (const [key, italianText] of dictionaries.it!) {
+      if (identicalOnPurpose.has(key)) continue;
+      expect(dictionaries.en!.get(key), key).not.toBe(italianText);
+    }
+  });
+});

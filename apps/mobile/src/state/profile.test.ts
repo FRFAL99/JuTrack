@@ -95,6 +95,42 @@ describe('persistenza del profilo', () => {
     expect((await loadProfile(meta))?.currency).toBe('CHF');
   });
 
+  it('conserva la lingua scelta', async () => {
+    const meta = new MemoryKeyValueStore();
+    const profile: Profile = { ...createProfile('Francesco', '#3B5BDB', random), language: 'en' };
+    await saveProfile(meta, profile);
+
+    expect((await loadProfile(meta))?.language).toBe('en');
+  });
+
+  it('legge la valuta scritta prima che la lingua esistesse', async () => {
+    // Il telefono aggiornato dallo Step 29 ha un profilo senza `language`: deve caricarsi
+    // intero, con la valuta al suo posto e la lingua semplicemente assente. È la stessa
+    // promessa che `parseSettings` ha mantenuto due volte nel filone delle notifiche.
+    const meta = new MemoryKeyValueStore();
+    await meta.set('profile', '{"profileId":"abc","name":"X","color":"#000","currency":"CHF"}');
+
+    const loaded = await loadProfile(meta);
+    expect(loaded?.currency).toBe('CHF');
+    expect(loaded?.language).toBeUndefined();
+  });
+
+  it.each([
+    ['manca', '{"profileId":"abc","name":"X","color":"#000"}'],
+    ['è vuota', '{"profileId":"abc","name":"X","color":"#000","language":""}'],
+    ['non è una stringa', '{"profileId":"abc","name":"X","color":"#000","language":42}'],
+  ])('torna al default, senza perdere il profilo, se la lingua %s', async (_case, raw) => {
+    // Vale il doppio rispetto alla valuta: mandare all'onboarding per una lingua illeggibile
+    // renderebbe irrecuperabile il telefono proprio a chi non capisce la lingua in cui
+    // l'onboarding è scritto.
+    const meta = new MemoryKeyValueStore();
+    await meta.set('profile', raw);
+
+    const loaded = await loadProfile(meta);
+    expect(loaded).not.toBeNull();
+    expect(loaded?.language).toBeUndefined();
+  });
+
   it.each([
     ['manca', '{"profileId":"abc","name":"X","color":"#000"}'],
     ['è vuota', '{"profileId":"abc","name":"X","color":"#000","currency":""}'],

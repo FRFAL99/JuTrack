@@ -29,8 +29,13 @@ export interface AppData {
   profile: Profile | null;
   /** Crea il profilo al primo avvio. */
   register(name: string, color: string): Promise<void>;
-  /** Rinomina, cambia colore o valuta. Il membro nel vault aperto si aggiorna da sé. */
-  update(patch: { name?: string; color?: string; currency?: string }): Promise<void>;
+  /** Rinomina, cambia colore, valuta o lingua. Il membro nel vault aperto si aggiorna da sé. */
+  update(patch: {
+    name?: string;
+    color?: string;
+    currency?: string;
+    language?: string;
+  }): Promise<void>;
   /**
    * Dimentica il profilo, e con lui tutto ciò che gli sta sotto.
    *
@@ -94,7 +99,12 @@ export function ProfileProvider({ children }: { children: ReactNode }) {
   );
 
   const update = useCallback(
-    async (patch: { name?: string; color?: string; currency?: string }): Promise<void> => {
+    async (patch: {
+      name?: string;
+      color?: string;
+      currency?: string;
+      language?: string;
+    }): Promise<void> => {
       if (opened === null || profile === null) return;
       const next: Profile = { ...profile, ...patch };
       await saveProfile(opened.meta, next);

@@ -40,6 +40,21 @@ export interface Profile {
    * comune di fatto.
    */
   currency?: string;
+  /**
+   * Codice ISO 639-1 della lingua in cui **questo telefono** scrive le proprie schermate.
+   *
+   * Assente finché non la si sceglie, e allora vale la lingua del telefono — non
+   * `DEFAULT_LANGUAGE`: la scelta esplicita e l'assenza di scelta portano a due posti
+   * diversi, ed è `resolveLanguage` a saperlo.
+   *
+   * Sta accanto a `currency` e per la stessa ragione, ma con una differenza che vale la
+   * pena dire: la valuta è una scelta comune di fatto, perché due membri con valute diverse
+   * sommano unità diverse; la lingua **no**. Traduce l'app e nient'altro — i nomi di gruppi,
+   * categorie e spese stanno nel documento condiviso e restano come li ha scritti chi li ha
+   * scritti. Due persone possono leggere lo stesso gruppo in due lingue senza che nessun
+   * numero cambi.
+   */
+  language?: string;
   /** Previsto e non usato: il posto dove un provider d'identità si aggancerebbe. */
   identity?: { provider: string; subject: string };
 }
@@ -117,7 +132,10 @@ export async function loadProfile(meta: KeyValueStore): Promise<Profile | null> 
   try {
     const parsed: unknown = JSON.parse(raw);
     if (typeof parsed !== 'object' || parsed === null) return null;
-    const { profileId, name, color, currency, identity } = parsed as Record<string, unknown>;
+    const { profileId, name, color, currency, language, identity } = parsed as Record<
+      string,
+      unknown
+    >;
     if (typeof profileId !== 'string' || profileId === '') return null;
     if (typeof name !== 'string' || name === '') return null;
     if (typeof color !== 'string' || color === '') return null;
@@ -129,6 +147,10 @@ export async function loadProfile(meta: KeyValueStore): Promise<Profile | null> 
       // torna al default e si continua. È una preferenza di formattazione, e rimandare
       // all'onboarding per un simbolo sbagliato costerebbe molto più di quanto vale.
       ...(typeof currency === 'string' && currency !== '' && { currency }),
+      // Stesso trattamento della valuta, e per il motivo che vale il doppio qui: una lingua
+      // illeggibile che mandasse all'onboarding renderebbe irrecuperabile un telefono
+      // proprio a chi non capisce la lingua in cui l'onboarding è scritto.
+      ...(typeof language === 'string' && language !== '' && { language }),
       ...(isIdentity(identity) && { identity }),
     };
   } catch {

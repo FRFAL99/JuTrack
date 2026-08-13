@@ -2,6 +2,11 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+// Import per **effetto**, non per valore: inizializza `i18next` prima che qualunque
+// componente chiami `useTranslation`. Chiamato prima di `init`, quell'hook non aspetta —
+// restituisce la chiave, e il primo fotogramma sarebbe fatto di `you.sync.title`.
+import '@/i18n';
+import { LanguageSync } from '@/i18n/LanguageSync';
 import { GroupIdentityGate } from '@/features/groups/GroupIdentityGate';
 import { BudgetWatcher } from '@/features/notifications/BudgetWatcher';
 import { ReminderScheduler } from '@/features/notifications/ReminderScheduler';
@@ -135,6 +140,10 @@ function Shell() {
             suona, e senza questo scatterebbe una volta sola. Non disegna niente e non
             dipende dai gruppi. */}
         <ReminderScheduler />
+        {/* Porta a `i18next` la lingua scelta nel profilo. Accanto al promemoria e per la
+            stessa ragione: legge il profilo, quindi va sotto `ProfileGate`, e non riguarda
+            alcun gruppo, quindi va sopra i gruppi. */}
+        <LanguageSync />
         <GroupsProvider>
           <GroupsGate>
             <VaultProvider>

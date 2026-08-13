@@ -162,7 +162,9 @@ contraddizione con come il resto del progetto è già strutturato.
 
 Non richiede moduli nativi (quindi nessuna build EAS aggiuntiva, a differenza di notifiche e widget),
 ha supporto maturo per React Native tramite `react-i18next`, e si integra con `expo-localization` per
-il rilevamento della lingua di sistema come default iniziale. Scriverne una versione minima in casa
+il rilevamento della lingua di sistema come default iniziale — **e proprio quest'ultimo pezzo è
+saltato allo Step 37**, perché `expo-localization` è nativo e avrebbe annullato il vantaggio scritto
+nella prima riga di questo paragrafo. Vedi la nota sotto lo Step 37. Scriverne una versione minima in casa
 risparmierebbe una dipendenza ma andrebbe reinventata man mano che servono plurali, interpolazioni o
 fallback — cose che il progetto dovrà comunque affrontare non appena la traduzione supera le prime
 schermate.
@@ -245,6 +247,19 @@ default iniziale. Campo `language?: string` additivo sul `Profile`, stesso schem
 (Step 29), con selettore in `tu.tsx`. A fine step l'infrastruttura esiste e funziona, ma solo un
 sottoinsieme minimo di stringhe è davvero tradotto — sufficiente a verificare che il cambio lingua è
 visibile, non a coprire l'app.
+
+> **Chiuso il 13 agosto, con uno scostamento: `expo-localization` non è stato installato.** Era
+> l'unico pezzo nativo dei tre nominati qui, e serviva a una cosa sola — leggere la lingua di
+> sistema al primo avvio. Installarlo avrebbe contraddetto la colonna «Build EAS: No» di questa
+> stessa tabella, e avrebbe rotto l'app sulla build allora installata, che quel modulo non ha. La
+> lettura la fa `Intl.DateTimeFormat().resolvedOptions().locale`, presente su Hermes, dentro un
+> `try` che ripiega sull'italiano: sbagliare lì costa un tocco sul selettore, non un dato. È la
+> stessa scelta dello Step 36, dove la sveglia dei widget c'era già.
+>
+> Il «sottoinsieme minimo» è risultato essere **una schermata intera** — `tu.tsx`, quella che
+> contiene l'interruttore — più le tre etichette dei tab, che servono a dimostrare che il cambio
+> esce da dove lo si è toccato. Resta fuori `features/sync/describe.ts`, che scrive anche in fondo
+> alla lista spese: è il primo pezzo dello Step 38.
 
 ### Step 38–39 — Traduzione EN
 
