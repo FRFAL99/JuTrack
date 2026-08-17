@@ -17,3 +17,13 @@ export {
   type JsonExportOptions,
   type VaultExport,
 } from './json';
+
+export {
+  parseVaultExport,
+  totalKept,
+  type ImportCounts,
+  type ImportKind,
+  type ImportReport,
+  type ImportResult,
+  type ImportSkip,
+} from './import';

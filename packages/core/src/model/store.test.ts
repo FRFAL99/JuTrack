@@ -521,3 +521,136 @@ describe('snapshot', () => {
     expect(store.snapshot().categories).toHaveLength(1);
   });
 });
+
+describe('importSnapshot', () => {
+  /** Un vault con dentro un po' di tutto: è quello che un export deve saper restituire. */
+  function makeFullVault(): VaultStore {
+    const { store, a, b } = makeCouple();
+    const category = store.addCategory({ name: 'Spesa', icon: '🛒', color: '#C2255C' });
+    const archived = store.addCategory({ name: 'Vacanze' });
+    store.updateCategory(archived.id, { archived: true });
+
+    store.addExpense({
+      amountCents: 2500,
+      date: '2026-08-01',
+      paidBy: a,
+      categoryId: category.id,
+      note: 'pane',
+      store: 'Esselunga',
+      tags: ['casa'],
+      split: buildSplit('equal', 2500, [a, b]),
+    });
+
+    const deleted = store.addExpense({
+      amountCents: 900,
+      date: '2026-08-02',
+      paidBy: b,
+      split: buildSplit('single', 900, [b]),
+    });
+    store.deleteExpense(deleted.id);
+
+    store.setBudget(category.id, '2026-08', 30000);
+    store.addSettlement({ fromMember: b, toMember: a, amountCents: 500, date: '2026-08-03' });
+    return store;
+  }
+
+  it('riporta il vault com’era: snapshot, import, snapshot dà lo stesso risultato', () => {
+    const original = makeFullVault().snapshot();
+
+    const restored = makeStore();
+    restored.importSnapshot(original);
+
+    expect(restored.snapshot()).toEqual(original);
+  });
+
+  it('conserva gli id, o le spese resterebbero pagate da nessuno', () => {
+    const source = makeFullVault();
+    const original = source.snapshot();
+
+    const restored = makeStore();
+    restored.importSnapshot(original);
+
+    const expense = restored.listExpenses()[0]!;
+    // Il pagante esiste ancora come membro, e le quote sono intestate a chi c'è davvero.
+    expect(restored.getMember(expense.paidBy)).not.toBeNull();
+    for (const memberId of Object.keys(expense.split.shares)) {
+      expect(restored.getMember(memberId)).not.toBeNull();
+    }
+  });
+
+  it('conserva i tombstone invece di far riapparire le spese cancellate', () => {
+    const original = makeFullVault().snapshot();
+
+    const restored = makeStore();
+    restored.importSnapshot(original);
+
+    expect(restored.listExpenses()).toHaveLength(1);
+    expect(restored.listExpenses({ includeDeleted: true })).toHaveLength(2);
+  });
+
+  it('conserva le categorie archiviate e i budget', () => {
+    const original = makeFullVault().snapshot();
+
+    const restored = makeStore();
+    restored.importSnapshot(original);
+
+    expect(restored.listCategories(true)).toHaveLength(2);
+    expect(restored.listCategories()).toHaveLength(1);
+    expect(restored.listBudgets('2026-08')).toEqual(original.budgets);
+  });
+
+  it('non normalizza il negozio: un ripristino non deve cambiare i dati', () => {
+    const restored = makeStore();
+    restored.importSnapshot({
+      expenses: [],
+      categories: [],
+      members: [{ id: 'anna', name: 'Anna', color: '#000000' }],
+      budgets: [],
+      settlements: [],
+    });
+    expect(restored.getMember('anna')?.name).toBe('Anna');
+  });
+
+  it('entra come un solo update Yjs, non come uno per record', () => {
+    const original = makeFullVault().snapshot();
+
+    const restored = makeStore();
+    let updates = 0;
+    restored.doc.on('update', () => updates++);
+    restored.importSnapshot(original);
+
+    expect(updates).toBe(1);
+  });
+
+  it('rifiuta un documento che contiene già dei record: fonderli cambierebbe i saldi', () => {
+    const original = makeFullVault().snapshot();
+
+    const occupied = makeStore();
+    occupied.addMember({ name: 'Qualcuno' });
+
+    expect(() => occupied.importSnapshot(original)).toThrow(/documento vuoto/);
+  });
+
+  it('accetta un documento che ha solo il nome del gruppo', () => {
+    const original = makeFullVault().snapshot();
+
+    const named = makeStore();
+    named.setGroupName('Ripristinato');
+
+    expect(() => named.importSnapshot(original)).not.toThrow();
+    expect(named.getGroupName()).toBe('Ripristinato');
+    expect(named.listExpenses()).toHaveLength(1);
+  });
+
+  it('una fotografia vuota lascia il documento vuoto invece di sollevare', () => {
+    const store = makeStore();
+    store.importSnapshot({
+      expenses: [],
+      categories: [],
+      members: [],
+      budgets: [],
+      settlements: [],
+    });
+    expect(store.snapshot().expenses).toEqual([]);
+  });
+});

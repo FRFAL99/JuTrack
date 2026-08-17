@@ -36,6 +36,9 @@ const BUDGET_KIND = 'budget';
 /** L'etichetta dell'avviso di sincronizzazione ferma (Step 33). */
 const SYNC_KIND = 'sync';
 
+/** L'etichetta dell'avviso di chiave mai salvata (Step 43). */
+const BACKUP_KIND = 'backup';
+
 /**
  * Il canale Android su cui esce il promemoria.
  *
@@ -65,6 +68,16 @@ const BUDGET_CHANNEL = 'budget';
  * posto smentirebbe il primo.
  */
 const SYNC_CHANNEL = 'sincronizzazione';
+
+/**
+ * Il canale dell'avviso di chiave mai salvata.
+ *
+ * Il quarto, e per la quarta volta la stessa ragione. Con una nota che vale solo per questo:
+ * è l'unico avviso che riguarda una **perdita irreversibile**, e chi lo zittisce dalle
+ * impostazioni di Android deve poterlo fare senza zittire gli altri tre — ma soprattutto
+ * senza che zittire gli altri tre zittisca questo.
+ */
+const BACKUP_CHANNEL = 'backup';
 
 /** Disdice i promemoria già programmati, e nient'altro. */
 export async function cancelReminder(): Promise<void> {
@@ -198,6 +211,16 @@ export async function notifySync(content: AlertContent): Promise<boolean> {
     { id: SYNC_CHANNEL, name: 'Sincronizzazione' },
     content,
     'invio dell’avviso di sincronizzazione',
+  );
+}
+
+/** L'avviso che la chiave di un gruppo non risulta salvata da nessuna parte (Step 43). */
+export async function notifyBackup(content: AlertContent): Promise<boolean> {
+  return notifyNow(
+    BACKUP_KIND,
+    { id: BACKUP_CHANNEL, name: 'Backup della chiave' },
+    content,
+    'invio dell’avviso di backup',
   );
 }
 

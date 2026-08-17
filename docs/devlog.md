@@ -4,6 +4,175 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-17 — Step 43: l'avviso «chiave non salvata», il quarto e l'unico irreversibile
+
+Il gemello dello Step 42, e nasce dalla stessa domanda vista dall'altro lato: il 42 dà una via
+d'uscita a chi la chiave l'ha persa, questo prova a far sì che non la perda.
+
+**Il rischio peggiore dell'app era scritto in un posto che lo legge solo chi non ne ha
+bisogno.** In cima a `/backup` c'è da sempre la frase giusta — «non esiste un password
+dimenticata», il relay conserva blob che non sa leggere, persa la chiave i dati non tornano —
+ma la legge chi apre `/backup`, cioè esattamente chi il backup lo sta già facendo. Chi non ci
+è mai entrato non ha mai visto quella frase, ed è la persona a cui serve.
+
+**La forma dell'avviso viene da un fatto crittografico, e per questo è più semplice degli
+altri tre.** La `vaultKey` nasce con il gruppo e **non cambia mai**: un backup fatto oggi vale
+per sempre. Quindi non c'è nessuna scadenza da riarmare — è l'opposto del promemoria spese, che
+si riprogramma a ogni apertura — e non c'è un livello che sale come in `near`/`over` o
+`stalled`/`stopped`. Lo stato è binario: o la chiave è al sicuro, o non lo è. Salvata una volta,
+il gruppo esce dal giro e non ci rientra, e `reviewBackup` esce alla prima riga per il resto
+della sua vita.
+
+**La soglia è in spese, non in giorni**, e la ragione è la stessa che decide tutte le soglie di
+questo progetto: quello che si rischia si misura in quanto c'è dentro. Un gruppo creato ieri e
+ancora vuoto non ha niente da perdere, e avvisare subito insegnerebbe a ignorare l'avviso
+proprio prima che diventi vero. Cinque spese: abbastanza da essere una serata di conti che
+nessuno ha voglia di riscrivere, poche abbastanza da arrivare mentre salvare la chiave costa
+ancora un minuto.
+
+**Un avviso per gruppo, mai ripetuto.** Ripetere «non hai salvato la chiave» a ogni apertura è
+il modo più rapido di far spegnere l'interruttore, e la stessa frase resta comunque in
+`/backup` per chi ci torna. È la regola dell'«un avviso per episodio» dello Step 33, applicata
+a un episodio che non finisce mai.
+
+**Il limite onesto, scritto nel file e non scoperto dopo.** L'app conosce i backup che **ha
+visto fare**: `recordBackup` scrive un segno quando la cifratura riesce, e prima di oggi quel
+segno non lo scriveva nessuno. Un gruppo salvato l'anno scorso risulta «mai salvato», e
+l'avviso lo dirà. Per questo il testo dice «su questo telefono **non risulta** un backup»
+invece di «non hai mai salvato»: la prima è vera in entrambi i casi, la seconda sarebbe falsa
+in uno dei due — ed è la stessa disciplina che allo Step 7 del redesign ha bocciato «Metà e
+metà» e «Tutto mio». L'errore va in questa direzione di proposito: un avviso di troppo fa
+controllare, uno mancante fa perdere dei dati.
+
+**Anche `parseBackupMarks` sbaglia dalla parte opposta a `parseSyncMarks`, e non è una
+distrazione.** Là un segno illeggibile vale «episodio mai visto», perché sbagliare di là
+produrrebbe un avviso su un guasto finito da settimane. Qui un segno illeggibile vale «chiave
+mai salvata», perché sbagliare di là produrrebbe **silenzio su una chiave a rischio**. Fra un
+avviso di troppo e dei dati persi non c'è partita, e le due funzioni si somigliano abbastanza
+da meritare che la differenza sia scritta in tutte e due.
+
+**Marcare il backup è il massimo che si possa osservare, e nemmeno quello è certezza.** Né il
+foglio di condivisione né gli appunti dicono se il file è stato poi conservato: `shareAsync`
+torna quando il foglio si è aperto, e un annullamento dopo non si vede — lo diceva già
+`ShareOutcome`. «Salvato» qui significa «la chiave cifrata ha lasciato l'app», e la scelta di
+marcare anche il ripiego sugli appunti discende da lì: in entrambi i casi l'app ha fatto tutto
+ciò che poteva vedere.
+
+**Il quarto interruttore non ha toccato le righe degli altri tre**, che era la previsione
+scritta in `settings.ts` allo Step 33 e adesso è verificata due volte. L'unica cosa da
+aggiornare sono stati i test, che confrontavano l'oggetto intero — e c'è ora un test in più
+per il caso vero di chi aggiorna: un JSON con tre chiavi che si legge con il quarto avviso
+spento invece di far cadere la lettura.
+
+**Un quarto canale Android**, per la quarta volta la stessa ragione: tre interruttori nella
+nostra schermata e tre nelle impostazioni di sistema, o il secondo posto smentirebbe il primo.
+Con una nota che vale solo per questo — è l'unico avviso che parla di una perdita
+irreversibile, e chi zittisce gli altri tre non deve zittire anche questo.
+
+**Verifica:** 1250 test verdi (639 core + 568 app + 43 relay), typecheck, lint e `format:check`
+puliti, `expo export --platform android` completato. **Nessuna build EAS nuova**: nessun modulo
+nativo aggiunto, e il canale di notifica si crea a runtime come gli altri tre.
+
+---
+
+## 2026-08-17 — Step 42: rileggere un export JSON, la metà che mancava
+
+`/export` diceva «per conservarli» e produceva una copia integrale del vault che **nessuno
+sapeva rileggere**. Il file serviva a portare i dati altrove, non a farli rientrare: chi perdeva
+il telefono senza il backup della chiave si ritrovava con un file pieno di spese e nessun modo
+di riaverle dentro l'app se non riscrivendole a mano. Conservare senza poter ripristinare non è
+conservare, e la parola nella schermata prometteva più di quanto il codice mantenesse.
+
+**Non è il gemello di `/backup`, ed è la prima cosa che la schermata dice.** Ripristinare una
+chiave riapre _quel_ vault: le spese tornano dal relay e la sincronizzazione riprende. Importare
+un JSON ricostruisce i **dati** in un gruppo **nuovo**, con una chiave nuova. La differenza non
+è un dettaglio implementativo: il file è in chiaro e non contiene alcuna chiave — **non
+potrebbe**, o chiunque lo riceva entrerebbe nel gruppo — quindi non c'è nessun vault da
+riaprire. Il gruppo importato non si sincronizza con i telefoni di prima, e per tornare a
+condividerlo serve un invito. Detto in cima, non scoperto dopo.
+
+**Il parser è una porta, e va trattato come tale.** Tutto il resto del modello riceve dati
+scritti dall'app o arrivati cifrati dall'altro telefono. Qui entra un file che può essere stato
+modificato a mano, troncato da un trasferimento, o prodotto da una versione futura — e quello
+che passa finisce **dentro il documento**, da dove si sincronizza: un dato sbagliato accettato
+adesso raggiunge l'altro telefono e non si disfa più. Il criterio è quello di `strList` e
+`parseMarks`, applicato con più forza.
+
+**Due livelli di rifiuto, e la differenza è quella che rende la schermata usabile.** Il **file**
+si rifiuta intero quando non si sa cosa sia — JSON illeggibile, `format` sbagliato, versione
+futura — perché proseguire vorrebbe dire indovinare. Il **record** si scarta da solo quando il
+file è giusto ma quella riga non sta in piedi, e ogni scarto finisce nel report **con il
+motivo**. Scartare in silenzio sarebbe il difetto peggiore che questa funzione possa avere: chi
+importa crederebbe di aver riavuto tutto.
+
+**Le invarianti si difendono alla porta, non a valle.** È l'unico punto del progetto in cui dei
+record arrivano già formati senza passare da `addExpense`, quindi le regole che `VaultStore` fa
+rispettare in scrittura vanno rifatte qui: quote che sommano al totale, importi interi in
+centesimi, riferimenti ai membri che esistono davvero. Una spesa le cui quote non tornano
+produrrebbe un saldo sbagliato per sempre e nessuno saprebbe da dove viene; una spesa pagata da
+un id che non è nella lista Persone comparirebbe nei totali e sparirebbe dai saldi — visibile in
+un posto e non nell'altro, che è il modo peggiore di sbagliare. È la stessa famiglia del bug dei
+membri duplicati dello Step 11, con un'altra origine.
+
+**Un `12.5` si scarta invece di arrotondarlo.** È il float che la regola ferrea del progetto
+tiene fuori dal modello, e arrotondarlo qui vorrebbe dire decidere per conto di chi ha scritto
+il file.
+
+**Categoria e budget hanno criteri diversi, e la differenza è di prodotto.** Una spesa che
+riferisce una categoria assente entra **senza** categoria — `categoryId` è già nullabile, e una
+spesa senza categoria resta una spesa — mentre un budget senza categoria si scarta: non
+comparirebbe in nessuna schermata e non si potrebbe nemmeno cancellare.
+
+**Le versioni vecchie si leggono, quelle future no.** Un file v1 non ha `store` né `tags` e si
+legge con gli stessi fallback (`''` e `[]`) che `readExpense` usa sui record scritti prima dello
+Step 23: è la stessa additività, vista dall'altro lato. Un file di versione **maggiore** si
+rifiuta invece di leggerne la parte comprensibile — la regola dei formati binari di
+`architecture.md` applicata qui, perché un client vecchio che legge a metà un formato nuovo
+scrive nel documento una versione mutilata dei dati e la sincronizza.
+
+**`importSnapshot` non passa dai metodi normali dello store, ed è tutto il punto.** `addExpense`
+e `addMember` chiamano `newId`: rigenerare gli id spezzerebbe `paidBy`, le chiavi di
+`split.shares`, il `categoryId` e i due membri di ogni pareggio — un vault fatto di spese pagate
+da nessuno. E non valida, deliberatamente: la validazione sta nel parser, e ripeterla sarebbe
+una seconda regola da tenere allineata alla prima. Una sola transazione, quindi **un** update
+Yjs: c'è il test che lo verifica, perché migliaia di `set` separati vorrebbero dire migliaia di
+righe nel log e una UI che si ridisegna a metà di un vault mezzo importato.
+
+**`assertEmpty` rende impossibile da sbagliare ciò che sarebbe stato da ricordare.** Su un
+documento che ha già dei record, gli id coincidenti sovrascriverebbero e gli altri si
+affiancherebbero: una fusione che nessuno ha chiesto, e che per una spesa cambierebbe dei saldi.
+Il nome del gruppo in `meta` non conta come record, così un gruppo appena creato e già nominato
+resta importabile.
+
+**Il documento si costruisce in memoria e il gruppo nasce già pieno.** Passare dal runtime
+avrebbe voluto dire creare il gruppo, aprirlo, aspettare che il `VaultProvider` lo montasse e
+solo allora scrivere — con in mezzo una finestra in cui esiste un gruppo vuoto che l'utente può
+già vedere. `GroupRegistry.createFromState` scrive lo stato nel log prima che qualcuno possa
+aprirlo, ed è lo stesso meccanismo di `regenerate`: infatti il pezzo comune è uscito in
+`seedDocument`, chiamato da entrambi.
+
+**L'export non porta il nome del gruppo**, e non è una dimenticanza: `VaultSnapshot` contiene i
+cinque insiemi di record, mentre il nome sta in `meta`, che la fotografia non attraversa.
+Aggiungerlo avrebbe voluto dire alzare la versione del formato per un campo che si può
+chiedere — e un file vecchio quel campo non ce l'avrebbe comunque. Si propone la data
+dell'export, che è l'unica cosa che distingue due file dello stesso vault, e si lascia cambiare.
+
+**Si incolla, non si sceglie un file**, per la sesta volta nel progetto: `expo-document-picker` è
+un modulo nativo, cioè una build EAS nuova per una comodità. `/backup` chiede di incollare per
+la stessa ragione, e le due schermate restano coerenti fra loro.
+
+**Leggere e importare sono due tocchi**, non uno: creare un gruppo prima di aver detto cosa c'è
+dentro vorrebbe dire far scoprire gli scarti quando il gruppo esiste già e va tolto a mano. E
+gli scarti si mostrano **raggruppati per motivo**, non per record: un file troncato produce lo
+stesso scarto su centinaia di spese, e centinaia di righe identiche nasconderebbero l'unica
+diversa.
+
+**Verifica:** 1250 test verdi, typecheck, lint e `format:check` puliti, `expo export --platform
+android` completato. **Nessuna build EAS nuova**: il parser è JS puro nel core, e la schermata
+usa solo moduli già presenti.
+
+---
+
 ## 2026-08-13 — Step 39: il formato dei numeri, e il primo ingresso in `packages/core` da otto step
 
 Uno step che il piano dell'11 agosto non aveva: lo ha reso necessario lo Step 38, che ha

@@ -17,6 +17,7 @@ import { initialOf } from '@/components/avatar';
 import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
 import { SectionLabel } from '@/components/SectionLabel';
+import { BACKUP_MIN_EXPENSES } from '@/features/notifications/backup';
 import { REMINDER_DAYS } from '@/features/notifications/reminder';
 import { SYNC_STALL_HOURS } from '@/features/notifications/sync';
 import {
@@ -275,6 +276,27 @@ export default function TuScreen() {
             />
           </View>
 
+          <View style={styles.switchRow}>
+            <View style={{ flex: 1, gap: 2 }}>
+              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
+                {t('you.alerts.backupTitle')}
+              </Text>
+              {/* La soglia si legge dalla costante, come le altre tre. La riga dice anche
+                  «una volta sola per gruppo», che è la cosa che distingue questo avviso
+                  dagli altri: la chiave non cambia mai, quindi salvarla una volta chiude
+                  la questione per sempre. */}
+              <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+                {t('you.alerts.backupHint', { count: BACKUP_MIN_EXPENSES })}
+              </Text>
+            </View>
+            <Switch
+              value={notifications.settings.backup}
+              onValueChange={(on) => toggle('backup', on)}
+              disabled={!notifications.ready}
+              accessibilityLabel={t('you.alerts.backupTitle')}
+            />
+          </View>
+
           {/* Il limite va detto, non scoperto: i due avvisi li produce l'app guardando il
               documento e il motore, quindi arrivano quando l'app è aperta — subito per
               quello che succede qui, all'apertura successiva per il resto. */}
@@ -355,6 +377,12 @@ export default function TuScreen() {
 
         <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
         <SectionLabel>{t('you.device.title')}</SectionLabel>
+        {/* Sta qui e non fra le voci del gruppo, benché sia il gemello di «Backup della
+            chiave»: l'import **crea** un gruppo, quindi è una cosa del telefono, e va
+            raggiungibile proprio quando di gruppi non ce n'è nessuno — che è il caso in cui
+            serve. La sezione del gruppo, sopra, si smonta senza gruppo. */}
+        <ListRow label={t('you.device.importExport')} onPress={() => router.push('/importa')} />
+        <Rule inset={spacing.lg} color={colors.divider} />
         <ListRow label={t('you.device.probe')} onPress={() => router.push('/probe')} />
         <Rule inset={spacing.lg} color={colors.divider} />
         <ListRow

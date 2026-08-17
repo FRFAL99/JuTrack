@@ -8,6 +8,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '@/i18n';
 import { LanguageSync } from '@/i18n/LanguageSync';
 import { GroupIdentityGate } from '@/features/groups/GroupIdentityGate';
+import { BackupWatcher } from '@/features/notifications/BackupWatcher';
 import { BudgetWatcher } from '@/features/notifications/BudgetWatcher';
 import { ReminderScheduler } from '@/features/notifications/ReminderScheduler';
 import { SyncWatcher } from '@/features/notifications/SyncWatcher';
@@ -157,6 +158,11 @@ function Shell() {
                     del sync vive in Tu e in fondo alla lista spese, cioè dove chi ha il
                     sync rotto potrebbe non passare per giorni. */}
                 <SyncWatcher />
+                {/* Guarda quanto c'è dentro il gruppo aperto e avvisa se la sua chiave non
+                    risulta salvata. Qui per la ragione che vale più di tutte: la frase che
+                    dice che senza backup i dati non tornano sta in cima a `/backup`, cioè
+                    la legge solo chi il backup lo sta già facendo. */}
+                <BackupWatcher />
                 {/* Tiene aggiornato il saldo che si legge sulla home di Android. Qui e non
                     in una schermata per la ragione più forte delle tre: quel saldo si
                     guarda **fuori** dall'app, e chi apre l'app solo per registrare una
