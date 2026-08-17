@@ -3,7 +3,7 @@ import { DEFAULT_SETTINGS, parseSettings, serializeSettings } from './settings';
 
 describe('parseSettings', () => {
   it('rilegge quello che ha scritto', () => {
-    const settings = { reminder: true, budget: true, sync: true };
+    const settings = { reminder: true, budget: true, sync: true, backup: true };
     expect(parseSettings(serializeSettings(settings))).toEqual(settings);
   });
 
@@ -36,6 +36,18 @@ describe('parseSettings', () => {
       reminder: true,
       budget: false,
       sync: true,
+      backup: false,
+    });
+  });
+
+  it('le impostazioni scritte prima dello Step 43 si leggono senza il quarto avviso', () => {
+    // Il caso vero di chi aggiorna: sul telefono c'è un JSON con tre chiavi, e il quarto
+    // interruttore deve risultare spento invece di far cadere la lettura.
+    expect(parseSettings('{"reminder":true,"budget":true,"sync":true}')).toEqual({
+      reminder: true,
+      budget: true,
+      sync: true,
+      backup: false,
     });
   });
 });

@@ -449,6 +449,114 @@ export class VaultStore {
   }
 
   /**
+   * Riversa nel documento una fotografia già validata: l'inversa di `snapshot()`.
+   *
+   * **Gli id si conservano, ed è tutto il punto.** `paidBy`, le chiavi di `split.shares`,
+   * il `categoryId` di una spesa e i due membri di un pareggio sono riferimenti a id che
+   * stanno dentro la fotografia stessa: rigenerarli — come farebbero `addExpense` e
+   * `addMember`, che chiamano `newId` — spezzerebbe ogni collegamento e produrrebbe un
+   * vault fatto di spese pagate da nessuno. Per questo non si passa dai metodi normali.
+   *
+   * **Non valida, e non è una svista.** La validazione sta in `parseVaultExport`, che è la
+   * porta da cui i dati esterni entrano, e ripeterla qui vorrebbe dire due regole da tenere
+   * allineate — la seconda delle quali, prima o poi, diversa dalla prima. Chi chiama passa
+   * una `VaultSnapshot`, che è un tipo che si ottiene solo di là o da `snapshot()`.
+   *
+   * **Va scritta in un documento vuoto.** Su un documento che ha già dei record, gli id
+   * coincidenti sovrascriverebbero e gli altri si affiancherebbero, producendo una fusione
+   * che nessuno ha chiesto — e per una spesa quella fusione cambierebbe dei saldi. Chi
+   * importa crea un gruppo nuovo, e `assertEmpty` lo rende impossibile da sbagliare invece
+   * che da ricordare.
+   *
+   * Una sola transazione: la fotografia entra come **un** update Yjs, quindi come una sola
+   * riga nel log e un solo blob verso il relay. Migliaia di `set` separati vorrebbero dire
+   * migliaia di update, e la UI si ridisegnerebbe a metà di un vault mezzo importato.
+   */
+  importSnapshot(snapshot: VaultSnapshot): void {
+    this.assertEmpty();
+
+    this.transact(() => {
+      for (const member of snapshot.members) {
+        writeRecord(membersMap(this.doc), member.id, {
+          name: member.name,
+          color: member.color,
+        });
+      }
+
+      for (const category of snapshot.categories) {
+        writeRecord(categoriesMap(this.doc), category.id, {
+          name: category.name,
+          icon: category.icon,
+          color: category.color,
+          archived: category.archived,
+        });
+      }
+
+      for (const expense of snapshot.expenses) {
+        writeRecord(expensesMap(this.doc), expense.id, {
+          amountCents: expense.amountCents,
+          currency: expense.currency,
+          date: expense.date,
+          categoryId: expense.categoryId,
+          note: expense.note,
+          // **Non si normalizza qui**, a differenza di `addExpense`: il testo era già
+          // passato per `normalizeStore` quando la spesa è stata scritta la prima volta, e
+          // rifarlo su un export prodotto da una versione futura con regole diverse
+          // cambierebbe dei dati durante quello che deve essere un ripristino.
+          store: expense.store,
+          tags: expense.tags,
+          paidBy: expense.paidBy,
+          split: expense.split,
+          createdAt: expense.createdAt,
+          updatedAt: expense.updatedAt,
+          deletedAt: expense.deletedAt,
+        });
+      }
+
+      for (const budget of snapshot.budgets) {
+        writeRecord(budgetsMap(this.doc), budgetKey(budget.categoryId, budget.month), {
+          limitCents: budget.limitCents,
+        });
+      }
+
+      for (const settlement of snapshot.settlements) {
+        writeRecord(settlementsMap(this.doc), settlement.id, {
+          fromMember: settlement.fromMember,
+          toMember: settlement.toMember,
+          amountCents: settlement.amountCents,
+          date: settlement.date,
+          note: settlement.note,
+          createdAt: settlement.createdAt,
+          deletedAt: settlement.deletedAt,
+        });
+      }
+    });
+  }
+
+  /**
+   * Il documento non contiene record.
+   *
+   * Guarda le cinque mappe e non `meta`: il nome del gruppo viene scritto da chi crea il
+   * gruppo, quindi c'è già quando l'import comincia, e non è un record che possa entrare in
+   * conflitto con niente.
+   */
+  private assertEmpty(): void {
+    const filled =
+      expensesMap(this.doc).size +
+      categoriesMap(this.doc).size +
+      membersMap(this.doc).size +
+      budgetsMap(this.doc).size +
+      settlementsMap(this.doc).size;
+
+    if (filled > 0) {
+      throw new Error(
+        `importSnapshot richiede un documento vuoto, e questo contiene ${filled} record. ` +
+          'Un import su dati esistenti li fonderebbe, cambiando dei saldi.',
+      );
+    }
+  }
+
+  /**
    * Fotografia completa del vault, per l'export.
    *
    * Con `includeDeleted` include anche i tombstone: l'export JSON deve conservarli, perché

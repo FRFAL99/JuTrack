@@ -90,6 +90,8 @@ export const it = {
     restoreIntro:
       'Se hai salvato la chiave di un gruppo e la sua passphrase, il gruppo torna qui. Le spese arrivano col primo sync, se è ancora sul relay.',
     restore: 'Ripristina una chiave',
+    /** L'ultima strada: ricostruisce i dati da un export JSON, ma in un gruppo nuovo. */
+    importExport: 'Importa un export JSON',
     openNow: 'Aperto adesso',
     vaultShort: 'vault {{id}}',
     noExpenses: 'nessuna spesa',
@@ -225,6 +227,11 @@ export const it = {
       syncTitle: 'Sincronizzazione ferma',
       syncHint:
         'Se le spese non arrivano agli altri telefoni per più di {{hours}} ore, o se il relay rifiuta la chiave',
+      backupTitle: 'Chiave non salvata',
+      /** «Una volta sola per gruppo» distingue questo avviso dagli altri tre: la chiave non
+          cambia mai, quindi salvarla una volta chiude la questione per sempre. */
+      backupHint:
+        'Una volta per gruppo, se supera le {{count}} spese senza che tu abbia mai salvato la sua chiave',
       scope:
         'Gli avvisi sui budget e sulla sincronizzazione riguardano il gruppo aperto e arrivano mentre l’app è in uso.',
       blocked:
@@ -250,6 +257,7 @@ export const it = {
     },
     device: {
       title: 'Questo telefono',
+      importExport: 'Importa un export JSON',
       probe: 'Diagnostica',
       wipe: 'Azzera questo telefono',
       idLabel: 'Il tuo identificativo',

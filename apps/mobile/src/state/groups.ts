@@ -303,18 +303,50 @@ export class GroupRegistry {
       await this.setMyMemberId(fresh.vaultId, source.myMemberId);
     }
 
+    await this.seedDocument(fresh.vaultId, state);
+
+    return { ...fresh, myMemberId: source.myMemberId };
+  }
+
+  /**
+   * Crea un gruppo nuovo che nasce **già pieno**, da uno stato Yjs costruito altrove.
+   *
+   * È la porta d'ingresso dell'import di un export JSON, e la differenza con `regenerate`
+   * è tutta in ciò che non c'è: là si continua la storia di un gruppo esistente, qui non
+   * c'è alcun gruppo di partenza — il file non porta con sé una chiave, e non potrebbe,
+   * perché l'export JSON è in chiaro. Vedi il commento in cima a `export/json.ts`.
+   *
+   * **La chiave è nuova, quindi il vault è un altro**, e va detto a chi importa invece di
+   * lasciarglielo scoprire: il gruppo ricostruito non si riaggancia a quello da cui il file
+   * proveniva, non riceverà gli aggiornamenti degli altri telefoni, e per tornare a
+   * condividerlo serve un invito nuovo. Un file in chiaro **non deve** poter riaprire un
+   * vault: se bastasse a rientrare, chiunque lo riceva entrerebbe nel gruppo.
+   *
+   * `origin` resta `created`, ed è esatto in entrambi i sensi che contano: la chiave nasce
+   * qui, e il seme delle categorie di default è comunque inerte perché il documento le
+   * contiene già — se l'export ne aveva.
+   */
+  async createFromState(name: string, state: Uint8Array): Promise<GroupRecord> {
+    const fresh = await this.register(generateVaultKey(this.random), name, 'created');
+    await this.seedDocument(fresh.vaultId, state);
+    return fresh;
+  }
+
+  /**
+   * Scrive uno stato Yjs nel log di un gruppo appena registrato.
+   *
+   * `load()` crea la tabella (vuota) e si mette in ascolto: l'update applicato dopo viene
+   * scritto come qualunque altro. `destroy()` attende che sia davvero su disco, prima che
+   * qualcuno apra il gruppo nuovo e lo trovi ancora senza dati.
+   */
+  private async seedDocument(vaultId: string, state: Uint8Array): Promise<void> {
     const doc = new Y.Doc();
     const persistence = new SqliteYPersistence(this.db, doc, {
-      tableName: updatesTableName(fresh.vaultId),
+      tableName: updatesTableName(vaultId),
     });
-    // `load()` crea la tabella (vuota) e si mette in ascolto: l'update applicato dopo
-    // viene scritto come qualunque altro. `destroy()` attende che sia davvero su disco,
-    // prima che qualcuno apra il gruppo nuovo e lo trovi ancora senza dati.
     await persistence.load();
     Y.applyUpdate(doc, state);
     await persistence.destroy();
-
-    return { ...fresh, myMemberId: source.myMemberId };
   }
 
   /** Le chiavi d'uso di un gruppo, `null` se la chiave manca o è illeggibile. */

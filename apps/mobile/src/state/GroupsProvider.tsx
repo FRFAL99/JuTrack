@@ -35,6 +35,13 @@ export interface GroupsData {
   create(name: string): Promise<GroupRecord>;
   /** Entra in un gruppo esistente e lo apre. Se c'è già, lo apre e basta. */
   join(key: Uint8Array, name: string): Promise<GroupRecord>;
+  /**
+   * Crea un gruppo che nasce già pieno, da uno stato Yjs, e lo apre.
+   *
+   * È l'ingresso dell'import di un export JSON. La chiave è **nuova**: il gruppo
+   * ricostruito è un vault a sé, non si riaggancia a quello da cui il file proveniva.
+   */
+  importState(name: string, state: Uint8Array): Promise<GroupRecord>;
   /** Apre un gruppo che c'è già: smonta il runtime corrente e ne monta un altro. */
   select(vaultId: string): Promise<void>;
   /**
@@ -175,6 +182,19 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
     [registry, select],
   );
 
+  const importState = useCallback(
+    async (name: string, state: Uint8Array): Promise<GroupRecord> => {
+      if (registry === null) throw new Error('registro dei gruppi non ancora pronto');
+      const group = await registry.createFromState(
+        normalizeGroupName(name) ?? 'Gruppo importato',
+        state,
+      );
+      await select(group.vaultId);
+      return group;
+    },
+    [registry, select],
+  );
+
   const rename = useCallback(
     async (vaultId: string, name: string): Promise<void> => {
       if (registry === null) return;
@@ -250,6 +270,7 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
         current,
         create,
         join,
+        importState,
         select,
         closeCurrent,
         rename,
@@ -264,6 +285,7 @@ export function GroupsProvider({ children }: { children: ReactNode }) {
     currentId,
     error,
     groups,
+    importState,
     join,
     leave,
     regenerate,

@@ -191,6 +191,35 @@ vero, la pagina non fa richieste di rete di alcun tipo e non carica risorse este
 proprietà verificata dai test, non una promessa. Il principio non negoziabile vale anche qui: il
 relay non sa nulla di chi entra in quale gruppo.
 
+## Uscire e rientrare: due strade che non sono la stessa
+
+Ci sono due modi di riavere i propri dati dopo aver perso un telefono, e confonderli è il modo più
+rapido di credersi al sicuro senza esserlo.
+
+|                               | **Backup della chiave** (`/backup`)          | **Export JSON** (`/export` → `/importa`) |
+| ----------------------------- | -------------------------------------------- | ---------------------------------------- |
+| Cosa contiene                 | la `vaultKey`, cifrata con una passphrase    | i record del vault, **in chiaro**        |
+| Cosa restituisce              | **quel** vault: spese dal relay, sync attivo | i dati, in un vault **nuovo**            |
+| Riaggancia gli altri telefoni | sì                                           | **no**: serve un invito nuovo            |
+| Se lo intercetta un terzo     | inutile senza la passphrase                  | legge tutte le vostre spese              |
+
+**L'export JSON non contiene e non conterrà mai la chiave.** Se bastasse quel file a rientrare in un
+vault, chiunque lo ricevesse — la chat da cui è passato, il servizio su cui è finito — vi entrerebbe.
+Ne discende che il gruppo ricostruito da un import ha per forza una chiave nuova: non è una
+limitazione dell'implementazione, è il principio non negoziabile applicato al percorso di ritorno.
+
+**L'import è l'unica porta da cui entrano dati che l'app non ha scritto.** Tutto il resto del modello
+riceve record prodotti dall'app o arrivati cifrati dall'altro dispositivo; un file d'export può
+essere stato modificato a mano o troncato. Per questo `parseVaultExport` (`export/import.ts`) rifà
+alla porta tutte le invarianti che `VaultStore` fa rispettare in scrittura — quote che sommano al
+totale, importi interi, riferimenti a membri esistenti — e scarta i record che non le rispettano
+**dicendolo**, invece di scriverli nel documento da cui si sincronizzerebbero.
+
+`VaultStore.importSnapshot` **conserva gli id** dei record: `paidBy`, le chiavi di `split.shares` e i
+membri dei pareggi sono riferimenti interni alla fotografia, e rigenerarli produrrebbe un vault di
+spese pagate da nessuno. Richiede un documento vuoto: su uno già popolato, gli id coincidenti
+sovrascriverebbero e gli altri si affiancherebbero, cambiando dei saldi.
+
 ### Compattazione
 
 Il log cresce indefinitamente. Due contromisure:

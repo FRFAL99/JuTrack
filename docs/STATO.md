@@ -1,7 +1,17 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-13 — **tutti e quattro i piani e il redesign visivo sono finiti nel codice, e il
-quinto piano è a undici step su tredici**. Il quarto — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
+Aggiornato: 2026-08-17 — **tutti e quattro i piani e il redesign visivo sono finiti nel codice, il
+quinto piano è a undici step su tredici, e due step di robustezza sono nati fuori dai piani**.
+
+> **Gli Step 42 e 43 non vengono da un piano, ma da una rilettura del progetto**, e chiudono i due
+> lati dello stesso rischio — perdere i dati. Il **42** dà una via d'uscita a chi la chiave l'ha già
+> persa: `/export` produceva una copia integrale del vault che **nessuno sapeva rileggere**, e adesso
+> `parseVaultExport` la rilegge e `/importa` la ricostruisce in un gruppo nuovo. Il **43** prova a
+> far sì che non la perda: un quarto avviso dice, una volta per gruppo, che la chiave non risulta
+> salvata da nessuna parte. Nessuno dei due chiede una build EAS. Dettaglio in
+> [devlog.md](devlog.md); il **40** resta il prossimo step scritto.
+
+Il quarto — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 **Step 23–28** — si è chiuso l'11 agosto con la dashboard componibile, e i sette passi del redesign
 sono chiusi da prima ([visualdesign.md](visualdesign.md)). Lo stesso giorno è stato scritto il
 **quinto piano**, [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md) —
@@ -102,6 +112,13 @@ step su dodici nel codice**:
 | 40 — Traduzione EN, il resto       | ⬜    | Grafici, dashboard, onboarding, pairing, backup/export, azzera         |
 | 41 — Verifica end-to-end           | ⬜    | Su telefono reale: notifiche, widget, lingua, valuta                   |
 
+Robustezza dei dati — nati fuori dai piani, dalla rilettura del 17 agosto:
+
+| Step                             | Stato | Cosa contiene                                                        |
+| -------------------------------- | ----- | -------------------------------------------------------------------- |
+| 42 — Reimport dell'export JSON   | ✅    | `parseVaultExport`, `importSnapshot`, `/importa`, in un gruppo nuovo |
+| 43 — Avviso «chiave non salvata» | ✅    | Quarto interruttore, `BackupWatcher`, soglia a cinque spese          |
+
 Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette passi:
 
 | Passo                      | Stato | Cosa contiene                                                   |
@@ -114,7 +131,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**1170 test verdi** (601 core + 526 app + 43 relay), typecheck, lint e `format:check` puliti.
+**1250 test verdi** (639 core + 568 app + 43 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -1034,6 +1051,67 @@ scalata di uno**: la traduzione del resto è il 40, la verifica su telefono il 4
   `centsToDecimal` sua, con un commento che dice di essere diversa da `formatCents` perché
   quella è «la forma italiana leggibile». Il file esportato è identico nelle due lingue, che è
   l'unica cosa sensata per un file che un foglio di calcolo deve rileggere.
+
+## Il reimport dell'export JSON (Step 42)
+
+`parseVaultExport` in `packages/core/src/export/import.ts`, `VaultStore.importSnapshot`,
+`GroupRegistry.createFromState` e la schermata `/importa`. Nasce da un'incoerenza: `/export` diceva
+«per conservarli» e produceva un file che **nessuno sapeva rileggere**.
+
+- **Non è il gemello di `/backup`, e la schermata lo dice in cima.** Ripristinare una chiave riapre
+  _quel_ vault, sincronizzazione compresa. Importare un JSON ricostruisce i **dati** in un gruppo
+  **nuovo**, con una chiave nuova: il file è in chiaro e non contiene alcuna chiave — non potrebbe,
+  o chiunque lo riceva entrerebbe nel gruppo. Il gruppo importato non riceve gli aggiornamenti degli
+  altri telefoni, e per tornare a condividerlo serve un invito.
+- **Il file si rifiuta intero, il record si scarta da solo.** Il primo quando non si sa cosa sia
+  (JSON illeggibile, `format` sbagliato, versione futura), il secondo quando il file è giusto ma la
+  riga non sta in piedi — e **ogni scarto porta il motivo** fino a schermo, raggruppato per motivo e
+  non per record. Un import che perde righe in silenzio farebbe credere di aver riavuto tutto.
+- **Le invarianti si difendono alla porta.** È l'unico punto in cui dei record entrano già formati
+  senza passare da `addExpense`: quote che sommano al totale, importi interi, `paidBy` e quote
+  intestate a membri che esistono davvero. Una spesa pagata da un id assente comparirebbe nei totali
+  e sparirebbe dai saldi — la stessa famiglia del bug dei membri duplicati dello Step 11.
+- **Categoria e budget hanno criteri diversi**: una spesa con categoria assente entra **senza**
+  categoria (`categoryId` è già nullabile), un budget senza categoria si scarta perché non
+  comparirebbe da nessuna parte.
+- **I file v1 si leggono, quelli di versione futura no.** Gli stessi fallback (`''` e `[]`) di
+  `readExpense` per `store` e `tags`; il rifiuto in avanti è la regola dei formati binari di
+  [architecture.md](architecture.md) applicata qui.
+- **`importSnapshot` conserva gli id ed è tutto il punto**: `newId` spezzerebbe `paidBy`, le chiavi
+  di `split.shares` e i due membri di ogni pareggio. Non valida — quella è del parser, e due regole
+  divergono — e scrive in **una sola transazione**, quindi un solo update Yjs. `assertEmpty` rifiuta
+  un documento che ha già dei record: la fusione cambierebbe dei saldi.
+- **Il gruppo nasce già pieno.** `createFromState` scrive lo stato nel log prima che qualcuno possa
+  aprirlo, con lo stesso `seedDocument` che usa `regenerate` — passare dal runtime avrebbe lasciato
+  una finestra con un gruppo vuoto visibile.
+- **L'export non porta il nome del gruppo** (sta in `meta`, che `VaultSnapshot` non attraversa): si
+  propone la data del file e si lascia cambiare, invece di alzare la versione del formato.
+- **Si incolla, non si sceglie un file**: `expo-document-picker` è un modulo nativo. Sesta volta.
+
+## L'avviso «chiave non salvata» (Step 43)
+
+Il quarto interruttore in Tu, `features/notifications/backup.ts`, `BackupWatcher` accanto agli altri
+due watcher, e `recordBackup` chiamata da `/backup` quando la cifratura riesce.
+
+- **È il rischio peggiore dell'app, e finora stava scritto dove lo legge solo chi non ne ha
+  bisogno**: la frase «persa la chiave, i dati non tornano» è in cima a `/backup`, cioè la legge chi
+  il backup lo sta già facendo.
+- **La `vaultKey` non cambia mai, quindi l'avviso è più semplice degli altri tre.** Niente scadenza
+  da riarmare, nessun livello che sale: o la chiave è al sicuro o non lo è, e salvata una volta il
+  gruppo esce dal giro per sempre.
+- **Soglia in spese, non in giorni** (cinque): quello che si rischia si misura in quanto c'è dentro,
+  e avvisare un gruppo vuoto insegnerebbe a ignorare l'avviso prima che diventi vero.
+- **Un avviso per gruppo, mai ripetuto**, come «un avviso per episodio» dello Step 33 — applicato a
+  un episodio che non finisce.
+- **«Non risulta» e non «non hai salvato».** L'app conosce i backup che ha visto fare, e prima di
+  oggi quel segno non lo scriveva nessuno: un gruppo salvato l'anno scorso risulterà «mai salvato».
+  La prima frase è vera in entrambi i casi, la seconda sarebbe falsa in uno — stessa disciplina che
+  ha bocciato «Metà e metà» al passo 7 del redesign.
+- **`parseBackupMarks` sbaglia dalla parte opposta a `parseSyncMarks`**, di proposito: là un segno
+  illeggibile vale «mai visto» per non avvisare su un guasto finito, qui vale «mai salvato» perché
+  sbagliare di là produrrebbe silenzio su una chiave a rischio.
+- **Marcare il backup è il massimo osservabile**: né il foglio di condivisione né gli appunti dicono
+  se il file è stato conservato. «Salvato» qui significa «la chiave cifrata ha lasciato l'app».
 
 ## I due bug che rendevano sbagliati i numeri sono corretti
 

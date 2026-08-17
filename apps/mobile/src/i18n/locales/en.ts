@@ -86,6 +86,7 @@ export const en: Dictionary = {
     restoreIntro:
       'If you saved a group’s key and its passphrase, the group comes back here. The expenses arrive with the first sync, if it is still on the relay.',
     restore: 'Restore a key',
+    importExport: 'Import a JSON export',
     openNow: 'Open now',
     vaultShort: 'vault {{id}}',
     noExpenses: 'no expenses',
@@ -213,6 +214,9 @@ export const en: Dictionary = {
       syncTitle: 'Sync stalled',
       syncHint:
         'If your expenses do not reach the other phones for more than {{hours}} hours, or if the relay rejects the key',
+      backupTitle: 'Key not saved',
+      backupHint:
+        'Once per group, if it grows past {{count}} expenses without you ever saving its key',
       scope:
         'Budget and sync alerts are about the open group, and they arrive while the app is in use.',
       blocked: 'Android is blocking JuTrack notifications: turn them back on in system settings.',
@@ -237,6 +241,7 @@ export const en: Dictionary = {
     },
     device: {
       title: 'This phone',
+      importExport: 'Import a JSON export',
       probe: 'Diagnostics',
       wipe: 'Reset this phone',
       idLabel: 'Your identifier',

@@ -7,11 +7,11 @@
  * update cifrato per ogni interruttore toccato. `wipe.ts` la porta via da sola con il suo
  * `DELETE FROM app_meta`.
  *
- * **Un interruttore per avviso, non uno solo.** Sono tre motivi diversi di essere
- * interrotti — non registri spese, hai sforato un budget, la sincronizzazione è ferma — e
- * chi ne vuole uno non vuole necessariamente gli altri due. Adesso ci sono tutti e tre, e
- * `parseSettings` era scritta perché aggiungere il terzo non toccasse le righe degli altri:
- * infatti non le ha toccate.
+ * **Un interruttore per avviso, non uno solo.** Sono quattro motivi diversi di essere
+ * interrotti — non registri spese, hai sforato un budget, la sincronizzazione è ferma, la
+ * chiave di un gruppo non è mai stata salvata — e chi ne vuole uno non vuole necessariamente
+ * gli altri. `parseSettings` era scritta perché aggiungerne uno non toccasse le righe degli
+ * altri: l'ha dimostrato il terzo, e adesso di nuovo il quarto.
  */
 
 export interface NotificationSettings {
@@ -21,6 +21,8 @@ export interface NotificationSettings {
   budget: boolean;
   /** Avviso «le spese non arrivano agli altri telefoni da un pezzo» (Step 33). */
   sync: boolean;
+  /** Avviso «la chiave di questo gruppo non risulta salvata da nessuna parte» (Step 43). */
+  backup: boolean;
 }
 
 /** La chiave in `app_meta`. Una sola per tutti gli avvisi. */
@@ -37,6 +39,7 @@ export const DEFAULT_SETTINGS: NotificationSettings = {
   reminder: false,
   budget: false,
   sync: false,
+  backup: false,
 };
 
 /**
@@ -61,8 +64,13 @@ export function parseSettings(raw: string | null): NotificationSettings {
   }
   if (typeof parsed !== 'object' || parsed === null) return DEFAULT_SETTINGS;
 
-  const { reminder, budget, sync } = parsed as Record<string, unknown>;
-  return { reminder: reminder === true, budget: budget === true, sync: sync === true };
+  const { reminder, budget, sync, backup } = parsed as Record<string, unknown>;
+  return {
+    reminder: reminder === true,
+    budget: budget === true,
+    sync: sync === true,
+    backup: backup === true,
+  };
 }
 
 export function serializeSettings(settings: NotificationSettings): string {

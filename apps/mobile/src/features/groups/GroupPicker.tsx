@@ -127,6 +127,18 @@ export function GroupPicker({ currentStats, onDone }: GroupPickerProps) {
               router.push('/backup');
             }}
           />
+          {/* La quarta strada, e l'ultima: chi non ha nemmeno la chiave. Sta sotto il
+              ripristino e non accanto, perché è la scelta peggiore delle due — ricostruisce
+              i dati ma non riaggancia il vault — e l'ordine è ciò che lo dice senza
+              scriverlo. */}
+          <Button
+            label={t('groups.importExport')}
+            variant="secondary"
+            onPress={() => {
+              onDone();
+              router.push('/importa');
+            }}
+          />
         </View>
       )}
 

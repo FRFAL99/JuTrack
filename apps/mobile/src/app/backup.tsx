@@ -9,8 +9,9 @@ import { ModalScreen } from '@/components/ModalScreen';
 import { assessPassphrase } from '@/features/backup/passphrase';
 import { exportFileName } from '@/features/export/filenames';
 import { isFileSharingAvailable, shareTextFile } from '@/features/export/share';
+import { recordBackup } from '@/features/notifications/backup';
 import { expoRandom } from '@/platform';
-import { useCurrentGroup, useGroups } from '@/state';
+import { useAppData, useCurrentGroup, useGroups } from '@/state';
 import { useTheme } from '@/theme';
 
 /**
@@ -36,6 +37,7 @@ import { useTheme } from '@/theme';
  */
 export default function BackupScreen() {
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
+  const { meta } = useAppData();
   const { registry, groups, join, select } = useGroups();
   const group = useCurrentGroup();
 
@@ -82,8 +84,22 @@ export default function BackupScreen() {
         const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
         const name = exportFileName('chiave', 'txt', new Date());
 
+        /**
+         * Segna che la chiave di questo gruppo è uscita dall'app, cifrata.
+         *
+         * **È il massimo che si possa osservare, e va detto.** Né il foglio di condivisione
+         * né gli appunti dicono se chi ha ricevuto il file l'ha poi conservato: `shareAsync`
+         * torna quando il foglio si è aperto, e un annullamento dopo non si vede (vedi
+         * `ShareOutcome`). Marcare qui significa quindi «la chiave cifrata ha lasciato
+         * l'app», non «esiste un backup al sicuro» — ed è esattamente per questo che
+         * l'avviso dello Step 43 dice «non **risulta** un backup» invece di «non hai
+         * salvato». La frase è vera in entrambe le direzioni dell'incertezza.
+         */
+        const remember = (): Promise<void> => recordBackup(meta, group.vaultId);
+
         if (!isFileSharingAvailable()) {
           await Clipboard.setStringAsync(blob);
+          await remember();
           Alert.alert(
             'Backup negli appunti',
             `Cifratura completata in ${elapsed} s. Su questa build manca il modulo per salvare i ` +
@@ -102,9 +118,11 @@ export default function BackupScreen() {
         if (outcome.status === 'failed') throw outcome.error;
         if (outcome.status === 'unavailable') {
           await Clipboard.setStringAsync(blob);
+          await remember();
           Alert.alert('Backup negli appunti', 'Il foglio di condivisione non è disponibile qui.');
           return;
         }
+        await remember();
         Alert.alert(
           'Backup creato',
           `Cifratura completata in ${elapsed} s. Conserva il file dove conservi le password, e ` +
