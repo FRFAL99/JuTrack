@@ -101,6 +101,11 @@ export const en: Dictionary = {
       creating: 'Creating…',
       failed: 'Could not create the group',
     },
+    required: {
+      title: 'You need a group',
+      hint: '{{what}} is about a group, and you don’t have one open yet. Create one, or join with an invite you’ve received.',
+      defaultWhat: 'This screen',
+    },
   },
   home: {
     groupLabel: 'Group {{name}}',
@@ -727,5 +732,109 @@ export const en: Dictionary = {
     permissionDenied: 'not granted',
     widgetsUnreachable: 'providers NOT reachable — needs the EAS build from Step 30',
     widgetsOk: '{{count}} providers respond ({{placed}} on the home screen)',
+  },
+  onboarding: {
+    profile: {
+      heading: 'What’s your name?',
+      hint: 'It’s only so the people you split expenses with can recognise you. It stays on your phone and inside the groups you join: no account, no email.',
+      colorLabel: 'Your colour',
+      saving: 'One moment…',
+      start: 'Get started',
+    },
+    identity: {
+      heading: 'Who are you in this group?',
+      hint: 'If you’re joining now, you’re a new person. But if you restored the key on a new phone, you’re already someone in here: saying so avoids showing up twice and throwing off the balance.',
+      chooseNew: 'I’m new — join as {{name}}',
+      waiting: 'Still downloading who’s in the group…',
+      noOthers: 'There’s no one else in this group yet.',
+      orSameName: 'Or: I was already here, under this name',
+    },
+  },
+  pairing: {
+    receivedTitle: 'Invite received',
+    qrLabel: 'Pairing QR code',
+    join: {
+      title: 'Invite',
+      noInviteTitle: 'No invite received',
+      enteringTitle: 'Joining…',
+      noInviteHint: 'Open the link they sent you, or paste the other phone’s code here.',
+      receivedHint:
+        'Confirm to add the group to the ones you already have. None of your groups are affected.',
+      pasteOrScan: 'Paste or scan a code',
+      backToGroups: 'Back to your groups',
+    },
+    deepLink: {
+      title: 'Pairing',
+      noCodeTitle: 'No code received',
+      noCodeHint:
+        'Open the scanner to frame the code shown on the other phone, or show yours to let it into this vault.',
+      receivedHint: 'Confirm to pair this phone with the vault the code points to.',
+      scan: 'Scan a code',
+      showMyCode: 'Show my code',
+    },
+    invite: {
+      guardTitle: 'Invite someone',
+      requiredWhat: 'An invite',
+      title: 'Invite to “{{name}}”',
+      keyUnreadable: 'This group’s key can’t be read on this device.',
+      shareMessage: 'Join “{{name}}” on JuTrack:\n{{url}}',
+      explainHeading: 'What you’re about to send',
+      explainIntro: 'This group’s key.',
+      explainWarning: 'Anyone who opens the link gets in',
+      explainRest:
+        ': send it to the right person and no one else. If it gets forwarded, whoever receives it can read every expense in the group too, now and in the future.',
+      linkPersists:
+        'The link stays in the conversation you sent it in. After {{minutes}} minutes it stops being accepted, but the key inside it doesn’t: if you sent it to the wrong person, the only fix is to leave the group and start over.',
+      scopeNote:
+        'It only applies to “{{name}}”: your other groups aren’t involved and stay out of reach for whoever receives it. The relay can’t read it — the key sits in the part of the address browsers never send to servers.',
+      preparing: 'Preparing…',
+      understood: 'Got it, prepare the invite',
+      expiredTitle: 'Invite expired',
+      expiredRegenerate: 'Prepare a new invite',
+      sendLinkHeading: 'Send the link',
+      linkValidFor:
+        'Whoever opens it finds a button that opens JuTrack on their phone. Still valid for {{remaining}}.',
+      shareLink: 'Share the link',
+      copyLink: 'Copy the link',
+      linkCopied: 'Link copied',
+      scanHeading: 'Or scan a code',
+      showQrHint:
+        'If you both have your phones out, the QR code avoids passing the key through a chat. On the other one: Groups → Join with an invite → Scan a code.',
+      showQr: 'Show the QR code',
+      regenerate: 'Regenerate the invite',
+    },
+    scan: {
+      title: 'Join a group',
+      activating: 'Turning on the camera…',
+      cameraUnavailable: 'Camera unavailable',
+      permission: {
+        unknown: 'Asking for permission to use the camera.',
+        denied:
+          'Permission denied. You can grant it in system settings, or paste the code below instead.',
+        unavailable:
+          'This build doesn’t expose the camera. Pairing still works by pasting the code below.',
+      },
+      pasteHeading: 'Or paste the invite',
+      pasteHintIntro: 'Either the link they sent you in chat, or an address that starts with',
+      schemePrefix: 'jutrack://',
+      pasteHintRest:
+        '. It contains the group’s key in plain sight: once you’ve used it, don’t leave it lying around.',
+      placeholder: 'https://…/j#v=1&k=…',
+      linkLabel: 'Pairing code',
+      paste: 'Paste',
+      connecting: 'Pairing…',
+      connect: 'Pair',
+    },
+    confirm: {
+      unnamedGroup: 'Shared group',
+      joinedTitle: 'You’re in the group',
+      joinedBody:
+        'This phone’s expenses and the other one’s come together here. You’ll show up among the group’s people under your name.',
+      confirmTitleGeneric: 'Join this group?',
+      confirmTitleNamed: 'Join “{{name}}”?',
+      confirmBody:
+        'It’ll be added to your groups, without touching the ones you already have. Expenses are end-to-end encrypted: whoever holds this key can read them, and no one else.',
+      enter: 'Join',
+    },
   },
 };

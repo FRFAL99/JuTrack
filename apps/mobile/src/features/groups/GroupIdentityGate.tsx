@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
@@ -26,6 +27,7 @@ export function GroupIdentityGate({
 }: {
   identity: Extract<GroupIdentity, { status: 'pending' }>;
 }) {
+  const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const insets = useSafeAreaInsets();
   const profile = useProfile();
@@ -67,17 +69,15 @@ export function GroupIdentityGate({
           accessibilityRole="header"
           style={{ color: colors.text, fontSize: fontSize.xxl, fontWeight: fontWeight.bold }}
         >
-          Chi sei in questo gruppo?
+          {t('onboarding.identity.heading')}
         </Text>
         <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-          Se stai entrando adesso, sei una persona nuova. Se invece hai ripristinato la chiave su un
-          telefono nuovo, qui dentro sei già qualcuno: dirlo evita di comparire due volte e di
-          sballare il saldo.
+          {t('onboarding.identity.hint')}
         </Text>
       </View>
 
       <Button
-        label={`Sono nuovo — entro come ${profile.name}`}
+        label={t('onboarding.identity.chooseNew', { name: profile.name })}
         onPress={() => choose(profile.profileId)}
         loading={choosing}
       />
@@ -85,10 +85,10 @@ export function GroupIdentityGate({
       <View style={{ gap: spacing.sm }}>
         <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
           {waiting
-            ? 'Sto ancora scaricando chi fa parte del gruppo…'
+            ? t('onboarding.identity.waiting')
             : members.length === 0
-              ? 'In questo gruppo non c’è ancora nessun altro.'
-              : 'Oppure: ero già qui, con questo nome'}
+              ? t('onboarding.identity.noOthers')
+              : t('onboarding.identity.orSameName')}
         </Text>
 
         {members.map((member) => (

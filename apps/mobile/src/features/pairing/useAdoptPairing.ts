@@ -1,11 +1,9 @@
 import { useCallback, useRef, useState } from 'react';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Alert } from 'react-native';
 import { describePairingError, deriveVaultKeys, parseInvite } from '@jutrack/core';
 import { useGroups } from '@/state';
-
-/** Come si chiama un gruppo di cui l'invito non porta il nome. */
-const UNNAMED_GROUP = 'Gruppo condiviso';
 
 interface AdoptPairing {
   /** Interpreta un invito (scansionato, incollato o arrivato per link) e chiede conferma. */
@@ -29,6 +27,7 @@ interface AdoptPairing {
  * da chiedere — il runtime si rimonta sul gruppo nuovo da solo.
  */
 export function useAdoptPairing(): AdoptPairing {
+  const { t } = useTranslation();
   const { groups, join, select } = useGroups();
   const [error, setError] = useState<string | null>(null);
   const [adopting, setAdopting] = useState(false);
@@ -41,14 +40,10 @@ export function useAdoptPairing(): AdoptPairing {
       setAdopting(true);
       // Il nome dell'invito è solo un suggerimento per la riga del registro: l'autorevole
       // sta dentro il vault e arriva col primo sync, sovrascrivendo questo.
-      void join(key, name ?? UNNAMED_GROUP)
+      void join(key, name ?? t('pairing.confirm.unnamedGroup'))
         .then((group) => {
           router.replace(`/groups/${group.vaultId}`);
-          Alert.alert(
-            'Sei nel gruppo',
-            'Le spese di questo telefono e quelle dell’altro si uniscono qui. ' +
-              'Comparirai fra le persone del gruppo con il tuo nome.',
-          );
+          Alert.alert(t('pairing.confirm.joinedTitle'), t('pairing.confirm.joinedBody'));
         })
         .catch((cause: unknown) => {
           setError(cause instanceof Error ? cause.message : String(cause));
@@ -56,7 +51,7 @@ export function useAdoptPairing(): AdoptPairing {
         })
         .finally(() => setAdopting(false));
     },
-    [join],
+    [join, t],
   );
 
   const submit = useCallback(
@@ -83,22 +78,23 @@ export function useAdoptPairing(): AdoptPairing {
       }
 
       Alert.alert(
-        result.name === null ? 'Entrare in questo gruppo?' : `Entrare in «${result.name}»?`,
-        `Verrà aggiunto ai tuoi gruppi, senza toccare quelli che hai già. ` +
-          `Le spese sono cifrate end-to-end: chi ha questa chiave le legge, e nessun altro.`,
+        result.name === null
+          ? t('pairing.confirm.confirmTitleGeneric')
+          : t('pairing.confirm.confirmTitleNamed', { name: result.name }),
+        t('pairing.confirm.confirmBody'),
         [
           {
-            text: 'Annulla',
+            text: t('common.cancel'),
             style: 'cancel',
             onPress: () => {
               handled.current = false;
             },
           },
-          { text: 'Entra', onPress: () => adopt(result.key, result.name) },
+          { text: t('pairing.confirm.enter'), onPress: () => adopt(result.key, result.name) },
         ],
       );
     },
-    [adopt, groups, select],
+    [adopt, groups, select, t],
   );
 
   return { submit, error, adopting };

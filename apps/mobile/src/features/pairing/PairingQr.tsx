@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import Svg, { Path, Rect } from 'react-native-svg';
 import { buildQrPath } from './qr-path';
@@ -17,10 +18,11 @@ interface PairingQrProps {
  * canonico, e un codice invertito viene spesso ignorato in silenzio.
  */
 export function PairingQr({ value, size }: PairingQrProps) {
+  const { t } = useTranslation();
   const { path, extent } = useMemo(() => buildQrPath(value), [value]);
 
   return (
-    <View accessible accessibilityLabel="Codice QR di collegamento">
+    <View accessible accessibilityLabel={t('pairing.qrLabel')}>
       <Svg width={size} height={size} viewBox={`0 0 ${extent} ${extent}`}>
         <Rect x={0} y={0} width={extent} height={extent} fill="#FFFFFF" />
         <Path d={path} fill="#101014" />

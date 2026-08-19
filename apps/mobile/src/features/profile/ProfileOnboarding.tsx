@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Button } from '@/components/Button';
@@ -15,6 +16,7 @@ import { ColorChoice } from './ColorChoice';
  * serve all'altra persona per riconoscerti nella lista, e non lascia mai il vault.
  */
 export function ProfileOnboarding() {
+  const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const insets = useSafeAreaInsets();
   const { register } = useAppData();
@@ -53,11 +55,10 @@ export function ProfileOnboarding() {
           accessibilityRole="header"
           style={{ color: colors.text, fontSize: fontSize.xxl, fontWeight: fontWeight.bold }}
         >
-          Come ti chiami?
+          {t('onboarding.profile.heading')}
         </Text>
         <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-          Serve solo perché chi divide le spese con te ti riconosca. Resta sul tuo telefono e dentro
-          i gruppi a cui partecipi: nessun account, nessuna email.
+          {t('onboarding.profile.hint')}
         </Text>
       </View>
 
@@ -65,13 +66,13 @@ export function ProfileOnboarding() {
         value={name}
         onChangeText={setName}
         onSubmitEditing={handleSubmit}
-        placeholder="Il tuo nome"
+        placeholder={t('you.name.label')}
         placeholderTextColor={colors.textMuted}
         maxLength={MAX_PROFILE_NAME}
         autoFocus
         autoCapitalize="words"
         returnKeyType="done"
-        accessibilityLabel="Il tuo nome"
+        accessibilityLabel={t('you.name.label')}
         style={{
           color: colors.text,
           fontSize: fontSize.lg,
@@ -84,7 +85,9 @@ export function ProfileOnboarding() {
       />
 
       <View style={{ gap: spacing.sm }}>
-        <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>Il tuo colore</Text>
+        <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
+          {t('onboarding.profile.colorLabel')}
+        </Text>
         <ColorChoice value={color} onChange={setColor} />
       </View>
 
@@ -95,7 +98,7 @@ export function ProfileOnboarding() {
       )}
 
       <Button
-        label={saving ? 'Un attimo…' : 'Comincia'}
+        label={saving ? t('onboarding.profile.saving') : t('onboarding.profile.start')}
         onPress={handleSubmit}
         disabled={normalized === null}
         loading={saving}

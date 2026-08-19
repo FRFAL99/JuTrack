@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { View } from 'react-native';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
@@ -24,17 +25,19 @@ interface GroupRequiredProps {
  * viene scritta prima dello stato vuoto che la attiva: quando arriva il ramo, il posto dove
  * metterlo esiste già.
  */
-export function GroupRequired({ what = 'Questa schermata' }: GroupRequiredProps) {
+export function GroupRequired({ what }: GroupRequiredProps) {
+  const { t } = useTranslation();
   const { spacing } = useTheme();
+  const resolvedWhat = what ?? t('groups.required.defaultWhat');
   return (
     <View style={{ flex: 1 }}>
       <EmptyState
         icon="👥"
-        title="Serve un gruppo"
-        hint={`${what} riguarda un gruppo, e per ora non ne hai nessuno aperto. Creane uno o entra con un invito ricevuto.`}
+        title={t('groups.required.title')}
+        hint={t('groups.required.hint', { what: resolvedWhat })}
       />
       <View style={{ padding: spacing.lg }}>
-        <Button label="I tuoi gruppi" onPress={() => router.push('/')} />
+        <Button label={t('groups.title')} onPress={() => router.push('/')} />
       </View>
     </View>
   );

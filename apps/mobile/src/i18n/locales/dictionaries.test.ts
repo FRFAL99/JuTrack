@@ -86,6 +86,12 @@ describe('dizionari', () => {
       // «vault» è il nome della cosa, non una parola italiana: si chiama così anche nel
       // codice, nel threat model e nel nome delle tabelle.
       'groups.vaultShort',
+      // Lo schema di un URI di pairing (`jutrack://`): un identificatore tecnico, non una
+      // frase, e non cambia con la lingua.
+      'pairing.scan.schemePrefix',
+      // La forma di un link di invito, usata come esempio nel campo di testo: è una
+      // struttura di URL, non una frase da tradurre.
+      'pairing.scan.placeholder',
       // Mese e anno stanno nello stesso ordine in tutte e due le lingue. È l'unico dei
       // cinque modelli di data a non cambiare: gli altri quattro sì, ed è il motivo per cui
       // stanno nel dizionario.

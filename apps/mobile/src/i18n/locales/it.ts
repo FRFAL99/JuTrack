@@ -106,6 +106,12 @@ export const it = {
       creating: 'Creazione…',
       failed: 'Creazione fallita',
     },
+    /** Cosa si vede al posto di una schermata che ha bisogno di un gruppo, quando non ce n'è. */
+    required: {
+      title: 'Serve un gruppo',
+      hint: '{{what}} riguarda un gruppo, e per ora non ne hai nessuno aperto. Creane uno o entra con un invito ricevuto.',
+      defaultWhat: 'Questa schermata',
+    },
   },
   home: {
     groupLabel: 'Gruppo {{name}}',
@@ -745,6 +751,114 @@ export const it = {
     permissionDenied: 'non concesso',
     widgetsUnreachable: 'provider NON raggiungibili — serve la build EAS dello Step 30',
     widgetsOk: '{{count}} provider rispondono ({{placed}} sulla home)',
+  },
+  onboarding: {
+    profile: {
+      heading: 'Come ti chiami?',
+      hint: 'Serve solo perché chi divide le spese con te ti riconosca. Resta sul tuo telefono e dentro i gruppi a cui partecipi: nessun account, nessuna email.',
+      colorLabel: 'Il tuo colore',
+      saving: 'Un attimo…',
+      start: 'Comincia',
+    },
+    identity: {
+      heading: 'Chi sei in questo gruppo?',
+      hint: 'Se stai entrando adesso, sei una persona nuova. Se invece hai ripristinato la chiave su un telefono nuovo, qui dentro sei già qualcuno: dirlo evita di comparire due volte e di sballare il saldo.',
+      chooseNew: 'Sono nuovo — entro come {{name}}',
+      waiting: 'Sto ancora scaricando chi fa parte del gruppo…',
+      noOthers: 'In questo gruppo non c’è ancora nessun altro.',
+      orSameName: 'Oppure: ero già qui, con questo nome',
+    },
+  },
+  pairing: {
+    receivedTitle: 'Invito ricevuto',
+    qrLabel: 'Codice QR di collegamento',
+    join: {
+      title: 'Invito',
+      noInviteTitle: 'Nessun invito ricevuto',
+      enteringTitle: 'Ingresso in corso…',
+      noInviteHint:
+        'Apri il link che ti hanno mandato, oppure incolla qui il codice dell’altro telefono.',
+      receivedHint:
+        'Conferma per aggiungere il gruppo a quelli che hai già. Nessuno dei tuoi gruppi viene toccato.',
+      pasteOrScan: 'Incolla o scansiona un codice',
+      backToGroups: 'Torna ai gruppi',
+    },
+    deepLink: {
+      title: 'Collegamento',
+      noCodeTitle: 'Nessun codice ricevuto',
+      noCodeHint:
+        'Apri lo scanner per inquadrare il codice mostrato dall’altro telefono, o mostra il tuo per farlo entrare in questo vault.',
+      receivedHint: 'Conferma per collegare questo telefono al vault indicato dal codice.',
+      scan: 'Scansiona un codice',
+      showMyCode: 'Mostra il mio codice',
+    },
+    invite: {
+      guardTitle: 'Invita qualcuno',
+      requiredWhat: 'Un invito',
+      title: 'Invita in «{{name}}»',
+      keyUnreadable: 'La chiave di questo gruppo non è leggibile su questo dispositivo.',
+      shareMessage: 'Entra in «{{name}}» su JuTrack:\n{{url}}',
+      explainHeading: 'Cosa stai per mandare',
+      explainIntro: 'La chiave di questo gruppo.',
+      explainWarning: 'Chiunque apra il link entra',
+      explainRest:
+        ': mandalo alla persona giusta e a nessun altro. Se viene inoltrato, anche chi lo riceve di rimbalzo legge tutte le spese del gruppo, adesso e in futuro.',
+      linkPersists:
+        'Il link resta nella conversazione in cui l’hai mandato. Dopo {{minutes}} minuti smette di essere accettato, ma la chiave che contiene no: se hai sbagliato destinatario, l’unico rimedio è uscire dal gruppo e rifarlo.',
+      scopeNote:
+        'Vale solo per «{{name}}»: gli altri tuoi gruppi non c’entrano e restano inaccessibili a chi lo riceve. Il relay non lo legge — la chiave sta nella parte dell’indirizzo che i browser non inviano ai server.',
+      preparing: 'Preparazione…',
+      understood: 'Ho capito, prepara l’invito',
+      expiredTitle: 'Invito scaduto',
+      expiredRegenerate: 'Prepara un nuovo invito',
+      sendLinkHeading: 'Manda il link',
+      linkValidFor:
+        'Chi lo apre trova un bottone che apre JuTrack sul suo telefono. Valido ancora {{remaining}}.',
+      shareLink: 'Condividi il link',
+      copyLink: 'Copia il link',
+      linkCopied: 'Link copiato',
+      scanHeading: 'Oppure inquadra un codice',
+      showQrHint:
+        'Se avete i due telefoni davanti, il QR evita di far passare la chiave da una chat. Sull’altro: Gruppi → Entra in un gruppo → Scansiona un codice.',
+      showQr: 'Mostra il codice QR',
+      regenerate: 'Rigenera l’invito',
+    },
+    scan: {
+      title: 'Entra in un gruppo',
+      activating: 'Attivazione fotocamera…',
+      cameraUnavailable: 'Fotocamera non disponibile',
+      permission: {
+        unknown: 'Sto chiedendo il permesso di usare la fotocamera.',
+        denied:
+          'Permesso negato. Puoi concederlo dalle impostazioni di sistema, oppure incollare il codice qui sotto.',
+        unavailable:
+          'Questa build non espone la fotocamera. Il collegamento funziona comunque incollando il codice qui sotto.',
+      },
+      pasteHeading: 'Oppure incolla l’invito',
+      pasteHintIntro:
+        'Va bene sia il link che ti hanno mandato in chat, sia un indirizzo che comincia con',
+      /** Lo schema dell'URI di pairing: uguale in ogni lingua, non è una frase da tradurre. */
+      schemePrefix: 'jutrack://',
+      pasteHintRest:
+        '. Contiene la chiave del gruppo in chiaro: dopo averlo usato, non lasciarlo in giro.',
+      /** La forma di un link di invito, non una frase: resta uguale in ogni lingua. */
+      placeholder: 'https://…/j#v=1&k=…',
+      linkLabel: 'Codice di collegamento',
+      paste: 'Incolla',
+      connecting: 'Collegamento…',
+      connect: 'Collega',
+    },
+    confirm: {
+      unnamedGroup: 'Gruppo condiviso',
+      joinedTitle: 'Sei nel gruppo',
+      joinedBody:
+        'Le spese di questo telefono e quelle dell’altro si uniscono qui. Comparirai fra le persone del gruppo con il tuo nome.',
+      confirmTitleGeneric: 'Entrare in questo gruppo?',
+      confirmTitleNamed: 'Entrare in «{{name}}»?',
+      confirmBody:
+        'Verrà aggiunto ai tuoi gruppi, senza toccare quelli che hai già. Le spese sono cifrate end-to-end: chi ha questa chiave le legge, e nessun altro.',
+      enter: 'Entra',
+    },
   },
 };
 
