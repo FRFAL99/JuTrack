@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { budgetStatuses, monthBounds, parseAmount, shiftMonth } from '@jutrack/core';
 import { formatCents, formatMoney } from '@/i18n/money';
@@ -17,6 +18,7 @@ import { useTheme } from '@/theme';
  * far finta che sia automatico.
  */
 export default function BudgetScreen() {
+  const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const symbol = useCurrencySymbol();
   const store = useVaultStore();
@@ -47,7 +49,7 @@ export default function BudgetScreen() {
     const trimmed = draft.trim();
     const limitCents = trimmed === '' ? 0 : parseAmount(trimmed);
     if (limitCents === null || limitCents < 0) {
-      Alert.alert('Limite non valido', 'Inserisci un importo, oppure lascia vuoto per rimuoverlo.');
+      Alert.alert(t('budget.invalidLimitTitle'), t('budget.invalidLimitBody'));
       setDrafts((c) => ({ ...c, [categoryId]: '' }));
       return;
     }
@@ -70,7 +72,7 @@ export default function BudgetScreen() {
   };
 
   return (
-    <ModalScreen title="Budget">
+    <ModalScreen title={t('budget.title')}>
       <ScrollView
         contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}
         keyboardShouldPersistTaps="handled"
@@ -79,7 +81,7 @@ export default function BudgetScreen() {
           <View style={styles.rowBetween}>
             <Step
               label="‹"
-              hint="Mese precedente"
+              hint={t('budget.prevMonth')}
               onPress={() => setMonth(shiftMonth(month, -1))}
             />
             <Text
@@ -87,12 +89,16 @@ export default function BudgetScreen() {
             >
               {formatMonthTitle(month)}
             </Text>
-            <Step label="›" hint="Mese successivo" onPress={() => setMonth(shiftMonth(month, 1))} />
+            <Step
+              label="›"
+              hint={t('budget.nextMonth')}
+              onPress={() => setMonth(shiftMonth(month, 1))}
+            />
           </View>
           {budgets.length === 0 && previousBudgets.length > 0 && (
             <Pressable onPress={copyPrevious} accessibilityRole="button" hitSlop={8}>
               <Text style={{ color: colors.accent, fontSize: fontSize.sm, textAlign: 'center' }}>
-                Copia i limiti di {formatMonthTitle(shiftMonth(month, -1))}
+                {t('budget.copyPrevious', { month: formatMonthTitle(shiftMonth(month, -1)) })}
               </Text>
             </Pressable>
           )}
@@ -120,11 +126,11 @@ export default function BudgetScreen() {
                     onChangeText={(text) => setDrafts((c) => ({ ...c, [category.id]: text }))}
                     onBlur={() => commit(category.id)}
                     onSubmitEditing={() => commit(category.id)}
-                    placeholder="nessun limite"
+                    placeholder={t('budget.noLimitPlaceholder')}
                     placeholderTextColor={colors.textMuted}
                     keyboardType="decimal-pad"
                     returnKeyType="done"
-                    accessibilityLabel={`Limite mensile per ${category.name}`}
+                    accessibilityLabel={t('budget.limitA11y', { name: category.name })}
                     style={{
                       width: 130,
                       textAlign: 'right',
@@ -143,10 +149,14 @@ export default function BudgetScreen() {
                   <Text
                     style={{ color: colors.textMuted, fontSize: fontSize.xs, textAlign: 'right' }}
                   >
-                    Spesi {formatMoney(status.spentCents, symbol)}
+                    {t('budget.spent', { amount: formatMoney(status.spentCents, symbol) })}
                     {status.state === 'over'
-                      ? ` · superato di ${formatMoney(-status.remainingCents, symbol)}`
-                      : ` · restano ${formatMoney(status.remainingCents, symbol)}`}
+                      ? t('budget.spentOver', {
+                          amount: formatMoney(-status.remainingCents, symbol),
+                        })
+                      : t('budget.spentUnder', {
+                          amount: formatMoney(status.remainingCents, symbol),
+                        })}
                   </Text>
                 )}
               </View>
@@ -162,8 +172,7 @@ export default function BudgetScreen() {
             paddingHorizontal: spacing.xs,
           }}
         >
-          I limiti valgono per {formatMonthTitle(month)} e sono condivisi con l&apos;altro
-          dispositivo. Lasciare vuoto un campo toglie il limite.
+          {t('budget.footerNote', { month: formatMonthTitle(month) })}
         </Text>
       </ScrollView>
     </ModalScreen>

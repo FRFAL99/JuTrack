@@ -86,6 +86,12 @@ describe('dizionari', () => {
       // «vault» è il nome della cosa, non una parola italiana: si chiama così anche nel
       // codice, nel threat model e nel nome delle tabelle.
       'groups.vaultShort',
+      // Lo schema di un URI di pairing (`jutrack://`): un identificatore tecnico, non una
+      // frase, e non cambia con la lingua.
+      'pairing.scan.schemePrefix',
+      // La forma di un link di invito, usata come esempio nel campo di testo: è una
+      // struttura di URL, non una frase da tradurre.
+      'pairing.scan.placeholder',
       // Mese e anno stanno nello stesso ordine in tutte e due le lingue. È l'unico dei
       // cinque modelli di data a non cambiare: gli altri quattro sì, ed è il motivo per cui
       // stanno nel dizionario.
@@ -93,6 +99,35 @@ describe('dizionari', () => {
       // «1 tag» al singolare si scrive uguale: in italiano «tag» è invariabile, in inglese
       // la s arriva solo dal secondo in poi. La forma `.other` infatti differisce.
       'expense.extra.tagCount.one',
+      // «Tag» come intestazione di sezione è un singolare, e la parola è la stessa nelle
+      // due lingue: come «vault», non un copia-incolla dimenticato.
+      'stats.filters.sections.tag',
+      // Etichetta e importo separati da due punti: la struttura non cambia con la lingua,
+      // e non c'è una parola da tradurre. Vale per entrambi i grafici che la usano.
+      'stats.pointA11y',
+      'stats.heatmap.dayA11y',
+      // Stesso caso, con un terzo segnaposto: il conteggio arriva già tradotto da
+      // `plural('stats.expenseCount', …)`, quindi qui non resta una parola da cambiare.
+      'stats.topListA11y',
+      // «Budget» è un prestito che l'inglese ha dato all'italiano: si scrive uguale in
+      // entrambe le lingue, come «vault».
+      'dashboard.widgets.budget.title',
+      'budget.title',
+      // Il prefisso del formato di backup, non una frase: si legge uguale in ogni lingua.
+      'backup.blobPlaceholder',
+      // «Passphrase» è già un prestito inglese nell'italiano di questa schermata: non
+      // esiste un termine italiano separato da tradurre.
+      'backup.passphrasePlaceholder',
+      // Sintassi JSON d'esempio, non una frase: si legge uguale in ogni lingua.
+      'importScreen.filePlaceholder',
+      // «Budget» al singolare è invariato in italiano, come «tag» in
+      // expense.extra.tagCount.one: solo il plurale inglese cambia forma.
+      'importScreen.summary.budgets.one',
+      // «OK» è la stessa sigla in entrambe le lingue.
+      'probe.ok',
+      // «SecureStore» è il nome del modulo, non una parola italiana: etichetta e risultato
+      // separati da due punti, come stats.pointA11y — non c'è una parola da tradurre.
+      'probe.steps.secureStore',
     ]);
 
     for (const [key, italianText] of dictionaries.it!) {

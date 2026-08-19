@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, ScrollView, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Svg, { Rect } from 'react-native-svg';
 import { HEATMAP_LEVELS, type HeatmapCell } from '@jutrack/core';
 import { formatMoney } from '@/i18n/money';
@@ -40,6 +41,7 @@ const LABELLED_ROWS = [0, 2, 4];
  * Native no — ed è la stessa che usa tutto il resto dell'app.
  */
 export function CalendarHeatmap({ cells }: CalendarHeatmapProps) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const symbol = useCurrencySymbol();
   const { width, onLayout } = useChartWidth();
@@ -129,11 +131,13 @@ export function CalendarHeatmap({ cells }: CalendarHeatmapProps) {
                         onPress={() => setSelected(selected?.date === day.date ? null : day)}
                         accessibilityRole="button"
                         accessibilityState={{ selected: selected?.date === day.date }}
-                        accessibilityLabel={`${formatDayTitle(day.date)}: ${
-                          day.totalCents === 0
-                            ? 'nessuna spesa'
-                            : formatMoney(day.totalCents, symbol)
-                        }`}
+                        accessibilityLabel={t('stats.heatmap.dayA11y', {
+                          day: formatDayTitle(day.date),
+                          amount:
+                            day.totalCents === 0
+                              ? t('stats.heatmap.noExpense')
+                              : formatMoney(day.totalCents, symbol),
+                        })}
                         style={{
                           position: 'absolute',
                           left: columnIndex * (cell + GAP),
@@ -151,21 +155,19 @@ export function CalendarHeatmap({ cells }: CalendarHeatmapProps) {
 
           {scrolls && (
             <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-              Il periodo è lungo: trascina la griglia per vedere le altre settimane.
+              {t('stats.heatmap.scrollHint')}
             </Text>
           )}
 
           <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
             {selected === null ? (
-              <Text style={{ color: colors.textMuted }}>
-                Tocca un giorno per sapere quanto è costato.
-              </Text>
+              <Text style={{ color: colors.textMuted }}>{t('stats.heatmap.tapHint')}</Text>
             ) : (
               <>
                 {formatDayTitle(selected.date)}{' '}
                 <Text style={{ fontWeight: fontWeight.semibold }}>
                   {selected.totalCents === 0
-                    ? '· nessuna spesa'
+                    ? `· ${t('stats.heatmap.noExpense')}`
                     : `· ${formatMoney(selected.totalCents, symbol)}`}
                 </Text>
               </>
@@ -199,7 +201,12 @@ export function CalendarHeatmap({ cells }: CalendarHeatmapProps) {
                     }}
                   />
                   <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-                    {level === 0 ? 'niente' : `da ${compactAmount(threshold ?? 0)} ${symbol}`}
+                    {level === 0
+                      ? t('stats.heatmap.legendNone')
+                      : t('stats.heatmap.legendFrom', {
+                          amount: compactAmount(threshold ?? 0),
+                          symbol,
+                        })}
                   </Text>
                 </View>
               );

@@ -1,7 +1,9 @@
 import { Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Feather from '@expo/vector-icons/Feather';
-import { queryParts, type QueryLabels } from '@jutrack/core';
+import { type QueryLabels } from '@jutrack/core';
 import { Chip } from '@/components/Chip';
+import { queryParts } from '@/i18n/query';
 import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import type { QueryFacets } from './facets';
@@ -29,11 +31,12 @@ interface FilterBarProps {
  * schermata che non mostra niente, e chiedere di aprire un foglio per trovarla vorrebbe dire
  * chiederlo proprio a chi non ha capito cosa sta succedendo.
  *
- * Le frasi le costruisce `queryParts` di `@jutrack/core`, la stessa che scrive il sottotitolo
+ * Le frasi le costruisce `queryParts` di `@/i18n/query`, la stessa che scrive il sottotitolo
  * di `describeQuery`: due elenchi scritti in due punti finirebbero per dire due cose diverse
  * della stessa domanda.
  */
 export function FilterBar({ period, facets, labels, onOpen, onReset }: FilterBarProps) {
+  const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const parts = queryParts(facets, labels, useCurrencySymbol());
 
@@ -55,7 +58,7 @@ export function FilterBar({ period, facets, labels, onOpen, onReset }: FilterBar
       <Pressable
         onPress={onOpen}
         accessibilityRole="button"
-        accessibilityLabel={`Periodo: ${periodLabel(period)}. Tocca per cambiare i filtri`}
+        accessibilityLabel={t('stats.filters.periodA11y', { label: periodLabel(period) })}
         style={{
           flexDirection: 'row',
           alignItems: 'center',
@@ -83,7 +86,7 @@ export function FilterBar({ period, facets, labels, onOpen, onReset }: FilterBar
           label={part}
           selected
           onPress={onOpen}
-          accessibilityLabel={`Filtro attivo: ${part}. Tocca per cambiarlo`}
+          accessibilityLabel={t('stats.filters.activeA11y', { part })}
         />
       ))}
 
@@ -91,23 +94,27 @@ export function FilterBar({ period, facets, labels, onOpen, onReset }: FilterBar
         <Pressable
           onPress={onReset}
           accessibilityRole="button"
-          accessibilityLabel="Azzera i filtri"
+          accessibilityLabel={t('stats.filters.resetA11y')}
           hitSlop={8}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4 }}
         >
           <Feather name="x" size={14} color={colors.textMuted} />
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>Azzera</Text>
+          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
+            {t('stats.filters.reset')}
+          </Text>
         </Pressable>
       ) : (
         <Pressable
           onPress={onOpen}
           accessibilityRole="button"
-          accessibilityLabel="Filtri"
+          accessibilityLabel={t('stats.filters.open')}
           hitSlop={8}
           style={{ flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 4 }}
         >
           <Feather name="sliders" size={14} color={colors.accent} />
-          <Text style={{ color: colors.accent, fontSize: fontSize.sm }}>Filtri</Text>
+          <Text style={{ color: colors.accent, fontSize: fontSize.sm }}>
+            {t('stats.filters.open')}
+          </Text>
         </Pressable>
       )}
     </ScrollView>

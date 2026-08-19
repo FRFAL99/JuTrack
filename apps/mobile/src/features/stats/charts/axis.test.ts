@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { labelIndices, shortWeekdayLabel, weekdayName, WEEKDAY_NAMES } from './axis';
+import { labelIndices, shortWeekdayLabel, weekdayName } from './axis';
 
 describe('weekdayName', () => {
   it('conta da lunedì, come dayOfWeek del core', () => {
@@ -13,7 +13,7 @@ describe('weekdayName', () => {
   });
 
   it('abbrevia a tre lettere', () => {
-    expect(WEEKDAY_NAMES.map((_, i) => shortWeekdayLabel(i))).toEqual([
+    expect([0, 1, 2, 3, 4, 5, 6].map((i) => shortWeekdayLabel(i))).toEqual([
       'lun',
       'mar',
       'mer',

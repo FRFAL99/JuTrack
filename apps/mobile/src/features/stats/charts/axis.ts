@@ -8,6 +8,7 @@
  * componente che i test non caricano.
  */
 import type { Cents } from '@jutrack/core';
+import { t } from '@/i18n/translate';
 
 /** Un punto di una curva: il valore, e come si chiama sull'asse. */
 export interface ChartPoint {
@@ -19,27 +20,20 @@ export interface ChartPoint {
 }
 
 /**
- * I nomi dei sette giorni, **lunedì per primo**.
+ * Nome per esteso di un giorno, **contato da lunedì** — per le etichette d'accessibilità.
  *
- * L'ordine è quello di `dayOfWeek` di `@jutrack/core`, che restituisce 0 per lunedì: non
+ * L'indice è quello di `dayOfWeek` di `@jutrack/core`, che restituisce 0 per lunedì: non
  * quello di `Date.getDay()`, che parte da domenica ed è la convenzione usata da
  * `features/expenses/grouping.ts` per un motivo diverso (lì l'indice arriva da un `Date`).
- * Due elenchi con lo stesso contenuto e un ordine diverso sono esattamente il tipo di cosa
- * che si sbaglia una volta sola e poi non si nota più.
+ * Il dizionario (`date.weekdays`) conta da **domenica** invece — è la convenzione di
+ * `Date.getDay()`, che è quella con cui `grouping.ts` lo popola — quindi qui l'indice si
+ * sposta di uno prima di leggerlo: due elenchi delle stesse sette parole in due ordini
+ * diversi sarebbero esattamente il tipo di cosa che si sbaglia una volta sola e poi non si
+ * nota più. Stringa vuota fuori da 0–6.
  */
-export const WEEKDAY_NAMES = [
-  'lunedì',
-  'martedì',
-  'mercoledì',
-  'giovedì',
-  'venerdì',
-  'sabato',
-  'domenica',
-] as const;
-
-/** Nome per esteso, per le etichette d'accessibilità. Stringa vuota fuori da 0–6. */
 export function weekdayName(weekday: number): string {
-  return WEEKDAY_NAMES[weekday] ?? '';
+  if (weekday < 0 || weekday > 6) return '';
+  return t(`date.weekdays.${(weekday + 1) % 7}`);
 }
 
 /** Abbreviazione di tre lettere, per l'asse dove lo spazio è poco. */

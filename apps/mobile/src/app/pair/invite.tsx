@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Share, ScrollView, Text, useWindowDimensions, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import {
@@ -39,6 +40,7 @@ interface Invite {
  * inoltra con due tocchi e sopravvive a chi l'ha mandato.
  */
 export default function PairInviteScreen() {
+  const { t } = useTranslation();
   const group = useCurrentGroup();
 
   // Questa schermata ha bisogno di un gruppo, ma **non** può stare in `app/(gruppo)/`
@@ -52,8 +54,8 @@ export default function PairInviteScreen() {
   // un `group` che può non esserci.
   if (group === null) {
     return (
-      <ModalScreen title="Invita qualcuno">
-        <GroupRequired what="Un invito" />
+      <ModalScreen title={t('pairing.invite.guardTitle')}>
+        <GroupRequired what={t('pairing.invite.requiredWhat')} />
       </ModalScreen>
     );
   }
@@ -62,6 +64,7 @@ export default function PairInviteScreen() {
 }
 
 function InviteToGroup({ group }: { group: GroupRecord }) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const { width } = useWindowDimensions();
   const { registry } = useGroups();
@@ -83,7 +86,7 @@ function InviteToGroup({ group }: { group: GroupRecord }) {
       .keyBytes(group.vaultId)
       .then((key) => {
         if (key === null) {
-          setError('La chiave di questo gruppo non è leggibile su questo dispositivo.');
+          setError(t('pairing.invite.keyUnreadable'));
           return;
         }
         // Un solo istante per entrambe le forme: due chiamate a `Date.now()` darebbero
@@ -99,7 +102,7 @@ function InviteToGroup({ group }: { group: GroupRecord }) {
         setError(cause instanceof Error ? cause.message : String(cause));
       })
       .finally(() => setGenerating(false));
-  }, [group.name, group.vaultId, registry]);
+  }, [group.name, group.vaultId, registry, t]);
 
   // Il conto alla rovescia è ricalcolato dall'orologio a ogni tick, non decrementato:
   // se il telefono sospende, un contatore decrementato resterebbe indietro e mostrerebbe
@@ -116,11 +119,11 @@ function InviteToGroup({ group }: { group: GroupRecord }) {
     // `Share` è API core di React Native, non un modulo Expo: funziona anche nella build
     // installata, che non contiene `expo-sharing`.
     void Share.share({
-      message: `Entra in «${group.name}» su JuTrack:\n${invite.link.url}`,
+      message: t('pairing.invite.shareMessage', { name: group.name, url: invite.link.url }),
     }).catch((cause: unknown) => {
       setError(cause instanceof Error ? cause.message : String(cause));
     });
-  }, [group.name, invite]);
+  }, [group.name, invite, t]);
 
   const copy = useCallback((): void => {
     if (invite === null) return;
@@ -137,44 +140,41 @@ function InviteToGroup({ group }: { group: GroupRecord }) {
   const minutes = Math.round(DEFAULT_PAIRING_TTL_MS / 60000);
 
   return (
-    <ModalScreen title={`Invita in «${group.name}»`}>
+    <ModalScreen title={t('pairing.invite.title', { name: group.name })}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
         <Card style={{ gap: spacing.sm }}>
           <Text
             style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
           >
-            Cosa stai per mandare
+            {t('pairing.invite.explainHeading')}
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            La chiave di questo gruppo.{' '}
-            <Text style={{ color: colors.text }}>Chiunque apra il link entra</Text>: mandalo alla
-            persona giusta e a nessun altro. Se viene inoltrato, anche chi lo riceve di rimbalzo
-            legge tutte le spese del gruppo, adesso e in futuro.
+            {t('pairing.invite.explainIntro')}{' '}
+            <Text style={{ color: colors.text }}>{t('pairing.invite.explainWarning')}</Text>
+            {t('pairing.invite.explainRest')}
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            Il link resta nella conversazione in cui l&apos;hai mandato. Dopo {minutes} minuti
-            smette di essere accettato, ma la chiave che contiene no: se hai sbagliato destinatario,
-            l&apos;unico rimedio è uscire dal gruppo e rifarlo.
+            {t('pairing.invite.linkPersists', { minutes })}
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            Vale solo per «{group.name}»: gli altri tuoi gruppi non c&apos;entrano e restano
-            inaccessibili a chi lo riceve. Il relay non lo legge — la chiave sta nella parte
-            dell&apos;indirizzo che i browser non inviano ai server.
+            {t('pairing.invite.scopeNote', { name: group.name })}
           </Text>
         </Card>
 
         {invite === null ? (
           <Button
-            label={generating ? 'Preparazione…' : 'Ho capito, prepara l’invito'}
+            label={generating ? t('pairing.invite.preparing') : t('pairing.invite.understood')}
             onPress={generate}
             loading={generating}
           />
         ) : expired ? (
           <Card style={{ gap: spacing.sm, alignItems: 'center' }}>
             <Text style={{ fontSize: 40 }}>⌛</Text>
-            <Text style={{ color: colors.text, fontSize: fontSize.md }}>Invito scaduto</Text>
+            <Text style={{ color: colors.text, fontSize: fontSize.md }}>
+              {t('pairing.invite.expiredTitle')}
+            </Text>
             <Button
-              label="Prepara un nuovo invito"
+              label={t('pairing.invite.expiredRegenerate')}
               onPress={generate}
               loading={generating}
               style={{ alignSelf: 'stretch' }}
@@ -190,15 +190,14 @@ function InviteToGroup({ group }: { group: GroupRecord }) {
                   fontWeight: fontWeight.semibold,
                 }}
               >
-                Manda il link
+                {t('pairing.invite.sendLinkHeading')}
               </Text>
               <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-                Chi lo apre trova un bottone che apre JuTrack sul suo telefono. Valido ancora{' '}
-                {formatRemaining(remaining)}.
+                {t('pairing.invite.linkValidFor', { remaining: formatRemaining(remaining) })}
               </Text>
-              <Button label="Condividi il link" onPress={share} />
+              <Button label={t('pairing.invite.shareLink')} onPress={share} />
               <Button
-                label={copied ? 'Link copiato' : 'Copia il link'}
+                label={copied ? t('pairing.invite.linkCopied') : t('pairing.invite.copyLink')}
                 variant="secondary"
                 onPress={copy}
               />
@@ -213,7 +212,7 @@ function InviteToGroup({ group }: { group: GroupRecord }) {
                   alignSelf: 'flex-start',
                 }}
               >
-                Oppure inquadra un codice
+                {t('pairing.invite.scanHeading')}
               </Text>
               <Text
                 style={{
@@ -223,8 +222,7 @@ function InviteToGroup({ group }: { group: GroupRecord }) {
                   alignSelf: 'flex-start',
                 }}
               >
-                Se avete i due telefoni davanti, il QR evita di far passare la chiave da una chat.
-                Sull&apos;altro: Gruppi → Entra in un gruppo → Scansiona un codice.
+                {t('pairing.invite.showQrHint')}
               </Text>
               {showQr ? (
                 <View style={{ padding: spacing.md, backgroundColor: '#FFFFFF', borderRadius: 8 }}>
@@ -232,7 +230,7 @@ function InviteToGroup({ group }: { group: GroupRecord }) {
                 </View>
               ) : (
                 <Button
-                  label="Mostra il codice QR"
+                  label={t('pairing.invite.showQr')}
                   variant="secondary"
                   onPress={() => setShowQr(true)}
                 />
@@ -240,7 +238,7 @@ function InviteToGroup({ group }: { group: GroupRecord }) {
             </Card>
 
             <Button
-              label="Rigenera l’invito"
+              label={t('pairing.invite.regenerate')}
               variant="secondary"
               onPress={generate}
               loading={generating}

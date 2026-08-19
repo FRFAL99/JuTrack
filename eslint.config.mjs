@@ -143,17 +143,27 @@ export default tseslint.config(
               message:
                 'Importa formatCents/formatMoney da @/i18n/money: quelle del core non conoscono la lingua e scrivono sempre «1.234,56».',
             },
+            {
+              // Stessa ragione, stesso meccanismo, per lo Step 40: senza `strings` le due
+              // scrivono sempre «categorie»/«negozi»/«Tutte le spese» in italiano, con
+              // l'inglese sotto — e senza questa regola una chiamata scritta per abitudine
+              // ci tornerebbe in silenzio.
+              name: '@jutrack/core',
+              importNames: ['queryParts', 'describeQuery'],
+              message:
+                'Importa queryParts/describeQuery da @/i18n/query: quelle del core non conoscono la lingua e scrivono sempre in italiano.',
+            },
           ],
         },
       ],
     },
   },
-  // L'unico file autorizzato a importare le due funzioni del core: è quello che le avvolge
-  // aggiungendoci la lingua, quindi è per definizione l'eccezione alla regola qui sopra. Il
-  // divieto su `node:*` va riscritto perché ridefinire `no-restricted-imports` sostituisce
-  // l'intera opzione invece di aggiungersi.
+  // I due soli file autorizzati a importare le funzioni del core qui sopra: sono quelli che
+  // le avvolgono aggiungendoci la lingua, quindi sono per definizione l'eccezione alla
+  // regola. Il divieto su `node:*` va riscritto perché ridefinire `no-restricted-imports`
+  // sostituisce l'intera opzione invece di aggiungersi.
   {
-    files: ['apps/mobile/src/i18n/money.ts'],
+    files: ['apps/mobile/src/i18n/money.ts', 'apps/mobile/src/i18n/query.ts'],
     rules: {
       'no-restricted-imports': [
         'error',

@@ -1,4 +1,5 @@
 import { Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { type Member, type MemberSeries } from '@jutrack/core';
 import { formatMoney } from '@/i18n/money';
 import { useCurrencySymbol } from '@/state';
@@ -24,9 +25,11 @@ interface MemberComparisonProps {
  * l'informazione.
  */
 export function MemberComparison({ series, members, periodLabel }: MemberComparisonProps) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const symbol = useCurrencySymbol();
-  const nameOf = (id: string): string => members.find((m) => m.id === id)?.name ?? 'qualcuno';
+  const nameOf = (id: string): string =>
+    members.find((m) => m.id === id)?.name ?? t('common.someone');
   const colorOf = (id: string): string => members.find((m) => m.id === id)?.color ?? colors.accent;
 
   // Una scala sola per tutti: due persone misurate su scale diverse non sono
@@ -45,19 +48,27 @@ export function MemberComparison({ series, members, periodLabel }: MemberCompari
           </Text>
 
           <MeasureBar
-            label="ha anticipato"
+            label={t('stats.memberComparison.paidLabel')}
             amountCents={one.paidCents}
             percent={shareOf(one.paidCents)}
             color={colorOf(one.memberId)}
             faded
-            accessibilityLabel={`${nameOf(one.memberId)} ha anticipato ${formatMoney(one.paidCents, symbol)} ${periodLabel}`}
+            accessibilityLabel={t('stats.memberComparison.paidA11y', {
+              name: nameOf(one.memberId),
+              amount: formatMoney(one.paidCents, symbol),
+              period: periodLabel,
+            })}
           />
           <MeasureBar
-            label="a suo carico"
+            label={t('stats.memberComparison.owedLabel')}
             amountCents={one.owedCents}
             percent={shareOf(one.owedCents)}
             color={colorOf(one.memberId)}
-            accessibilityLabel={`A carico di ${nameOf(one.memberId)}: ${formatMoney(one.owedCents, symbol)} ${periodLabel}`}
+            accessibilityLabel={t('stats.memberComparison.owedA11y', {
+              name: nameOf(one.memberId),
+              amount: formatMoney(one.owedCents, symbol),
+              period: periodLabel,
+            })}
           />
         </View>
       ))}

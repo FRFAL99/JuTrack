@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
+import type { TFunction } from 'i18next';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Button } from '@/components/Button';
@@ -23,6 +25,7 @@ type PermissionPhase = CameraPermission | 'unknown';
  * restare possibile, altrimenti l'app smette di avere senso in coppia.
  */
 export default function PairScanScreen() {
+  const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const { submit, error, adopting } = useAdoptPairing();
 
@@ -66,7 +69,7 @@ export default function PairScanScreen() {
   const shown = error ?? clipboardError;
 
   return (
-    <ModalScreen title="Entra in un gruppo">
+    <ModalScreen title={t('pairing.scan.title')}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
         {permission === 'granted' && CameraView !== undefined ? (
           <View
@@ -91,10 +94,12 @@ export default function PairScanScreen() {
             <Text
               style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
             >
-              {permission === 'unknown' ? 'Attivazione fotocamera…' : 'Fotocamera non disponibile'}
+              {permission === 'unknown'
+                ? t('pairing.scan.activating')
+                : t('pairing.scan.cameraUnavailable')}
             </Text>
             <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-              {describePermission(permission)}
+              {describePermission(permission, t)}
             </Text>
           </Card>
         )}
@@ -103,23 +108,23 @@ export default function PairScanScreen() {
           <Text
             style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
           >
-            Oppure incolla l&apos;invito
+            {t('pairing.scan.pasteHeading')}
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            Va bene sia il link che ti hanno mandato in chat, sia un indirizzo che comincia con{' '}
-            <Text style={{ color: colors.text }}>jutrack://</Text>. Contiene la chiave del gruppo in
-            chiaro: dopo averlo usato, non lasciarlo in giro.
+            {t('pairing.scan.pasteHintIntro')}{' '}
+            <Text style={{ color: colors.text }}>{t('pairing.scan.schemePrefix')}</Text>
+            {t('pairing.scan.pasteHintRest')}
           </Text>
           <TextInput
             value={manual}
             onChangeText={setManual}
             onSubmitEditing={() => submit(manual)}
-            placeholder="https://…/j#v=1&k=…"
+            placeholder={t('pairing.scan.placeholder')}
             placeholderTextColor={colors.textMuted}
             autoCapitalize="none"
             autoCorrect={false}
             multiline
-            accessibilityLabel="Codice di collegamento"
+            accessibilityLabel={t('pairing.scan.linkLabel')}
             style={{
               color: colors.text,
               fontSize: fontSize.sm,
@@ -133,13 +138,13 @@ export default function PairScanScreen() {
           />
           <View style={{ flexDirection: 'row', gap: spacing.sm }}>
             <Button
-              label="Incolla"
+              label={t('pairing.scan.paste')}
               variant="secondary"
               onPress={pasteFromClipboard}
               style={{ flex: 1 }}
             />
             <Button
-              label={adopting ? 'Collegamento…' : 'Collega'}
+              label={adopting ? t('pairing.scan.connecting') : t('pairing.scan.connect')}
               onPress={() => submit(manual)}
               disabled={manual.trim() === ''}
               loading={adopting}
@@ -163,14 +168,14 @@ export default function PairScanScreen() {
   );
 }
 
-function describePermission(phase: PermissionPhase): string {
+function describePermission(phase: PermissionPhase, t: TFunction): string {
   switch (phase) {
     case 'unknown':
-      return 'Sto chiedendo il permesso di usare la fotocamera.';
+      return t('pairing.scan.permission.unknown');
     case 'denied':
-      return 'Permesso negato. Puoi concederlo dalle impostazioni di sistema, oppure incollare il codice qui sotto.';
+      return t('pairing.scan.permission.denied');
     case 'unavailable':
-      return 'Questa build non espone la fotocamera. Il collegamento funziona comunque incollando il codice qui sotto.';
+      return t('pairing.scan.permission.unavailable');
     case 'granted':
       return '';
   }

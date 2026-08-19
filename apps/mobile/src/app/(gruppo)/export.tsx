@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
+import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, Text, View } from 'react-native';
 import { expensesToCsv, settlementsToCsv, toJsonExport } from '@jutrack/core';
 import { Button } from '@/components/Button';
@@ -22,6 +23,7 @@ import { useTheme } from '@/theme';
  * (`/backup`) e viaggia cifrata con una passphrase.
  */
 export default function ExportScreen() {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const { store } = useVaultRuntime();
   const [busy, setBusy] = useState<string | null>(null);
@@ -43,7 +45,10 @@ export default function ExportScreen() {
         content = build();
       } catch (error) {
         setBusy(null);
-        Alert.alert('Export fallito', error instanceof Error ? error.message : String(error));
+        Alert.alert(
+          t('exportScreen.failedTitle'),
+          error instanceof Error ? error.message : String(error),
+        );
         return;
       }
 
@@ -53,14 +58,15 @@ export default function ExportScreen() {
         void Clipboard.setStringAsync(content)
           .then(() =>
             Alert.alert(
-              'Copiato negli appunti',
-              `Su questa build manca il modulo per salvare i file, quindi ${name} è finito ` +
-                'negli appunti. Incollalo dove preferisci — oppure aggiorna l’app per avere il ' +
-                'foglio di condivisione.',
+              t('exportScreen.clipboard.title'),
+              t('exportScreen.clipboard.body', { name }),
             ),
           )
           .catch((error: unknown) => {
-            Alert.alert('Copia fallita', error instanceof Error ? error.message : String(error));
+            Alert.alert(
+              t('exportScreen.copyFailedTitle'),
+              error instanceof Error ? error.message : String(error),
+            );
           })
           .finally(() => setBusy(null));
         return;
@@ -70,13 +76,13 @@ export default function ExportScreen() {
         .then((outcome) => {
           if (outcome.status === 'failed') {
             Alert.alert(
-              'Export fallito',
+              t('exportScreen.failedTitle'),
               outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
             );
           } else if (outcome.status === 'unavailable') {
             Alert.alert(
-              'Condivisione non disponibile',
-              'Questo dispositivo non offre il foglio di condivisione.',
+              t('exportScreen.shareUnavailable.title'),
+              t('exportScreen.shareUnavailable.body'),
             );
           }
         })
@@ -85,22 +91,19 @@ export default function ExportScreen() {
   };
 
   return (
-    <ModalScreen title="Esporta i dati">
+    <ModalScreen title={t('exportScreen.title')}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
         <Card style={{ gap: spacing.sm }}>
           <Text
             style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
           >
-            Per leggerli altrove
+            {t('exportScreen.csvTitle')}
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            Un foglio di calcolo: una riga per spesa, una colonna con la quota di ciascuno. Si apre
-            in Excel, Fogli Google o qualunque altro strumento. Gli importi ci sono due volte, in
-            euro e in centesimi interi: la seconda colonna è quella che nessun programma può
-            interpretare male.
+            {t('exportScreen.csvBody')}
           </Text>
           <Button
-            label="Spese (CSV)"
+            label={t('exportScreen.expensesCsvButton')}
             onPress={run('spese', 'spese', 'csv', 'text/csv', () =>
               expensesToCsv(store.snapshot()),
             )}
@@ -108,7 +111,7 @@ export default function ExportScreen() {
             disabled={busy !== null}
           />
           <Button
-            label="Pareggi (CSV)"
+            label={t('exportScreen.settlementsCsvButton')}
             variant="secondary"
             onPress={run('pareggi', 'pareggi', 'csv', 'text/csv', () =>
               settlementsToCsv(store.snapshot()),
@@ -117,8 +120,7 @@ export default function ExportScreen() {
             disabled={busy !== null}
           />
           <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
-            I pareggi stanno in un file a parte perché non sono spese: sommarli insieme darebbe un
-            totale che non vuol dire niente.
+            {t('exportScreen.csvSplitHint')}
           </Text>
         </Card>
 
@@ -126,15 +128,13 @@ export default function ExportScreen() {
           <Text
             style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
           >
-            Per conservarli
+            {t('exportScreen.jsonTitle')}
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            Copia integrale del vault in JSON: spese, categorie, persone, budget e pareggi,
-            com&apos;è in memoria. È il formato da tenere da parte — il CSV, per come è fatto, perde
-            pezzi.
+            {t('exportScreen.jsonBody')}
           </Text>
           <Button
-            label="Tutto il vault (JSON)"
+            label={t('exportScreen.jsonButton')}
             onPress={run('vault', 'vault', 'json', 'application/json', () =>
               toJsonExport(store.snapshot()),
             )}
@@ -147,23 +147,20 @@ export default function ExportScreen() {
           <Text
             style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
           >
-            Questi file non sono cifrati
+            {t('exportScreen.unencryptedTitle')}
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            Escono in chiaro: chi li riceve legge le vostre spese. La cifratura end-to-end protegge
-            i dati mentre passano dal relay, non dopo che li avete mandati a qualcun altro.
+            {t('exportScreen.unencryptedBody1')}
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            La chiave del vault non è dentro nessuno di questi file. Per quella c&apos;è «Backup
-            della chiave», ed è protetta da una passphrase.
+            {t('exportScreen.unencryptedBody2', { label: t('you.group.backup') })}
           </Text>
         </Card>
 
         {!sharingAvailable && (
           <Card>
             <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-              Su questa build i moduli per scrivere e condividere file non sono disponibili: gli
-              export finiranno negli appunti. Una build aggiornata dell&apos;app risolve.
+              {t('exportScreen.noSharingNote')}
             </Text>
           </Card>
         )}

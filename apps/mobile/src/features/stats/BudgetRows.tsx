@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { type BudgetState, type BudgetStatus, type Category } from '@jutrack/core';
 import { formatMoney } from '@/i18n/money';
 import { useCurrencySymbol } from '@/state';
@@ -18,6 +19,7 @@ interface BudgetRowsProps {
  * dal verde non informerebbe nessun altro.
  */
 export function BudgetRows({ statuses, categories }: BudgetRowsProps) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize } = useTheme();
   const symbol = useCurrencySymbol();
   const byId = new Map(categories.map((c) => [c.id, c]));
@@ -43,7 +45,7 @@ export function BudgetRows({ statuses, categories }: BudgetRowsProps) {
                 numberOfLines={1}
                 style={{ flex: 1, color: colors.text, fontSize: fontSize.sm }}
               >
-                {category?.name ?? 'Categoria rimossa'}
+                {category?.name ?? t('stats.categoryRemoved')}
               </Text>
               <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
                 {formatMoney(status.spentCents, symbol)} / {formatMoney(status.limitCents, symbol)}

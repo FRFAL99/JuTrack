@@ -1,4 +1,5 @@
 import type { ImportCounts, ImportSkip } from '@jutrack/core';
+import { plural, t } from '@/i18n/translate';
 
 /**
  * Cosa dire di un file appena letto, prima di scriverlo da qualche parte.
@@ -7,19 +8,19 @@ import type { ImportCounts, ImportSkip } from '@jutrack/core';
  * `extra-fields.ts`: è testo che dipende da dei numeri, cioè la cosa che si sbaglia più
  * facilmente e che dentro un componente nessun test guarderebbe.
  *
- * **Resta in italiano**, come `/backup` e `/export` accanto a cui questa schermata vive:
- * tradurle è lo Step 40, e farlo per una sola delle tre lascerebbe l'utente inglese davanti
- * a due schermate di ripristino su tre in una lingua che non legge — che è peggio di
- * trovarle tutte e tre coerenti.
+ * **Tradotto insieme a `/backup` e `/export`**, accanto a cui questa schermata vive: è lo
+ * Step 40, e farlo per una sola delle tre avrebbe lasciato l'utente inglese davanti a due
+ * schermate di ripristino su tre in una lingua che non legge — peggio di trovarle tutte e
+ * tre coerenti. Il testo che dipende da un numero passa da `plural()` invece che da `t()`.
  */
 
-/** Le famiglie, con singolare e plurale. L'ordine è quello in cui si leggono a schermo. */
-const LABELS: [keyof ImportCounts, string, string][] = [
-  ['expenses', 'spesa', 'spese'],
-  ['members', 'persona', 'persone'],
-  ['categories', 'categoria', 'categorie'],
-  ['budgets', 'budget', 'budget'],
-  ['settlements', 'pareggio', 'pareggi'],
+/** Le famiglie, con la chiave del dizionario che porta singolare e plurale. */
+const LABELS: (keyof ImportCounts)[] = [
+  'expenses',
+  'members',
+  'categories',
+  'budgets',
+  'settlements',
 ];
 
 /**
@@ -29,15 +30,15 @@ const LABELS: [keyof ImportCounts, string, string][] = [
  * cercare un problema dove non ce n'è, e un vault senza pareggi è il caso normale.
  */
 export function describeKept(counts: ImportCounts): string {
-  const parts = LABELS.filter(([key]) => counts[key] > 0).map(
-    ([key, one, many]) => `${counts[key]} ${counts[key] === 1 ? one : many}`,
+  const parts = LABELS.filter((key) => counts[key] > 0).map((key) =>
+    plural(`importScreen.summary.${key}`, counts[key]),
   );
-  return parts.length === 0 ? 'niente' : parts.join(', ');
+  return parts.length === 0 ? t('importScreen.summary.none') : parts.join(', ');
 }
 
 /** Quanti record sono entrati in tutto. Zero significa che non c'è niente da importare. */
 export function keptTotal(counts: ImportCounts): number {
-  return LABELS.reduce((sum, [key]) => sum + counts[key], 0);
+  return LABELS.reduce((sum, key) => sum + counts[key], 0);
 }
 
 /**
@@ -76,8 +77,12 @@ export function groupSkips(skipped: ImportSkip[]): { reason: string; count: numb
  * generico — e chi importa può comunque scriverne uno suo prima di confermare.
  */
 export function suggestedName(exportedAt: string | null): string {
-  if (exportedAt === null) return 'Gruppo importato';
+  if (exportedAt === null) return t('importScreen.summary.defaultName');
   const when = new Date(exportedAt);
-  if (Number.isNaN(when.getTime())) return 'Gruppo importato';
-  return `Importato del ${when.getDate()}/${when.getMonth() + 1}/${when.getFullYear()}`;
+  if (Number.isNaN(when.getTime())) return t('importScreen.summary.defaultName');
+  return t('importScreen.summary.importedOn', {
+    day: when.getDate(),
+    month: when.getMonth() + 1,
+    year: when.getFullYear(),
+  });
 }

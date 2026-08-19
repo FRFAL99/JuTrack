@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import type { IsoDate } from '@jutrack/core';
 import { Chip } from '@/components/Chip';
 import { useTheme } from '@/theme';
 import { DayGridPicker } from './DayGridPicker';
-import { describeBounds, PERIOD_PRESETS, periodLabel, presetPeriod, type Period } from './period';
+import { describeBounds, periodLabel, periodPresets, presetPeriod, type Period } from './period';
 
 interface PeriodPickerProps {
   period: Period;
@@ -25,6 +26,7 @@ interface PeriodPickerProps {
  * vuole guardare lontano usa «ultimi 12 mesi», che è disegnato per mesi.
  */
 export function PeriodPicker({ period, onChange, today }: PeriodPickerProps) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize } = useTheme();
   const custom = period.id === 'custom';
   const [showGrid, setShowGrid] = useState(custom);
@@ -32,7 +34,7 @@ export function PeriodPicker({ period, onChange, today }: PeriodPickerProps) {
   return (
     <View style={{ gap: spacing.md }}>
       <View style={styles.chips}>
-        {PERIOD_PRESETS.map((preset) => (
+        {periodPresets().map((preset) => (
           <Chip
             key={preset.id}
             label={preset.label}
@@ -44,7 +46,7 @@ export function PeriodPicker({ period, onChange, today }: PeriodPickerProps) {
           />
         ))}
         <Chip
-          label={custom ? periodLabel(period) : 'Personalizzato'}
+          label={custom ? periodLabel(period) : t('stats.period.custom')}
           selected={custom}
           onPress={() => setShowGrid((open) => !open)}
         />

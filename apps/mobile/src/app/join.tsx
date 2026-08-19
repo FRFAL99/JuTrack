@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, Text } from 'react-native';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -21,6 +22,7 @@ import { useTheme } from '@/theme';
  * viva che ne riceve uno, e restituisce subito l'URL iniziale a ogni ricarica.
  */
 export default function JoinScreen() {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const url = Linking.useLinkingURL();
   const { submit, error, adopting } = useAdoptPairing();
@@ -38,22 +40,20 @@ export default function JoinScreen() {
   const waiting = url === null;
 
   return (
-    <ModalScreen title="Invito">
+    <ModalScreen title={t('pairing.join.title')}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
         <Card style={{ gap: spacing.xs }}>
           <Text
             style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
           >
             {waiting
-              ? 'Nessun invito ricevuto'
+              ? t('pairing.join.noInviteTitle')
               : adopting
-                ? 'Ingresso in corso…'
-                : 'Invito ricevuto'}
+                ? t('pairing.join.enteringTitle')
+                : t('pairing.receivedTitle')}
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            {waiting
-              ? 'Apri il link che ti hanno mandato, oppure incolla qui il codice dell’altro telefono.'
-              : 'Conferma per aggiungere il gruppo a quelli che hai già. Nessuno dei tuoi gruppi viene toccato.'}
+            {waiting ? t('pairing.join.noInviteHint') : t('pairing.join.receivedHint')}
           </Text>
         </Card>
 
@@ -69,10 +69,14 @@ export default function JoinScreen() {
         )}
 
         <Button
-          label="Incolla o scansiona un codice"
+          label={t('pairing.join.pasteOrScan')}
           onPress={() => router.replace('/pair/scan')}
         />
-        <Button label="Torna ai gruppi" variant="secondary" onPress={() => router.replace('/')} />
+        <Button
+          label={t('pairing.join.backToGroups')}
+          variant="secondary"
+          onPress={() => router.replace('/')}
+        />
       </ScrollView>
     </ModalScreen>
   );

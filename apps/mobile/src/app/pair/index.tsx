@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { ScrollView, Text } from 'react-native';
 import { PAIRING_URI_PREFIX } from '@jutrack/core';
 import { Button } from '@/components/Button';
@@ -18,6 +19,7 @@ import { useTheme } from '@/theme';
  * link non deve rendere l'adozione più silenziosa.
  */
 export default function PairDeepLinkScreen() {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const params = useLocalSearchParams<{ v?: string; k?: string; e?: string }>();
   const { submit, error } = useAdoptPairing();
@@ -40,18 +42,18 @@ export default function PairDeepLinkScreen() {
   }, [key, params.e, params.v, submit]);
 
   return (
-    <ModalScreen title="Collegamento">
+    <ModalScreen title={t('pairing.deepLink.title')}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
         <Card style={{ gap: spacing.xs }}>
           <Text
             style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
           >
-            {key === undefined ? 'Nessun codice ricevuto' : 'Invito ricevuto'}
+            {key === undefined ? t('pairing.deepLink.noCodeTitle') : t('pairing.receivedTitle')}
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
             {key === undefined
-              ? 'Apri lo scanner per inquadrare il codice mostrato dall’altro telefono, o mostra il tuo per farlo entrare in questo vault.'
-              : 'Conferma per collegare questo telefono al vault indicato dal codice.'}
+              ? t('pairing.deepLink.noCodeHint')
+              : t('pairing.deepLink.receivedHint')}
           </Text>
         </Card>
 
@@ -66,9 +68,9 @@ export default function PairDeepLinkScreen() {
           </Card>
         )}
 
-        <Button label="Scansiona un codice" onPress={() => router.replace('/pair/scan')} />
+        <Button label={t('pairing.deepLink.scan')} onPress={() => router.replace('/pair/scan')} />
         <Button
-          label="Mostra il mio codice"
+          label={t('pairing.deepLink.showMyCode')}
           variant="secondary"
           onPress={() => router.replace('/pair/invite')}
         />

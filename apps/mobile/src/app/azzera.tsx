@@ -1,12 +1,14 @@
 import { useState } from 'react';
 import type { ReactNode } from 'react';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, Switch, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
 import { NavCard } from '@/components/NavCard';
 import { useWipeDevice } from '@/features/profile/useWipeDevice';
+import { plural } from '@/i18n/translate';
 import { useGroups, useProfile } from '@/state';
 import { useTheme } from '@/theme';
 
@@ -23,6 +25,7 @@ import { useTheme } from '@/theme';
  * l'`Alert` finale è l'ultima occasione per annullare.
  */
 export default function WipeDeviceScreen() {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const profile = useProfile();
   const { groups } = useGroups();
@@ -35,18 +38,18 @@ export default function WipeDeviceScreen() {
   const busy = phase === 'closing' || phase === 'wiping';
 
   const confirm = (): void => {
+    const groupsClause =
+      groups.length === 0
+        ? ''
+        : groups.length === 1
+          ? t('wipe.confirmBody.oneGroup')
+          : t('wipe.confirmBody.manyGroups', { count: groups.length });
     Alert.alert(
-      'Azzerare questo telefono?',
-      `Spariscono il profilo «${profile.name}»` +
-        (groups.length === 0
-          ? ''
-          : groups.length === 1
-            ? ' e il tuo gruppo, con tutte le sue spese'
-            : ` e i tuoi ${groups.length} gruppi, con tutte le loro spese`) +
-        '. Senza un backup della chiave non tornano: non esiste un reset lato server.',
+      t('wipe.confirmTitle'),
+      t('wipe.confirmBody.base', { name: profile.name, groupsClause }),
       [
-        { text: 'Annulla', style: 'cancel' },
-        { text: 'Azzera', style: 'destructive', onPress: start },
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('wipe.confirmButton'), style: 'destructive', onPress: start },
       ],
     );
   };
@@ -59,34 +62,27 @@ export default function WipeDeviceScreen() {
   const body = { color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 } as const;
 
   return (
-    <ModalScreen title="Azzera questo telefono">
+    <ModalScreen title={t('wipe.title')}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
         {/* In cima, non in fondo: è l'unica cosa che rende reversibile il gesto, e va
             letta prima di decidere, non dopo. */}
         {groups.length > 0 && (
           <NavCard
-            title="Fai prima un backup della chiave"
-            subtitle="La chiave del gruppo aperto, cifrata con una passphrase che scegli tu. È l'unico modo di ritrovare queste spese dopo un azzeramento."
+            title={t('wipe.backupFirstTitle')}
+            subtitle={t('wipe.backupFirstSubtitle')}
             onPress={() => router.push('/backup')}
           />
         )}
 
         <Card style={{ gap: spacing.sm, borderColor: colors.danger }}>
-          <Text style={heading}>Che cosa sparisce</Text>
-          <Text style={body}>Da questo telefono, e senza possibilità di annullare:</Text>
+          <Text style={heading}>{t('wipe.whatDisappearsTitle')}</Text>
+          <Text style={body}>{t('wipe.whatDisappearsIntro')}</Text>
 
-          <Bullet>
-            il tuo profilo, «{profile.name}», con il suo identificativo: quello che registrerai dopo
-            sarà una persona diversa per chi divide le spese con te
-          </Bullet>
+          <Bullet>{t('wipe.bulletProfile', { name: profile.name })}</Bullet>
           {groups.length > 0 && (
             <>
-              <Bullet>
-                {groups.length === 1
-                  ? 'il tuo gruppo, con tutte le sue spese, categorie, budget e pareggi'
-                  : `i tuoi ${groups.length} gruppi, con tutte le loro spese, categorie, budget e pareggi`}
-              </Bullet>
-              <Bullet>le chiavi con cui quei dati sono cifrati</Bullet>
+              <Bullet>{plural('wipe.bulletGroups', groups.length)}</Bullet>
+              <Bullet>{t('wipe.bulletKeys')}</Bullet>
             </>
           )}
 
@@ -100,50 +96,43 @@ export default function WipeDeviceScreen() {
             </View>
           )}
 
-          <Text style={[body, { paddingTop: spacing.xs }]}>
-            I dati sono cifrati end-to-end: senza la chiave non li può recuperare nessuno, noi
-            compresi. Non esiste un reset lato server.
-          </Text>
+          <Text style={[body, { paddingTop: spacing.xs }]}>{t('wipe.whatDisappearsFooter')}</Text>
         </Card>
 
         {/* Senza gruppi non c'è nessuna copia sul relay di cui parlare: dirlo lo stesso
             farebbe cercare all'utente qualcosa che non esiste. */}
         {groups.length > 0 && (
           <Card style={{ gap: spacing.sm }}>
-            <Text style={heading}>Che cosa invece resta</Text>
+            <Text style={heading}>{t('wipe.whatRemainsTitle')}</Text>
             <Text style={body}>
-              Le copie sul relay. Sono cifrate e illeggibili senza la chiave, e scadono da sole dopo
-              trenta giorni. Se vuoi cancellarle subito, esci da ogni gruppo con l&apos;interruttore{' '}
-              <Text style={{ color: colors.text }}>Cancella anche la copia sul relay</Text> prima di
-              azzerare.
+              {t('wipe.relayCopy.before')}{' '}
+              <Text style={{ color: colors.text }}>{t('wipe.relayCopy.switchLabel')}</Text>
+              {t('wipe.relayCopy.after')}
             </Text>
-            <Text style={body}>
-              E resta ciò che gli altri hanno già scaricato: azzerare il proprio telefono non toglie
-              niente a nessun altro.
-            </Text>
+            <Text style={body}>{t('wipe.whatRemainsOthers')}</Text>
           </Card>
         )}
 
         <Card style={{ gap: spacing.md, borderColor: colors.danger }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <Text style={{ color: colors.text, fontSize: fontSize.sm, flex: 1 }}>
-              Ho capito che non si torna indietro
+              {t('wipe.understandLabel')}
             </Text>
             <Switch
               value={understood}
               onValueChange={setUnderstood}
               disabled={busy}
-              accessibilityLabel="Ho capito che non si torna indietro"
+              accessibilityLabel={t('wipe.understandLabel')}
             />
           </View>
 
           <Button
             label={
               phase === 'closing'
-                ? 'Chiusura del gruppo…'
+                ? t('wipe.closingGroup')
                 : phase === 'wiping'
-                  ? 'Azzeramento…'
-                  : 'Azzera questo telefono'
+                  ? t('wipe.wiping')
+                  : t('wipe.action')
             }
             variant="danger"
             onPress={confirm}

@@ -1,7 +1,9 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ModalScreen } from '@/components/ModalScreen';
 import { CategoryIcon } from '@/features/categories/CategoryIcon';
+import { plural } from '@/i18n/translate';
 import { useCategories, useExpenses, useVaultStore } from '@/state';
 import { useTheme } from '@/theme';
 
@@ -27,6 +29,7 @@ const ICONS = [
 ] as const;
 
 export default function CategoriesScreen() {
+  const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const store = useVaultStore();
   const categories = useCategories(true);
@@ -52,20 +55,20 @@ export default function CategoriesScreen() {
     // resterebbero orfane. Si archiviano, sparendo dalle scelte future.
     const used = expenses.filter((e) => e.categoryId === id).length;
     Alert.alert(
-      `Archiviare «${categoryName}»?`,
-      used === 0
-        ? 'Non comparirà più fra le categorie selezionabili.'
-        : `${used} ${used === 1 ? 'spesa usa' : 'spese usano'} questa categoria. ` +
-            'Restano invariate: la categoria sparisce solo dalle scelte future.',
+      t('categories.archiveTitle', { name: categoryName }),
+      used === 0 ? t('categories.archiveBodyUnused') : plural('categories.archiveBodyUsed', used),
       [
-        { text: 'Annulla', style: 'cancel' },
-        { text: 'Archivia', onPress: () => store.updateCategory(id, { archived: true }) },
+        { text: t('common.cancel'), style: 'cancel' },
+        {
+          text: t('categories.archiveConfirm'),
+          onPress: () => store.updateCategory(id, { archived: true }),
+        },
       ],
     );
   };
 
   return (
-    <ModalScreen title="Categorie">
+    <ModalScreen title={t('categories.title')}>
       <FlatList
         data={categories}
         keyExtractor={(item) => item.id}
@@ -101,10 +104,10 @@ export default function CategoriesScreen() {
                 value={name}
                 onChangeText={setName}
                 onSubmitEditing={handleAdd}
-                placeholder="Nome della categoria"
+                placeholder={t('categories.namePlaceholder')}
                 placeholderTextColor={colors.textMuted}
                 returnKeyType="done"
-                accessibilityLabel="Nome della nuova categoria"
+                accessibilityLabel={t('categories.nameA11y')}
                 style={{
                   flex: 1,
                   color: colors.text,
@@ -120,7 +123,7 @@ export default function CategoriesScreen() {
                 onPress={handleAdd}
                 disabled={name.trim() === ''}
                 accessibilityRole="button"
-                accessibilityLabel="Aggiungi categoria"
+                accessibilityLabel={t('categories.addA11y')}
                 style={{
                   paddingHorizontal: spacing.lg,
                   justifyContent: 'center',
@@ -130,7 +133,7 @@ export default function CategoriesScreen() {
                 }}
               >
                 <Text style={{ color: colors.textOnAccent, fontWeight: fontWeight.semibold }}>
-                  Aggiungi
+                  {t('categories.addButton')}
                 </Text>
               </Pressable>
             </View>
@@ -152,7 +155,7 @@ export default function CategoriesScreen() {
             <CategoryIcon icon={item.icon} color={item.color} size={20} />
             <Text style={{ flex: 1, color: colors.text, fontSize: fontSize.md }}>{item.name}</Text>
             <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
-              {item.archived ? 'Ripristina' : 'Archivia'}
+              {item.archived ? t('categories.restore') : t('categories.archiveConfirm')}
             </Text>
           </Pressable>
         )}

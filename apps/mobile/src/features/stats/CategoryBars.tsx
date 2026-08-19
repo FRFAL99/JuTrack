@@ -1,4 +1,5 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { type Category, type CategoryTotal } from '@jutrack/core';
 import { formatMoney } from '@/i18n/money';
 import { useCurrencySymbol } from '@/state';
@@ -19,19 +20,20 @@ interface CategoryBarsProps {
  * per voce — l'importo, che si legge una riga alla volta, sta a destra.
  */
 export function CategoryBars({ totals, categories }: CategoryBarsProps) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const symbol = useCurrencySymbol();
   const byId = new Map(categories.map((c) => [c.id, c]));
 
   // Le larghezze sono rapportate alla voce più alta, non al totale: sul totale la barra
   // maggiore occuperebbe una frazione minuscola e il confronto fra le voci sparirebbe.
-  const peak = totals.reduce((max, t) => Math.max(max, t.totalCents), 0);
+  const peak = totals.reduce((max, one) => Math.max(max, one.totalCents), 0);
 
   return (
     <View style={{ gap: spacing.md }}>
       {totals.map((total) => {
         const category = total.categoryId === null ? null : byId.get(total.categoryId);
-        const name = category?.name ?? 'Senza categoria';
+        const name = category?.name ?? t('expense.row.uncategorized');
         const color = category?.color ?? colors.textMuted;
         const width = peak === 0 ? 0 : Math.max(2, (total.totalCents / peak) * 100);
 
@@ -59,7 +61,11 @@ export function CategoryBars({ totals, categories }: CategoryBarsProps) {
             </View>
             <View
               accessible
-              accessibilityLabel={`${name}: ${formatMoney(total.totalCents, symbol)}, ${formatShare(total.share)} del totale`}
+              accessibilityLabel={t('stats.categoryShareA11y', {
+                name,
+                amount: formatMoney(total.totalCents, symbol),
+                share: formatShare(total.share),
+              })}
               style={{ height: 3, borderRadius: 1.5, backgroundColor: colors.surfacePressed }}
             >
               <View

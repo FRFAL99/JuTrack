@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { parseVaultExport, type ImportReport, type VaultSnapshot } from '@jutrack/core';
 import { Button } from '@/components/Button';
@@ -8,6 +9,7 @@ import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
 import { encodeSnapshotAsState } from '@/features/import/build';
 import { describeKept, groupSkips, keptTotal, suggestedName } from '@/features/import/summary';
+import { plural } from '@/i18n/translate';
 import { expoRandom } from '@/platform';
 import { MAX_GROUP_NAME, useGroups } from '@/state';
 import { useTheme } from '@/theme';
@@ -42,6 +44,7 @@ import { useTheme } from '@/theme';
  * per la stessa ragione, e le due schermate restano coerenti fra loro.
  */
 export default function ImportScreen() {
+  const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const { importState } = useGroups();
 
@@ -87,7 +90,7 @@ export default function ImportScreen() {
         return;
       }
       if (keptTotal(result.report.kept) === 0) {
-        setError('Il file è valido ma non contiene alcun record: non c’è niente da importare.');
+        setError(t('importScreen.emptyFile'));
         return;
       }
 
@@ -108,7 +111,10 @@ export default function ImportScreen() {
       state = encodeSnapshotAsState(read.snapshot, expoRandom);
     } catch (cause) {
       setImporting(false);
-      Alert.alert('Import fallito', cause instanceof Error ? cause.message : String(cause));
+      Alert.alert(
+        t('importScreen.failedTitle'),
+        cause instanceof Error ? cause.message : String(cause),
+      );
       return;
     }
 
@@ -117,7 +123,10 @@ export default function ImportScreen() {
         router.replace(`/groups/${group.vaultId}`);
       })
       .catch((cause: unknown) => {
-        Alert.alert('Import fallito', cause instanceof Error ? cause.message : String(cause));
+        Alert.alert(
+          t('importScreen.failedTitle'),
+          cause instanceof Error ? cause.message : String(cause),
+        );
       })
       .finally(() => setImporting(false));
   };
@@ -131,24 +140,21 @@ export default function ImportScreen() {
   const skips = read === null ? [] : groupSkips(read.report.skipped);
 
   return (
-    <ModalScreen title="Importa un export">
+    <ModalScreen title={t('importScreen.title')}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
         <Card style={{ gap: spacing.xs }}>
           <Text
             style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
           >
-            Ricostruisce i dati, non riapre il gruppo
+            {t('importScreen.introTitle')}
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            Il file JSON non contiene la chiave del vault — è in chiaro, e se la contenesse chiunque
-            lo ricevesse entrerebbe nel gruppo. Quello che leggi qui diventa un gruppo{' '}
-            <Text style={{ fontWeight: fontWeight.semibold }}>nuovo</Text>, con una chiave nuova:
-            non si sincronizza con i telefoni che avevano il gruppo di prima, e per tornare a
-            condividerlo serve un invito.
+            {t('importScreen.intro.before')}{' '}
+            <Text style={{ fontWeight: fontWeight.semibold }}>{t('importScreen.intro.bold')}</Text>
+            {t('importScreen.intro.after')}
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            Se hai il backup della chiave, usa quello: è in «Backup della chiave» e rimette il
-            gruppo dov’era, sincronizzazione compresa.
+            {t('importScreen.useBackupHint', { label: t('you.group.backup') })}
           </Text>
         </Card>
 
@@ -157,11 +163,10 @@ export default function ImportScreen() {
             <Text
               style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
             >
-              Il file
+              {t('importScreen.fileTitle')}
             </Text>
             <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-              Incolla il contenuto dell’export JSON, quello che comincia con una graffa e contiene
-              «jutrack-export».
+              {t('importScreen.fileBody')}
             </Text>
           </View>
 
@@ -174,18 +179,22 @@ export default function ImportScreen() {
               setRead(null);
               setError(null);
             }}
-            placeholder={'{ "format": "jutrack-export", …'}
+            placeholder={t('importScreen.filePlaceholder')}
             placeholderTextColor={colors.textMuted}
             multiline
             autoCapitalize="none"
             autoCorrect={false}
-            accessibilityLabel="Contenuto del file di export"
+            accessibilityLabel={t('importScreen.fileA11y')}
             style={[fieldStyle, { minHeight: 120, textAlignVertical: 'top' }]}
           />
 
-          <Button label="Incolla dagli appunti" variant="secondary" onPress={pasteFromClipboard} />
           <Button
-            label={reading ? 'Lettura…' : 'Leggi il file'}
+            label={t('importScreen.pasteButton')}
+            variant="secondary"
+            onPress={pasteFromClipboard}
+          />
+          <Button
+            label={reading ? t('importScreen.reading') : t('importScreen.readButton')}
             onPress={handleRead}
             loading={reading}
             disabled={text.trim() === '' || reading}
@@ -211,7 +220,7 @@ export default function ImportScreen() {
                   fontWeight: fontWeight.semibold,
                 }}
               >
-                Cosa c’è nel file
+                {t('importScreen.summaryTitle')}
               </Text>
               <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
                 {describeKept(read.report.kept)}.
@@ -224,9 +233,7 @@ export default function ImportScreen() {
             {skips.length > 0 && (
               <View style={{ gap: 4 }}>
                 <Text style={{ color: colors.warning, fontSize: fontSize.sm }}>
-                  {read.report.skipped.length === 1
-                    ? 'Un record non entrerà:'
-                    : `${read.report.skipped.length} record non entreranno:`}
+                  {plural('importScreen.skipCount', read.report.skipped.length)}
                 </Text>
                 {skips.map(({ reason, count }) => (
                   <Text
@@ -241,27 +248,29 @@ export default function ImportScreen() {
             )}
 
             <View style={{ gap: 2 }}>
-              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>Nome del gruppo</Text>
+              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
+                {t('importScreen.groupNameLabel')}
+              </Text>
               {/* L'export non porta con sé il nome del gruppo: sta in `meta`, che la
                   fotografia non attraversa. Si propone la data del file e si lascia
                   cambiare, invece di alzare la versione del formato per un campo che si
                   può chiedere. */}
               <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs, lineHeight: 16 }}>
-                Il file non lo contiene: questo è ricavato dalla data dell’export.
+                {t('importScreen.groupNameHint')}
               </Text>
             </View>
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholder="Gruppo importato"
+              placeholder={t('importScreen.summary.defaultName')}
               placeholderTextColor={colors.textMuted}
               maxLength={MAX_GROUP_NAME}
-              accessibilityLabel="Nome del gruppo importato"
+              accessibilityLabel={t('importScreen.groupNameA11y')}
               style={fieldStyle}
             />
 
             <Button
-              label={importing ? 'Import…' : 'Crea il gruppo'}
+              label={importing ? t('importScreen.importing') : t('importScreen.createGroupButton')}
               onPress={handleImport}
               loading={importing}
               disabled={importing}
