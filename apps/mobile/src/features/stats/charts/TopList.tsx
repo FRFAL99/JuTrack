@@ -1,6 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { type NamedTotal } from '@jutrack/core';
 import { formatMoney } from '@/i18n/money';
+import { plural } from '@/i18n/translate';
 import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { formatShare } from '../format';
@@ -28,6 +30,7 @@ interface TopListProps {
  * lui. Il nome è l'identità, e la barra dice solo il rapporto fra le voci.
  */
 export function TopList({ totals, max = 5, note }: TopListProps) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const symbol = useCurrencySymbol();
   const shown = totals.slice(0, max);
@@ -52,7 +55,11 @@ export function TopList({ totals, max = 5, note }: TopListProps) {
           </View>
           <View
             accessible
-            accessibilityLabel={`${total.name}: ${formatMoney(total.totalCents, symbol)}, ${total.count} ${total.count === 1 ? 'spesa' : 'spese'}`}
+            accessibilityLabel={t('stats.topListA11y', {
+              name: total.name,
+              amount: formatMoney(total.totalCents, symbol),
+              count: plural('stats.expenseCount', total.count),
+            })}
             style={{ height: 3, borderRadius: 1.5, backgroundColor: colors.surfacePressed }}
           >
             <View

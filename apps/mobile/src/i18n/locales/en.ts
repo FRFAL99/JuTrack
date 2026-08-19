@@ -250,4 +250,229 @@ export const en: Dictionary = {
       version: 'JuTrack {{app}} · core {{core}}',
     },
   },
+  stats: {
+    filters: {
+      periodA11y: 'Period: {{label}}. Tap to change the filters',
+      activeA11y: 'Active filter: {{part}}. Tap to change it',
+      resetA11y: 'Reset the filters',
+      reset: 'Reset',
+      open: 'Filters',
+      sections: {
+        period: 'Period',
+        person: 'Person',
+        category: 'Category',
+        store: 'Store',
+        tag: 'Tag',
+        amount: 'Amount',
+      },
+      personMode: {
+        owed: 'Owed by',
+        paid: 'Paid by',
+      },
+      personModeHint: {
+        owed: 'What it cost them: a dinner split in half counts as half.',
+        paid: 'What they fronted: a dinner they paid for counts in full.',
+      },
+      amountHint: 'On the figure the person filter produces, not the full price.',
+      done: 'Done',
+    },
+    period: {
+      last7: 'Last 7 days',
+      last30: 'Last 30 days',
+      thisMonth: 'This month',
+      lastMonth: 'Last month',
+      last12Months: 'Last 12 months',
+      thisYear: 'This year',
+      custom: 'Custom',
+      onlyDay: 'Just {{day}}',
+      fromTo: 'From {{opening}} to {{closing}}',
+    },
+    grid: {
+      previousMonth: 'Previous month',
+      nextMonth: 'Next month',
+      startHint: 'Tap a day to start a new range.',
+      endHint: 'From {{day}}: tap the day it ends.',
+    },
+    query: {
+      categoriesCount: '{{count}} categories',
+      storesCount: '{{count}} stores',
+      tagsCount: '{{count}} tags',
+      owedBy: 'Owed by {{who}}',
+      paidBy: 'Paid by {{who}}',
+      amountFrom: 'From {{amount}}',
+      amountTo: 'Up to {{amount}}',
+      allExpenses: 'All expenses',
+      periodFrom: 'From {{date}}',
+      periodTo: 'Up to {{date}}',
+    },
+    change: {
+      none: 'No expenses',
+      zeroPrevious: 'Nothing spent in {{previous}}',
+      same: 'Same as {{previous}}',
+      up: '+{{delta}}% compared to {{previous}}',
+      down: '{{delta}}% compared to {{previous}}',
+    },
+    budgetStatus: {
+      over: '⚠️ Over by {{amount}}',
+      near: '⏳ {{amount}} left',
+      under: '✓ {{amount}} left',
+    },
+    expenseCount: { one: '{{count}} expense', other: '{{count}} expenses' },
+    categoryRemoved: 'Removed category',
+    categoryFallback: 'category',
+    categoryShareA11y: '{{name}}: {{amount}}, {{share}} of the total',
+    histogramA11y: 'From {{label}} {{symbol}}: {{count}}, {{amount}}',
+    cumulativeSummary: 'Cumulative total: {{amount}} as of {{label}}.',
+    lineSummary: 'From {{from}} to {{to}}. Peak {{amount}}, {{peak}}.',
+    pointA11y: '{{label}}: {{amount}}',
+    treemapTapHint: 'Tap a tile to read its name and amount.',
+    topListA11y: '{{name}}: {{amount}}, {{count}}',
+    heatmap: {
+      dayA11y: '{{day}}: {{amount}}',
+      noExpense: 'no expenses',
+      scrollHint: 'The period is long: drag the grid to see the other weeks.',
+      tapHint: 'Tap a day to see what it cost.',
+      legendNone: 'nothing',
+      legendFrom: 'from {{amount}} {{symbol}}',
+    },
+    memberComparison: {
+      paidLabel: 'fronted',
+      owedLabel: 'owed by them',
+      paidA11y: '{{name}} fronted {{amount}} {{period}}',
+      owedA11y: 'Owed by {{name}}: {{amount}} {{period}}',
+    },
+    noGroupTitle: 'No group open',
+    noGroupHint:
+      'Charts tell the story of a group’s expenses. Open one, or create one, and the trend, categories and balance will show up here.',
+    noDataTitle: 'No data yet',
+    noDataHint:
+      'The trend, the breakdown by category, and the balance between you will show up here once the first expenses are recorded.',
+    emptyFilteredTitle: 'No expenses match these filters',
+    emptyPeriodTitle: 'No expenses in {{period}}',
+    emptyFilteredHint:
+      'The filters apply to every chart together. Remove one, or widen the period, and they reappear.',
+    emptyPeriodHint: 'Pick a wider period, or record an expense on these days.',
+    tiles: {
+      perDay: 'Per day',
+      perDayHint: { one: 'over {{count}} day', other: 'over {{count}} days' },
+      dailyTrend: 'Daily trend for {{period}}',
+      expenses: 'Expenses',
+      recordedHint: { one: 'recorded', other: 'recorded' },
+      perExpense: 'Per expense',
+      average: 'on average',
+    },
+    monthsWholeNote: 'Months are shown whole, even when the chosen period is shorter.',
+    dailyOverlayLabel: '{{days}}-day moving average',
+    cumulativeReferenceLabel: 'Total for {{period}}',
+    weekdaysNote:
+      'Over the last twelve months, not the chosen period: a single month would be seven random numbers.',
+    amountsNote:
+      'The height is the number of expenses, not their sum: it shows whether you make many small purchases or a few big ones.',
+    paidCenterLabel: 'Fronted in {{period}}',
+    balance: {
+      evenBody: 'You’re even. Nobody owes anybody anything.',
+      history: 'History',
+      transfer: '{{from}} owes {{amount}} to {{to}}',
+      historyNote:
+        'Across the group’s whole history, filters aside: a debt doesn’t reset when you change the period.',
+    },
+    membersPeriodLabel: 'over the last twelve months',
+    storesNote:
+      'Expenses without a store don’t appear: this ranking adds up to less than the period’s total.',
+    tagsNote:
+      'An expense with two tags counts in full in both: this sum can add up to more than the period’s total.',
+    budgetSet: 'Set',
+    budgetNoneSet:
+      'No limit set for {{month}}. A budget is for knowing halfway through the month if you’re overdoing it, not at the end.',
+    footer: 'Calculated on this phone',
+  },
+  dashboard: {
+    title: 'Build the dashboard',
+    intro:
+      'Choose what to show in the Charts tab and in what order. This applies to this phone only: it changes nothing for the other people in the group.',
+    allOff: 'With every widget off, the Charts tab stays empty.',
+    visibleCount: {
+      one: '{{count}} widget on out of {{total}}.',
+      other: '{{count}} widgets on out of {{total}}.',
+    },
+    resetOrder: 'Reset to the starting order',
+    moveUp: 'Move {{title}} up',
+    moveDown: 'Move {{title}} down',
+    emptyTitle: 'Empty dashboard',
+    emptyHint:
+      'You’ve turned off every widget. Turn one back on from “{{action}}”, at the top right.',
+    widgetEmpty: 'Nothing to show in this period.',
+    widgets: {
+      total: {
+        title: 'Total',
+        subtitle: 'How much was spent in the period, and how it compares to before',
+      },
+      tiles: {
+        title: 'At a glance',
+        subtitle: 'Average per day, number of expenses, average amount per expense',
+      },
+      months: {
+        title: 'Month by month',
+        subtitle: 'Six monthly bars. Tapping one moves the period to that month',
+      },
+      daily: {
+        title: 'Day by day',
+        subtitle: 'The curve of daily expenses, with the weekly average',
+      },
+      cumulative: {
+        title: 'How it’s adding up',
+        subtitle:
+          'The running total since the start of the period, to know halfway through if you’re overdoing it',
+      },
+      heatmap: {
+        title: 'When you spent',
+        subtitle: 'One cell per day: shows the busy weeks and the empty days',
+      },
+      year: {
+        title: 'Twelve months',
+        subtitle: 'The long-run trend, independent of the chosen period',
+      },
+      weekdays: {
+        title: 'Days of the week',
+        subtitle: 'The weekly pattern, over the last twelve months',
+      },
+      categories: {
+        title: 'Where it went',
+        subtitle: 'The breakdown by category, as tiles and as bars',
+      },
+      amounts: {
+        title: 'How many expenses, by range',
+        subtitle: 'Many small purchases, or a few big ones?',
+      },
+      paid: {
+        title: 'Who fronted it',
+        subtitle: 'How much each person put in, over the chosen period',
+      },
+      balance: {
+        title: 'Between you',
+        subtitle: 'Who owes what to whom, across the group’s whole history',
+      },
+      members: {
+        title: 'Fronted vs. owed',
+        subtitle: 'The two figures compared, person by person',
+      },
+      stores: {
+        title: 'Stores',
+        subtitle: 'The ranking of the places you spent the most',
+      },
+      tags: {
+        title: 'Tags',
+        subtitle: 'The ranking of the labels put on expenses',
+      },
+      budget: {
+        title: 'Budget',
+        subtitle: 'The limits set for the month, and how much is left',
+      },
+    },
+    needs: {
+      members: 'Needs at least one more person in the group.',
+      store: 'Needs at least one expense with a store.',
+      tags: 'Needs at least one expense with a tag.',
+    },
+  },
 };

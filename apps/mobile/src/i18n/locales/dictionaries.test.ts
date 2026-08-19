@@ -93,6 +93,19 @@ describe('dizionari', () => {
       // «1 tag» al singolare si scrive uguale: in italiano «tag» è invariabile, in inglese
       // la s arriva solo dal secondo in poi. La forma `.other` infatti differisce.
       'expense.extra.tagCount.one',
+      // «Tag» come intestazione di sezione è un singolare, e la parola è la stessa nelle
+      // due lingue: come «vault», non un copia-incolla dimenticato.
+      'stats.filters.sections.tag',
+      // Etichetta e importo separati da due punti: la struttura non cambia con la lingua,
+      // e non c'è una parola da tradurre. Vale per entrambi i grafici che la usano.
+      'stats.pointA11y',
+      'stats.heatmap.dayA11y',
+      // Stesso caso, con un terzo segnaposto: il conteggio arriva già tradotto da
+      // `plural('stats.expenseCount', …)`, quindi qui non resta una parola da cambiare.
+      'stats.topListA11y',
+      // «Budget» è un prestito che l'inglese ha dato all'italiano: si scrive uguale in
+      // entrambe le lingue, come «vault».
+      'dashboard.widgets.budget.title',
     ]);
 
     for (const [key, italianText] of dictionaries.it!) {

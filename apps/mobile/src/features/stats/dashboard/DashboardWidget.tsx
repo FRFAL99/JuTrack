@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Feather from '@expo/vector-icons/Feather';
 import { SectionLabel } from '@/components/SectionLabel';
 import { useTheme } from '@/theme';
@@ -43,6 +44,7 @@ export function DashboardWidget({
   empty = false,
   children,
 }: DashboardWidgetProps) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize } = useTheme();
 
   return (
@@ -61,7 +63,7 @@ export function DashboardWidget({
       {unmet.length > 0 ? (
         <Missing lines={unmet.map(describeNeed)} />
       ) : empty ? (
-        <Missing lines={['In questo periodo non c’è niente da mostrare.']} />
+        <Missing lines={[t('dashboard.widgetEmpty')]} />
       ) : (
         children
       )}

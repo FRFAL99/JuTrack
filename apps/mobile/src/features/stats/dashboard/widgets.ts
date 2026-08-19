@@ -11,6 +11,7 @@
  * si limita a chiedersi se quella condizione è soddisfatta. È ciò che permette di tenerlo
  * **visibile** quando non lo è — un widget scelto che svanisce si legge come un guasto.
  */
+import { t } from '@/i18n/translate';
 
 export type WidgetId =
   | 'total'
@@ -43,6 +44,26 @@ export interface WidgetSpec {
   needs: WidgetNeed[];
 }
 
+/** Gli id del registro, **nell'ordine in cui la schermata li mostrava allo Step 26**. */
+const WIDGET_ORDER: { id: WidgetId; needs: WidgetNeed[] }[] = [
+  { id: 'total', needs: [] },
+  { id: 'tiles', needs: [] },
+  { id: 'months', needs: [] },
+  { id: 'daily', needs: [] },
+  { id: 'cumulative', needs: [] },
+  { id: 'heatmap', needs: [] },
+  { id: 'year', needs: [] },
+  { id: 'weekdays', needs: [] },
+  { id: 'categories', needs: [] },
+  { id: 'amounts', needs: [] },
+  { id: 'paid', needs: ['members'] },
+  { id: 'balance', needs: ['members'] },
+  { id: 'members', needs: ['members'] },
+  { id: 'stores', needs: ['store'] },
+  { id: 'tags', needs: ['tags'] },
+  { id: 'budget', needs: [] },
+];
+
 /**
  * I sedici widget, **nell'ordine in cui la schermata li mostrava allo Step 26**.
  *
@@ -50,112 +71,26 @@ export interface WidgetSpec {
  * aggiorna l'app non deve comporre niente per ritrovarsi a casa. Aggiungendone uno in
  * futuro, il posto in cui lo si scrive qui decide dove comparirà a chi la dashboard non
  * l'ha mai toccata — e **non** comparirà a chi l'ha già composta.
+ *
+ * **Funzione e non costante di modulo**: i titoli passano da `t()`, e una costante calcolata
+ * all'import resterebbe congelata nella lingua di sistema per tutta la vita del processo —
+ * lo stesso guasto rischiato dai widget Android allo Step 38.
  */
-export const WIDGETS: WidgetSpec[] = [
-  {
-    id: 'total',
-    title: 'Totale',
-    subtitle: 'Quanto è stato speso nel periodo, e come cambia rispetto a prima',
-    needs: [],
-  },
-  {
-    id: 'tiles',
-    title: 'In sintesi',
-    subtitle: 'Media al giorno, numero di spese, importo medio per spesa',
-    needs: [],
-  },
-  {
-    id: 'months',
-    title: 'Mese per mese',
-    subtitle: 'Sei barre mensili. Toccarne una sposta il periodo su quel mese',
-    needs: [],
-  },
-  {
-    id: 'daily',
-    title: 'Giorno per giorno',
-    subtitle: 'La curva delle spese quotidiane, con la media della settimana',
-    needs: [],
-  },
-  {
-    id: 'cumulative',
-    title: 'Quanto si è accumulato',
-    subtitle: 'La somma dall’inizio del periodo, per sapere a metà mese se si sta esagerando',
-    needs: [],
-  },
-  {
-    id: 'heatmap',
-    title: 'Quando si è speso',
-    subtitle: 'Una cella per giorno: dice le settimane fitte e i giorni vuoti',
-    needs: [],
-  },
-  {
-    id: 'year',
-    title: 'Dodici mesi',
-    subtitle: 'L’andamento lungo, indipendente dal periodo scelto',
-    needs: [],
-  },
-  {
-    id: 'weekdays',
-    title: 'Giorni della settimana',
-    subtitle: 'L’abitudine settimanale, sugli ultimi dodici mesi',
-    needs: [],
-  },
-  {
-    id: 'categories',
-    title: 'Dove sono finiti',
-    subtitle: 'La ripartizione per categoria, a riquadri e a barre',
-    needs: [],
-  },
-  {
-    id: 'amounts',
-    title: 'Quante spese, per fascia',
-    subtitle: 'Tanti scontrini piccoli o pochi grossi?',
-    needs: [],
-  },
-  {
-    id: 'paid',
-    title: 'Chi ha anticipato',
-    subtitle: 'Quanto ha messo ciascuno, sul periodo scelto',
-    needs: ['members'],
-  },
-  {
-    id: 'balance',
-    title: 'Fra di voi',
-    subtitle: 'Chi deve quanto a chi, su tutta la storia del gruppo',
-    needs: ['members'],
-  },
-  {
-    id: 'members',
-    title: 'Anticipato e a carico',
-    subtitle: 'Le due grandezze a confronto, persona per persona',
-    needs: ['members'],
-  },
-  {
-    id: 'stores',
-    title: 'Negozi',
-    subtitle: 'La classifica dei posti in cui si è speso di più',
-    needs: ['store'],
-  },
-  {
-    id: 'tags',
-    title: 'Tag',
-    subtitle: 'La classifica delle etichette messe sulle spese',
-    needs: ['tags'],
-  },
-  {
-    id: 'budget',
-    title: 'Budget',
-    subtitle: 'I limiti impostati per il mese, e quanto ne resta',
-    needs: [],
-  },
-];
+export function widgets(): WidgetSpec[] {
+  return WIDGET_ORDER.map(({ id, needs }) => ({
+    id,
+    needs,
+    title: t(`dashboard.widgets.${id}.title`),
+    subtitle: t(`dashboard.widgets.${id}.subtitle`),
+  }));
+}
 
 /** Gli id del registro, per i controlli di appartenenza. */
-export const WIDGET_IDS: WidgetId[] = WIDGETS.map((widget) => widget.id);
+export const WIDGET_IDS: WidgetId[] = WIDGET_ORDER.map((widget) => widget.id);
 
 /** La scheda di un widget, `undefined` per un id che il registro non conosce più. */
 export function widgetSpec(id: WidgetId): WidgetSpec | undefined {
-  return WIDGETS.find((widget) => widget.id === id);
+  return widgets().find((widget) => widget.id === id);
 }
 
 /** Vero se la stringa è un id del registro. È il filtro di `parseLayout`. */
@@ -173,11 +108,11 @@ export function isWidgetId(value: unknown): value is WidgetId {
 export function describeNeed(need: WidgetNeed): string {
   switch (need) {
     case 'members':
-      return 'Serve almeno un’altra persona nel gruppo.';
+      return t('dashboard.needs.members');
     case 'store':
-      return 'Serve almeno una spesa con un negozio.';
+      return t('dashboard.needs.store');
     case 'tags':
-      return 'Serve almeno una spesa con un tag.';
+      return t('dashboard.needs.tags');
   }
 }
 

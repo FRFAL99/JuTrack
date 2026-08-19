@@ -132,55 +132,102 @@ export interface QueryLabels {
 }
 
 /**
+ * Le frasi che compongono `queryParts`, nella lingua di chi guarda.
+ *
+ * Stessa regola dello Step 39 per `NumberFormat`: `packages/core` non importa `i18next`, per
+ * la regola dello Step 0 che tiene fuori anche `react-native`. Il testo arriva da fuori come
+ * parametro, con un default italiano che tiene validi i test del core scritti prima di
+ * questo step; `apps/mobile` passa la versione tradotta dal dizionario, con un modulo sottile
+ * come già per `formatMoney` (Step 39, `@/i18n/money`).
+ */
+export interface QueryStrings {
+  categoriesCount: (count: number) => string;
+  storesCount: (count: number) => string;
+  tagsCount: (count: number) => string;
+  owedBy: (who: string) => string;
+  paidBy: (who: string) => string;
+  amountFrom: (amount: string) => string;
+  amountTo: (amount: string) => string;
+  allExpenses: string;
+  /** Ripiego di `describePeriod`, usato solo se chi chiama non passa `labels.period`. */
+  periodFrom: (date: string) => string;
+  periodTo: (date: string) => string;
+}
+
+/** Il testo di chi non ne passa uno: italiano, come il resto del core. */
+export const ITALIAN_QUERY_STRINGS: QueryStrings = {
+  categoriesCount: (count) => `${count} categorie`,
+  storesCount: (count) => `${count} negozi`,
+  tagsCount: (count) => `${count} tag`,
+  owedBy: (who) => `A carico di ${who}`,
+  paidBy: (who) => `Pagate da ${who}`,
+  amountFrom: (amount) => `Da ${amount}`,
+  amountTo: (amount) => `Fino a ${amount}`,
+  allExpenses: 'Tutte le spese',
+  periodFrom: (date) => `Dal ${date}`,
+  periodTo: (date) => `Fino al ${date}`,
+};
+
+/**
  * Una frase per filtro attivo, nell'ordine in cui la barra dei chip le mostra.
  *
- * `symbol` è l'unico pezzo di formattazione che entra qui: le fasce di importo si leggono
- * come importi, e con la valuta scelta nel profilo (Step 29). Default `'€'`, così i
+ * `symbol` è l'unico pezzo di formattazione monetaria che entra qui: le fasce di importo si
+ * leggono come importi, e con la valuta scelta nel profilo (Step 29). Default `'€'`, così i
  * chiamanti che non ne hanno una restano identici.
  */
-export function queryParts(query: ExpenseQuery, labels: QueryLabels = {}, symbol = '€'): string[] {
+export function queryParts(
+  query: ExpenseQuery,
+  labels: QueryLabels = {},
+  symbol = '€',
+  strings: QueryStrings = ITALIAN_QUERY_STRINGS,
+): string[] {
   const parts: string[] = [];
 
   if (query.from !== undefined || query.to !== undefined) {
-    parts.push(labels.period ?? describePeriod(query.from, query.to));
+    parts.push(labels.period ?? describePeriod(query.from, query.to, strings));
   }
 
   const categories = query.categoryIds ?? [];
   if (categories.length === 1) {
     parts.push(name(categories[0] as string, labels.category));
   } else if (categories.length > 1) {
-    parts.push(`${categories.length} categorie`);
+    parts.push(strings.categoriesCount(categories.length));
   }
 
   const stores = query.stores ?? [];
   if (stores.length === 1) parts.push(stores[0] as string);
-  else if (stores.length > 1) parts.push(`${stores.length} negozi`);
+  else if (stores.length > 1) parts.push(strings.storesCount(stores.length));
 
   const tags = query.tags ?? [];
   if (tags.length === 1) parts.push(`#${tags[0] as string}`);
-  else if (tags.length > 1) parts.push(`${tags.length} tag`);
+  else if (tags.length > 1) parts.push(strings.tagsCount(tags.length));
 
   if (query.memberId !== undefined) {
     const who = name(query.memberId, labels.member);
-    parts.push((query.personMode ?? 'owed') === 'paid' ? `Pagate da ${who}` : `A carico di ${who}`);
+    parts.push((query.personMode ?? 'owed') === 'paid' ? strings.paidBy(who) : strings.owedBy(who));
   }
 
   const { minCents, maxCents } = query;
   if (minCents !== undefined && maxCents !== undefined) {
     parts.push(`${formatMoney(minCents, symbol)} – ${formatMoney(maxCents, symbol)}`);
   } else if (minCents !== undefined) {
-    parts.push(`Da ${formatMoney(minCents, symbol)}`);
+    parts.push(strings.amountFrom(formatMoney(minCents, symbol)));
   } else if (maxCents !== undefined) {
-    parts.push(`Fino a ${formatMoney(maxCents, symbol)}`);
+    parts.push(strings.amountTo(formatMoney(maxCents, symbol)));
   }
 
   return parts;
 }
 
 /** Le stesse frasi in una riga sola, per un sottotitolo. «Tutte le spese» se non filtra. */
-export function describeQuery(query: ExpenseQuery, labels: QueryLabels = {}, symbol = '€'): string {
-  const parts = queryParts(query, labels, symbol);
-  return parts.length === 0 ? 'Tutte le spese' : parts.join(' · ');
+export function describeQuery(
+  query: ExpenseQuery,
+  labels: QueryLabels = {},
+  symbol = '€',
+  strings: QueryStrings = ITALIAN_QUERY_STRINGS,
+): string {
+  const parts = queryParts(query, labels, symbol, strings);
+  return parts.length === 0 ? strings.allExpenses : parts.join(' · ');
 }
 
 /** Se la persona c'entra con questa spesa, secondo la modalità scelta. */
@@ -196,7 +243,11 @@ function name(id: string, resolve: ((id: string) => string) | undefined): string
 }
 
 /** Ripiego quando il chiamante non passa un'etichetta di periodo: le date grezze. */
-function describePeriod(from: IsoDate | undefined, to: IsoDate | undefined): string {
+function describePeriod(
+  from: IsoDate | undefined,
+  to: IsoDate | undefined,
+  strings: QueryStrings,
+): string {
   if (from !== undefined && to !== undefined) return `${from} → ${to}`;
-  return from !== undefined ? `Dal ${from}` : `Fino al ${to as IsoDate}`;
+  return from !== undefined ? strings.periodFrom(from) : strings.periodTo(to as IsoDate);
 }

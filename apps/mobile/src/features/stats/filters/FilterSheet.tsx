@@ -1,9 +1,11 @@
 import type { ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import type { Category, IsoDate, Member, PersonMode } from '@jutrack/core';
 import { Chip } from '@/components/Chip';
 import { CategoryIcon } from '@/features/categories/CategoryIcon';
+import { plural } from '@/i18n/translate';
 import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { AMOUNT_CHOICES, amountRange, isAmountChosen } from './amount';
@@ -27,12 +29,6 @@ interface FilterSheetProps {
   matchCount: number;
   today: IsoDate;
 }
-
-/** Le due modalità del filtro persona, con le parole che le distinguono davvero. */
-const PERSON_MODES: { id: PersonMode; label: string }[] = [
-  { id: 'owed', label: 'A carico di' },
-  { id: 'paid', label: 'Ha pagato' },
-];
 
 /**
  * I sei filtri, in un foglio dal basso.
@@ -62,9 +58,16 @@ export function FilterSheet({
   matchCount,
   today,
 }: FilterSheetProps) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const symbol = useCurrencySymbol();
   const insets = useSafeAreaInsets();
+
+  /** Le due modalità del filtro persona, con le parole che le distinguono davvero. */
+  const personModes: { id: PersonMode; label: string }[] = [
+    { id: 'owed', label: t('stats.filters.personMode.owed') },
+    { id: 'paid', label: t('stats.filters.personMode.paid') },
+  ];
 
   const patch = (change: QueryFacets) => onFacetsChange({ ...facets, ...change });
 
@@ -90,7 +93,7 @@ export function FilterSheet({
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
-      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel="Chiudi" />
+      <Pressable style={styles.backdrop} onPress={onClose} accessibilityLabel={t('common.close')} />
       <View
         style={{
           backgroundColor: colors.surface,
@@ -107,14 +110,14 @@ export function FilterSheet({
         </View>
 
         <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.xl }}>
-          <Section title="Periodo">
+          <Section title={t('stats.filters.sections.period')}>
             <PeriodPicker period={period} onChange={onPeriodChange} today={today} />
           </Section>
 
           {/* Con una persona sola il filtro non ha niente da separare: mostrarlo sarebbe
               una domanda a cui c'è una risposta sola. */}
           {members.length > 1 && (
-            <Section title="Persona">
+            <Section title={t('stats.filters.sections.person')}>
               <View style={styles.chips}>
                 {members.map((member) => (
                   <Chip
@@ -129,7 +132,7 @@ export function FilterSheet({
               {facets.memberId !== undefined && (
                 <View style={{ gap: spacing.sm }}>
                   <View style={styles.chips}>
-                    {PERSON_MODES.map((mode) => (
+                    {personModes.map((mode) => (
                       <Chip
                         key={mode.id}
                         label={mode.label}
@@ -142,8 +145,8 @@ export function FilterSheet({
                       lati, e un numero plausibile e sbagliato non si riconosce a occhio. */}
                   <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs, lineHeight: 16 }}>
                     {(facets.personMode ?? 'owed') === 'owed'
-                      ? 'Quanto le è costato: di una cena divisa a metà conta la metà.'
-                      : 'Quanto ha anticipato: di una cena che ha pagato lei conta tutto.'}
+                      ? t('stats.filters.personModeHint.owed')
+                      : t('stats.filters.personModeHint.paid')}
                   </Text>
                 </View>
               )}
@@ -151,7 +154,7 @@ export function FilterSheet({
           )}
 
           {categories.length > 0 && (
-            <Section title="Categoria">
+            <Section title={t('stats.filters.sections.category')}>
               <View style={styles.chips}>
                 {categories.map((category) => (
                   <Chip
@@ -175,7 +178,7 @@ export function FilterSheet({
           {/* Negozi e tag compaiono solo se esistono: il vocabolario si deriva dalle spese,
               e in un gruppo che non li usa questi due blocchi sarebbero vuoti. */}
           {stores.length > 0 && (
-            <Section title="Negozio">
+            <Section title={t('stats.filters.sections.store')}>
               <View style={styles.chips}>
                 {stores.map((store) => (
                   <Chip
@@ -192,7 +195,7 @@ export function FilterSheet({
           )}
 
           {tags.length > 0 && (
-            <Section title="Tag">
+            <Section title={t('stats.filters.sections.tag')}>
               <View style={styles.chips}>
                 {tags.map((tag) => (
                   <Chip
@@ -206,7 +209,7 @@ export function FilterSheet({
             </Section>
           )}
 
-          <Section title="Importo">
+          <Section title={t('stats.filters.sections.amount')}>
             <View style={styles.chips}>
               {AMOUNT_CHOICES.map((choice) => {
                 const chosen = isAmountChosen(choice, facets);
@@ -233,7 +236,7 @@ export function FilterSheet({
                 quota, non sul prezzo pieno, o l'istogramma mostrerebbe barre fuori fascia. */}
             {facets.memberId !== undefined && (
               <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-                Sulla cifra che risulta dal filtro persona, non sul prezzo pieno.
+                {t('stats.filters.amountHint')}
               </Text>
             )}
           </Section>
@@ -252,7 +255,7 @@ export function FilterSheet({
           }}
         >
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-            {matchCount === 1 ? '1 spesa' : `${matchCount} spese`}
+            {plural('stats.expenseCount', matchCount)}
           </Text>
           <Pressable onPress={onClose} accessibilityRole="button" hitSlop={8}>
             <Text
@@ -262,7 +265,7 @@ export function FilterSheet({
                 fontWeight: fontWeight.semibold,
               }}
             >
-              Fatto
+              {t('stats.filters.done')}
             </Text>
           </Pressable>
         </View>

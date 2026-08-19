@@ -1,4 +1,5 @@
 import { formatMoney, numberFormat } from '@/i18n/money';
+import { t } from '@/i18n/translate';
 
 /**
  * Le frasi e i numeri che compaiono nei grafici.
@@ -15,12 +16,16 @@ import { formatMoney, numberFormat } from '@/i18n/money';
  * non si calcola.
  */
 export function describeChange(current: number, previous: number, previousLabel: string): string {
-  if (previous === 0) return current === 0 ? 'Nessuna spesa' : `Nulla speso in ${previousLabel}`;
+  if (previous === 0) {
+    return current === 0
+      ? t('stats.change.none')
+      : t('stats.change.zeroPrevious', { previous: previousLabel });
+  }
   const delta = Math.round(((current - previous) / previous) * 100);
-  if (delta === 0) return `Come in ${previousLabel}`;
+  if (delta === 0) return t('stats.change.same', { previous: previousLabel });
   return delta > 0
-    ? `+${delta}% rispetto a ${previousLabel}`
-    : `${delta}% rispetto a ${previousLabel}`;
+    ? t('stats.change.up', { delta, previous: previousLabel })
+    : t('stats.change.down', { delta, previous: previousLabel });
 }
 
 /**
@@ -59,7 +64,11 @@ export function describeBudget(
   remainingCents: number,
   symbol = '€',
 ): string {
-  if (state === 'over') return `⚠️ Superato di ${formatMoney(-remainingCents, symbol)}`;
-  if (state === 'near') return `⏳ Restano ${formatMoney(remainingCents, symbol)}`;
-  return `✓ Restano ${formatMoney(remainingCents, symbol)}`;
+  if (state === 'over') {
+    return t('stats.budgetStatus.over', { amount: formatMoney(-remainingCents, symbol) });
+  }
+  if (state === 'near') {
+    return t('stats.budgetStatus.near', { amount: formatMoney(remainingCents, symbol) });
+  }
+  return t('stats.budgetStatus.under', { amount: formatMoney(remainingCents, symbol) });
 }

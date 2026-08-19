@@ -34,11 +34,13 @@ export {
   applyQuery,
   describeQuery,
   isEmptyQuery,
+  ITALIAN_QUERY_STRINGS,
   queryParts,
   queryTotalCents,
   type ExpenseQuery,
   type PersonMode,
   type QueryLabels,
+  type QueryStrings,
 } from './query';
 
 export {

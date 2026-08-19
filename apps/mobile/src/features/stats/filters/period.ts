@@ -21,6 +21,7 @@ import {
   type IsoMonth,
 } from '@jutrack/core';
 import { formatDayShort, formatMonthTitle, todayIso } from '@/features/expenses/grouping';
+import { t } from '@/i18n/translate';
 
 /** I sei preset del selettore. `custom` non è fra questi: non ha una regola, ha due date. */
 export type PeriodPresetId =
@@ -41,15 +42,21 @@ export interface Period {
  *
  * L'etichetta è quella che compare sia nel selettore sia nel chip della barra — un solo
  * testo, così la pillola che si tocca e quella che resta scritta dicono la stessa cosa.
+ *
+ * **Funzione e non costante di modulo**: una costante calcolata all'import resterebbe
+ * congelata nella lingua di sistema per tutta la vita del processo, lo stesso guasto rischiato
+ * dai widget allo Step 38.
  */
-export const PERIOD_PRESETS: { id: PeriodPresetId; label: string }[] = [
-  { id: 'last7', label: 'Ultimi 7 giorni' },
-  { id: 'last30', label: 'Ultimi 30 giorni' },
-  { id: 'thisMonth', label: 'Questo mese' },
-  { id: 'lastMonth', label: 'Mese scorso' },
-  { id: 'last12Months', label: 'Ultimi 12 mesi' },
-  { id: 'thisYear', label: "Quest'anno" },
-];
+export function periodPresets(): { id: PeriodPresetId; label: string }[] {
+  return [
+    { id: 'last7', label: t('stats.period.last7') },
+    { id: 'last30', label: t('stats.period.last30') },
+    { id: 'thisMonth', label: t('stats.period.thisMonth') },
+    { id: 'lastMonth', label: t('stats.period.lastMonth') },
+    { id: 'last12Months', label: t('stats.period.last12Months') },
+    { id: 'thisYear', label: t('stats.period.thisYear') },
+  ];
+}
 
 /**
  * Il periodo di un preset.
@@ -146,7 +153,7 @@ export function previousPeriod(period: Period): { from: IsoDate; to: IsoDate } {
  * hanno un nome.
  */
 export function periodLabel(period: Period, now: Date = new Date()): string {
-  const preset = PERIOD_PRESETS.find((one) => one.id === period.id);
+  const preset = periodPresets().find((one) => one.id === period.id);
   if (preset !== undefined) return preset.label;
   // La maiuscola sta **qui** e non in `describeRange`: un chip comincia una frase sua,
   // mentre «rispetto a marzo» sta in mezzo a una. Le date non se ne accorgono — «3 – 20
@@ -182,10 +189,10 @@ export function describeRange(from: IsoDate, to: IsoDate, now: Date = new Date()
  * si intende — «Questo mese» che il 15 significa fino al 15 e non fino al 31.
  */
 export function describeBounds(from: IsoDate, to: IsoDate, now: Date = new Date()): string {
-  if (from === to) return `Solo il ${formatDayShort(from, now)}`;
+  if (from === to) return t('stats.period.onlyDay', { day: formatDayShort(from, now) });
   const opening =
     monthOf(from) === monthOf(to) ? String(Number(from.slice(8, 10))) : formatDayShort(from, now);
-  return `Dal ${opening} al ${formatDayShort(to, now)}`;
+  return t('stats.period.fromTo', { opening, closing: formatDayShort(to, now) });
 }
 
 /**

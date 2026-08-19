@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import {
@@ -31,6 +32,7 @@ import {
   type QueryLabels,
 } from '@jutrack/core';
 import { formatMoney } from '@/i18n/money';
+import { plural } from '@/i18n/translate';
 import { HeroAmount } from '@/components/HeroAmount';
 import { Button } from '@/components/Button';
 import { EmptyState } from '@/components/EmptyState';
@@ -104,19 +106,20 @@ const TOP_SLICES = 5;
  * La guardia sta sopra il componente che lavora: tutti i suoi hook leggono il vault.
  */
 export default function StatsScreen() {
+  const { t } = useTranslation();
   const { colors, spacing } = useTheme();
   const group = useCurrentGroup();
 
   if (group === null) {
     return (
-      <Screen title="Grafici">
+      <Screen title={t('tabs.charts')}>
         <EmptyState
           icon={<Feather name="bar-chart-2" size={26} color={colors.textFaint} />}
-          title="Nessun gruppo aperto"
-          hint="I grafici raccontano le spese di un gruppo. Aprine uno, o creane uno, e qui compariranno andamento, categorie e saldo."
+          title={t('stats.noGroupTitle')}
+          hint={t('stats.noGroupHint')}
         />
         <View style={{ padding: spacing.lg }}>
-          <Button label="I tuoi gruppi" onPress={() => router.push('/')} />
+          <Button label={t('groups.title')} onPress={() => router.push('/')} />
         </View>
       </Screen>
     );
@@ -140,6 +143,7 @@ export default function StatsScreen() {
  * mesi. Tutto il resto passa da `applyQuery` in due `useMemo`.
  */
 function StatsOfGroup() {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const symbol = useCurrencySymbol();
   const [period, setPeriod] = useState<Period>(defaultPeriod);
@@ -290,16 +294,18 @@ function StatsOfGroup() {
   const storeNames = useMemo(() => knownStores(allExpenses), [allExpenses]);
   const tagNames = useMemo(() => knownTags(allExpenses), [allExpenses]);
 
-  const nameOf = (id: string): string => members.find((m) => m.id === id)?.name ?? 'qualcuno';
+  const nameOf = (id: string): string =>
+    members.find((m) => m.id === id)?.name ?? t('common.someone');
   const colorOf = (id: string): string => members.find((m) => m.id === id)?.color ?? colors.accent;
   const periodTitle = describeRange(period.from, period.to);
 
   const labels: QueryLabels = useMemo(
     () => ({
-      category: (id) => categories.find((one) => one.id === id)?.name ?? 'categoria',
-      member: (id) => members.find((one) => one.id === id)?.name ?? 'qualcuno',
+      category: (id) =>
+        categories.find((one) => one.id === id)?.name ?? t('stats.categoryFallback'),
+      member: (id) => members.find((one) => one.id === id)?.name ?? t('common.someone'),
     }),
-    [categories, members],
+    [categories, members, t],
   );
 
   const filtering = !isEmptyQuery(facets);
@@ -309,7 +315,7 @@ function StatsOfGroup() {
     const category = total.categoryId === null ? undefined : byId(categories, total.categoryId);
     return {
       key: total.categoryId ?? 'none',
-      label: category?.name ?? 'Senza categoria',
+      label: category?.name ?? t('expense.row.uncategorized'),
       valueCents: total.totalCents,
       color: category?.color ?? colors.textMuted,
     };
@@ -345,7 +351,7 @@ function StatsOfGroup() {
       <Pressable
         onPress={() => router.push('/dashboard')}
         accessibilityRole="button"
-        accessibilityLabel="Componi la dashboard"
+        accessibilityLabel={t('dashboard.title')}
         hitSlop={10}
         style={{ paddingHorizontal: spacing.lg }}
       >
@@ -373,11 +379,11 @@ function StatsOfGroup() {
 
   if (allExpenses.length === 0) {
     return (
-      <Screen title="Grafici">
+      <Screen title={t('tabs.charts')}>
         <EmptyState
           icon={<Feather name="bar-chart-2" size={26} color={colors.textFaint} />}
-          title="Ancora nessun dato"
-          hint="Andamento, ripartizione per categoria e saldo tra di voi appariranno qui una volta registrate le prime spese."
+          title={t('stats.noDataTitle')}
+          hint={t('stats.noDataHint')}
         />
       </Screen>
     );
@@ -396,16 +402,16 @@ function StatsOfGroup() {
       <Screen header={header}>
         <EmptyState
           icon={<Feather name="filter" size={26} color={colors.textFaint} />}
-          title={filtering ? 'Nessuna spesa con questi filtri' : `Nessuna spesa in ${periodTitle}`}
-          hint={
+          title={
             filtering
-              ? 'I filtri valgono per tutti i grafici insieme. Toglierne uno, o allargare il periodo, li fa ricomparire.'
-              : 'Scegli un periodo più largo, oppure registra una spesa in questi giorni.'
+              ? t('stats.emptyFilteredTitle')
+              : t('stats.emptyPeriodTitle', { period: periodTitle })
           }
+          hint={filtering ? t('stats.emptyFilteredHint') : t('stats.emptyPeriodHint')}
         />
         {filtering && (
           <View style={{ padding: spacing.lg }}>
-            <Button label="Azzera i filtri" onPress={reset} />
+            <Button label={t('stats.filters.resetA11y')} onPress={reset} />
           </View>
         )}
         {sheet}
@@ -453,23 +459,23 @@ function StatsOfGroup() {
       node: (
         <View style={[styles.tiles, { paddingHorizontal: spacing.sm }]}>
           <StatTile
-            label="Al giorno"
+            label={t('stats.tiles.perDay')}
             value={formatMoney(averagePerDay(days), symbol)}
-            hint={`su ${days.length} ${days.length === 1 ? 'giorno' : 'giorni'}`}
+            hint={plural('stats.tiles.perDayHint', days.length)}
             values={days.map((day) => day.totalCents)}
-            sparklineLabel={`Andamento giornaliero di ${periodTitle}`}
+            sparklineLabel={t('stats.tiles.dailyTrend', { period: periodTitle })}
           />
           <Divider color={colors.divider} />
           <StatTile
-            label="Spese"
+            label={t('stats.tiles.expenses')}
             value={String(filtered.length)}
-            hint={filtered.length === 1 ? 'registrata' : 'registrate'}
+            hint={plural('stats.tiles.recordedHint', filtered.length)}
           />
           <Divider color={colors.divider} />
           <StatTile
-            label="A spesa"
+            label={t('stats.tiles.perExpense')}
             value={formatMoney(Math.round(periodTotal / filtered.length), symbol)}
-            hint="in media"
+            hint={t('stats.tiles.average')}
           />
         </View>
       ),
@@ -488,7 +494,7 @@ function StatsOfGroup() {
           />
           {!startsAtMonthStart(period) && (
             <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-              I mesi sono interi, anche quando il periodo scelto è più corto.
+              {t('stats.monthsWholeNote')}
             </Text>
           )}
         </View>
@@ -505,7 +511,7 @@ function StatsOfGroup() {
               valueCents: day.totalCents,
             }))}
             overlayCents={smoothed}
-            overlayLabel={`Media dei ${SMOOTHING_DAYS} giorni precedenti`}
+            overlayLabel={t('stats.dailyOverlayLabel', { days: SMOOTHING_DAYS })}
           />
         </View>
       ),
@@ -522,7 +528,9 @@ function StatsOfGroup() {
             }))}
             {...(previous > 0 && {
               referenceCents: previous,
-              referenceLabel: `Totale di ${previousLabel(period)}`,
+              referenceLabel: t('stats.cumulativeReferenceLabel', {
+                period: previousLabel(period),
+              }),
             })}
           />
         </View>
@@ -559,8 +567,7 @@ function StatsOfGroup() {
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
           <WeekdayBars totals={weekdays} />
           <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            Sugli ultimi dodici mesi, non sul periodo scelto: su un mese solo sarebbero sette numeri
-            a caso.
+            {t('stats.weekdaysNote')}
           </Text>
         </View>
       ),
@@ -580,8 +587,7 @@ function StatsOfGroup() {
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
           <AmountHistogram bins={bins} />
           <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            L&apos;altezza è il numero di spese, non la somma: dice se si fanno tanti scontrini
-            piccoli o pochi grossi.
+            {t('stats.amountsNote')}
           </Text>
         </View>
       ),
@@ -595,7 +601,7 @@ function StatsOfGroup() {
         <View style={{ paddingHorizontal: spacing.lg }}>
           <DonutChart
             slices={topSlices(paidSlices, TOP_SLICES, colors.textMuted)}
-            centerLabel={`Anticipato in ${periodTitle}`}
+            centerLabel={t('stats.paidCenterLabel', { period: periodTitle })}
           />
         </View>
       ),
@@ -607,29 +613,31 @@ function StatsOfGroup() {
           {transfers.length === 0 ? (
             <View style={styles.rowBetween}>
               <Text style={{ flex: 1, color: colors.text, fontSize: fontSize.md }}>
-                Siete pari. Nessuno deve niente a nessuno.
+                {t('stats.balance.evenBody')}
               </Text>
-              <CompactButton label="Storico" onPress={() => router.push('/settle')} />
+              <CompactButton
+                label={t('stats.balance.history')}
+                onPress={() => router.push('/settle')}
+              />
             </View>
           ) : (
             transfers.map((transfer, index) => (
               <View key={`${transfer.fromMember}-${transfer.toMember}`} style={styles.rowBetween}>
                 <Text style={{ flex: 1, color: colors.text, fontSize: fontSize.md }}>
-                  {nameOf(transfer.fromMember)} deve{' '}
-                  <Text style={{ color: colors.expense, fontWeight: fontWeight.semibold }}>
-                    {formatMoney(transfer.amountCents, symbol)}
-                  </Text>{' '}
-                  a {nameOf(transfer.toMember)}
+                  {t('stats.balance.transfer', {
+                    from: nameOf(transfer.fromMember),
+                    amount: formatMoney(transfer.amountCents, symbol),
+                    to: nameOf(transfer.toMember),
+                  })}
                 </Text>
                 {index === transfers.length - 1 && (
-                  <CompactButton label="Pareggia" onPress={() => router.push('/settle')} />
+                  <CompactButton label={t('home.settle')} onPress={() => router.push('/settle')} />
                 )}
               </View>
             ))
           )}
           <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            Su tutta la storia del gruppo, filtri esclusi: un debito non si azzera cambiando
-            periodo.
+            {t('stats.balance.historyNote')}
           </Text>
         </View>
       ),
@@ -641,7 +649,7 @@ function StatsOfGroup() {
           <MemberComparison
             series={overTheYear}
             members={members}
-            periodLabel="negli ultimi dodici mesi"
+            periodLabel={t('stats.membersPeriodLabel')}
           />
         </View>
       ),
@@ -651,11 +659,7 @@ function StatsOfGroup() {
       empty: stores.length === 0,
       node: (
         <View style={{ paddingHorizontal: spacing.lg }}>
-          <TopList
-            totals={stores}
-            max={TOP_SLICES}
-            note="Le spese senza negozio non compaiono: questa classifica somma meno del totale del periodo."
-          />
+          <TopList totals={stores} max={TOP_SLICES} note={t('stats.storesNote')} />
         </View>
       ),
     },
@@ -664,11 +668,7 @@ function StatsOfGroup() {
       empty: tags.length === 0,
       node: (
         <View style={{ paddingHorizontal: spacing.lg }}>
-          <TopList
-            totals={tags}
-            max={TOP_SLICES}
-            note="Una spesa con due tag conta per intero in entrambi: qui la somma può superare il totale del periodo."
-          />
+          <TopList totals={tags} max={TOP_SLICES} note={t('stats.tagsNote')} />
         </View>
       ),
     },
@@ -685,13 +685,14 @@ function StatsOfGroup() {
               accessibilityRole="button"
               hitSlop={8}
             >
-              <Text style={{ color: colors.accent, fontSize: fontSize.sm }}>Imposta</Text>
+              <Text style={{ color: colors.accent, fontSize: fontSize.sm }}>
+                {t('stats.budgetSet')}
+              </Text>
             </Pressable>
           </View>
           {budgetState.length === 0 ? (
             <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
-              Nessun limite impostato per {formatMonthTitle(anchor)}. Un budget serve a sapere a
-              metà mese se si sta esagerando, non a fine mese.
+              {t('stats.budgetNoneSet', { month: formatMonthTitle(anchor) })}
             </Text>
           ) : (
             <BudgetRows statuses={budgetState} categories={categories} />
@@ -732,8 +733,8 @@ function StatsOfGroup() {
           <View style={{ paddingTop: spacing.xl }}>
             <EmptyState
               icon={<Feather name="grid" size={26} color={colors.textFaint} />}
-              title="Dashboard vuota"
-              hint="Hai spento tutti i widget. Riaccendine qualcuno da «Componi la dashboard», in alto a destra."
+              title={t('dashboard.emptyTitle')}
+              hint={t('dashboard.emptyHint', { action: t('dashboard.title') })}
             />
           </View>
         )}
@@ -741,7 +742,7 @@ function StatsOfGroup() {
         <View style={[styles.footer, { paddingHorizontal: spacing.lg, paddingTop: spacing.xl }]}>
           <Feather name="lock" size={13} color={colors.textFaint} />
           <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            Calcolato su questo telefono
+            {t('stats.footer')}
           </Text>
         </View>
       </ScrollView>

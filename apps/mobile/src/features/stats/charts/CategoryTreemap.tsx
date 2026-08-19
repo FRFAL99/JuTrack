@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Svg, { Rect } from 'react-native-svg';
 import { squarify, type TreemapRect } from '@jutrack/core';
 import { formatMoney } from '@/i18n/money';
@@ -32,6 +33,7 @@ const AMOUNT_FITS = { width: 40, height: 20 };
  * sotto la mappa. È la stessa compensazione della heatmap, per la stessa ragione.
  */
 export function CategoryTreemap({ items, height = 180 }: CategoryTreemapProps) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const symbol = useCurrencySymbol();
   const { width, onLayout } = useChartWidth();
@@ -78,7 +80,10 @@ export function CategoryTreemap({ items, height = 180 }: CategoryTreemapProps) {
                   key={rect.id}
                   onPress={() => setSelected(selected?.key === item.key ? null : item)}
                   accessibilityRole="button"
-                  accessibilityLabel={`${item.label}: ${formatMoney(item.valueCents, symbol)}`}
+                  accessibilityLabel={t('stats.pointA11y', {
+                    label: item.label,
+                    amount: formatMoney(item.valueCents, symbol),
+                  })}
                   style={{
                     position: 'absolute',
                     left: rect.x,
@@ -113,9 +118,7 @@ export function CategoryTreemap({ items, height = 180 }: CategoryTreemapProps) {
 
           <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
             {selected === null ? (
-              <Text style={{ color: colors.textMuted }}>
-                Tocca un riquadro per leggerne nome e importo.
-              </Text>
+              <Text style={{ color: colors.textMuted }}>{t('stats.treemapTapHint')}</Text>
             ) : (
               <>
                 {selected.label}{' '}

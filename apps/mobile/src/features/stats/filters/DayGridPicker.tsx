@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Feather from '@expo/vector-icons/Feather';
 import { dayOfWeek, daysOfMonth, monthOf, shiftMonth, type IsoDate } from '@jutrack/core';
 import { currentMonth, formatDayShort, formatMonthTitle } from '@/features/expenses/grouping';
@@ -32,6 +33,7 @@ const COLUMNS = 7;
  * non è un errore visibile, è una schermata vuota che sembra un guasto.
  */
 export function DayGridPicker({ period, onChange, today }: DayGridPickerProps) {
+  const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const [month, setMonth] = useState(() => monthOf(period.to));
   /** Il primo tocco di un intervallo nuovo. `null` quando non ce n'è uno a metà. */
@@ -67,7 +69,7 @@ export function DayGridPicker({ period, onChange, today }: DayGridPickerProps) {
         <Pressable
           onPress={() => setMonth(shiftMonth(month, -1))}
           accessibilityRole="button"
-          accessibilityLabel="Mese precedente"
+          accessibilityLabel={t('stats.grid.previousMonth')}
           hitSlop={12}
         >
           <Feather name="chevron-left" size={20} color={colors.accent} />
@@ -81,7 +83,7 @@ export function DayGridPicker({ period, onChange, today }: DayGridPickerProps) {
           onPress={() => setMonth(shiftMonth(month, 1))}
           disabled={atCurrentMonth}
           accessibilityRole="button"
-          accessibilityLabel="Mese successivo"
+          accessibilityLabel={t('stats.grid.nextMonth')}
           accessibilityState={{ disabled: atCurrentMonth }}
           hitSlop={12}
         >
@@ -148,8 +150,8 @@ export function DayGridPicker({ period, onChange, today }: DayGridPickerProps) {
 
       <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
         {pending === null
-          ? 'Tocca un giorno per cominciare un intervallo nuovo.'
-          : `Dal ${formatDayShort(pending)}: tocca il giorno in cui finisce.`}
+          ? t('stats.grid.startHint')
+          : t('stats.grid.endHint', { day: formatDayShort(pending) })}
       </Text>
     </View>
   );

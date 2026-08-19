@@ -1,4 +1,5 @@
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Feather from '@expo/vector-icons/Feather';
 import { knownStores, knownTags } from '@jutrack/core';
 import { ModalScreen } from '@/components/ModalScreen';
@@ -11,6 +12,7 @@ import {
   type GroupFacts,
   type WidgetSpec,
 } from '@/features/stats/dashboard/widgets';
+import { plural } from '@/i18n/translate';
 import { useCurrentGroup, useExpenses, useMembers } from '@/state';
 import { useTheme } from '@/theme';
 
@@ -48,13 +50,14 @@ function ComposerWithFacts() {
 }
 
 function Composer({ facts }: { facts: GroupFacts | null }) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize } = useTheme();
   const { layout, ready, update, reset } = useDashboardLayout();
 
   const visible = layout.filter((item) => item.visible).length;
 
   return (
-    <ModalScreen title="Componi la dashboard">
+    <ModalScreen title={t('dashboard.title')}>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
         <Text
           style={{
@@ -65,8 +68,7 @@ function Composer({ facts }: { facts: GroupFacts | null }) {
             paddingBottom: spacing.md,
           }}
         >
-          Scegli cosa mostrare nel tab Grafici e in che ordine. Vale solo per questo telefono: non
-          cambia niente per le altre persone del gruppo.
+          {t('dashboard.intro')}
         </Text>
 
         {ready &&
@@ -93,12 +95,12 @@ function Composer({ facts }: { facts: GroupFacts | null }) {
         <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg, gap: spacing.md }}>
           <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs, lineHeight: 16 }}>
             {visible === 0
-              ? 'Con tutti i widget spenti il tab Grafici resta vuoto.'
-              : `${visible} ${visible === 1 ? 'widget acceso' : 'widget accesi'} su ${layout.length}.`}
+              ? t('dashboard.allOff')
+              : plural('dashboard.visibleCount', visible, { total: layout.length })}
           </Text>
           <Pressable onPress={reset} accessibilityRole="button" hitSlop={8}>
             <Text style={{ color: colors.accent, fontSize: fontSize.sm }}>
-              Ripristina l&apos;ordine di partenza
+              {t('dashboard.resetOrder')}
             </Text>
           </Pressable>
         </View>
@@ -127,6 +129,7 @@ interface WidgetRowProps {
  * lavoro aggiuntivo.
  */
 function WidgetRow({ spec, item, facts, first, last, onToggle, onMove }: WidgetRowProps) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const unmet = facts === null ? [] : unmetNeeds(spec, facts);
 
@@ -168,13 +171,13 @@ function WidgetRow({ spec, item, facts, first, last, onToggle, onMove }: WidgetR
       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
         <Chevron
           name="chevron-up"
-          label={`Sposta ${spec.title} più in alto`}
+          label={t('dashboard.moveUp', { title: spec.title })}
           disabled={first}
           onPress={() => onMove(-1)}
         />
         <Chevron
           name="chevron-down"
-          label={`Sposta ${spec.title} più in basso`}
+          label={t('dashboard.moveDown', { title: spec.title })}
           disabled={last}
           onPress={() => onMove(1)}
         />

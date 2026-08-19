@@ -1,7 +1,9 @@
 import { Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import Svg, { Rect } from 'react-native-svg';
 import { bandScale, type AmountBin } from '@jutrack/core';
 import { formatMoney } from '@/i18n/money';
+import { plural } from '@/i18n/translate';
 import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { useChartWidth } from './useChartWidth';
@@ -24,6 +26,7 @@ interface AmountHistogramProps {
  * cambierebbero a ogni spesa nuova, e due mesi affiancati non sarebbero più confrontabili.
  */
 export function AmountHistogram({ bins, height = 96 }: AmountHistogramProps) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const symbol = useCurrencySymbol();
   const { width, onLayout } = useChartWidth();
@@ -57,7 +60,12 @@ export function AmountHistogram({ bins, height = 96 }: AmountHistogramProps) {
               <View
                 key={bin.label}
                 accessible
-                accessibilityLabel={`Da ${bin.label} euro: ${bin.count} ${bin.count === 1 ? 'spesa' : 'spese'}, ${formatMoney(bin.totalCents, symbol)}`}
+                accessibilityLabel={t('stats.histogramA11y', {
+                  label: bin.label,
+                  symbol,
+                  count: plural('stats.expenseCount', bin.count),
+                  amount: formatMoney(bin.totalCents, symbol),
+                })}
                 style={{ flex: 1, alignItems: 'center', gap: 1 }}
               >
                 <Text

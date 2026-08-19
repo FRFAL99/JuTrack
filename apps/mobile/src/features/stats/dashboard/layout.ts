@@ -11,7 +11,7 @@
  * spento conserva il posto che avrà quando verrà riacceso — e il selettore, che mostra
  * tutto, riordina anche ciò che è spento.
  */
-import { isWidgetId, WIDGETS, type WidgetId } from './widgets';
+import { isWidgetId, WIDGET_IDS, type WidgetId } from './widgets';
 
 export interface LayoutItem {
   id: WidgetId;
@@ -31,8 +31,8 @@ export const LAYOUT_KEY = 'dashboard_layout';
  * e il default coincidano è vero **oggi** e non è una regola: i widget che verranno
  * aggiunti in futuro entreranno nel catalogo senza entrare in un layout già salvato.
  */
-export const DEFAULT_LAYOUT: DashboardLayout = WIDGETS.map((widget) => ({
-  id: widget.id,
+export const DEFAULT_LAYOUT: DashboardLayout = WIDGET_IDS.map((id) => ({
+  id,
   visible: true,
 }));
 
