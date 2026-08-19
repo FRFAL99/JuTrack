@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { deriveVaultKeys, exportBackup, importBackup } from '@jutrack/core';
 import { Button } from '@/components/Button';
@@ -36,6 +37,7 @@ import { useTheme } from '@/theme';
  * la metà che ne rimette una dentro.
  */
 export default function BackupScreen() {
+  const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const { meta } = useAppData();
   const { registry, groups, join, select } = useGroups();
@@ -78,7 +80,7 @@ export default function BackupScreen() {
       .keyBytes(group.vaultId)
       .then(async (key) => {
         if (key === null) {
-          throw new Error('La chiave di questo gruppo non è leggibile su questo dispositivo.');
+          throw new Error(t('backup.keyUnreadable'));
         }
         const blob = await exportBackup(key, passphrase, expoRandom);
         const elapsed = ((Date.now() - startedAt) / 1000).toFixed(1);
@@ -101,10 +103,8 @@ export default function BackupScreen() {
           await Clipboard.setStringAsync(blob);
           await remember();
           Alert.alert(
-            'Backup negli appunti',
-            `Cifratura completata in ${elapsed} s. Su questa build manca il modulo per salvare i ` +
-              'file: il backup è negli appunti. Incollalo subito in un gestore di password — gli ' +
-              'appunti non sono un posto dove lasciarlo.',
+            t('backup.clipboardAlert.title'),
+            t('backup.clipboardAlert.body', { elapsed }),
           );
           return;
         }
@@ -119,18 +119,17 @@ export default function BackupScreen() {
         if (outcome.status === 'unavailable') {
           await Clipboard.setStringAsync(blob);
           await remember();
-          Alert.alert('Backup negli appunti', 'Il foglio di condivisione non è disponibile qui.');
+          Alert.alert(t('backup.clipboardAlert.title'), t('backup.shareUnavailableBody'));
           return;
         }
         await remember();
-        Alert.alert(
-          'Backup creato',
-          `Cifratura completata in ${elapsed} s. Conserva il file dove conservi le password, e ` +
-            'ricorda la passphrase: senza, il file non serve a niente.',
-        );
+        Alert.alert(t('backup.createdAlert.title'), t('backup.createdAlert.body', { elapsed }));
       })
       .catch((error: unknown) => {
-        Alert.alert('Backup fallito', error instanceof Error ? error.message : String(error));
+        Alert.alert(
+          t('backup.exportFailedTitle'),
+          error instanceof Error ? error.message : String(error),
+        );
       })
       .finally(() => setExporting(false));
   };
@@ -149,7 +148,10 @@ export default function BackupScreen() {
           setRestoreBlob('');
           setRestorePassphrase('');
           void select(known.vaultId).then(() =>
-            Alert.alert('Gruppo già presente', `«${known.name}» è di nuovo il gruppo aperto.`),
+            Alert.alert(
+              t('backup.alreadyPresent.title'),
+              t('backup.alreadyPresent.body', { name: known.name }),
+            ),
           );
           return;
         }
@@ -158,31 +160,26 @@ export default function BackupScreen() {
         // gruppo, e quelli che c'erano restano dove sono. Prima esisteva un solo slot per
         // la chiave, quindi ripristinarne una significava rendersi illeggibili i dati
         // dell'altro vault — ed era per quello che l'avviso parlava di una perdita.
-        Alert.alert(
-          'Ripristinare questo gruppo?',
-          `Verrà aggiunto ai tuoi gruppi, senza toccare quelli che hai già. ` +
-            'Le spese arriveranno col primo sync, se il gruppo è ancora sul relay.',
-          [
-            { text: 'Annulla', style: 'cancel' },
-            {
-              text: 'Ripristina',
-              onPress: () => {
-                // Si sta **entrando** in un vault che esiste già, e le sue categorie
-                // arriveranno col primo sync: `join` lo registra come `joined`, così
-                // seminare le proprie — e ritrovarsene sedici — non è possibile.
-                void join(key, 'Gruppo ripristinato')
-                  .then((restored) => {
-                    setRestoreBlob('');
-                    setRestorePassphrase('');
-                    router.replace(`/groups/${restored.vaultId}`);
-                  })
-                  .catch((error: unknown) => {
-                    setRestoreError(error instanceof Error ? error.message : String(error));
-                  });
-              },
+        Alert.alert(t('backup.restoreConfirm.title'), t('backup.restoreConfirm.body'), [
+          { text: t('common.cancel'), style: 'cancel' },
+          {
+            text: t('backup.restoreConfirm.confirm'),
+            onPress: () => {
+              // Si sta **entrando** in un vault che esiste già, e le sue categorie
+              // arriveranno col primo sync: `join` lo registra come `joined`, così
+              // seminare le proprie — e ritrovarsene sedici — non è possibile.
+              void join(key, 'Gruppo ripristinato')
+                .then((restored) => {
+                  setRestoreBlob('');
+                  setRestorePassphrase('');
+                  router.replace(`/groups/${restored.vaultId}`);
+                })
+                .catch((error: unknown) => {
+                  setRestoreError(error instanceof Error ? error.message : String(error));
+                });
             },
-          ],
-        );
+          },
+        ]);
       })
       .catch((error: unknown) => {
         setRestoreError(error instanceof Error ? error.message : String(error));
@@ -191,18 +188,22 @@ export default function BackupScreen() {
   };
 
   return (
-    <ModalScreen title={group === null ? 'Ripristina una chiave' : `Backup di «${group.name}»`}>
+    <ModalScreen
+      title={
+        group === null
+          ? t('backup.title.noGroup')
+          : t('backup.title.withGroup', { name: group.name })
+      }
+    >
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
         <Card style={{ gap: spacing.xs, borderColor: colors.danger }}>
           <Text
             style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
           >
-            Non esiste un «password dimenticata»
+            {t('backup.noRecoveryTitle')}
           </Text>
           <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            I dati sono cifrati end-to-end: il server conserva blob che non sa leggere. Se perdi la
-            chiave e non hai un backup, le spese non tornano — nessuno può recuperarle, noi
-            compresi.
+            {t('backup.noRecoveryBody')}
           </Text>
         </Card>
 
@@ -219,24 +220,22 @@ export default function BackupScreen() {
                   fontWeight: fontWeight.semibold,
                 }}
               >
-                Crea un backup
+                {t('backup.createTitle')}
               </Text>
               <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-                La chiave di «{group.name}», in un file cifrato con la passphrase che scegli. Da
-                solo non serve a niente, e nemmeno la passphrase da sola: servono entrambi. Ogni
-                gruppo ha la sua chiave, quindi va salvato uno per uno.
+                {t('backup.createBody', { name: group.name })}
               </Text>
             </View>
 
             <TextInput
               value={passphrase}
               onChangeText={setPassphrase}
-              placeholder="Passphrase"
+              placeholder={t('backup.passphrasePlaceholder')}
               placeholderTextColor={colors.textMuted}
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
-              accessibilityLabel="Passphrase per il backup"
+              accessibilityLabel={t('backup.passphraseA11y')}
               style={fieldStyle}
             />
             {passphrase !== '' && (
@@ -254,29 +253,28 @@ export default function BackupScreen() {
             <TextInput
               value={confirmation}
               onChangeText={setConfirmation}
-              placeholder="Ripeti la passphrase"
+              placeholder={t('backup.confirmPlaceholder')}
               placeholderTextColor={colors.textMuted}
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
-              accessibilityLabel="Conferma della passphrase"
+              accessibilityLabel={t('backup.confirmA11y')}
               style={fieldStyle}
             />
             {mismatch && (
               <Text style={{ color: colors.danger, fontSize: fontSize.xs }}>
-                Le due passphrase non coincidono.
+                {t('backup.mismatch')}
               </Text>
             )}
 
             <Button
-              label={exporting ? 'Cifratura…' : 'Crea il backup'}
+              label={exporting ? t('backup.encrypting') : t('backup.createButton')}
               onPress={handleExport}
               loading={exporting}
               disabled={!canExport}
             />
             <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
-              La cifratura richiede qualche secondo: è voluto. Rende costoso provare le passphrase a
-              tappeto su un file rubato.
+              {t('backup.encryptHint')}
             </Text>
           </Card>
         )}
@@ -286,37 +284,37 @@ export default function BackupScreen() {
             <Text
               style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
             >
-              Ripristina da un backup
+              {t('backup.restoreTitle')}
             </Text>
             <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-              Incolla il contenuto del file di backup, quello che comincia per JTBK1.
+              {t('backup.restoreBody')}
             </Text>
           </View>
 
           <TextInput
             value={restoreBlob}
             onChangeText={setRestoreBlob}
-            placeholder="JTBK1.…"
+            placeholder={t('backup.blobPlaceholder')}
             placeholderTextColor={colors.textMuted}
             multiline
             autoCapitalize="none"
             autoCorrect={false}
-            accessibilityLabel="Contenuto del backup"
+            accessibilityLabel={t('backup.blobA11y')}
             style={[fieldStyle, { minHeight: 88, textAlignVertical: 'top' }]}
           />
           <TextInput
             value={restorePassphrase}
             onChangeText={setRestorePassphrase}
-            placeholder="Passphrase del backup"
+            placeholder={t('backup.restorePassphrasePlaceholder')}
             placeholderTextColor={colors.textMuted}
             secureTextEntry
             autoCapitalize="none"
             autoCorrect={false}
-            accessibilityLabel="Passphrase del backup da ripristinare"
+            accessibilityLabel={t('backup.restorePassphraseA11y')}
             style={fieldStyle}
           />
           <Button
-            label={restoring ? 'Verifica…' : 'Ripristina la chiave'}
+            label={restoring ? t('backup.verifying') : t('backup.restoreButton')}
             variant="secondary"
             onPress={handleRestore}
             loading={restoring}

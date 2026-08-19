@@ -106,6 +106,22 @@ describe('dizionari', () => {
       // «Budget» è un prestito che l'inglese ha dato all'italiano: si scrive uguale in
       // entrambe le lingue, come «vault».
       'dashboard.widgets.budget.title',
+      'budget.title',
+      // Il prefisso del formato di backup, non una frase: si legge uguale in ogni lingua.
+      'backup.blobPlaceholder',
+      // «Passphrase» è già un prestito inglese nell'italiano di questa schermata: non
+      // esiste un termine italiano separato da tradurre.
+      'backup.passphrasePlaceholder',
+      // Sintassi JSON d'esempio, non una frase: si legge uguale in ogni lingua.
+      'importScreen.filePlaceholder',
+      // «Budget» al singolare è invariato in italiano, come «tag» in
+      // expense.extra.tagCount.one: solo il plurale inglese cambia forma.
+      'importScreen.summary.budgets.one',
+      // «OK» è la stessa sigla in entrambe le lingue.
+      'probe.ok',
+      // «SecureStore» è il nome del modulo, non una parola italiana: etichetta e risultato
+      // separati da due punti, come stats.pointA11y — non c'è una parola da tradurre.
+      'probe.steps.secureStore',
     ]);
 
     for (const [key, italianText] of dictionaries.it!) {

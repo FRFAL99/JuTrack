@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
 import { ModalScreen } from '@/components/ModalScreen';
 import { mark, markError } from '@/diagnostics';
@@ -19,10 +20,12 @@ import { useTheme } from '@/theme';
  * leggibile anche se l'app si chiude prima di mostrare qualcosa.
  */
 export default function ProbeScreen() {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize } = useTheme();
   const [lines, setLines] = useState<string[]>([]);
   const [done, setDone] = useState(false);
   const [failed, setFailed] = useState(false);
+  const [interruptedLine, setInterruptedLine] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,23 +36,23 @@ export default function ProbeScreen() {
 
     async function probe(): Promise<void> {
       try {
-        log('1. sonda avviata — React Native e Hermes funzionano');
+        log(`1. ${t('probe.steps.started')}`);
 
         const Y = await import('yjs');
-        log('2. yjs importato');
+        log(`2. ${t('probe.steps.yjsImported')}`);
 
         const doc = new Y.Doc();
-        log(`3. Y.Doc creato (clientID ${doc.clientID}) — shim lib0/webcrypto OK`);
+        log(`3. ${t('probe.steps.yDocCreated', { clientId: doc.clientID })}`);
 
         const core = await import('@jutrack/core');
-        log(`4. @jutrack/core importato (v${core.CORE_VERSION})`);
+        log(`4. ${t('probe.steps.coreImported', { version: core.CORE_VERSION })}`);
 
         const { expoRandom } = await import('@/platform/random');
         const bytes = expoRandom.getRandomBytes(32);
-        log(`5. expo-crypto: ${bytes.length} byte casuali`);
+        log(`5. ${t('probe.steps.randomBytes', { count: bytes.length })}`);
 
         const keys = core.deriveVaultKeys(core.generateVaultKey(expoRandom));
-        log(`6. chiavi derivate (vault ${keys.vaultId.slice(0, 8)}…) — HKDF e UTF-8 OK`);
+        log(`6. ${t('probe.steps.keysDerived', { vaultId: keys.vaultId.slice(0, 8) })}`);
 
         const blob = core.seal(
           keys.contentKey,
@@ -58,11 +61,11 @@ export default function ProbeScreen() {
           expoRandom,
         );
         core.open(keys.contentKey, keys.vaultId, blob);
-        log('7. XChaCha20-Poly1305: cifratura e decifratura OK');
+        log(`7. ${t('probe.steps.crypto')}`);
 
         const { ExpoSqliteDatabase } = await import('@/platform/database');
         const db = await ExpoSqliteDatabase.open('jutrack-probe.db');
-        log('8. database SQLite aperto');
+        log(`8. ${t('probe.steps.dbOpened')}`);
 
         const persistence = new core.SqliteYPersistence(db, doc);
         await persistence.load();
@@ -76,33 +79,43 @@ export default function ProbeScreen() {
           split: core.buildSplit('single', 1230, [me]),
         });
         await persistence.flush();
-        log(`9. spesa salvata su SQLite (${store.listExpenses().length} in elenco)`);
+        log(`9. ${t('probe.steps.expenseSaved', { count: store.listExpenses().length })}`);
 
         const { expoKeyStore } = await import('@/platform/keystore');
         await expoKeyStore.set('jutrack.probe', 'valore-di-prova');
         const read = await expoKeyStore.get('jutrack.probe');
         log(
-          `10. SecureStore: ${read === 'valore-di-prova' ? 'scrive e rilegge' : 'RILETTURA DIVERSA'}`,
+          `10. ${t('probe.steps.secureStore', {
+            result:
+              read === 'valore-di-prova'
+                ? t('probe.secureStoreOk')
+                : t('probe.secureStoreMismatch'),
+          })}`,
         );
 
         const { RELAY_URL } = await import('@/config');
         const res = await fetch(`${RELAY_URL}/health`);
-        log(`11. relay raggiungibile: HTTP ${res.status}`);
+        log(`11. ${t('probe.steps.relay', { status: res.status })}`);
 
         const { createPairingInvite, parsePairingUri } = core;
         const invite = createPairingInvite(core.generateVaultKey(expoRandom), { now: Date.now() });
         const parsed = parsePairingUri(invite.uri, Date.now());
-        log(`12. invito di pairing costruito e riletto: ${parsed.ok ? 'OK' : 'FALLITO'}`);
+        log(
+          `12. ${t('probe.steps.pairing', { result: parsed.ok ? t('probe.ok') : t('probe.failed') })}`,
+        );
 
         const { buildQrPath } = await import('@/features/pairing/qr-path');
         const qr = buildQrPath(invite.uri);
-        log(`13. QR generato: griglia ${qr.extent}×${qr.extent} moduli`);
+        log(`13. ${t('probe.steps.qr', { extent: qr.extent })}`);
 
         // La fotocamera è l'unico modulo nativo che l'app carica pigramente: se manca,
         // il pairing resta possibile incollando il codice, e va saputo qui.
         const { loadCameraModule } = await import('@/features/pairing/camera');
         log(
-          `14. modulo fotocamera: ${loadCameraModule() === null ? 'NON disponibile (resta l’incolla manuale)' : 'disponibile'}`,
+          `14. ${t('probe.steps.camera', {
+            result:
+              loadCameraModule() === null ? t('probe.cameraUnavailable') : t('probe.available'),
+          })}`,
         );
 
         // I due moduli dello Step 30. Su una build compilata prima non ci sono, e la
@@ -111,11 +124,17 @@ export default function ProbeScreen() {
         const { readNotificationPermission } = await import('@/features/notifications/module');
         const permission = await readNotificationPermission();
         log(
-          `15. notifiche locali: ${
-            permission === null
-              ? 'modulo NON nella build — serve la build EAS dello Step 30'
-              : `modulo disponibile, permesso ${permission === 'granted' ? 'concesso' : 'non concesso'}`
-          }`,
+          `15. ${t('probe.steps.notifications', {
+            result:
+              permission === null
+                ? t('probe.notifModuleMissing')
+                : t('probe.notifModuleAvailable', {
+                    status:
+                      permission === 'granted'
+                        ? t('probe.permissionGranted')
+                        : t('probe.permissionDenied'),
+                  }),
+          })}`,
         );
 
         // `getWidgetInfo` interroga il provider nativo per nome: se il modulo c'è ma il
@@ -124,23 +143,23 @@ export default function ProbeScreen() {
         const { countPlacedWidgets, WIDGET_NAMES } = await import('@/features/widgets/module');
         const placed = await Promise.all(WIDGET_NAMES.map(countPlacedWidgets));
         log(
-          `16. widget Android: ${
-            placed.some((count) => count === null)
-              ? 'provider NON raggiungibili — serve la build EAS dello Step 30'
-              : `${WIDGET_NAMES.length} provider rispondono (${placed.join(' + ')} sulla home)`
-          }`,
+          `16. ${t('probe.steps.widgets', {
+            result: placed.some((count) => count === null)
+              ? t('probe.widgetsUnreachable')
+              : t('probe.widgetsOk', { count: WIDGET_NAMES.length, placed: placed.join(' + ') }),
+          })}`,
         );
 
         await persistence.destroy();
-        log('TUTTO OK — ogni sottosistema funziona su questo dispositivo');
+        log(t('probe.steps.allOk'));
       } catch (error) {
         markError('sonda interrotta', error);
         if (!cancelled) {
+          const detail = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
+          const line = t('probe.interrupted', { detail });
           setFailed(true);
-          setLines((prev) => [
-            ...prev,
-            `INTERROTTA: ${error instanceof Error ? `${error.name}: ${error.message}` : String(error)}`,
-          ]);
+          setInterruptedLine(line);
+          setLines((prev) => [...prev, line]);
         }
       } finally {
         if (!cancelled) setDone(true);
@@ -151,17 +170,20 @@ export default function ProbeScreen() {
     return () => {
       cancelled = true;
     };
+    // Va eseguita una volta sola all'apertura della schermata: la sonda scatta subito, e
+    // `t` non deve farla ripartire se la lingua cambia mentre gira.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   return (
-    <ModalScreen title="Diagnostica">
+    <ModalScreen title={t('probe.title')}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.sm }}>
         {lines.map((line) => (
           <Text
             key={line}
             selectable
             style={{
-              color: line.startsWith('INTERROTTA') ? colors.danger : colors.textMuted,
+              color: line === interruptedLine ? colors.danger : colors.textMuted,
               fontSize: fontSize.sm,
               lineHeight: 20,
             }}
@@ -176,7 +198,7 @@ export default function ProbeScreen() {
         )}
         {done && !failed && (
           <Text style={{ color: colors.income, fontSize: fontSize.md, paddingTop: spacing.md }}>
-            Nessun problema rilevato.
+            {t('probe.noIssues')}
           </Text>
         )}
       </ScrollView>

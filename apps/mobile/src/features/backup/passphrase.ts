@@ -12,6 +12,8 @@
  * più parole slegate fra loro.
  */
 
+import { t } from '@/i18n/translate';
+
 export type PassphraseLevel = 'troppo-corta' | 'debole' | 'accettabile' | 'robusta';
 
 export interface PassphraseAssessment {
@@ -38,7 +40,10 @@ export function assessPassphrase(passphrase: string): PassphraseAssessment {
   if (length < MIN_PASSPHRASE_LENGTH) {
     return {
       level: 'troppo-corta',
-      message: `Almeno ${MIN_PASSPHRASE_LENGTH} caratteri: ne mancano ${MIN_PASSPHRASE_LENGTH - length}.`,
+      message: t('backup.passphrase.tooShort', {
+        min: MIN_PASSPHRASE_LENGTH,
+        missing: MIN_PASSPHRASE_LENGTH - length,
+      }),
       acceptable: false,
     };
   }
@@ -48,7 +53,7 @@ export function assessPassphrase(passphrase: string): PassphraseAssessment {
   if (words >= 4 && length >= 20) {
     return {
       level: 'robusta',
-      message: 'Va bene. Scrivila da qualche parte: non c’è modo di recuperarla.',
+      message: t('backup.passphrase.strong'),
       acceptable: true,
     };
   }
@@ -56,14 +61,14 @@ export function assessPassphrase(passphrase: string): PassphraseAssessment {
   if (words >= 3 || length >= 20) {
     return {
       level: 'accettabile',
-      message: 'Accettabile. Quattro parole slegate fra loro sarebbero meglio.',
+      message: t('backup.passphrase.acceptable'),
       acceptable: true,
     };
   }
 
   return {
     level: 'debole',
-    message: 'Debole: una parola sola si indovina. Usane quattro senza legame fra loro.',
+    message: t('backup.passphrase.weak'),
     acceptable: true,
   };
 }
