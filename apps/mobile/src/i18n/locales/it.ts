@@ -9,8 +9,10 @@
  * **Lo Step 37 aveva tradotto una schermata**, `tu.tsx`, quella con l'interruttore. Lo Step
  * 38 aggiunge le tre che si aprono più spesso — le spese del gruppo, la nuova spesa,
  * l'elenco dei gruppi — e con esse i moduli condivisi che ci scrivono dentro: date, stato
- * del sync, saldo, divisione, sottotitoli dell'elenco. Restano allo Step 39 i grafici, la
- * dashboard, l'onboarding, il pairing, il backup/export e l'azzeramento.
+ * del sync, saldo, divisione, sottotitoli dell'elenco. Lo Step 40 chiude il resto: grafici,
+ * dashboard, onboarding, pairing, backup/export/import e azzeramento — comprese le frasi
+ * rimaste in `insights/query.ts` (`packages/core`), passate da fuori come `QueryStrings`
+ * per la stessa ragione per cui il core non importa `i18next` (Step 0).
  *
  * **Le date sono un modello, non un elenco di parole.** `date.dayTitle` è
  * `{{weekday}} {{day}} {{month}}` in italiano e `{{weekday}}, {{month}} {{day}}` in inglese:
@@ -397,7 +399,6 @@ export const it = {
     balance: {
       evenBody: 'Siete pari. Nessuno deve niente a nessuno.',
       history: 'Storico',
-      transfer: '{{from}} deve {{amount}} a {{to}}',
       historyNote:
         'Su tutta la storia del gruppo, filtri esclusi: un debito non si azzera cambiando periodo.',
     },

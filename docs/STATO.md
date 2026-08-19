@@ -1,7 +1,7 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-17 — **tutti e quattro i piani e il redesign visivo sono finiti nel codice, il
-quinto piano è a undici step su tredici, e due step di robustezza sono nati fuori dai piani**.
+Aggiornato: 2026-08-19 — **tutti e quattro i piani e il redesign visivo sono finiti nel codice, il
+quinto piano è a dodici step su tredici, e due step di robustezza sono nati fuori dai piani**.
 
 > **Gli Step 42 e 43 non vengono da un piano, ma da una rilettura del progetto**, e chiudono i due
 > lati dello stesso rischio — perdere i dati. Il **42** dà una via d'uscita a chi la chiave l'ha già
@@ -9,19 +9,20 @@ quinto piano è a undici step su tredici, e due step di robustezza sono nati fuo
 > `parseVaultExport` la rilegge e `/importa` la ricostruisce in un gruppo nuovo. Il **43** prova a
 > far sì che non la perda: un quarto avviso dice, una volta per gruppo, che la chiave non risulta
 > salvata da nessuna parte. Nessuno dei due chiede una build EAS. Dettaglio in
-> [devlog.md](devlog.md); il **40** resta il prossimo step scritto.
+> [devlog.md](devlog.md); il **41** resta l'unico step scritto che manca.
 
 Il quarto — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 **Step 23–28** — si è chiuso l'11 agosto con la dashboard componibile, e i sette passi del redesign
 sono chiusi da prima ([visualdesign.md](visualdesign.md)). Lo stesso giorno è stato scritto il
 **quinto piano**, [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md) —
 notifiche locali, due widget Android, valuta e lingua nel profilo — e ne sono entrati nel codice i
-**primi undici step su tredici**: la valuta di default nel profilo, l'infrastruttura nativa, il
+**primi dodici step su tredici**: la valuta di default nel profilo, l'infrastruttura nativa, il
 promemoria spese, l'avviso di budget, quello di sincronizzazione ferma, **tutti e due i widget**, il
 refresh in background che li tiene vivi, l'**infrastruttura i18n**, la **traduzione EN delle tre
-schermate più aperte** e il **formato dei numeri per lingua**. Restano il resto della traduzione
-(40) e la verifica su telefono (41). Il piano ne aveva dodici: il tredicesimo è lo Step 39, nato
-dallo Step 38 e inserito in mezzo.
+schermate più aperte**, il **formato dei numeri per lingua** e, il 19 agosto, **il resto della
+traduzione**: grafici, dashboard, onboarding, pairing, backup, export, import e azzeramento, più
+budget/categorie/pareggi del gruppo e la sonda diagnostica. Resta solo la verifica su telefono
+(41). Il piano ne aveva dodici: il tredicesimo è lo Step 39, nato dallo Step 38 e inserito in mezzo.
 
 > ⚠️ **Serve una build EAS nuova, ed è la seconda del piano v5.** Lo
 > [Step 36](#il-refresh-in-background-step-36) ha messo `updatePeriodMillis: 1800000` in
@@ -37,8 +38,8 @@ dallo Step 38 e inserito in mezzo.
 > **Notifiche e widget sono tutti nel codice**: lo [Step 31](#il-promemoria-spese-step-31), lo
 > [Step 32](#lavviso-di-budget-step-32) e lo [Step 33](#la-sincronizzazione-ferma-step-33) per le
 > tre notifiche, il [34](#il-widget-del-saldo-step-34), il [35](#il-totale-del-mese-step-35) e il
-> [36](#il-refresh-in-background-step-36) per i widget. Il prossimo è il **40**, il resto della
-> traduzione.
+> [36](#il-refresh-in-background-step-36) per i widget. **Anche la traduzione è tutta nel codice**,
+> Step 40 compreso: il prossimo è il **41**, la verifica su telefono.
 >
 > **Lo Step 37 si è scostato dal piano su un punto, ed è scritto qui perché non si scopra dopo:**
 > `expo-localization` **non** è stato installato. Serviva solo a leggere la lingua del telefono al
@@ -93,7 +94,7 @@ Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md),
 | 27 — I sei filtri              | ✅    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
 | 28 — La dashboard componibile  | ✅    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
 
-Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **dieci
+Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **dodici
 step su dodici nel codice**:
 
 | Step                               | Stato | Cosa contiene                                                          |
@@ -109,7 +110,7 @@ step su dodici nel codice**:
 | 37 — Infrastruttura i18n           | ✅    | `i18next`, campo `language`, selettore in `tu.tsx`, Tu tradotta tutta  |
 | 38 — Traduzione EN, tre schermate  | ✅    | Spese, nuova spesa, gruppi, e i sei moduli condivisi sotto             |
 | 39 — Formato dei numeri per lingua | ✅    | `NumberFormat` nel core, `@/i18n/money` nell app, guardia ESLint       |
-| 40 — Traduzione EN, il resto       | ⬜    | Grafici, dashboard, onboarding, pairing, backup/export, azzera         |
+| 40 — Traduzione EN, il resto       | ✅    | Grafici, dashboard, onboarding, pairing, backup/export/import, azzera  |
 | 41 — Verifica end-to-end           | ⬜    | Su telefono reale: notifiche, widget, lingua, valuta                   |
 
 Robustezza dei dati — nati fuori dai piani, dalla rilettura del 17 agosto:
@@ -1052,6 +1053,40 @@ scalata di uno**: la traduzione del resto è il 40, la verifica su telefono il 4
   quella è «la forma italiana leggibile». Il file esportato è identico nelle due lingue, che è
   l'unica cosa sensata per un file che un foglio di calcolo deve rileggere.
 
+## Il resto della traduzione (Step 40)
+
+Grafici, dashboard, onboarding, pairing, backup, export, import, azzeramento, più budget,
+categorie e pareggi del gruppo, e la sonda diagnostica — che il piano non nominava, ma restava
+l'ultima schermata in italiano fisso. Da un centinaio di stringhe a circa settecento.
+
+- **Il core torna a farsi toccare, per la seconda volta in due step.** `insights/query.ts`
+  scriveva a mano «categorie», «Pagate da», «Tutte le spese»: adesso `queryParts`/
+  `describeQuery` ricevono un `QueryStrings` da fuori, con un default italiano che tiene validi
+  i test del core, esattamente come il `NumberFormat` dello Step 39. `@/i18n/query.ts` è il
+  modulo che lo popola dal dizionario, e una regola ESLint in più vieta di importare
+  `queryParts`/`describeQuery` dal core dentro `apps/mobile`.
+- **Due costanti di modulo erano congelate nella lingua di sistema**, lo stesso guasto dei
+  widget Android allo Step 38: `WIDGETS` (`dashboard/widgets.ts`) e `PERIOD_PRESETS`
+  (`filters/period.ts`) sono diventate funzioni, chiamate a ogni render.
+- **`charts/axis.ts` teneva un secondo elenco dei giorni della settimana**, in un ordine
+  diverso da `date.weekdays` del dizionario: adesso legge quello, con l'indice spostato di uno.
+- **Fatto in tre pezzi paralleli** invece che in un passo solo, a differenza del resto del
+  piano — grafici/dashboard, onboarding/pairing, backup/export/import/azzera — verificati uno
+  alla volta e uniti alla fine; un pezzo ha lavorato in un git worktree isolato per non
+  scrivere sugli stessi due dizionari mentre un altro li stava ancora modificando.
+- **Una frase con una parola in grassetto in mezzo non ha un modo pulito di tradursi** senza
+  `Trans` di react-i18next, che il progetto non usa da nessuna parte: nei tre casi che contano
+  di più visivamente — il pareggio in `settle.tsx`, l'avviso «gruppo nuovo» in `importa.tsx`,
+  il nome dello switch in `azzera.tsx` — la frase è spezzata in due chiavi `before`/`after` che
+  sandwichano lo `<Text>` in grassetto, invece di riscriverla come aveva fatto lo Step 38: qui
+  l'ordine delle parti è lo stesso in italiano e in inglese, e riscrivere avrebbe voluto dire
+  perdere l'enfasi su un numero che conta. Un quarto caso nel widget «Fra di voi» dei grafici
+  era stato tradotto con la via dello Step 38 invece che con questa: incoerenza vera, trovata
+  rileggendo e corretta riusando le due chiavi di `settle.tsx`.
+- **Due commenti d'intestazione erano falsi** e non da oggi: `it.ts` diceva ancora «restano allo
+  Step 39 i grafici…», `en.ts` diceva che i numeri restavano italiani, cosa smentita dallo
+  Step 39 stesso senza che il commento fosse mai stato aggiornato. Corretti entrambi.
+
 ## Il reimport dell'export JSON (Step 42)
 
 `parseVaultExport` in `packages/core/src/export/import.ts`, `VaultStore.importSnapshot`,
@@ -1433,8 +1468,21 @@ lista, non le toglie.
   davanti (`€1,234.56` è più stretto di `1.234,56 €`, quindi il rischio è basso, ma è l'unico
   numero a 38 punti), e che nei grafici le etichette compatte dicano «1.2k» e non «1,2k». Da
   guardare anche un gruppo in **franchi** letto in inglese: deve dire «CHF 5.00» con lo spazio
+- **Lo Step 40, dove il rischio non è più su tre schermate ma su decine.** Il testo inglese è
+  più lungo di quello italiano quasi ovunque («Who fronted it» contro «Chi ha anticipato», «This
+  group's key can't be read on this device» contro la sua frase italiana), e qui finisce dentro
+  superfici molto più strette delle tre dello Step 38: i chip dei filtri nella barra scorrevole,
+  le etichette compatte degli assi, le due righe del widget «Fra di voi», i titoli dei sedici
+  widget nel foglio «Componi la dashboard». Da guardare in ordine: la barra dei filtri in
+  inglese con **tre o quattro filtri attivi**, che deve continuare a scorrere invece di
+  accavallarsi; il foglio di composizione della dashboard, dove i titoli più lunghi («How many
+  expenses, by range») non devono spingere i due chevron fuori dalla riga; e le tre frasi
+  spezzate in due chiavi per via del grassetto in mezzo (il pareggio, l'avviso «gruppo nuovo»
+  dell'import, il nome dello switch di azzeramento) — è lì che un ordine delle parole diverso fra
+  le due lingue si vedrebbe subito, ed è per questo che sono rimaste con lo stesso ordine
+  italiano e inglese invece di essere riscritte
 
-Tutto il resto è verificato: 1088 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+Tutto il resto è verificato: 1250 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 > **Lo Step 25 è entrato in questa lista attraverso il 26**, come era stato scritto: la geometria

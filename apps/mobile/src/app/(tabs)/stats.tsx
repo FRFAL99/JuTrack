@@ -624,11 +624,11 @@ function StatsOfGroup() {
             transfers.map((transfer, index) => (
               <View key={`${transfer.fromMember}-${transfer.toMember}`} style={styles.rowBetween}>
                 <Text style={{ flex: 1, color: colors.text, fontSize: fontSize.md }}>
-                  {t('stats.balance.transfer', {
-                    from: nameOf(transfer.fromMember),
-                    amount: formatMoney(transfer.amountCents, symbol),
-                    to: nameOf(transfer.toMember),
-                  })}
+                  {t('settle.transferBefore', { from: nameOf(transfer.fromMember) })}{' '}
+                  <Text style={{ color: colors.expense, fontWeight: fontWeight.semibold }}>
+                    {formatMoney(transfer.amountCents, symbol)}
+                  </Text>{' '}
+                  {t('settle.transferAfter', { to: nameOf(transfer.toMember) })}
                 </Text>
                 {index === transfers.length - 1 && (
                   <CompactButton label={t('home.settle')} onPress={() => router.push('/settle')} />

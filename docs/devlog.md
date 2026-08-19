@@ -4,6 +4,101 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-08-19 — Step 40: il resto della traduzione, e due bug della stessa famiglia dello Step 38
+
+Chiude quello che gli Step 37–39 avevano lasciato aperto: grafici, dashboard, onboarding,
+pairing, backup, export, import e azzeramento — più budget, categorie e pareggi del gruppo, e
+la sonda diagnostica, che il piano non nominava ma restavano le sole schermate ancora in
+italiano fisso. Da un centinaio di stringhe tradotte allo Step 39 se ne aggiungono circa
+seicento: `it.ts` e `en.ts` sono passati da 253/279 righe a oltre 750 ciascuno.
+
+**Il core torna a farsi toccare, per la seconda volta in due step.** `insights/query.ts`
+scriveva a mano «categorie», «Pagate da», «Tutte le spese»: frasi che `queryParts` e
+`describeQuery` costruiscono dentro `packages/core`, che non può importare `i18next` per la
+stessa regola dello Step 0 che tiene fuori `react-native`. La soluzione è la stessa dello Step
+39 per `NumberFormat`: un tipo `QueryStrings` che il chiamante passa da fuori, con un default
+italiano che tiene validi i ventisette test del core scritti prima di oggi. `apps/mobile/src/
+i18n/query.ts` è il modulo sottile che lo popola dal dizionario — stessa forma di `@/i18n/
+money` — e una regola ESLint in più impedisce di importare `queryParts`/`describeQuery` dal
+core dentro `apps/mobile`, per lo stesso motivo per cui è già vietato con `formatCents`/
+`formatMoney`: la prossima chiamata scritta per abitudine tornerebbe in italiano in silenzio.
+
+**Due costanti di modulo erano congelate nella lingua di sistema, lo stesso guasto dello Step
+38 con i widget Android.** `WIDGETS` in `dashboard/widgets.ts` e `PERIOD_PRESETS` in
+`filters/period.ts` calcolavano titoli e etichette una volta sola, all'import: cambiare lingua
+nel profilo non le avrebbe mai aggiornate. Sono diventate funzioni — `widgets()` e
+`periodPresets()` — chiamate a ogni render invece che una volta per processo.
+`dashboard/layout.ts` non ne aveva bisogno: `DEFAULT_LAYOUT` legge solo gli id, che non
+cambiano con la lingua, quindi ora usa `WIDGET_IDS` e non tocca `widgets()`.
+
+**`charts/axis.ts` teneva un secondo elenco dei sette giorni della settimana**, in italiano e
+in un ordine diverso da `date.weekdays` del dizionario (quello parte da lunedì, quello del
+dizionario da domenica, perché lo eredita da `Date.getDay()` attraverso `grouping.ts`). Due
+elenchi delle stesse sette parole sono esattamente il tipo di cosa che si sbaglia una volta e
+poi non si nota più: `weekdayName` ora legge `date.weekdays` con l'indice spostato di uno,
+invece di portarsi dietro un `WEEKDAY_NAMES` proprio.
+
+**Fatto in tre pezzi, non in un passo solo — a differenza del resto del piano v5.** Il resto
+del piano procedeva «un passo a sessione»; qui la sessione ha coperto in parallelo grafici/
+dashboard, onboarding/pairing e backup/export/import/azzera, con due dei tre pezzi delegati e
+verificati uno alla volta prima di unirli. Un pezzo ha lavorato in un git worktree isolato
+apposta per non scrivere sugli stessi file di `it.ts`/`en.ts` mentre un altro pezzo li stava
+ancora modificando nella copia principale — l'unione dopo è stata un'aggiunta di sezioni
+disgiunte in entrambi i dizionari, con un solo incidente: un `},` di troppo lasciato da
+un'unione fatta a mano, che `tsc` ha segnalato subito.
+
+**Una frase con una parola in grassetto in mezzo non ha un modo pulito di essere tradotta
+senza `Trans` di `react-i18next`, e il progetto non lo usa da nessuna parte.** Lo Step 38
+aveva già risolto lo stesso problema riscrivendo la frase invece di spezzarla in due chiavi,
+per non imporre al traduttore l'ordine italiano delle parole. Qui i casi erano tre — il
+pareggio in `settle.tsx` («X deve **12,00 €** a Y»), l'avviso di gruppo nuovo in `importa.tsx`,
+il nome dello switch in `azzera.tsx` — e per tutti e tre si è scelta la via opposta: due chiavi
+`before`/`after` che sandwichano lo `<Text>` in grassetto, perché l'ordine delle tre parti
+(nome, importo, nome) è lo stesso in italiano e in inglese e girare la frase avrebbe voluto
+dire perdere l'enfasi visiva su un numero che conta. **Il quarto caso, nel widget «Fra di voi»
+di `stats.tsx`, era stato tradotto con la via dello Step 38** — una frase sola, senza
+grassetto sull'importo — invece di seguire gli altri tre: un'incoerenza vera, trovata
+rileggendo il lavoro finito e non durante la scrittura. Corretta riusando `settle.
+transferBefore`/`transferAfter`, gli stessi due che già esistevano, invece di aprirne una
+quarta coppia.
+
+**Due commenti d'intestazione erano falsi**, e non per una svista di oggi: `it.ts` diceva
+ancora «restano allo Step 39 i grafici, la dashboard…» — la numerazione era scalata dalla nota
+in cima allo Step 38 — ed `en.ts` diceva che i numeri restavano italiani, cosa vera fino allo
+Step 39 e smentita da quello stesso step senza che il commento fosse mai stato aggiornato.
+Corretti entrambi.
+
+**Verificato, non assunto**
+
+- `npm run format:check && npm run lint && npm run typecheck && npm test` sui tre workspace,
+  puliti, dopo l'unione dei tre pezzi — non prima, e non su ciascun pezzo isolatamente: un
+  merge additivo su due dizionari da settecento righe è esattamente il punto in cui un
+  copia-incolla può lasciare una chiave duplicata che il tipo non vede finché non è tutto
+  insieme.
+- I ventisette test di `insights/query.test.ts` restano verdi senza essere stati toccati:
+  è la prova che il default `ITALIAN_QUERY_STRINGS` di `QueryStrings` regge da solo, come il
+  `DEFAULT_NUMBER_FORMAT` dello Step 39.
+- Il warning ESLint «unused eslint-disable directive» insieme a un warning «missing
+  dependency» sulla stessa riga di `probe.tsx`, allo stesso tempo: la disable directive era a
+  due righe di distanza dalla riga che doveva coprire, per via del commento esplicativo in
+  mezzo. Spostata a ridosso di `}, []);`.
+
+**Ancora da verificare sul telefono**
+
+Tutto: è lo Step 41. Le tre schermate di Step 38 avevano già un rischio di sbordo del testo
+inglese sulle pillole più strette; qui il rischio si allarga a molte più superfici piccole —
+i chip dei filtri, le etichette degli assi, le due righe del widget del saldo.
+
+**Verifica:** 1250 test verdi (639 core + 568 app + 43 relay), typecheck, lint e
+`format:check` puliti su tutti e tre i workspace.
+
+**Prossimo:** lo Step 41 — verifica end-to-end su telefono reale: le tre notifiche, i due
+widget, il cambio di lingua a schermo, la valuta di default su una spesa nuova. Con questo
+il piano v5 ha tutto il codice scritto; quello che manca è la stessa prova sul campo che
+manca ai quattro piani precedenti e al redesign.
+
+---
+
 ## 2026-08-17 — Step 43: l'avviso «chiave non salvata», il quarto e l'unico irreversibile
 
 Il gemello dello Step 42, e nasce dalla stessa domanda vista dall'altro lato: il 42 dà una via

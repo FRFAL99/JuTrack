@@ -17,10 +17,10 @@ import type { Dictionary } from './it';
  * `{{weekday}} {{day}} {{month}}` italiano. È la ragione per cui quei modelli stanno nel
  * dizionario e non nel codice.
  *
- * **Quello che resta italiano, e va detto:** i numeri. `formatCents` scrive «1.234,56» in
- * entrambe le lingue, perché il separatore decimale sta in `packages/core` e cambiarlo tocca
- * ogni importo dell'app e l'export CSV. Non è una svista dello Step 38, è un lavoro suo che
- * non è ancora stato fatto.
+ * **I numeri non sono più italiani da questo dizionario in giù**, dallo Step 39:
+ * `formatCents`/`formatMoney` di `@/i18n/money` scrivono «1,234.56» qui e «1.234,56» in
+ * italiano, leggendo il formato dalla lingua corrente. Il core non lo sa fare da sé — non
+ * importa `i18next`, per la regola dello Step 0 — e lo riceve come parametro.
  */
 export const en: Dictionary = {
   common: {
@@ -377,7 +377,6 @@ export const en: Dictionary = {
     balance: {
       evenBody: 'You’re even. Nobody owes anybody anything.',
       history: 'History',
-      transfer: '{{from}} owes {{amount}} to {{to}}',
       historyNote:
         'Across the group’s whole history, filters aside: a debt doesn’t reset when you change the period.',
     },

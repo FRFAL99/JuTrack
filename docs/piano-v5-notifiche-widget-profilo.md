@@ -344,6 +344,24 @@ Step 40 copre il resto: grafici/dashboard, Tu/impostazioni, onboarding, pairing,
 azzera — comprese le frasi italiane rimaste dentro `insights/query.ts`, che è core ma scrive
 descrizioni di filtri.
 
+> **Lo Step 40 è chiuso il 19 agosto, e si è scostato dal ritmo "un passo a sessione" scritto qui
+> sopra**: le tre parti — grafici/dashboard, onboarding/pairing, backup/export/import/azzera — sono
+> state fatte in parallelo nella stessa sessione invece che una a testa, verificate separatamente e
+> unite alla fine. Ha portato anche budget, categorie e pareggi del gruppo, e la sonda diagnostica:
+> non erano nell'elenco di questa riga, ma restavano l'unica altra roba in italiano fisso.
+>
+> **`insights/query.ts` è cambiato con lo stesso meccanismo dello Step 39**, non uno nuovo:
+> `queryParts`/`describeQuery` ricevono un `QueryStrings` da fuori (default italiano, come
+> `NumberFormat`), e `@/i18n/query.ts` lo popola dal dizionario. Una regola ESLint in più vieta di
+> importare le due funzioni dal core dentro `apps/mobile`, per lo stesso motivo di
+> `formatCents`/`formatMoney`.
+>
+> **Due bug della stessa famiglia di quello dei widget allo Step 38**: `WIDGETS` in
+> `dashboard/widgets.ts` e `PERIOD_PRESETS` in `filters/period.ts` erano costanti di modulo con i
+> titoli già tradotti all'import, quindi congelate nella lingua di sistema. Diventate funzioni.
+>
+> Dettaglio completo in [STATO.md](STATO.md#il-resto-della-traduzione-step-40) e nel devlog.
+
 ### Step 41 — Verifica end-to-end
 
 Notifiche e widget sono per natura non verificabili senza telefono: vanno nella lista di "verificato
