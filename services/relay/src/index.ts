@@ -11,8 +11,10 @@
  *   DELETE /v1/vault/:vaultId/vault            → { deleted: true }
  *   GET    /health                             → { ok: true }
  *   GET    /j                                  → pagina di atterraggio degli inviti
+ *   GET    /privacy                            → informativa privacy
  */
 import { INVITE_PATH, invitePage } from './invite-page';
+import { PRIVACY_PATH, privacyPage } from './privacy-page';
 import { VAULT_ID_PATTERN } from './protocol';
 
 export { VaultRoom } from './vault-room';
@@ -36,6 +38,15 @@ export default {
         return json({ error: 'metodo non consentito' }, 405);
       }
       return invitePage();
+    }
+
+    // Statica come `/j`, e per la stessa ragione servita prima di ogni instradamento:
+    // non c'è alcun vault da aprire per mostrare un documento uguale per tutti.
+    if (url.pathname === PRIVACY_PATH || url.pathname === `${PRIVACY_PATH}/`) {
+      if (request.method !== 'GET' && request.method !== 'HEAD') {
+        return json({ error: 'metodo non consentito' }, 405);
+      }
+      return privacyPage();
     }
 
     const match = /^\/v1\/vault\/([^/]+)\/(updates|vault)$/.exec(url.pathname);
