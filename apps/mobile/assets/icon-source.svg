@@ -1,0 +1,39 @@
+<!--
+  Sorgente vettoriale dell'icona di JuTrack. I PNG di questa cartella si rigenerano
+  da qui: non modificarli a mano, o la prossima rigenerazione li sovrascrive.
+
+  Il segno: una lente — l'intersezione di due cerchi che non si disegnano — con la J
+  di JuJu ritagliata dentro. Due forme che si sovrappongono, e quello che resta e' la
+  parte in comune.
+
+  Geometria: due archi di raggio 256 fra (594.6, 294.6) e (429.4, 729.4), scalati di
+  1.18 attorno al centro della tela. Ne esce un ingombro di 370x514, con semidiagonale
+  317: dentro la zona sicura delle icone adattive di Android, che ha raggio 338. E' un
+  margine di appena il 6%, quindi la scala non va aumentata.
+
+  La J e' un TRACCIATO e non un <text>, di proposito: era Cormorant Garamond a peso
+  400, e lasciarla come testo avrebbe legato la rigenerazione delle icone a un font
+  installato sulla macchina. Il tracciato e' stato estratto una volta dall'istanza
+  wght=400 del font variabile — il cui default e' 300, che avrebbe dato una J piu'
+  sottile di quella disegnata.
+
+  La J e' un buco nella lente, non una forma sopra: nella silhouette monocromatica
+  delle notifiche resta trasparente e la lettera si legge lo stesso.
+
+  Il viola #5B3E9E del disegno originale e' stato portato sull'indaco #3B5BDB, che e'
+  `accent` in theme/tokens.ts: il colore di ogni azione primaria, dei grafici e dei due
+  widget. Un'icona di un colore e l'interfaccia di un altro si notano aprendo l'app.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <mask id="buco-j" maskUnits="userSpaceOnUse" x="0" y="0" width="1024" height="1024">
+      <path d="M594.6 294.6 A256 256 0 0 1 429.4 729.4 A256 256 0 0 1 594.6 294.6 Z"
+        transform="translate(512,512) scale(1.18) translate(-512,-512)" fill="#FFFFFF"/>
+      <path id="j" d="M570.40 354Q571.20 354 571.20 356.40Q571.20 358.80 570.40 358.80Q557.60 358.80 551.40 361.20Q545.20 363.60 543 369.60Q540.80 375.60 540.80 387.20L540.80 615.20Q540.80 653.60 522.80 677.60Q504.80 701.60 469.20 701.60Q455.60 701.60 447.80 696.80Q440 692 440 684.40Q440 678.40 443.60 674.80Q447.20 671.20 453.60 671.20Q460.80 671.20 464.60 674.40Q468.40 677.60 471 682.20Q473.60 686.80 476.80 690.20Q480 693.60 486 693.60Q500 693.60 507.20 677.40Q514.40 661.20 514.40 623.60L514.40 386.40Q514.40 374.80 511.60 369Q508.80 363.20 500.40 361Q492 358.80 475.20 358.80Q474.40 358.80 474.40 356.40Q474.40 354 475.20 354Q486.80 354 500 354.60Q513.20 355.20 527.20 355.20Q540.40 355.20 551 354.60Q561.60 354 570.40 354" fill="#000000"/>
+    </mask>
+  </defs>
+  <rect id="ground" width="1024" height="1024" fill="#F3F2F2"/>
+  <g id="mark">
+    <rect width="1024" height="1024" fill="#3B5BDB" mask="url(#buco-j)"/>
+  </g>
+</svg>
