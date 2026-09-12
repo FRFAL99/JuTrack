@@ -4,6 +4,90 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-12 — Step 48: il rapporto dei guasti, e cosa non ne esce
+
+Terzo e ultimo dei passi verso la pubblicazione. Fino a qui JuTrack era **cieca dopo la
+pubblicazione**: un crash sul telefono di qualcun altro non lasciava traccia da nessuna parte, e
+l'unico segnale sarebbe stata una recensione a una stella. Il Play Console mostra i crash nativi, ma
+non quello che succede nel JavaScript, che qui è quasi tutto.
+
+Installare `@sentry/react-native` è stata la parte breve. Quella lunga è stata decidere **cosa gli si
+lascia portare via**.
+
+### Il difetto che si stava per spedire
+
+Sentry, coi valori di default, allega a ogni evento le briciole: le richieste di rete recenti e
+quello che l'app ha scritto in console. Per quasi tutte le app è innocuo. Qui gli **URL del relay
+contengono il `vaultId`**, e una console può contenere qualunque cosa, importi compresi.
+
+Un'app che promette «il nostro server non può leggere le tue spese» e poi carica briciole con dentro
+le spese si smentisce da sola — e nessuno se ne accorgerebbe, perché quel materiale non compare da
+nessuna parte nell'app: si vedrebbe solo aprendo i rapporti su Sentry, cioè mai.
+
+Da qui la regola: **scartare per categoria, non ripulire per euristica.** `features/diagnostica/scrub.ts`
+è fatto di funzioni pure e ha **16 test**, perché è l'unico punto in cui si decide cosa esce dal
+telefono.
+
+- `xhr`, `fetch`, `http`, `console` buttate; `navigation` tenuta, perché dice su quale schermata è
+  successo — metà dell'informazione utile — e i suoi percorsi passano comunque dalla ripulitura.
+- Ogni esadecimale di almeno 32 caratteri nei percorsi diventa `<id>`: resta la forma della chiamata
+  fallita, sparisce il gruppo. Un test controlla che ne sostituisca **due** nello stesso URL: è il
+  difetto classico di una regex senza `g`, quello che protegge il primo e lascia il secondo — lo
+  stesso già incontrato con `neutralizeFormula` sui tag del CSV.
+- Un test controlla che `deadbeef` **non** venga toccato: una soglia più bassa cancellerebbe pezzi di
+  URL leggibili senza proteggere niente in più.
+- `beforeSend` toglie l'utente — Sentry ne inventa uno dall'installazione — butta le intestazioni,
+  dove c'è il token di autorizzazione del vault, e **rifiltra** le briciole, che possono arrivare
+  senza passare da `beforeBreadcrumb`.
+- `enableAutoSessionTracking: false`, `tracesSampleRate: 0`: un rapporto parte solo quando qualcosa
+  si rompe. Le sessioni sono misura d'uso, cioè quello che l'informativa dice di non fare.
+
+Un test controlla anche che `ripuliscEvento` **non muti** l'oggetto in ingresso: Sentry lo riusa, e
+mutarlo cambierebbe quel che vede il resto dell'SDK.
+
+### Tipi generici invece di conversioni forzate
+
+Prima versione: tipi minimi con indice `[k: string]: unknown`, e due `as` al confine con Sentry. Il
+typecheck li ha rifiutati entrambi, e aveva ragione — `ErrorEvent` e `Breadcrumb` non hanno indice.
+Le funzioni sono diventate **generiche** (`<T extends Briciola>`), quindi restituiscono esattamente
+il tipo ricevuto e al confine non serve alcuna conversione. Il modulo resta puro e provabile senza la
+libreria, e sparisce il punto in cui un tipo sbagliato avrebbe smesso di farsi notare.
+
+### Senza DSN non parte
+
+`avviaSentry()` è condizionata a `extra.sentryDsn`, oggi **vuoto**: una build senza DSN non spedisce
+niente a nessuno invece di fallire in qualche modo. Il DSN è configurazione, non un segreto —
+permette di scrivere rapporti, non di leggerli.
+
+L'aggancio è la **prima riga** di `index.js`, prima di `expo-router/entry`: i moduli si valutano
+nell'ordine in cui compaiono, e un guasto all'avvio è quello che più vale la pena vedere. È anche
+l'unico che si perderebbe inizializzando Sentry dentro un componente.
+
+### L'informativa non poteva restare com'era
+
+Diceva testualmente «non usa strumenti di analisi o di tracciamento». Con Sentry quella frase
+**diventa falsa**, in un documento pubblicato apposta perché il Play Store lo pretende. Riscritta in
+entrambe le lingue: due sezioni nuove — «Quando qualcosa si rompe» e «Aggiornamenti dell'app», che
+copre anche lo Step 47, perché chiedere a Expo se esiste un aggiornamento è un terzo contattato — e
+«Condivisione con terzi» che adesso ne elenca tre invece di uno.
+
+Tre test la tengono onesta, e uno vale più degli altri due: divide l'HTML in corrispondenza di
+`id="en"` e controlla le **due metà separatamente**. Una sezione scritta in una lingua sola è il
+difetto più facile da fare su una pagina bilingue e il più difficile da vedere rileggendola.
+
+**L'informativa è cambiata nel repo, non in produzione.** Il deploy va chiesto, e va fatto insieme
+alla build che contiene davvero Sentry: pubblicarla prima significherebbe descrivere un trattamento
+che non avviene ancora — lo stesso difetto, al contrario, che questa giornata ha passato a
+correggere.
+
+**Verifica:** 1277 test verdi (639 core + 584 app + 54 relay), typecheck, lint, `format:check` ed
+`expo export --platform android` puliti.
+
+**Prossimo:** il DSN, poi **una sola build** con dentro gli Step 46, 47 e 48, e la prova dell'APK
+senza Metro — che è la cosa che non è mai stata fatta.
+
+---
+
 ## 2026-09-12 — Step 47: le correzioni senza passare dal negozio
 
 Secondo dei tre passi verso la pubblicazione. Una volta che l'app è sul Play Store, il primo difetto

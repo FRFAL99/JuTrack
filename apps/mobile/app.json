@@ -88,7 +88,8 @@
             "backgroundColor": "#0B0B10"
           }
         }
-      ]
+      ],
+      "@sentry/react-native"
     ],
     "experiments": {
       "typedRoutes": true
@@ -97,7 +98,8 @@
       "router": {},
       "eas": {
         "projectId": "91640a35-dac1-4d52-be1d-938c17482d76"
-      }
+      },
+      "sentryDsn": ""
     },
     "owner": "frfal"
   }
