@@ -1,7 +1,19 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-08-19 — **tutti e quattro i piani e il redesign visivo sono finiti nel codice, il
-quinto piano è a dodici step su tredici, e due step di robustezza sono nati fuori dai piani**.
+Aggiornato: 2026-09-12 — **tutti e quattro i piani e il redesign visivo sono finiti nel codice, il
+quinto piano è a dodici step su tredici, quattro passi nati fuori dai piani hanno chiuso i due
+rischi sui dati e le due cose che mancavano al negozio, e la build EAS che tiene tutto questo è
+installata sul telefono**.
+
+> **Il 5 settembre sono entrate le due cose che impedivano di pubblicare, e nessuna delle due
+> chiedeva un telefono.** L'**informativa privacy** è in produzione su
+> [`/privacy`](https://jutrack-relay.jutrack-relayfrfal.workers.dev/privacy), servita dallo stesso
+> Worker di `/j`, in italiano e in inglese; e l'**icona** non è più quella dello scaffold Expo — il
+> chevron azzurro con le linee guida di costruzione, mai toccata dal 1° agosto — ma una lente con la
+> J di JuJu ritagliata dentro, rigenerabile da un unico sorgente vettoriale. Dettaglio in
+> [devlog.md](devlog.md). **Il 41 resta l'unico step scritto che manca**, e la build EAS che lo
+> sblocca — che serve anche a guardare l'icona sul telefono — **è stata fatta il 5 settembre stesso
+> ed è installata** (vedi il riquadro qui sotto).
 
 > **Gli Step 42 e 43 non vengono da un piano, ma da una rilettura del progetto**, e chiudono i due
 > lati dello stesso rischio — perdere i dati. Il **42** dà una via d'uscita a chi la chiave l'ha già
@@ -24,15 +36,22 @@ traduzione**: grafici, dashboard, onboarding, pairing, backup, export, import e 
 budget/categorie/pareggi del gruppo e la sonda diagnostica. Resta solo la verifica su telefono
 (41). Il piano ne aveva dodici: il tredicesimo è lo Step 39, nato dallo Step 38 e inserito in mezzo.
 
-> ⚠️ **Serve una build EAS nuova, ed è la seconda del piano v5.** Lo
-> [Step 36](#il-refresh-in-background-step-36) ha messo `updatePeriodMillis: 1800000` in
-> `app.json`, e quel numero finisce nell'XML del provider dei widget: **sulla build installata
-> oggi la sveglia non suona**, e il refresh in background non parte. Tutto il resto — notifiche,
-> widget, disegno, **e la lingua** — funziona già sulla build dello Step 30: lo Step 37 è JS puro
-> e non ha aggiunto moduli nativi, deliberatamente (vedi sotto).
+> ✅ **La build EAS che serviva è stata fatta ed è installata, e da qui non c'è più niente di
+> bloccato sul telefono.** È del **5 settembre 2026**, profilo `development`, commit
+> [`9606e0f`](https://github.com/FRFAL99/JuTrack) — cioè **la punta di `main`**: contiene sia
+> l'`updatePeriodMillis: 1800000` dello [Step 36](#il-refresh-in-background-step-36), che finisce
+> nell'XML dei due provider dei widget, sia l'**icona nuova** del passo 45. Prima di lei ce n'era
+> stata una il **15 agosto** (Step 40), a sua volta mai annotata qui: fino all'11 settembre questo
+> documento diceva ancora che l'ultima installata fosse quella dello Step 30, e mandava a rifare
+> una build già fatta.
+>
+> **Non resta un solo pezzo di codice che il telefono non possa eseguire**: la build combacia con
+> `main`, quindi Metro serve esattamente ciò che c'è nel binario. Tutto il piano v5 — notifiche,
+> widget, refresh in background, lingua, valuta — più l'icona, i due step di robustezza e il
+> redesign, sono davanti a un dito che li tocchi.
 >
 > ```bash
-> cd apps/mobile && npx eas-cli build -p android --profile development
+> cd apps/mobile && npx eas-cli build -p android --profile development   # solo se app.json cambia
 > ```
 >
 > **Notifiche e widget sono tutti nel codice**: lo [Step 31](#il-promemoria-spese-step-31), lo
@@ -106,7 +125,7 @@ step su dodici nel codice**:
 | 33 — Sincronizzazione ferma        | ✅    | Terzo interruttore, watcher sulla fase, scadenza di 24 h su disco      |
 | 34 — Widget «Saldo»                | ✅    | Foglietto in `app_meta`, task headless, `index.js` come entry          |
 | 35 — Widget «Speso questo mese»    | ✅    | Stesso foglietto e stesso rettangolo, didascalia che nomina il mese    |
-| 36 — Refresh in background         | ✅    | Sync ogni 30 min dal task headless. **Chiede una build EAS nuova**     |
+| 36 — Refresh in background         | ✅    | Sync ogni 30 min dal task headless. Build del 5 settembre installata   |
 | 37 — Infrastruttura i18n           | ✅    | `i18next`, campo `language`, selettore in `tu.tsx`, Tu tradotta tutta  |
 | 38 — Traduzione EN, tre schermate  | ✅    | Spese, nuova spesa, gruppi, e i sei moduli condivisi sotto             |
 | 39 — Formato dei numeri per lingua | ✅    | `NumberFormat` nel core, `@/i18n/money` nell app, guardia ESLint       |
@@ -120,6 +139,13 @@ Robustezza dei dati — nati fuori dai piani, dalla rilettura del 17 agosto:
 | 42 — Reimport dell'export JSON   | ✅    | `parseVaultExport`, `importSnapshot`, `/importa`, in un gruppo nuovo |
 | 43 — Avviso «chiave non salvata» | ✅    | Quarto interruttore, `BackupWatcher`, soglia a cinque spese          |
 
+Verso la pubblicazione — anch'essi fuori dai piani, dalla rilettura del 5 settembre:
+
+| Passo                    | Stato | Cosa contiene                                                   |
+| ------------------------ | ----- | --------------------------------------------------------------- |
+| 44 — Informativa privacy | ✅    | `GET /privacy` sul relay, IT + EN, otto test, **in produzione** |
+| 45 — Icona definitiva    | ✅    | `icon-source.svg` come unica sorgente, cinque PNG rigenerabili  |
+
 Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette passi:
 
 | Passo                      | Stato | Cosa contiene                                                   |
@@ -132,7 +158,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**1250 test verdi** (639 core + 568 app + 43 relay), typecheck, lint e `format:check` puliti.
+**1258 test verdi** (639 core + 568 app + 51 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -197,6 +223,15 @@ dopo** aver provato sul campo la taratura degli Step 16 e 17.
 **La pagina `/j` è in produzione** (deploy del 2026-08-02, versione `b351a959`): risponde 200 con
 gli header attesi — `Referrer-Policy: no-referrer`, CSP `default-src 'none'`, `noindex` — e l'HTML
 servito è quello del repo, senza risorse esterne. Resta da provare col telefono in mano.
+
+**Dal 2026-09-05 il Worker ne serve una seconda: [`/privacy`](https://jutrack-relay.jutrack-relayfrfal.workers.dev/privacy)**,
+l'informativa richiesta dal Play Store, verificata identica byte per byte al sorgente in `main`. Le
+sue **due differenze rispetto a `/j` sono deliberate e hanno un test ciascuna**, perché sono ciò che
+si copierebbe per abitudine dalla pagina accanto: **niente `noindex`**, perché questo documento deve
+essere trovabile e citabile mentre `/j` porta una chiave nel fragment; e **`script-src 'none'`**
+invece di `'unsafe-inline'`, perché non c'è nulla da calcolare nel browser e le due lingue stanno una
+sotto l'altra dietro due ancore, così si legge anche con gli script disattivati. Titolare e recapito
+sono costanti in cima al modulo, e un test impedisce che tornino a essere segnaposto.
 
 ## Redesign visivo
 
@@ -902,7 +937,8 @@ widget del piano v5.
 ## Il refresh in background (Step 36)
 
 I widget si aggiornano da soli ogni mezz'ora, ad app chiusa. Era l'unico step del piano v5 marcato
-opzionale, ed è l'unico che **chiede una build EAS nuova** dopo quella dello Step 30.
+opzionale, ed è l'unico che ha **chiesto una build EAS nuova** dopo quella dello Step 30: quella
+build c'è dal 15 agosto e la porta anche quella installata oggi, del 5 settembre.
 
 - **Ricalcolare non sarebbe servito a niente, e questa è la scoperta dello step.** Il documento
   locale non si muove da solo: il motore di sync gira solo dentro l'app. Un ricalcolo periodico
@@ -1201,26 +1237,40 @@ lezione di metodo in [troubleshooting-avvio-app.md](troubleshooting-avvio-app.md
 cd apps/mobile && npx expo start --dev-client    # MAI dalla root del monorepo
 ```
 
-Development build EAS installata su Android. **Diagnostica: 16 passaggi su 16, «TUTTO OK»** — Yjs,
+Development build EAS installata su Android — **dal 5 settembre 2026 quella del commit `9606e0f`**,
+vedi qui sotto. **Diagnostica: 16 passaggi su 16, «TUTTO OK»** — Yjs,
 `Y.Doc` con lo shim lib0/webcrypto, crypto su Hermes vero, XChaCha20-Poly1305, SQLite, SecureStore,
 relay in produzione, invito di pairing, QR, fotocamera, **notifiche locali e widget Android**.
 
 - Progetto EAS: `@frfal/jutrack`, build con `npx eas-cli build -p android --profile development`
 - Il keystore Android è custodito da EAS: serve per ogni aggiornamento futuro dell'app installata
 
-> **La build del 12 agosto 2026 è quella dello Step 30**, installata e verificata: la diagnostica
-> risponde `15. notifiche locali: modulo disponibile, permesso non concesso` e
+> **Le build fatte finora sono quattro, e quella installata oggi è l'ultima.** Vanno scritte tutte,
+> perché per un mese questo documento ne ha annotata una sola e ha mandato a rifare lavoro già
+> fatto:
+>
+> | Data       | Commit    | Cosa ha portato di nativo                                                                                                          |
+> | ---------- | --------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+> | 2026-08-01 | `5c5db2e` | Il collegamento a EAS e `expo-camera`. La prima, diagnostica 14/14                                                                 |
+> | 2026-08-12 | `aff8aa2` | Step 30: `expo-notifications`, `react-native-android-widget`, e finalmente `expo-file-system` ed `expo-sharing`. Diagnostica 16/16 |
+> | 2026-08-15 | _(ramo)_  | Step 40. Porta con sé l'`updatePeriodMillis` dello Step 36, **e nessuno l'ha annotato**                                            |
+> | 2026-09-05 | `9606e0f` | **Installata.** L'icona del passo 45, e ancora l'`updatePeriodMillis`                                                              |
+>
+> La build del 12 agosto è quella dello Step 30: la diagnostica rispondeva
+> `15. notifiche locali: modulo disponibile, permesso non concesso` e
 > `16. widget Android: 2 provider rispondono (0 + 0 sulla home)`. «Permesso non concesso» e gli zeri
 > erano **l'esito atteso** di allora: il permesso l'ha poi chiesto lo Step 31, il saldo ha ricevuto
-> un contenuto con lo Step 34, e «speso questo mese» lo riceve col 35.
+> un contenuto con lo Step 34, e «speso questo mese» lo riceve col 35. Da rifare sulla build attuale,
+> dove **gli zeri sono un difetto e non un'attesa**.
 >
-> **Questa build sblocca gli Step 31–35, che sono JS e non ne chiedono altre** — lo Step 34 lo ha
-> confermato anche per il cambio di `main`, che Metro risolve al momento del bundle. Ne resta fuori
-> il solo Step 36, opzionale e da riaprire solo se il refresh ad apertura app non basta.
+> **Sulla build del 5 settembre non c'è più nulla che il telefono non possa eseguire**: è la punta di
+> `main`, quindi Metro serve esattamente il JS che sta nel binario, e sia lo Step 36 sia l'icona sono
+> dentro. Il `git log` non si è mosso da lì, quindi non serve un'altra build finché `app.json` non
+> cambia.
 >
-> **Ha portato con sé anche `expo-file-system` ed `expo-sharing`**, aggiunti allo Step 9 e mai finiti
-> in una build: il foglio di condivisione dell'export dovrebbe funzionare adesso, invece di ripiegare
-> sugli appunti. Non è stato ancora guardato — vedi la lista qui sotto.
+> **Dal 12 agosto ci sono anche `expo-file-system` ed `expo-sharing`**, aggiunti allo Step 9 e per
+> quattro mesi mai finiti in una build: il foglio di condivisione dell'export dovrebbe funzionare,
+> invece di ripiegare sugli appunti. **Non è stato ancora guardato** — vedi la lista qui sotto.
 
 ## Cosa non è ancora stato verificato su hardware reale
 
@@ -1236,6 +1286,47 @@ lista, non le toglie.
 > telefono; **(4)** la spesa compare sull'altro telefono, **e in entrambi i versi** — è il criterio
 > di «fatto» che manca a tutti e tre i piani. I punti 1 e 2 si provano con un telefono solo; i punti
 > 3 e 4 sono quelli che non sono mai stati visti funzionare.
+
+### Il giro di prova, in quattro blocchi
+
+La lista qui sotto è lunga una quarantina di voci e **non si percorre in ordine di scrittura**:
+quello è l'ordine in cui gli step sono stati fatti, non quello in cui conviene guardarli. Dal 5
+settembre **niente è più bloccato da una build**, quindi il giro si può fare tutto. I quattro
+blocchi sono ordinati per «un rosso qui rende inutile il blocco dopo».
+
+**Blocco 0 — prima di toccare il telefono.** Metro parte **da `apps/mobile`**, mai dalla root, e
+`npm run prova` verde evita di dare la colpa al telefono per un guasto di relay o di dati:
+
+```bash
+cd apps/mobile && npx expo start --dev-client
+npm run prova                                    # altro terminale, ~30 controlli in ~90 s
+```
+
+**Blocco 1 — telefono da solo, nessuna attesa (~30 min).** Nell'ordine: l'app si apre su un telefono
+che **i gruppi ce li ha già** e non chiede nulla (Step 21, e le spese di prima dello Step 23 si
+devono vedere lo stesso); la navigazione della nuova radice del tab Gruppi (passo 6); il form della
+spesa e i suoi tre modi di perdere quello che si scrive (passo 7, Step 24 e 38); le cinque `NavCard`
+(Step 19); i grafici e i filtri (Step 26 e 27); la dashboard, che **chiede di chiudere e riaprire
+l'app** (Step 28); valuta e lingua in Tu, che la chiedono anche loro (Step 29 e 37). Poi la prova
+singola che vale più di tutte le altre di questo blocco: **in inglese, aprire una spesa registrata
+prima e guardare il campo importo** — deve dire `12.30` e non `1230` (Step 39).
+
+**Blocco 2 — con `npm run peer` dall'altra parte (~20 min).** È il criterio di «fatto» che manca a
+tutti i piani. Il link mandato in chat che apre `/groups/<id>` **col fragment**, `Share.share`, la
+spesa che passa **nei due versi**, due membri e non quattro, il saldo a mano, l'aereo con i ~15 s
+dello Step 17 e la scala di poll dello Step 16. Guida: [prova-con-un-telefono-solo.md](prova-con-un-telefono-solo.md).
+
+**Blocco 3 — notifiche e widget, cioè lo Step 41 (~30 min).** Il **32** per primo perché si vede in
+un minuto (budget basso, spesa che lo supera, notifica **mentre si è nell'app**); poi il **31**
+(dialogo del permesso, diagnostica 15 che passa a «concesso»); il **33** nel suo caso _fermo_
+(rigenerare il gruppo dal peer); infine i due **widget** sulla home, la prova che li distingue —
+spesa tutta mia contro pareggio — e il **riavvio del telefono**, che è il solo modo di vedere il
+task headless. Qui la diagnostica va rifatta: sulla build di oggi `0 + 0 sulla home` è un difetto.
+
+**Blocco 4 — quello che chiede tempo, non attenzione.** L'**icona** nei suoi cinque posti (launcher
+tondo e squircle, 48 px nel cassetto, silhouette nella tendina, icona a tema, i due widget); lo
+**Step 36**, che vuole mezz'ora di app chiusa; lo Step 31 vero, che arriva a **tre giorni**; il caso
+_in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step 35.
 
 - Il ciclo di sync completo **fra due telefoni fisici**: provato una volta e **fallito** (una sola
   direzione, con ritardi di parecchi secondi, e membri duplicati). Le cause sono state corrette agli
@@ -1430,8 +1521,8 @@ lista, non le toglie.
   pazienza è il **primo del mese**: il totale deve ripartire da zero alla prima apertura dell'app, e
   fino ad allora la didascalia deve dire il mese giusto per il numero che mostra — è la ragione per
   cui non dice «questo mese»
-- **Lo Step 36, che prima della build EAS nuova non è provabile affatto**: sulla build installata
-  oggi `updatePeriodMillis` è 0 e la sveglia non suona. Dopo l'installazione, nell'ordine:
+- **Lo Step 36, che dalla build del 5 settembre è finalmente provabile**: `updatePeriodMillis` vale
+  1800000 nell'XML dei due provider, quindi la sveglia adesso suona davvero. Nell'ordine:
   aggiungere un widget, registrare una spesa **sull'altro telefono** e lasciar passare mezz'ora
   senza toccare il primo — il widget deve cambiare da solo. Poi il caso che vale il doppio, perché
   prova la direzione che il nome dello step non nomina: chiudere l'app in aereo dopo aver registrato
@@ -1482,7 +1573,16 @@ lista, non le toglie.
   le due lingue si vedrebbe subito, ed è per questo che sono rimaste con lo stesso ordine
   italiano e inglese invece di essere riscritte
 
-Tutto il resto è verificato: 1250 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+- **L'icona nuova, che è la prima cosa che si vede e non ha alcun test che la copra.** Nel launcher
+  la maschera adattiva la ritaglia, e il segno le sta dentro per appena il 6%: da guardare che non
+  tocchi i bordi né in tondo né in squircle. Poi i tre posti dove la stessa immagine ricompare con
+  regole diverse — la **silhouette monocromatica** nella tendina delle notifiche (dove la J deve
+  restare un buco leggibile e non chiudersi), l'**icona a tema** di Android 13+ con lo sfondo colorato
+  dal sistema, e i **due widget** sulla home. Da guardare anche a 48 px nel cassetto delle app, che è
+  la dimensione a cui vive davvero, e su uno sfondo chiaro: il fondo dell'icona è quasi bianco, ed è
+  l'unico punto in cui potrebbe sparire contro il wallpaper
+
+Tutto il resto è verificato: 1258 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 > **Lo Step 25 è entrato in questa lista attraverso il 26**, come era stato scritto: la geometria
@@ -1491,36 +1591,38 @@ su un dispositivo Android reale.
 
 ## Trappole già risolte — da non riscoprire
 
-| Trappola                                                                                                      | Soluzione adottata                                                                                      |
-| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `TextEncoder` non esiste su Hermes                                                                            | UTF-8 scritta in `crypto/encoding.ts`; vietato l'import da noble                                        |
-| Yjs non fa il bundle su RN (`lib0` → `isomorphic-webcrypto`, fermo al 2022)                                   | Alias in `metro.config.js` verso uno shim su `expo-crypto`                                              |
-| `storage.deleteAll()` su Durable Object SQLite cancella anche le tabelle                                      | `ensureSchema()` subito dopo, con test di regressione                                                   |
-| Un blob corrotto blocca **tutti** gli update successivi di quel device                                        | Ripubblicazione dello stato completo al rilevamento                                                     |
-| TypeScript bloccato a 6.x                                                                                     | `typescript-eslint` dichiara peer `typescript <6.1.0`                                                   |
-| Nella flat config ESLint vince l'ultima regola                                                                | Gli override vanno **dopo** il blocco generale                                                          |
-| Metro annunciava `127.0.0.1` come host del bundle                                                             | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                                                               |
-| expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera                    | `expo-camera`, `expo-file-system`, `expo-sharing` con `require` in `try/catch`                          |
-| **`expo start` dalla root del monorepo**: 404 su ogni bundle, app muta                                        | Avviarlo **sempre** da `apps/mobile`; è costato giorni                                                  |
-| Due copie di React (`expo-*` dichiara `"react": "*"`)                                                         | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede                                         |
-| `DELETE FROM sync_pending` senza `WHERE`: con due gruppi cancella la coda offline dell'altro                  | Colonna `vault_id` ovunque, e un test su SQLite vero — con un finto motore passerebbe comunque          |
-| I tipi delle rotte expo-router non li rigenera `expo export`, ma `expo start`                                 | Sono in `.expo/types/`, gitignorato: in CI non esistono e il typecheck passa lo stesso                  |
-| **expo-router non espone il fragment**: `useLocalSearchParams` vede il percorso e la query                    | La rotta `/join` legge il link grezzo con `Linking.useLinkingURL()`                                     |
-| Uscire da un gruppo **mai sincronizzato**: `no such table: sync_state`                                        | `SqliteSyncStore.forget` passa dallo stesso `ensureSchema` di `open`                                    |
-| La schermata del gruppo riselezionava il gruppo **appena abbandonato**: app ferma sul caricamento             | Guardia nella schermata **e** in `select`, che rifiuta un `vaultId` non nel registro                    |
-| Spostare rotte con `.expo/types/` gitignorato: gli href obsoleti passano typecheck **e** lint                 | Grep sugli href, poi `expo start` per rigenerare i tipi e `tsc` **con quei tipi presenti**              |
-| **SecureStore non sa elencare i propri slot**: cancellare `groups` per primo orfanerebbe le chiavi            | `wipeDevice` legge `registry.list()` come primissima operazione, prima di qualunque DELETE              |
-| Dopo `DELETE FROM app_meta`, `ensureSchema` scambia le tabelle di sync per quelle del vecchio schema          | Innocuo di proposito: a quel punto sono vuote e `SqliteSyncStore.open` le ricrea — scritto nel codice   |
-| **Un `<Redirect>` in una schermata di stack scatta anche quando non è a fuoco**: quelle sotto restano montate | Componente condiviso fra le due rotte, che non naviga — vedi `GroupHome` (passo 6)                      |
-| Cambiare gruppo mentre si è su `/groups/<id>`: la guardia del layout lo riporta indietro subito               | `dismissTo('/')` **prima** di `select()`, così la guardia è già smontata                                |
-| Un token di stile con `as const` non è assegnabile a `TextStyle` (`fontVariant` diventa `readonly`)           | Tipizzarlo `Pick<TextStyle, …>`; e un token che nessuno usa non compila senza che nessuno lo sappia     |
-| `-shares[me]` con quota zero dà `-0`, che non è `0` e a valle si legge come debito                            | `net === 0 ? 0 : net` in `yourShareCents`, con il test che lo fissa                                     |
-| Un campo nuovo letto senza fallback: un record dall'altro telefono fa saltare `listExpenses` intera           | Reader difensivi: `strList` accetta solo array e solo stringhe, e i test ci scrivono dentro un `42`     |
-| Disinnescare le formule **dopo** aver unito i tag in una cella CSV: protegge solo il primo                    | `neutralizeFormula` su ciascun tag, poi il `join(';')` — e il test guarda il secondo, non il primo      |
-| Testo bianco fisso dentro una tinta: metà dei colori di categoria di default sta sotto 3,7:1                  | `inkOn` confronta i **due contrasti veri**; la soglia WCAG vale contro bianco e nero puri, non qui      |
-| Contare a sette per fare le colonne di una heatmap: funziona solo se il periodo comincia di lunedì            | Colonna nuova al lunedì, buchi in testa — e il test parte da un mese che comincia di sabato             |
-| `Dimensions.get('window')` per dare una larghezza a un SVG: ignora i padding e il grafico sborda              | Ogni grafico si misura con `onLayout` e non disegna niente finché la larghezza è zero                   |
-| Un accumulatore riassegnato dentro una `map` in fase di render                                                | `react-hooks/immutability` lo rifiuta: ciclo che scrive in un elenco locale (gli archi della ciambella) |
+| Trappola                                                                                                      | Soluzione adottata                                                                                                                                                                    |
+| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TextEncoder` non esiste su Hermes                                                                            | UTF-8 scritta in `crypto/encoding.ts`; vietato l'import da noble                                                                                                                      |
+| Yjs non fa il bundle su RN (`lib0` → `isomorphic-webcrypto`, fermo al 2022)                                   | Alias in `metro.config.js` verso uno shim su `expo-crypto`                                                                                                                            |
+| `storage.deleteAll()` su Durable Object SQLite cancella anche le tabelle                                      | `ensureSchema()` subito dopo, con test di regressione                                                                                                                                 |
+| Un blob corrotto blocca **tutti** gli update successivi di quel device                                        | Ripubblicazione dello stato completo al rilevamento                                                                                                                                   |
+| TypeScript bloccato a 6.x                                                                                     | `typescript-eslint` dichiara peer `typescript <6.1.0`                                                                                                                                 |
+| Nella flat config ESLint vince l'ultima regola                                                                | Gli override vanno **dopo** il blocco generale                                                                                                                                        |
+| Metro annunciava `127.0.0.1` come host del bundle                                                             | `REACT_NATIVE_PACKAGER_HOSTNAME=<ip-lan>`                                                                                                                                             |
+| expo-router importa **tutte** le route al boot: un modulo nativo rotto uccide l'app intera                    | `expo-camera`, `expo-file-system`, `expo-sharing` con `require` in `try/catch`                                                                                                        |
+| **`expo start` dalla root del monorepo**: 404 su ogni bundle, app muta                                        | Avviarlo **sempre** da `apps/mobile`; è costato giorni                                                                                                                                |
+| Due copie di React (`expo-*` dichiara `"react": "*"`)                                                         | `overrides` nella root + lock rigenerato; `expo-doctor` lo vede                                                                                                                       |
+| `DELETE FROM sync_pending` senza `WHERE`: con due gruppi cancella la coda offline dell'altro                  | Colonna `vault_id` ovunque, e un test su SQLite vero — con un finto motore passerebbe comunque                                                                                        |
+| I tipi delle rotte expo-router non li rigenera `expo export`, ma `expo start`                                 | Sono in `.expo/types/`, gitignorato: in CI non esistono e il typecheck passa lo stesso                                                                                                |
+| **expo-router non espone il fragment**: `useLocalSearchParams` vede il percorso e la query                    | La rotta `/join` legge il link grezzo con `Linking.useLinkingURL()`                                                                                                                   |
+| Uscire da un gruppo **mai sincronizzato**: `no such table: sync_state`                                        | `SqliteSyncStore.forget` passa dallo stesso `ensureSchema` di `open`                                                                                                                  |
+| La schermata del gruppo riselezionava il gruppo **appena abbandonato**: app ferma sul caricamento             | Guardia nella schermata **e** in `select`, che rifiuta un `vaultId` non nel registro                                                                                                  |
+| Spostare rotte con `.expo/types/` gitignorato: gli href obsoleti passano typecheck **e** lint                 | Grep sugli href, poi `expo start` per rigenerare i tipi e `tsc` **con quei tipi presenti**                                                                                            |
+| `.expo/types/router.d.ts` **stantio**: il typecheck locale segnala rotte che invece esistono                  | Cancellarlo — `expo start` lo rigenera. È il caso inverso dei due qui sopra, e inganna perché in CI, dove il file non esiste, tutto è verde                                           |
+| `wrangler` autenticato sull'account Cloudflare sbagliato: `Authentication error [code: 10000]`                | Il relay vive sull'account di `francesco.fallavena@gmail.com`. `wrangler login` scade in un paio di minuti, e se il browser è già su un altro account autorizza quello senza chiedere |
+| **SecureStore non sa elencare i propri slot**: cancellare `groups` per primo orfanerebbe le chiavi            | `wipeDevice` legge `registry.list()` come primissima operazione, prima di qualunque DELETE                                                                                            |
+| Dopo `DELETE FROM app_meta`, `ensureSchema` scambia le tabelle di sync per quelle del vecchio schema          | Innocuo di proposito: a quel punto sono vuote e `SqliteSyncStore.open` le ricrea — scritto nel codice                                                                                 |
+| **Un `<Redirect>` in una schermata di stack scatta anche quando non è a fuoco**: quelle sotto restano montate | Componente condiviso fra le due rotte, che non naviga — vedi `GroupHome` (passo 6)                                                                                                    |
+| Cambiare gruppo mentre si è su `/groups/<id>`: la guardia del layout lo riporta indietro subito               | `dismissTo('/')` **prima** di `select()`, così la guardia è già smontata                                                                                                              |
+| Un token di stile con `as const` non è assegnabile a `TextStyle` (`fontVariant` diventa `readonly`)           | Tipizzarlo `Pick<TextStyle, …>`; e un token che nessuno usa non compila senza che nessuno lo sappia                                                                                   |
+| `-shares[me]` con quota zero dà `-0`, che non è `0` e a valle si legge come debito                            | `net === 0 ? 0 : net` in `yourShareCents`, con il test che lo fissa                                                                                                                   |
+| Un campo nuovo letto senza fallback: un record dall'altro telefono fa saltare `listExpenses` intera           | Reader difensivi: `strList` accetta solo array e solo stringhe, e i test ci scrivono dentro un `42`                                                                                   |
+| Disinnescare le formule **dopo** aver unito i tag in una cella CSV: protegge solo il primo                    | `neutralizeFormula` su ciascun tag, poi il `join(';')` — e il test guarda il secondo, non il primo                                                                                    |
+| Testo bianco fisso dentro una tinta: metà dei colori di categoria di default sta sotto 3,7:1                  | `inkOn` confronta i **due contrasti veri**; la soglia WCAG vale contro bianco e nero puri, non qui                                                                                    |
+| Contare a sette per fare le colonne di una heatmap: funziona solo se il periodo comincia di lunedì            | Colonna nuova al lunedì, buchi in testa — e il test parte da un mese che comincia di sabato                                                                                           |
+| `Dimensions.get('window')` per dare una larghezza a un SVG: ignora i padding e il grafico sborda              | Ogni grafico si misura con `onLayout` e non disegna niente finché la larghezza è zero                                                                                                 |
+| Un accumulatore riassegnato dentro una `map` in fase di render                                                | `react-hooks/immutability` lo rifiuta: ciclo che scrive in un elenco locale (gli archi della ciambella)                                                                               |
 
 ## Dove sta ogni schermata (Step 18, 19 e 20)
 
@@ -1868,15 +1970,17 @@ confuse:
 
 ## Se un giorno si vuole pubblicare
 
-Non è stato fatto, per scelta: si sta ancora provando la development build.
+Non è stato fatto, per scelta: si sta ancora provando la development build — quella del 5 settembre,
+che è la punta di `main`.
 
 ```bash
 cd apps/mobile && npx eas-cli build -p android --profile preview      # APK autonomo, senza Metro
 cd apps/mobile && npx eas-cli build -p android --profile production   # app bundle per il Play Store
 ```
 
-- Piano EAS Free: **15 build Android al mese**, concorrenza 1, timeout 45 minuti. Al 2026-08-01 ne è
-  stata consumata **una** (la development build, 19 minuti).
+- Piano EAS Free: **15 build Android al mese**, concorrenza 1, timeout 45 minuti. Ne sono state
+  consumate **tre in agosto** (1, 12 e 15) e **una a settembre** (il 5), tutte col profilo
+  `development` e tutte riuscite, fra i 13 e i 19 minuti l'una.
 - Il keystore è custodito da EAS ed è quello che lega gli aggiornamenti all'app già installata:
   perderlo significa non poter più aggiornare quell'installazione.
 - Il profilo `preview` è quello che serve per far provare l'app a qualcun altro: gira senza Metro,

@@ -3,12 +3,16 @@
 > Punto d'ingresso del progetto: [STATO.md](STATO.md). Piano approvato:
 > `~/.claude/plans/ho-appena-fatto-delle-nested-conway.md`.
 >
-> **Cinque step su dodici chiusi**, tutti il 12 agosto 2026: lo
-> [Step 29](#step-29--valuta-di-default-nel-profilo), lo
-> [Step 30](#step-30--infrastruttura-nativa-condivisa) — **build EAS compresa**, installata e
-> verificata con la diagnostica a 16 passaggi su 16 — e i tre contenuti di notifica, lo Step 31
-> (promemoria spese), lo Step 32 (avviso di budget) e lo Step 33 (sincronizzazione ferma). Gli
-> Step 34–35 lavorano in JS sopra quella build e non ne chiedono altre.
+> **Dodici step su dodici sono nel codice**, dal 12 al 19 agosto 2026: la valuta nel profilo (29),
+> l'infrastruttura nativa (30) — **build EAS compresa**, verificata con la diagnostica a 16 passaggi
+> su 16 — le tre notifiche (31 promemoria, 32 budget, 33 sync ferma), i due widget (34, 35), il
+> refresh in background (36) e i quattro step di lingua e numeri (37–40).
+>
+> **Resta il solo [Step 41](#step-41--verifica-end-to-end), che non è codice**: è il giro di prova
+> su telefono. Non ha più niente davanti — la development build installata è quella del 5 settembre
+> 2026, commit `9606e0f`, che è la punta di `main` e contiene anche l'`updatePeriodMillis` dello
+> Step 36. Il percorso in quattro blocchi è in
+> [STATO.md](STATO.md#cosa-non-è-ancora-stato-verificato-su-hardware-reale).
 >
 > **Sullo Step 31 il piano diceva «promemoria periodico», e periodico non è.** Una notifica locale
 > si programma prima e scatta da sola, senza che nessuno possa rivalutare la condizione al momento
@@ -182,7 +186,7 @@ schermate.
 | 33   | Notifiche | Notifica locale esito sync (fallito/bloccato a lungo)                                                                                         |    No     |
 | 34   | Widget    | Widget "Saldo del gruppo aperto" — refresh quando l'app è in primo piano/dopo sync                                                            |    No     |
 | 35   | Widget    | Widget "Totale speso nel mese" — stesso meccanismo di refresh                                                                                 |    No     |
-| 36   | Widget    | _(opzionale, da valutare dopo l'uso reale)_ refresh periodico in background via WorkManager                                                   |   Forse   |
+| 36   | Widget    | Refresh periodico in background dalla sveglia del provider dei widget (fatto; la build del 15 agosto lo porta)                                |  **Sì**   |
 | 37   | Lingua    | Infrastruttura i18n (libreria, provider, dizionari IT/EN), campo `language` nel `Profile`, selettore in `tu.tsx`                              |    No     |
 | 38   | Lingua    | Traduzione EN delle tre schermate più aperte: home spese, nuova spesa, gruppi                                                                 |    No     |
 | 39   | Lingua    | **Formato dei numeri per lingua**: separatore decimale e posizione del simbolo in `packages/core`                                             |    No     |

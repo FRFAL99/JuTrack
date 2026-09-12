@@ -4,6 +4,150 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-12 — La build installata non era quella che i documenti dicevano
+
+Nessun codice cambiato: solo una correzione di ciò che il progetto credeva di sé, e non è un
+dettaglio burocratico, perché la frase sbagliata stava per far rifare una build già fatta e
+stava tenendo fuori dal giro di prova due cose provabili da settimane.
+
+**STATO.md diceva che sul telefono c'era la build dello Step 30, del 12 agosto**, e da lì
+faceva discendere due conseguenze: che lo Step 36 «prima della build EAS nuova non è provabile
+affatto», e che la build necessaria a guardare l'icona nuova fosse ancora da lanciare. In cima
+al documento c'era il riquadro ⚠️ con il comando `eas-cli build` pronto da copiare.
+
+`eas-cli build:list` dice un'altra cosa. Le build Android fatte sono **quattro**, non due:
+
+| Data       | Commit    | Cosa portava                                                   |
+| ---------- | --------- | -------------------------------------------------------------- |
+| 2026-08-01 | `5c5db2e` | La prima: collegamento a EAS e `expo-camera`                   |
+| 2026-08-12 | `aff8aa2` | Step 30: notifiche, widget, `expo-file-system`, `expo-sharing` |
+| 2026-08-15 | _(ramo)_  | Step 40 — e con lui l'`updatePeriodMillis` dello Step 36       |
+| 2026-09-05 | `9606e0f` | L'icona del passo 45. **È quella installata**                  |
+
+Le due di mezzo non erano mai state annotate. Quella del **15 agosto** sbloccava già lo
+Step 36 — `updatePeriodMillis: 1800000` era entrato in `app.json` prima dello Step 40, quindi
+quella build lo conteneva — e per quasi un mese il documento ha continuato a dichiararlo
+bloccato. Quella del **5 settembre** è sul commit che è **la punta di `main`**: la build e il
+codice combaciano, quindi Metro serve esattamente il JS che sta nel binario, e non c'è più
+niente che il telefono non possa eseguire.
+
+**La lezione di metodo è la stessa della trappola di Metro, e vale la pena scriverla:** i fatti
+sull'ambiente vanno letti dall'ambiente, non dedotti dalla documentazione. Due minuti di
+`build:list` valevano quindici minuti di build e un mese di lista di prova sbagliata. Il
+documento è credibile finché l'ultima riga di stato è stata scritta da chi ha fatto l'ultima
+azione — e una build lanciata a mano non lascia traccia nel repo.
+
+**Cosa è cambiato in `docs/STATO.md`:** il riquadro ⚠️ è diventato un riquadro ✅ con la tabella
+delle quattro build; la riga dello Step 36 nella tabella di avanzamento non chiede più una
+build; la sezione «L'app gira sul telefono» elenca tutte e quattro le build invece di una; la
+voce dello Step 36 nella lista di ciò che non è verificato dice che adesso è provabile; e il
+piano EAS Free conta quattro build consumate invece di una.
+
+**E una cosa nuova: il giro di prova in quattro blocchi.** La lista «cosa non è ancora stato
+verificato su hardware reale» è lunga una quarantina di voci scritte nell'ordine in cui gli
+step sono stati fatti, che non è l'ordine in cui conviene guardarle. Adesso sopra la lista c'è
+un percorso: preparazione (Metro da `apps/mobile`, `npm run prova`), telefono da solo, telefono
+contro `npm run peer`, notifiche e widget, e infine ciò che chiede giorni invece di attenzione.
+La lista resta la fonte di dettaglio; i blocchi dicono in che ordine leggerla.
+
+**Prossimo:** lo Step 41 — la verifica end-to-end su telefono — che è l'unico step scritto che
+manca, e adesso non ha più niente davanti.
+
+---
+
+## 2026-09-05 — Le due cose che mancavano al negozio: l'informativa e un'icona vera
+
+Nessuna delle due nasce da un piano. Vengono dalla domanda «cosa manca davvero prima di
+pubblicare», e sono le due risposte che non richiedevano un telefono in mano.
+
+**Il punto di partenza era rotto in locale, e non nel repo.** `npm test` falliva su tutti e
+quarantacinque i file di test dell'app con «0 test»: mancava `i18next`, entrato allo Step 37 e
+mai installato in questa copia di lavoro. E `npm run typecheck` segnalava quattro rotte
+inesistenti — `/tu`, `/dashboard`, `/importa` — perché `apps/mobile/.expo/types/router.d.ts`
+era fermo al 2 agosto. Quel file è generato e gitignored, quindi in CI non esiste e lì non ha
+mai dato problemi: è un guasto che si manifesta **solo** su una copia di lavoro vecchia, ed è
+esattamente il genere di cosa che si scambia per un difetto del codice. Si risolve
+cancellandolo, e Metro lo rigenera al primo avvio.
+
+**`npm run prova` è verde su tutte e dieci le sezioni**, contro il relay in produzione: sync in
+entrambi i versi (2,0 s e 0,8 s), saldo che coincide col calcolo a mano, due gruppi che non si
+mescolano, coda offline che riparte da sola in 11 s, scala del poll, persistenza fra due
+riavvii, cancellazione dal relay. Vale la pena scriverlo perché cambia una frase che STATO.md
+si porta dietro da settimane: la logica di sync **non** è più «mai vista funzionare». Quello che
+resta non verificato è ciò che ha bisogno di uno schermo — tocco, tastiera, consegna del deep
+link, fotocamera, notifiche, widget.
+
+### L'informativa privacy sta sul relay, e non è un adempimento
+
+Il Play Store pretende un URL pubblico e raggiungibile, e non ne esisteva uno. Sta sul Worker
+che serve già `/j` per una ragione precisa: un'informativa ospitata su una piattaforma che
+chiude lascia sul negozio un link morto, che è una violazione delle regole del Play Store e non
+un dettaglio estetico. Il Worker è già in produzione, ha già gli header giusti, e non aggiunge
+niente da tenere in vita.
+
+Il contenuto descrive quello che il codice fa: i trenta giorni di conservazione vengono da
+`UPDATE_TTL_DAYS` in `protocol.ts`, non da una stima. Ed è dichiarata anche la parte scomoda —
+Cloudflare tratta l'indirizzo IP come ogni servizio raggiunto via rete — perché tacerla sarebbe
+il modo di farsi bocciare in revisione. **Se un giorno il relay vedesse qualcosa che qui è
+dichiarato illeggibile, sarebbe questo file a essere sbagliato.**
+
+**Due differenze deliberate rispetto a `/j`, ed entrambe hanno un test** perché sono ciò che si
+copierebbe per abitudine dalla pagina accanto. Niente `noindex`: `/j` non deve finire negli
+indici perché il suo URL porta una chiave nel fragment, questa invece deve essere trovabile e
+citabile. E `script-src 'none'` invece di `'unsafe-inline'`: non c'è nulla da calcolare nel
+browser, e le due lingue che l'app parla dallo Step 37 stanno una sotto l'altra con due ancore,
+così il documento si legge anche con gli script disattivati.
+
+Titolare e recapito sono costanti in cima al modulo, e un test impedisce che tornino a essere
+segnaposto: quel controllo deve fallire in CI, non in revisione sul negozio.
+
+**Il deploy si è fermato su un account sbagliato**, e vale la pena registrarlo: `wrangler` era
+autenticato su un account Cloudflare che **non possiede** `jutrack-relay`, e rispondeva
+`Authentication error [code: 10000]` su un account id diverso da quello del token. Il relay vive
+sull'account di `francesco.fallavena@gmail.com`, non su quello di `ziofalla99@gmail.com`. Da
+sapere prima del prossimo deploy: `wrangler login` va completato entro un paio di minuti o
+scade, e se il browser è già loggato sull'account sbagliato autorizza quello senza chiedere
+nulla.
+
+### L'icona non è più quella dello scaffold
+
+L'app sarebbe arrivata sul Play Store con l'icona del template Expo — il chevron azzurro, linee
+guida di costruzione comprese, mai toccata dal 1° agosto. Al suo posto il disegno di Francesco:
+una lente, cioè l'intersezione di due cerchi che non si disegnano, con la J di JuJu ritagliata
+dentro.
+
+Il vettoriale entra nel repo come `apps/mobile/assets/icon-source.svg` ed è l'unica sorgente:
+tutti e cinque i PNG si rigenerano da lì, **fondo e accento inclusi**, che lo script legge dal
+file. La prima versione dello script quei due colori li aveva scritti dentro, e il risultato è
+stato un sorgente che diceva indaco e dei PNG che restavano viola — un difetto che nessun test
+può vedere e che è saltato fuori solo guardando l'immagine.
+
+Tre cose che il commento nel sorgente registra perché non vengano riscoperte:
+
+- **La J è un tracciato e non un `<text>`.** Era Cormorant Garamond a peso 400, e lasciarla come
+  testo avrebbe legato la rigenerazione delle icone a un font installato sulla macchina — lo
+  stesso genere di dipendenza invisibile che era già costato giorni con Metro.
+- **Quel font è variabile e il suo peso di default è 300**, non 400: la prima estrazione dava una
+  J più pesante di quella disegnata. L'istanza `wght=400` va forzata prima di leggere il glifo.
+- **La scala 1.18 sta dentro la zona sicura delle icone adattive per il 6%**: il segno misura
+  370×514, semidiagonale 317 contro un raggio utile di 338. Funziona, ma **quella scala non va
+  aumentata** o il launcher taglia i bordi.
+
+Il viola `#5B3E9E` del disegno è stato portato sull'indaco `#3B5BDB`, che è `accent` in
+`theme/tokens.ts`: un'icona di un colore e un'interfaccia di un altro si notano aprendo l'app.
+Per la stessa ragione la tinta delle notifiche in `app.json` resta l'indaco, mentre
+`adaptiveIcon.backgroundColor` passa al bianco caldo del disegno.
+
+**Verifica:** 1258 test verdi (639 core + 568 app + 51 relay — otto nuovi sull'informativa),
+typecheck, lint e `format:check` puliti, CI verde su `main` compreso `expo export --platform
+android`. `/privacy` risponde 200 in produzione ed è **identica byte per byte** al sorgente in
+`main`; `/j` continua a rispondere `noindex`.
+
+**Cosa resta:** la build EAS di sviluppo, che ora serve a due cose insieme — sbloccare lo
+Step 36 e far vedere l'icona nuova sul telefono.
+
+---
+
 ## 2026-08-19 — Step 40: il resto della traduzione, e due bug della stessa famiglia dello Step 38
 
 Chiude quello che gli Step 37–39 avevano lasciato aperto: grafici, dashboard, onboarding,
