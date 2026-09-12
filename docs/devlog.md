@@ -4,6 +4,89 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-12 — Step 46: lo splash, e lo script che diceva di esistere
+
+Primo dei tre passi verso la pubblicazione. Nasce da una domanda semplice — «cosa manca per
+pubblicare» — e dalle due cose che il negozio avrebbe reso visibili subito.
+
+**All'avvio c'era un lampo bianco.** `expo-splash-screen` non era fra le dipendenze e `app.json` non
+nominava nessuno splash. Dopo l'icona è la seconda cosa che un utente vede. E
+`assets/splash-icon.png` era del 1° agosto e **non referenziato da nessuna parte**: avanzo dello
+scaffold Expo, esattamente come lo era l'icona prima del passo 45.
+
+**Lo script che rigenera le icone non esisteva.** Questo è il pezzo che vale la pena raccontare.
+`STATO.md` e il devlog lo descrivevano nel dettaglio — la scala 1.18, i colori letti dal sorgente, la
+J estratta come tracciato — ma il commit `9606e0f` aveva aggiunto `icon-source.svg` e i cinque PNG
+**senza il programma che li produce**, e in tutto il repo la stringa `icon-source` compariva solo
+dentro i due documenti che ne parlavano. Era un file usa e getta di quella sessione.
+
+È lo stesso difetto della build annotata male, trovato stamattina: **un documento che afferma una
+proprietà del repo che il repo non ha.** Due in un giorno, dalla stessa causa — una sessione che
+finisce e si porta via quello che aveva in mano.
+
+### Ricostruirlo senza cambiare l'icona
+
+Il vincolo vero non era scrivere lo script: era scriverlo in modo che producesse **esattamente** i
+PNG già spediti. Un'icona «quasi uguale» sarebbe passata inosservata nel diff e sarebbe arrivata sul
+telefono di qualcuno.
+
+La specifica è stata ricavata **dai PNG stessi**, campionandone i pixel invece di dedurla: angolo e
+centro di ognuno dicono se ha alpha, se il fondo c'è, e di che colore è il segno. Ne è uscita la
+tabella delle sette varianti — completo / solo fondo / solo segno / solo segno bianco — e il fatto
+che il monocromatico è **bianco** e non nero.
+
+Poi la verifica, che è il punto: `npm run icone -- --verifica` confronta quello che lo script produce
+con quello che sta su disco **decodificato in pixel grezzi**, non byte per byte, perché un encoder
+diverso darebbe «diverso» anche a parità di immagine. Sui sei PNG già spediti lo **scarto massimo per
+canale è 0**. Il solo divergente era `splash-icon.png`, cioè lo scaffold — che è esattamente il
+risultato che si sperava.
+
+I file rigenerati sono anche più piccoli — `icon.png` -47%, il fondo adattivo -70% — perché
+`compressionLevel: 9` è esplicito. Pixel identici, 18 KB in meno.
+
+### Due regole dentro lo script, che vengono da difetti già pagati
+
+- **I colori si leggono dal file.** La prima versione li aveva scritti dentro, e ne uscì un sorgente
+  che diceva indaco e dei PNG che restavano viola: un difetto che nessun test può vedere.
+- **Ogni estrazione asserisce.** Se un id sparisce dall'SVG lo script muore con un messaggio invece
+  di produrre un'icona muta. Un fondo trasparente o un segno mancante si notano solo guardando
+  l'immagine, cioè mai.
+
+Il ricolore del monocromatico tocca **solo** il `fill` dentro `<g id="mark">`: quelli della maschera
+sono `#FFFFFF` e `#000000`, e una sostituzione globale chiuderebbe il buco della J.
+
+### `sharp` era una dipendenza invisibile
+
+Rasterizza lui l'SVG, ed era nell'albero **solo di rimbalzo**, da `miniflare`, che è tooling di test
+del relay: un aggiornamento di quel pacchetto avrebbe fatto sparire la pipeline delle icone senza che
+nulla lo segnalasse. Lo stesso genere di dipendenza invisibile che era già costato giorni con Metro,
+e che il commento dell'SVG cita a proposito del font. Adesso è in `devDependencies` della root, alla
+**0.35.4**: sotto quella versione ha un avviso `high` su libheif.
+
+Resta una copia `0.35.2` annidata sotto `miniflare`. Ripulirla vuol dire un salto di major di
+`@cloudflare/vitest-pool-workers`: è tooling di test, non tocca né l'app né il relay, e non decodifica
+HEIF di nessuno. Annotato, non fatto.
+
+### Lo splash
+
+Il fondo è **`background` di `theme/tokens.ts`** (`#F7F7F9`), non quello dell'icona (`#F3F2F2`).
+Sono due bianchi diversi e la scelta è deliberata: il compito dello splash è sparire senza farsi
+notare quando l'app prende il suo posto, quindi deve combaciare con la **schermata che arriva**, non
+con l'icona da cui viene il disegno. Il ramo `dark` porta `#0B0B10`: senza, un telefono in tema
+scuro lampeggerebbe di bianco a ogni avvio. Un solo PNG serve entrambi i temi, perché il segno è
+indaco su trasparente.
+
+**Verifica:** 1258 test verdi (639 core + 568 app + 51 relay), typecheck, lint, `format:check` e
+`expo export --platform android` puliti.
+
+**Serve una build EAS** — `expo-splash-screen` è nativo e `app.json` è cambiato — ma non adesso:
+entra insieme allo Step 47 (`expo-updates`) e allo Step 48 (crash reporting), così se ne spende una
+sola invece di tre.
+
+**Prossimo:** Step 47, `expo-updates`.
+
+---
+
 ## 2026-09-12 — Il criterio di «fatto» end-to-end, dopo sei settimane
 
 Nessun codice scritto. È la mattina in cui è stato **guardato** quello che da agosto era scritto e

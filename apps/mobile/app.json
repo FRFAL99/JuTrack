@@ -70,6 +70,18 @@
             }
           ]
         }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 300,
+          "resizeMode": "contain",
+          "backgroundColor": "#F7F7F9",
+          "dark": {
+            "backgroundColor": "#0B0B10"
+          }
+        }
       ]
     ],
     "experiments": {

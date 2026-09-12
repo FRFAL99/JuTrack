@@ -150,7 +150,10 @@ Verso la pubblicazione — anch'essi fuori dai piani, dalla rilettura del 5 sett
 | Passo                    | Stato | Cosa contiene                                                   |
 | ------------------------ | ----- | --------------------------------------------------------------- |
 | 44 — Informativa privacy | ✅    | `GET /privacy` sul relay, IT + EN, otto test, **in produzione** |
-| 45 — Icona definitiva    | ✅    | `icon-source.svg` come unica sorgente, cinque PNG rigenerabili  |
+| 45 — Icona definitiva    | ✅    | `icon-source.svg` come unica sorgente (lo script arriva col 46) |
+| 46 — Splash e pipeline   | ✅    | `npm run icone`, sette PNG dal vettoriale, splash vero          |
+| 47 — `expo-updates`      | ⬜    | Correzioni JS senza passare dal Play Store                      |
+| 48 — Crash reporting     | ⬜    | Sentry, e il passaggio corrispondente nell'informativa          |
 
 Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette passi:
 
@@ -1224,6 +1227,8 @@ cd services/relay && npm run e2e                       # prova cifrata contro il
 cd apps/mobile && npx expo export --platform android   # il bundle regge?
 npm run prova                                          # la checklist end-to-end, senza telefono
 npm run peer -- crea "Prova"                           # un secondo dispositivo, interattivo
+npm run icone                                          # rigenera i sette PNG dal vettoriale
+npm run icone -- --verifica                            # …o controlla soltanto che combacino
 ```
 
 Sono esattamente i passaggi della CI, nello stesso ordine: `.github/workflows/ci.yml` gira a ogni
@@ -1277,6 +1282,91 @@ relay in produzione, invito di pairing, QR, fotocamera, **notifiche locali e wid
 > **Dal 12 agosto ci sono anche `expo-file-system` ed `expo-sharing`**, aggiunti allo Step 9 e per
 > quattro mesi mai finiti in una build: il foglio di condivisione dell'export dovrebbe funzionare,
 > invece di ripiegare sugli appunti. **Non è stato ancora guardato** — vedi la lista qui sotto.
+
+## Lo splash e la pipeline degli asset (Step 46)
+
+Due cose che il negozio avrebbe reso visibili, e una terza che era un'affermazione senza codice
+sotto.
+
+**All'avvio c'era un lampo bianco.** `expo-splash-screen` non era fra le dipendenze e `app.json` non
+nominava nessuno splash: dopo l'icona, è la seconda cosa che un utente vede. E
+`assets/splash-icon.png` era del 1° agosto, **non referenziato da nessuna parte** — avanzo dello
+scaffold Expo esattamente come lo era l'icona prima del passo 45.
+
+**Lo script che rigenera le icone non esisteva.** `STATO.md` e il devlog lo descrivevano nel
+dettaglio — la scala 1.18, i colori letti dal sorgente, la J come tracciato — ma il commit `9606e0f`
+aveva aggiunto il vettoriale e i PNG **senza il programma che li produce**, e in tutto il repo
+`icon-source` compariva solo dentro i due documenti che ne parlavano. Era un file usa e getta. È lo
+stesso difetto della build annotata male: **un documento che afferma una proprietà del repo che il
+repo non ha**, e si è pagato subito, perché lo splash è un settimo PNG da tirare fuori da quello
+stesso SVG.
+
+### `npm run icone`
+
+Lo script sta in [`apps/mobile/scripts/icone.mts`](../apps/mobile/scripts/icone.mts) e produce
+**tutti e sette** i PNG dal solo `icon-source.svg`:
+
+| File                          | Lato | Contenuto                                   |
+| ----------------------------- | ---- | ------------------------------------------- |
+| `icon.png`                    | 1024 | completo, opaco                             |
+| `playstore-512.png`           | 512  | completo, opaco — per la scheda del negozio |
+| `favicon.png`                 | 48   | completo                                    |
+| `android-icon-background.png` | 512  | solo fondo                                  |
+| `android-icon-foreground.png` | 512  | solo segno                                  |
+| `android-icon-monochrome.png` | 432  | solo segno, bianco, la J resta un buco      |
+| `splash-icon.png`             | 1024 | solo segno — **nuovo**                      |
+
+Due regole scritte nel sorgente perché vengono da altrettanti difetti già pagati: **i colori si
+leggono dal file** e non si scrivono nello script (la prima versione li aveva dentro, e ne uscì un
+sorgente che diceva indaco e dei PNG che restavano viola), e **ogni estrazione asserisce** — se un
+id sparisce dall'SVG lo script muore con un messaggio invece di produrre un'icona muta, perché un
+fondo trasparente o un segno mancante si notano solo guardando l'immagine, cioè mai.
+
+**La prova che lo script ricostruisce davvero la pipeline persa, e non una simile:**
+`npm run icone -- --verifica` confronta quello che produce con quello che sta su disco **decodificato
+in pixel**, non byte per byte, e sui sei PNG già spediti lo scarto massimo per canale è **0**. Il
+solo divergente era `splash-icon.png`, cioè lo scaffold. Dalla rigenerazione i file sono anche più
+piccoli — `icon.png` -47%, il fondo adattivo -70% — perché l'encoder è configurato, ma **i pixel
+sono gli stessi**: nessuna icona è cambiata.
+
+### Lo splash
+
+```json
+[
+  "expo-splash-screen",
+  {
+    "image": "./assets/splash-icon.png",
+    "imageWidth": 300,
+    "resizeMode": "contain",
+    "backgroundColor": "#F7F7F9",
+    "dark": { "backgroundColor": "#0B0B10" }
+  }
+]
+```
+
+- **Il fondo è `background` di `theme/tokens.ts`, non quello dell'icona.** Sono due bianchi diversi
+  — `#F7F7F9` contro `#F3F2F2` — e la scelta è deliberata: il compito dello splash è **sparire senza
+  farsi notare** quando l'app prende il suo posto, quindi deve combaciare con la schermata che
+  arriva, non con l'icona da cui viene il disegno.
+- **Un solo PNG per i due temi.** Il segno è indaco su trasparente e si legge su entrambi i fondi:
+  cambia solo `backgroundColor`. Senza il ramo `dark`, un telefono in tema scuro lampeggerebbe di
+  bianco a ogni avvio.
+
+### `sharp` era una dipendenza invisibile
+
+Rasterizza lui l'SVG, ed era nell'albero **solo di rimbalzo**: arrivava da `miniflare`, che è
+tooling di test del relay. Un aggiornamento di quel pacchetto avrebbe fatto sparire la pipeline
+delle icone senza che nulla lo segnalasse — lo stesso genere di dipendenza invisibile che era già
+costato giorni con Metro e che il commento dell'SVG cita a proposito del font. Adesso è dichiarata
+in `devDependencies` della root, alla **0.35.4**: sotto quella versione ha un avviso `high` su
+libheif.
+
+> Resta una copia di `sharp@0.35.2` annidata sotto `miniflare`, che l'avviso ce l'ha ancora.
+> Ripulirla vuol dire un salto di major di `@cloudflare/vitest-pool-workers`: è tooling di test, non
+> tocca né l'app né il relay in produzione, e non decodifica HEIF di nessuno. Annotato, non fatto.
+
+**Serve una build EAS**, perché `expo-splash-screen` è un modulo nativo e `app.json` è cambiato. Per
+non spenderne tre, entra insieme allo Step 47 e allo Step 48.
 
 ## La verifica su telefono del 12 settembre (Step 41)
 

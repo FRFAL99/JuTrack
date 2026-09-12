@@ -11,7 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "peer": "tsx scripts/peer.mts",
-    "prova": "tsx scripts/prova.mts"
+    "prova": "tsx scripts/prova.mts",
+    "icone": "tsx scripts/icone.mts"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -28,6 +29,7 @@
     "expo-router": "~57.0.12",
     "expo-secure-store": "~57.0.1",
     "expo-sharing": "~57.0.11",
+    "expo-splash-screen": "~57.0.9",
     "expo-sqlite": "~57.0.1",
     "expo-status-bar": "~57.0.1",
     "i18next": "^26.3.6",
