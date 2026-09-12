@@ -1306,21 +1306,31 @@ stesso SVG.
 Lo script sta in [`apps/mobile/scripts/icone.mts`](../apps/mobile/scripts/icone.mts) e produce
 **tutti e sette** i PNG dal solo `icon-source.svg`:
 
-| File                          | Lato | Contenuto                                   |
-| ----------------------------- | ---- | ------------------------------------------- |
-| `icon.png`                    | 1024 | completo, opaco                             |
-| `playstore-512.png`           | 512  | completo, opaco — per la scheda del negozio |
-| `favicon.png`                 | 48   | completo                                    |
-| `android-icon-background.png` | 512  | solo fondo                                  |
-| `android-icon-foreground.png` | 512  | solo segno                                  |
-| `android-icon-monochrome.png` | 432  | solo segno, bianco, la J resta un buco      |
-| `splash-icon.png`             | 1024 | solo segno — **nuovo**                      |
+| File                          | Lato       | Contenuto                                   |
+| ----------------------------- | ---------- | ------------------------------------------- |
+| `icon.png`                    | 1024       | completo, opaco                             |
+| `playstore-512.png`           | 512        | completo, opaco — per la scheda del negozio |
+| `favicon.png`                 | 48         | completo                                    |
+| `android-icon-background.png` | 512        | solo fondo                                  |
+| `android-icon-foreground.png` | 512        | solo segno                                  |
+| `android-icon-monochrome.png` | 432        | solo segno, bianco, la J resta un buco      |
+| `splash-icon.png`             | 1024       | solo segno — **nuovo**                      |
+| `store/feature-graphic…`      | 1024 × 500 | l'insegna della scheda del negozio          |
 
 Due regole scritte nel sorgente perché vengono da altrettanti difetti già pagati: **i colori si
 leggono dal file** e non si scrivono nello script (la prima versione li aveva dentro, e ne uscì un
 sorgente che diceva indaco e dei PNG che restavano viola), e **ogni estrazione asserisce** — se un
 id sparisce dall'SVG lo script muore con un messaggio invece di produrre un'icona muta, perché un
 fondo trasparente o un segno mancante si notano solo guardando l'immagine, cioè mai.
+
+**L'insegna del negozio esce dallo stesso sorgente**, e non sta in `assets/` ma in `store/`: non è
+un asset dell'app, non deve entrare nel bundle, e si carica a mano nel Play Console. Riusa la
+geometria del vettoriale invece di ridisegnarla — `<defs>` porta la maschera con la J e il gruppo
+`mark` viene riscalato — così **insegna e icona non possono divergere**. È l'unico file che dipende
+da un **font installato sulla macchina** (`Noto Sans`), cioè proprio la dipendenza invisibile che il
+commento dell'icona dice di evitare: si accetta perché non entra nell'app e si carica una volta
+sola, ma non in silenzio — `fontDisponibile()` ferma lo script prima di disegnare, invece di
+lasciare che librsvg sostituisca un carattere senza dirlo.
 
 **La prova che lo script ricostruisce davvero la pipeline persa, e non una simile:**
 `npm run icone -- --verifica` confronta quello che produce con quello che sta su disco **decodificato
