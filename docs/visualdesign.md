@@ -292,3 +292,24 @@ I passi 1-3 si possono fare in un giorno e rendono i successivi meccanici.
 - Lo schema Yjs (`state/schema.ts`) — invariato, compreso il campo `icon` delle categorie (§3).
 - Sync, crypto, relay, backup, export, azzeramento — invariati.
 - Il **copy** delle schermate di conferma e di rischio (azzeramento, backup, invito): quei testi lunghi restano lunghi. Il taglio riguarda le schermate di uso quotidiano, non quelle in cui si può perdere qualcosa.
+
+---
+
+## 7. Secondo giro — Piano v6
+
+I sette passi sopra restano **chiusi** e non vengono riaperti: quanto segue è un secondo giro di
+redesign, deciso il 12 settembre 2026, su due schermate soltanto (Nuova spesa, Grafici). Il piano di
+attuazione è un file a sé, [piano-v6-spesa-rapida-e-grafici-componibili.md](piano-v6-spesa-rapida-e-grafici-componibili.md),
+perché non è più un ritocco di componenti ma una riscrittura di comportamento (tastierino in-app,
+capitoli dei grafici).
+
+Tre direzioni sono state mostrate in un mockup (`JuTrack UI.dc.html`, turni 1 e 2) e si è scelta
+**Lastra**: gli stessi token di questo documento — `darkPalette`, l'accento, i colori di categoria —
+con la gerarchia rifatta (un solo numero grande e un solo accento per schermata). Scartate **Insegna**
+(fondo nero pieno, accento lime acido a 14:1 di contrasto, cifre in Space Grotesk condensato) ed
+**Estratto** (cifre in Instrument Serif, metadati in JetBrains Mono, nessun riquadro). Nessuna delle
+due scartate cambiava la ragione del problema, che era di gerarchia e non di palette o di carattere —
+vedi la decisione 1 nel piano.
+
+Nessuno step del piano v6 è ancora nel codice: per ora esiste solo la decisione, presa e motivata,
+non l'implementazione.

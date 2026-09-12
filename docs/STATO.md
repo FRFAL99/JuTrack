@@ -6,6 +6,14 @@ saldi giusti, e i due widget si sono popolati con numeri identici a un calcolo i
 quattro i piani e il redesign sono nel codice, il quinto è a dodici step su tredici, e la build EAS
 che tiene tutto questo è installata.
 
+> **Lo stesso 12 settembre, dopo la verifica su telefono, sono state prese le 15 decisioni del
+> [Piano v6](piano-v6-spesa-rapida-e-grafici-componibili.md)**: un secondo giro di redesign, su
+> spesa rapida e grafici componibili, da due artifact Claude Design (un mockup a più direzioni e il
+> registro delle decisioni). La direzione scelta è **Lastra** — stessi token del redesign chiuso in
+> [visualdesign.md](visualdesign.md), gerarchia rifatta — contro le due scartate, **Insegna** e
+> **Estratto**. **Nessuno dei quattro step del piano è ancora nel codice**: per ora esiste solo la
+> decisione.
+
 > **La sessione del 12 settembre è raccontata in
 > [La verifica su telefono](#la-verifica-su-telefono-del-12-settembre-step-41)**, divisa fra ciò che
 > ha una prova rileggibile e ciò che è riferito da chi aveva il telefono in mano. Il solo difetto
@@ -166,6 +174,16 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 5 — Grafici                | ✅    | Riscrittura in forma registro, barre ritoccate                  |
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
+
+Piano v6 — [piano-v6-spesa-rapida-e-grafici-componibili.md](piano-v6-spesa-rapida-e-grafici-componibili.md),
+**deciso il 12 settembre, zero step su quattro nel codice**:
+
+| Step                                          | Stato | Cosa contiene                                                       |
+| ---------------------------------------------- | ----- | --------------------------------------------------------------------|
+| 49 — Il tastierino in-app per l'importo        | ⬜    | `TextInput` senza tastiera di sistema, `amount-pad.ts`, tasto decimale per lingua |
+| 50 — I tre gruppi apribili della nuova spesa   | ⬜    | Un gruppo aperto per volta, riassunto col valore vero, Data/Nota in «Dettagli» |
+| 51 — I capitoli dei grafici                    | ⬜    | Sedici widget divisi in Mese (10) / Abitudini (3) / Fra di voi (3) |
+| 52 — La composizione in loco                   | ⬜    | «Modifica» dentro i Grafici, `moveWithin`, `app/dashboard.tsx` diventa redirect |
 
 **1261 test verdi** (639 core + 568 app + 54 relay), typecheck, lint e `format:check` puliti.
 

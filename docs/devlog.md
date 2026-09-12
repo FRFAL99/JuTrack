@@ -4,6 +4,72 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-12 — Piano v6 deciso: spesa rapida e grafici componibili
+
+Lo stesso giorno della verifica su telefono (Step 41), un secondo giro di redesign: non un ritocco,
+ma una riscrittura di comportamento su due sole schermate, Nuova spesa e Grafici.
+
+Il materiale di partenza sono due artifact Claude Design: un mockup (`JuTrack UI.dc.html`, turni 0,
+1 e 2 — la ricostruzione dello stato attuale dal codice, tre direzioni visive provate, due modi di
+comporre i Grafici) e un registro di 15 decisioni motivate, ciascuna con la ragione e la conseguenza
+sul codice. Il registro è diventato [piano-v6-spesa-rapida-e-grafici-componibili.md](piano-v6-spesa-rapida-e-grafici-componibili.md),
+`docs/STATO.md` e `docs/visualdesign.md` sono stati aggiornati per puntarci.
+
+### La direzione: Lastra, non Insegna né Estratto
+
+Delle tre direzioni mostrate, scelta **Lastra**: stessi token del redesign già chiuso — `darkPalette`,
+l'accento, gli otto colori di categoria, già validati per le tre forme di daltonismo — con la
+gerarchia rifatta (un solo numero grande e un solo accento per schermata). Scartate **Insegna** (fondo
+nero pieno, accento lime a 14:1 di contrasto, cifre in Space Grotesk) ed **Estratto** (cifre in
+Instrument Serif, metadati in JetBrains Mono). Nessuna delle due avrebbe risolto il problema
+dichiarato — «il blocco eroe è denso e la lista è un muro di righe uguali» è un problema di
+gerarchia, non di palette o di carattere — e avrebbero rimesso in discussione una palette già
+validata, o richiesto un font nuovo nel bundle dove oggi non ce n'è nessuno.
+
+### Nuova spesa: il tastierino esce dal sistema ed entra nell'app
+
+L'importo diventa una cifra a 62 punti con un tastierino in-app sempre visibile sotto e il salva
+fisso in fondo — niente più tastiera di sistema che copre il salva. Il tasto decimale scrive il
+separatore della **lingua** (`numberFormat().decimal`), non una virgola fissa: è la stessa trappola
+già chiusa dallo Step 39 sul separatore di raggruppamento, questa volta da chiudere prima di
+scriverla. La validazione di ciò che si può scrivere — niente doppio decimale, niente terzo
+decimale, niente zero iniziale ripetuto — diventa una funzione con dei test (`applyKey` in
+`amount-pad.ts`), perché senza tastiera di sistema quel filtro non lo fa più nessuno al posto nostro.
+
+Il resto del form si chiude in tre gruppi apribili uno alla volta («Chi paga e come si divide»,
+«Categoria», «Dettagli», dove entrano anche Data e Nota); ogni riga chiusa porta il valore vero, non
+un segnaposto, con la stessa regola che `extraSummary` applica già oggi.
+
+### Grafici: si compone dove si guarda
+
+I sedici widget si dividono in tre capitoli — Mese (10), Abitudini (3), Fra di voi (3) — dichiarati
+come `Record<WidgetId, Chapter>` così un widget nuovo non compila finché non si è deciso dove vive.
+«Abitudini» non è un raggruppamento inventato: è l'insieme dei grafici che già oggi si portano dietro
+la stessa nota di scuse perché leggono una finestra ancorata e non il periodo scelto.
+
+La composizione si sposta **dentro** i Grafici stessi — un «Modifica» testuale al posto dell'icona a
+griglia, ogni widget disegnato al 45% mentre si riordina, la × per toglierlo, un cassetto in fondo coi
+widget tolti da rimettere con un tocco — invece che in `app/dashboard.tsx`, che sparisce. Il problema
+che questo risolve non era la palette ma la **collocazione**: si componeva in una schermata e si
+guardava l'effetto in un'altra. Scartata l'alternativa con un selettore a sé e le miniature dei
+grafici: costava sedici miniature da disegnare e mantenere per risolvere solo una delle tre ragioni
+del problema.
+
+### Cosa non cambia, di nuovo
+
+`packages/core`, lo schema Yjs, sync/crypto/relay/backup/export/azzeramento: invariati. Nessun modulo
+nativo nuovo — è la sesta volta che il progetto lo rifiuta per un gesto o un'animazione. Nessuna
+build EAS richiesta da questo piano.
+
+### Dove siamo
+
+Zero step su quattro nel codice: per ora esiste solo la decisione, presa e motivata. La numerazione
+prosegue da 49 a 52.
+
+**Prossimo:** Step 49 — il tastierino in-app per l'importo, il primo dei quattro step del piano v6.
+
+---
+
 ## 2026-09-12 — La prima build autonoma, e l'informativa in produzione
 
 Tre cose in fila, nell'ordine in cui un guasto avrebbe reso inutili le successive.
