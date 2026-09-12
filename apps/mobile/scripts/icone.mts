@@ -65,8 +65,10 @@ function varianti(fondo: string): readonly Variante[] {
     // Quello che vede il launcher sui telefoni senza icone adattive, e la sorgente
     // di tutto il resto. Opaco: un'icona con alpha su Android 7 diventa un quadrato.
     { file: 'icon.png', lato: 1024, appiattisciSu: fondo, svg: completo },
-    // La scheda del Play Store lo vuole 512 e opaco.
-    { file: 'playstore-512.png', lato: 512, appiattisciSu: fondo, svg: completo },
+    // La scheda del Play Store lo vuole 512 e **a 32 bit**, cioe' con il canale alpha
+    // anche se e' opaco dappertutto: per questo non si appiattisce come `icon.png`.
+    // Il fondo lo mette gia' il rettangolo `ground`, quindi l'immagine e' comunque piena.
+    { file: 'playstore-512.png', lato: 512, svg: completo },
     { file: 'favicon.png', lato: 48, svg: completo },
     // I tre strati dell'icona adattiva. Android li compone e li ritaglia da se':
     // il segno deve stare nella zona sicura, ed e' la ragione della scala 1.18.
