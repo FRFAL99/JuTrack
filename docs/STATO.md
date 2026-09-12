@@ -178,12 +178,12 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 Piano v6 — [piano-v6-spesa-rapida-e-grafici-componibili.md](piano-v6-spesa-rapida-e-grafici-componibili.md),
 **deciso il 12 settembre, zero step su quattro nel codice**:
 
-| Step                                          | Stato | Cosa contiene                                                       |
-| ---------------------------------------------- | ----- | --------------------------------------------------------------------|
-| 49 — Il tastierino in-app per l'importo        | ⬜    | `TextInput` senza tastiera di sistema, `amount-pad.ts`, tasto decimale per lingua |
-| 50 — I tre gruppi apribili della nuova spesa   | ⬜    | Un gruppo aperto per volta, riassunto col valore vero, Data/Nota in «Dettagli» |
-| 51 — I capitoli dei grafici                    | ⬜    | Sedici widget divisi in Mese (10) / Abitudini (3) / Fra di voi (3) |
-| 52 — La composizione in loco                   | ⬜    | «Modifica» dentro i Grafici, `moveWithin`, `app/dashboard.tsx` diventa redirect |
+| Step                                         | Stato | Cosa contiene                                                                     |
+| -------------------------------------------- | ----- | --------------------------------------------------------------------------------- |
+| 49 — Il tastierino in-app per l'importo      | ⬜    | `TextInput` senza tastiera di sistema, `amount-pad.ts`, tasto decimale per lingua |
+| 50 — I tre gruppi apribili della nuova spesa | ⬜    | Un gruppo aperto per volta, riassunto col valore vero, Data/Nota in «Dettagli»    |
+| 51 — I capitoli dei grafici                  | ⬜    | Sedici widget divisi in Mese (10) / Abitudini (3) / Fra di voi (3)                |
+| 52 — La composizione in loco                 | ⬜    | «Modifica» dentro i Grafici, `moveWithin`, `app/dashboard.tsx` diventa redirect   |
 
 **1261 test verdi** (639 core + 568 app + 54 relay), typecheck, lint e `format:check` puliti.
 
