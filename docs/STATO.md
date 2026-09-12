@@ -1365,8 +1365,8 @@ libheif.
 > Ripulirla vuol dire un salto di major di `@cloudflare/vitest-pool-workers`: è tooling di test, non
 > tocca né l'app né il relay in produzione, e non decodifica HEIF di nessuno. Annotato, non fatto.
 
-**Serve una build EAS**, perché `expo-splash-screen` è un modulo nativo e `app.json` è cambiato.
-Entra insieme allo Step 47, in una sola build.
+**La build c'è**: profilo `preview`, commit `b2425b7`, 12 settembre 2026, 23 minuti. È la prima
+build autonoma della storia del progetto, e lo splash è stato visto funzionare su telefono.
 
 ## Le correzioni senza passare dal negozio (Step 47)
 
@@ -1409,7 +1409,9 @@ e l'`updatePeriodMillis` che stava in una build che nessuno sapeva di avere.
 ### I canali
 
 Ogni profilo di `eas.json` ha adesso il suo (`development`, `preview`, `production`): un
-`eas update --channel preview` raggiunge le build di prova senza sfiorare quelle del negozio.
+`eas update --channel preview` raggiunge le build di prova senza sfiorare quelle del negozio. La
+build del 12 settembre ha **creato da sé** il canale e il ramo `preview` su EAS, che è la conferma
+che il collegamento è vivo.
 
 **Cosa `expo-updates` non può fare:** tutto ciò che è nativo. Un modulo nuovo, un permesso, una riga
 di `app.json` — quelli restano build EAS più release. Serve a correggere il JavaScript, che in
@@ -1559,8 +1561,9 @@ lista, non le toglie.
 
 La lista qui sotto è lunga una quarantina di voci e **non si percorre in ordine di scrittura**:
 quello è l'ordine in cui gli step sono stati fatti, non quello in cui conviene guardarli. Dal 5
-settembre **niente è più bloccato da una build**, quindi il giro si può fare tutto. I quattro
-blocchi sono ordinati per «un rosso qui rende inutile il blocco dopo».
+settembre **niente è più bloccato da una build**, quindi il giro si può fare tutto; dal 12 settembre
+esiste anche una build **`preview`** autonoma, che gira senza Metro. I quattro blocchi sono ordinati
+per «un rosso qui rende inutile il blocco dopo».
 
 **Blocco 0 — prima di toccare il telefono.** Metro parte **da `apps/mobile`**, mai dalla root, e
 `npm run prova` verde evita di dare la colpa al telefono per un guasto di relay o di dati:
@@ -1610,7 +1613,11 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
 - Le **schermate degli Step 7, 8 e 9** — statistiche, budget, pareggi, quote libere, export, backup
   della chiave — mai toccate con un dito. Statistiche e quote libere sono state anche **riscritte**
   dal redesign (passi 5 e 7), quindi non è più solo «mai provate»: è codice nuovo mai provato
-- L'**APK autonomo** (profilo `preview`), che gira senza Metro: mai costruito
+- ~~L'**APK autonomo** (profilo `preview`), che gira senza Metro~~ — **costruito e provato il 12
+  settembre 2026**, ed era l'ultimo vero ignoto del progetto: fino a quel giorno il JavaScript era
+  sempre arrivato dal PC di sviluppo. L'app si apre, gira senza Metro, e **i dati preesistenti sono
+  ancora lì** — stesso package e stesso keystore (`c3BIFch_jg`), quindi Android l'ha trattata come
+  un aggiornamento
 - Il costo di `scrypt` con `logN = 16` su mobile (default da calibrare, in
   `packages/core/src/crypto/backup.ts`). La schermata di backup **misura e mostra** il tempo
   impiegato: basta un backup reale per avere il numero

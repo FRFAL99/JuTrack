@@ -4,6 +4,60 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-12 — La prima build autonoma, e l'informativa in produzione
+
+Tre cose in fila, nell'ordine in cui un guasto avrebbe reso inutili le successive.
+
+### La build `preview`, e l'ultimo vero ignoto del progetto
+
+Commit `b2425b7`, 23 minuti, profilo `preview`: APK autonomo. **È la prima volta in tutta la vita di
+JuTrack che l'app gira senza Metro.** Fino a oggi il JavaScript arrivava sempre dal PC di sviluppo,
+non compilato, non minificato, con `__DEV__` vero. Restava aperta la domanda se il bundle di
+produzione — bytecode Hermes, R8, asset tutti dentro — reggesse i punti fragili noti: l'alias
+`lib0`/`isomorphic-webcrypto` di `metro.config.js`, i `require` in `try/catch` dei moduli opzionali,
+i font di `@expo/vector-icons` caricati a runtime.
+
+Regge. L'app si apre, gira, e **i dati preesistenti sono ancora lì**: stesso package e stesso
+keystore (`c3BIFch_jg`) delle build di sviluppo, quindi Android l'ha trattata come un aggiornamento
+e non come un'installazione nuova. Era un'assunzione dichiarata prima di installare, ed è stata
+confermata invece che sperata.
+
+Lo **splash** dello Step 46 è stato visto sul telefono: non c'è più il lampo bianco.
+
+La build ha anche **creato da sé il canale e il ramo `preview`** su EAS, che è la conferma che il
+collegamento di `expo-updates` dello Step 47 è vivo e non solo scritto in `app.json`.
+
+### L'informativa in produzione
+
+Deploy del Worker, versione `d8cd8195`, **dopo** aver confermato che l'app installata funziona — non
+prima: un'informativa che descrive un'app che non gira è lo stesso difetto, al contrario, che questa
+giornata ha passato a correggere.
+
+Verificato invece che assunto, con `curl`:
+
+- **200**, e l'HTML servito è **identico byte per byte** al sorgente in `main` (15.178 byte da
+  entrambe le parti, confrontati importando `PRIVACY_PAGE_HTML` e non a occhio).
+- «Ultimo aggiornamento: 2026-09-12»; prima era il 5 settembre.
+- `Expo` compare 5 volte, la sezione sugli aggiornamenti c'è in **entrambe** le lingue, il capoverso
+  sul Play Store due volte. **`Sentry`: zero occorrenze.**
+- Header giusti, `script-src 'none'` compreso, e **nessun `noindex`** — la differenza deliberata
+  rispetto a `/j`.
+- **`/j` risponde ancora 200**: il deploy non ha rotto la pagina degli inviti.
+
+Prima del deploy, l'informativa è stata **resa in testo e riletta**, non controllata nel diff: è un
+documento pubblico, e un diff dice cosa è cambiato ma non come si legge quello che resta.
+
+### Dove siamo
+
+Non resta niente da scrivere, niente da costruire e niente da distribuire. Quello che manca è tutto
+fuori dal repo: account Play, la scheda del negozio (feature graphic 1024×500 e screenshot, che
+ancora non esistono), e il collo di bottiglia vero, che è il calendario — i **12 tester per 14
+giorni** che Google chiede a un account personale prima di sbloccare la produzione.
+
+**Prossimo:** la scheda del negozio, e alzare `version` a `1.0.0` prima della build `production`.
+
+---
+
 ## 2026-09-12 — Step 48 ritirato: per ora bastano gli Android Vitals
 
 Sentry installato, configurato e tolto lo stesso giorno. L'entry sotto racconta com'era fatto e resta
