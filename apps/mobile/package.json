@@ -17,7 +17,6 @@
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
     "@jutrack/core": "*",
-    "@sentry/react-native": "~7.11.0",
     "expo": "~57.0.12",
     "expo-camera": "~57.0.3",
     "expo-clipboard": "~57.0.1",

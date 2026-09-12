@@ -110,10 +110,8 @@ a { color: var(--accent); }
 
 <div class="card">
 <p><strong>In breve.</strong> JuTrack non ha account, non chiede né e-mail né numero di telefono, non
-contiene pubblicità, non ti profila e non misura come usi l'app. Le tue spese sono cifrate sul
-telefono prima di partire: <strong>il nostro server non ha la chiave e non può leggerle</strong>.
-L'unica cosa che l'app manda fuori di sua iniziativa è il <strong>rapporto tecnico di un guasto</strong>,
-quando qualcosa si rompe.</p>
+contiene pubblicità e non usa strumenti di analisi o di tracciamento. Le tue spese sono cifrate sul
+telefono prima di partire: <strong>il nostro server non ha la chiave e non può leggerle</strong>.</p>
 </div>
 
 <h2>Chi tratta i dati</h2>
@@ -163,18 +161,6 @@ negare il permesso: il gruppo si condivide anche con un link.</p>
 ferma, la chiave non salvata — sono <strong>generati sul telefono</strong> dall'app stessa. Non
 esiste alcun server che invii notifiche, quindi il loro contenuto non passa da noi.</p>
 
-<h2>Quando qualcosa si rompe</h2>
-<p>Se l'app va in errore, ne manda un <strong>rapporto tecnico</strong> a
-<strong>Sentry</strong>, il servizio che usiamo per accorgercene. Senza, un difetto che si presenta
-sul tuo telefono non lascerebbe alcuna traccia e nessuno potrebbe correggerlo.</p>
-<p>Nel rapporto ci sono: il punto del programma in cui l'errore è avvenuto, il modello del telefono,
-la versione di Android e quella dell'app. <strong>Non ci sono le tue spese</strong>, né i nomi dei
-gruppi o delle persone. Due categorie di informazioni sono escluse apposta, prima che il rapporto
-parta: le <em>richieste di rete</em>, perché i loro indirizzi contengono l'identificativo di un
-gruppo, e tutto ciò che l'app scrive nel proprio registro di lavoro.</p>
-<p>Il rapporto parte <strong>solo quando qualcosa si rompe</strong>. Non c'è alcuna misura di
-apertura, di durata o di uso dell'app: non sappiamo quando la apri né quanto la tieni aperta.</p>
-
 <h2>Aggiornamenti dell'app</h2>
 <p>All'avvio l'app chiede ai server di <strong>Expo</strong> se esiste una versione più recente della
 sua parte non nativa, così una correzione può arrivarti senza aspettare un aggiornamento dal negozio.
@@ -200,16 +186,18 @@ scadono da soli entro 30 giorni.</li>
 comunque, l'indirizzo qui sopra risponde.</p>
 
 <h2>Condivisione con terzi</h2>
-<p>Non vendiamo dati e non li cediamo a nessuno. I fornitori coinvolti sono tre, e fanno solo quello
+<p>Non vendiamo dati e non li cediamo a nessuno. I fornitori coinvolti sono due, e fanno solo quello
 che è descritto sopra:</p>
 <ul>
 <li><strong>Cloudflare</strong>, che ospita il relay e ne tratta i dati tecnici.</li>
-<li><strong>Sentry</strong>, che riceve i rapporti di errore quando l'app si rompe.</li>
 <li><strong>Expo</strong>, a cui l'app chiede se esiste un aggiornamento.</li>
 </ul>
-<p>Tutti e tre, come ogni servizio raggiunto via rete, vedono l'<strong>indirizzo IP</strong> della
+<p>Entrambi, come ogni servizio raggiunto via rete, vedono l'<strong>indirizzo IP</strong> della
 richiesta. L'app non contiene reti pubblicitarie, SDK di tracciamento, né strumenti che misurino
 come la usi.</p>
+<p>Se scarichi JuTrack dal Google Play Store, Google raccoglie per conto proprio i dati tecnici sui
+blocchi dell'app, come fa per ogni applicazione distribuita dal negozio. È un trattamento del
+negozio, non nostro: l'app non contiene alcun componente che glieli mandi.</p>
 
 <h2>Esportazioni e backup che crei tu</h2>
 <p>L'app può produrre un export delle spese (CSV o JSON) e un backup della chiave protetto da
@@ -238,10 +226,8 @@ precedenti restano nella storia pubblica del codice sorgente dell'app.</p>
 
 <div class="card">
 <p><strong>In short.</strong> JuTrack has no accounts, asks for no email or phone number, contains no
-advertising, does not profile you and does not measure how you use the app. Your expenses are
-encrypted on your phone before they leave it: <strong>our server has no key and cannot read
-them</strong>. The only thing the app sends out on its own initiative is a <strong>technical crash
-report</strong>, when something breaks.</p>
+advertising, and uses no analytics or tracking tools. Your expenses are encrypted on your phone
+before they leave it: <strong>our server has no key and cannot read them</strong>.</p>
 </div>
 
 <h2>Who processes your data</h2>
@@ -292,18 +278,6 @@ a group can also be shared with a link.</p>
 key — are <strong>generated on the phone</strong> by the app itself. No server sends notifications,
 so their content never passes through us.</p>
 
-<h2>When something breaks</h2>
-<p>If the app hits an error, it sends a <strong>technical report</strong> to <strong>Sentry</strong>,
-the service we use to find out about it. Without one, a fault that shows up on your phone would leave
-no trace at all and nobody could fix it.</p>
-<p>The report contains: where in the program the error happened, your phone model, the Android
-version and the app version. <strong>It does not contain your expenses</strong>, nor group or people
-names. Two categories are excluded deliberately, before the report leaves: <em>network requests</em>,
-because their addresses carry a group's identifier, and everything the app writes to its own working
-log.</p>
-<p>A report is sent <strong>only when something breaks</strong>. There is no measurement of openings,
-duration or usage: we do not know when you open the app or how long you keep it open.</p>
-
 <h2>App updates</h2>
 <p>At startup the app asks <strong>Expo</strong>'s servers whether a newer version of its non-native
 part exists, so a fix can reach you without waiting for a store update. The question carries the
@@ -328,16 +302,17 @@ themselves within 30 days.</li>
 like to anyway, the address above works.</p>
 
 <h2>Sharing with third parties</h2>
-<p>We do not sell data and do not pass it to anyone. Three providers are involved, and each does only
+<p>We do not sell data and do not pass it to anyone. Two providers are involved, and each does only
 what is described above:</p>
 <ul>
 <li><strong>Cloudflare</strong>, which hosts the relay and processes its technical data.</li>
-<li><strong>Sentry</strong>, which receives error reports when the app breaks.</li>
 <li><strong>Expo</strong>, which the app asks whether an update exists.</li>
 </ul>
-<p>All three, like any service reached over a network, see the request's <strong>IP address</strong>.
-The app contains no advertising networks, no tracking SDKs, and no tools that measure how you use
-it.</p>
+<p>Both, like any service reached over a network, see the request's <strong>IP address</strong>. The
+app contains no advertising networks, no tracking SDKs, and no tools that measure how you use it.</p>
+<p>If you download JuTrack from the Google Play Store, Google collects technical crash data on its
+own account, as it does for every app distributed by the store. That is the store's processing, not
+ours: the app contains no component that sends it anything.</p>
 
 <h2>Exports and backups you create</h2>
 <p>The app can produce an export of your expenses (CSV or JSON) and a passphrase-protected backup of

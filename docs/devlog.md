@@ -4,6 +4,56 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-12 — Step 48 ritirato: per ora bastano gli Android Vitals
+
+Sentry installato, configurato e tolto lo stesso giorno. L'entry sotto racconta com'era fatto e resta
+valida come riferimento tecnico; questa dice **perché non c'è più**, che è l'informazione che fra sei
+mesi non sarà più in vista.
+
+Il problema che risolveva è reale e non è sparito: **JuTrack è cieca dopo la pubblicazione.** Gli
+Android Vitals del Play Console mostrano i crash **nativi**, non quello che succede nel JavaScript —
+che qui è quasi tutto. Un errore in un `useEffect`, un campo letto da un record che non ce l'ha, una
+`Promise` rifiutata: le cose che questo progetto ha effettivamente incontrato non appariranno in
+nessun cruscotto.
+
+Il costo era la catena di passaggi manuali prima che la prima riga servisse a qualcosa: account su un
+servizio terzo, **scelta irreversibile della regione dei dati**, un DSN, un secondo credenziale per
+caricare le source map — senza le quali le tracce sono bytecode Hermes minificato e non si leggono —
+e la riscrittura dell'informativa, da ridistribuire. Per un'app che non è ancora sul negozio,
+Francesco ha giudicato che non valesse il prezzo adesso, e per una versione iniziale è difendibile:
+i Vitals arrivano gratis con la pubblicazione, non chiedono integrazione e **non costano una riga di
+informativa**, perché è il negozio a raccoglierli e non l'app a mandarli.
+
+### La parte che non è tornata indietro, e non doveva
+
+Rimossi: pacchetto, config plugin, `extra.sentryDsn`, `features/diagnostica/` coi suoi 16 test,
+l'aggancio in `index.js`.
+
+**L'informativa privacy non è tornata identica a prima.** La sezione «Aggiornamenti dell'app» resta,
+perché lo Step 47 resta, e chiedere a Expo se esiste un aggiornamento è comunque un terzo contattato
+— cosa che prima di oggi il documento non diceva, perché prima di oggi non succedeva. «Condivisione
+con terzi» elenca due fornitori invece di tre, e un capoverso nuovo chiarisce che i dati sui blocchi
+raccolti da Google appartengono al negozio e non all'app.
+
+Questo è il punto che sarebbe stato facile sbagliare: **revertire il commit avrebbe portato via anche
+la parte vera.** Le due modifiche erano nello stesso commit ma non nella stessa decisione.
+
+### I test sono diventati simmetrici, ed è una regola generale
+
+Prima c'era un test che controllava che i fornitori contattati fossero nominati. Adesso ce n'è anche
+uno che controlla che **Sentry non compaia**. Dichiarare un trattamento che non avviene è inesatto
+quanto tacerne uno che avviene, e nei due casi il difetto ha la stessa forma: un documento che non
+combacia col codice. È la stessa lezione della build annotata male e dello script di icone che non
+esisteva, per la terza volta oggi.
+
+**Verifica:** 1261 test verdi (639 core + 568 app + 54 relay), typecheck, lint, `format:check` ed
+`expo export --platform android` puliti.
+
+**Prossimo:** una sola build con dentro gli Step 46 e 47, e la prova dell'APK `preview` **senza
+Metro**, che non è mai stata fatta.
+
+---
+
 ## 2026-09-12 — Step 48: il rapporto dei guasti, e cosa non ne esce
 
 Terzo e ultimo dei passi verso la pubblicazione. Fino a qui JuTrack era **cieca dopo la

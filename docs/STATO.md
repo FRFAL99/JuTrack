@@ -147,13 +147,13 @@ Robustezza dei dati — nati fuori dai piani, dalla rilettura del 17 agosto:
 
 Verso la pubblicazione — anch'essi fuori dai piani, dalla rilettura del 5 settembre:
 
-| Passo                    | Stato | Cosa contiene                                                   |
-| ------------------------ | ----- | --------------------------------------------------------------- |
-| 44 — Informativa privacy | ✅    | `GET /privacy` sul relay, IT + EN, otto test, **in produzione** |
-| 45 — Icona definitiva    | ✅    | `icon-source.svg` come unica sorgente (lo script arriva col 46) |
-| 46 — Splash e pipeline   | ✅    | `npm run icone`, sette PNG dal vettoriale, splash vero          |
-| 47 — `expo-updates`      | ✅    | Correzioni JS senza Play Store, con `runtimeVersion` a impronta |
-| 48 — Crash reporting     | 🟡    | Sentry e informativa nel codice; **manca il DSN e il deploy**   |
+| Passo                    | Stato | Cosa contiene                                                     |
+| ------------------------ | ----- | ----------------------------------------------------------------- |
+| 44 — Informativa privacy | ✅    | `GET /privacy` sul relay, IT + EN, otto test, **in produzione**   |
+| 45 — Icona definitiva    | ✅    | `icon-source.svg` come unica sorgente (lo script arriva col 46)   |
+| 46 — Splash e pipeline   | ✅    | `npm run icone`, sette PNG dal vettoriale, splash vero            |
+| 47 — `expo-updates`      | ✅    | Correzioni JS senza Play Store, con `runtimeVersion` a impronta   |
+| 48 — Crash reporting     | ⬜    | **Ritirato**: per ora bastano gli Android Vitals del Play Console |
 
 Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette passi:
 
@@ -167,7 +167,7 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
-**1277 test verdi** (639 core + 584 app + 54 relay), typecheck, lint e `format:check` puliti.
+**1261 test verdi** (639 core + 568 app + 54 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -1365,8 +1365,8 @@ libheif.
 > Ripulirla vuol dire un salto di major di `@cloudflare/vitest-pool-workers`: è tooling di test, non
 > tocca né l'app né il relay in produzione, e non decodifica HEIF di nessuno. Annotato, non fatto.
 
-**Serve una build EAS**, perché `expo-splash-screen` è un modulo nativo e `app.json` è cambiato. Per
-non spenderne tre, entra insieme allo Step 47 e allo Step 48.
+**Serve una build EAS**, perché `expo-splash-screen` è un modulo nativo e `app.json` è cambiato.
+Entra insieme allo Step 47, in una sola build.
 
 ## Le correzioni senza passare dal negozio (Step 47)
 
@@ -1415,77 +1415,52 @@ Ogni profilo di `eas.json` ha adesso il suo (`development`, `preview`, `producti
 di `app.json` — quelli restano build EAS più release. Serve a correggere il JavaScript, che in
 JuTrack è quasi tutto, non a evitare il negozio.
 
-## Il rapporto dei guasti, e cosa non ne esce (Step 48)
+## Il crash reporting, scritto e poi ritirato (Step 48)
 
-Fino a qui JuTrack era **cieca dopo la pubblicazione**: un crash sul telefono di qualcun altro non
-lasciava traccia da nessuna parte, e l'unico segnale sarebbe stata una recensione a una stella. Il
-Play Console mostra i crash **nativi**, ma non quello che succede nel JavaScript — che in questo
-progetto è quasi tutto.
+**Sentry è stato installato, configurato e tolto lo stesso giorno.** Vale la pena scrivere perché,
+perché la decisione va rispettata anche fra sei mesi e le ragioni di allora non saranno più in vista.
 
-`@sentry/react-native@~7.11.0`. Ma il lavoro vero non è installarlo: è decidere **cosa gli si lascia
-portare via**.
+Il problema che risolveva è reale: **JuTrack è cieca dopo la pubblicazione.** Il Play Console mostra
+i crash **nativi** attraverso gli Android Vitals, ma non quello che succede nel JavaScript — che in
+questo progetto è quasi tutto. Un difetto sul telefono di qualcun altro non lascerà traccia, e
+l'unico segnale sarà una recensione o un messaggio all'indirizzo dell'informativa.
 
-### Il difetto che si stava per spedire
+Il costo era la catena: account su un servizio terzo, scelta irreversibile della regione dei dati,
+un DSN, **un secondo credenziale** per caricare le source map — senza le quali le tracce sono
+bytecode Hermes minificato e non si leggono — e la riscrittura dell'informativa privacy, che va poi
+ridistribuita. Quattro passaggi manuali prima che la prima riga serva a qualcosa.
 
-Sentry, coi suoi valori di default, allega a ogni evento le **briciole**: le richieste di rete
-recenti e quello che l'app ha scritto in console. Per quasi tutte le app è materiale innocuo. Qui
-no, per due ragioni precise:
+**Francesco ha deciso che non vale il prezzo adesso**, e per una versione iniziale è difendibile: gli
+Android Vitals arrivano gratis con la pubblicazione, non chiedono nessuna integrazione e **non
+costano una riga di informativa**, perché è il negozio a raccoglierli e non l'app a mandarli.
 
-- **Gli URL del relay contengono il `vaultId`**, l'identificativo di un gruppo. Non permette di
-  leggere le spese, ma è il dato che l'informativa promette di trattare con parsimonia.
-- **Una console può contenere qualunque cosa**, importi compresi, e nessuno ricorda tutte le
-  `console.log` che ha scritto.
+Quello che si perde, detto chiaramente: **gli errori JavaScript non li vedrà nessuno.** Un guasto in
+un `useEffect`, un campo letto da un record che non ce l'ha, una `Promise` rifiutata — cioè le cose
+che questo progetto ha effettivamente incontrato — non appariranno in nessun cruscotto.
 
+### Cosa resta nel repo
+
+Niente di Sentry: pacchetto, config plugin, `extra.sentryDsn`, la cartella
+`features/diagnostica/` coi suoi 16 test e l'aggancio in `index.js` sono stati rimossi tutti.
+
+**L'informativa privacy invece non è tornata identica a prima**, ed è la cosa da non perdere: la
+sezione **«Aggiornamenti dell'app»** resta, perché lo [Step 47](#le-correzioni-senza-passare-dal-negozio-step-47)
+resta, e chiedere a Expo se esiste un aggiornamento è comunque un terzo contattato. «Condivisione con
+terzi» elenca quindi **due** fornitori — Cloudflare ed Expo — e un capoverso nuovo spiega che i dati
+sui blocchi raccolti da Google appartengono al negozio e non all'app.
+
+I test dell'informativa sono diventati simmetrici, e vale come regola generale: uno controlla che i
+fornitori contattati **siano nominati**, l'altro che Sentry **non** compaia. Dichiarare un
+trattamento che non avviene è inesatto quanto tacerne uno che avviene.
+
+### Se un giorno si cambia idea
+
+Il lavoro fatto non era sbagliato, era prematuro. La parte che varrà la pena rileggere nel devlog è
+**cosa non si può lasciare uscire**: Sentry coi valori di default allega a ogni evento le richieste
+di rete — e gli URL del relay contengono il `vaultId` — e la console, che può contenere importi.
 Un'app che promette «il nostro server non può leggere le tue spese» e poi carica briciole con dentro
-le spese **si smentisce da sola**. Quindi la regola è scartare **per categoria**, non ripulire per
-euristica: una ripulitura sbagliata si noterebbe solo leggendo i rapporti su Sentry, cioè mai.
-
-Sta in [`features/diagnostica/scrub.ts`](../apps/mobile/src/features/diagnostica/scrub.ts), è fatto
-di funzioni pure, e ha **16 test** — perché è l'unico punto in cui si decide cosa esce dal telefono,
-e un difetto lì non si vede da nessuna parte nell'app.
-
-- `xhr`, `fetch`, `http`, `console` → **buttate**. `navigation` resta, perché dice _su quale
-  schermata_ è successo, che è metà dell'informazione utile.
-- Ogni esadecimale lungo almeno 32 nei percorsi diventa `<id>`: resta la **forma** della chiamata
-  fallita, sparisce il gruppo. Un test controlla che ne sostituisca **due** nello stesso URL, che è
-  il difetto classico di una regex senza `g`.
-- `beforeSend` toglie l'utente (Sentry ne inventa uno dall'installazione), butta le intestazioni —
-  lì c'è il token di autorizzazione del vault — e **rifiltra** le briciole, che possono arrivare
-  senza passare da `beforeBreadcrumb`.
-- `enableAutoSessionTracking: false` e `tracesSampleRate: 0`: un rapporto parte **solo quando
-  qualcosa si rompe**. Le sessioni sono misura d'uso, cioè esattamente ciò che l'informativa dice di
-  non fare.
-
-### Senza DSN, Sentry non parte
-
-`avviaSentry()` è condizionata a `extra.sentryDsn` in `app.json`, che **oggi è vuoto**. Una build
-senza DSN non spedisce niente a nessuno, invece di fallire in qualche modo. Il DSN è configurazione e
-non un segreto: permette di **scrivere** rapporti, non di leggerli.
-
-L'aggancio è la **prima riga** di `index.js`, prima di `expo-router/entry`: i moduli si valutano
-nell'ordine in cui compaiono, e un guasto all'avvio è quello che più vale la pena vedere — ed è anche
-l'unico che si perderebbe inizializzando Sentry dentro un componente.
-
-### L'informativa non poteva restare com'era
-
-Diceva, testualmente, «non usa strumenti di analisi o di tracciamento». Con Sentry quella frase
-**diventa falsa**, in un documento pubblicato apposta perché il Play Store lo pretende. Riscritta in
-entrambe le lingue:
-
-- due sezioni nuove, **«Quando qualcosa si rompe»** e **«Aggiornamenti dell'app»** (che copre lo
-  Step 47: anche chiedere a Expo se esiste un aggiornamento è un terzo contattato);
-- «Condivisione con terzi» adesso ne elenca **tre** — Cloudflare, Sentry, Expo — invece di uno;
-- il riquadro in cima dice cosa l'app manda fuori di sua iniziativa, invece di promettere che non
-  manda niente.
-
-Tre test nuovi la tengono onesta, e **uno vale più degli altri due**: divide l'HTML in corrispondenza
-di `id="en"` e controlla le due metà **separatamente**. Una sezione scritta in una lingua sola è il
-difetto più facile da fare su una pagina bilingue e il più difficile da vedere rileggendola.
-
-> ⚠️ **L'informativa è cambiata nel repo, non in produzione.** Il deploy del Worker va chiesto, e
-> soprattutto va fatto **insieme** alla build che contiene davvero Sentry: pubblicarla prima
-> significherebbe descrivere al mondo un trattamento che non avviene ancora — lo stesso difetto, al
-> contrario, dei documenti che questa giornata ha passato a correggere.
+le spese si smentisce da sola, e non se ne accorgerebbe nessuno, perché quel materiale si vede solo
+aprendo i rapporti sul servizio.
 
 ## La verifica su telefono del 12 settembre (Step 41)
 

@@ -495,29 +495,28 @@ describe('informativa privacy', () => {
     return { it: PRIVACY_PAGE_HTML.slice(0, i), en: PRIVACY_PAGE_HTML.slice(i) };
   }
 
-  it('nomina tutti e tre i fornitori, in tutte e due le lingue', () => {
-    // Dallo Step 48 non e' piu' solo Cloudflare. Un fornitore che tratta dati e non e'
-    // nominato qui e' precisamente cio' che rende un'informativa inesatta.
+  it('nomina entrambi i fornitori, in tutte e due le lingue', () => {
+    // Dallo Step 47 non e' piu' solo Cloudflare: l'app chiede a Expo se esiste un
+    // aggiornamento, e un fornitore che tratta dati e non e' nominato qui e'
+    // precisamente cio' che rende un'informativa inesatta.
     const { it: ita, en } = meta();
-    for (const fornitore of ['Cloudflare', 'Sentry', 'Expo']) {
+    for (const fornitore of ['Cloudflare', 'Expo']) {
       expect(ita).toContain(fornitore);
       expect(en).toContain(fornitore);
     }
   });
 
-  it('non promette piu di non avere strumenti di analisi', () => {
-    // La frase c'era, ed era vera finche' l'app non mandava niente a nessuno. Il crash
-    // reporting la smentirebbe: va tolta insieme al codice che la rende falsa, non dopo.
-    expect(PRIVACY_PAGE_HTML).not.toContain('non usa strumenti di analisi o di tracciamento');
-    expect(PRIVACY_PAGE_HTML).not.toContain('uses no analytics or tracking tools');
+  it('non nomina fornitori che l app non contatta piu', () => {
+    // Sentry e' stato installato e poi tolto lo stesso giorno. Un'informativa che
+    // dichiara un trattamento che non avviene e' inesatta quanto una che ne tace uno:
+    // questo test e' la meta' che manca all'altro qui sopra.
+    expect(PRIVACY_PAGE_HTML).not.toContain('Sentry');
   });
 
-  it('dice in tutte e due le lingue cosa NON finisce in un rapporto di errore', () => {
-    // E' la parte che conta per chi legge: l'esclusione delle spese e' una promessa, ed
-    // e' imposta dal codice in `features/diagnostica/scrub.ts`, che ha i suoi test.
+  it('dice in tutte e due le lingue che l app si aggiorna da se', () => {
     const { it: ita, en } = meta();
-    expect(ita).toContain('Non ci sono le tue spese');
-    expect(en).toContain('It does not contain your expenses');
+    expect(ita).toContain('Aggiornamenti dell');
+    expect(en).toContain('App updates');
   });
 
   it('non va in produzione senza titolare e recapito', () => {

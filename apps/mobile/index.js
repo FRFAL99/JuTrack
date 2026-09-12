@@ -17,16 +17,8 @@
  * l'entry virtuale di Metro, che risolve `main` di `package.json` al momento del bundle. Se
  * così non fosse, questo step avrebbe smentito lo Step 30, che esiste per pagare una volta
  * sola il conto delle build.
- *
- * Dallo Step 48 la prima riga è Sentry, e l'ordine degli import qui conta davvero: i moduli
- * si valutano nell'ordine in cui compaiono, quindi importare `./src/features/diagnostica/sentry`
- * **prima** di `expo-router/entry` è ciò che mette il gestore dei crash al suo posto prima che
- * il router monti qualcosa. Un guasto all'avvio è quello che più vale la pena vedere, ed è
- * anche l'unico che si perderebbe inizializzando Sentry dentro un componente.
  */
-import { avviaSentry } from './src/features/diagnostica/sentry';
 import 'expo-router/entry';
 import { registerWidgetTask } from './src/features/widgets/register';
 
-avviaSentry();
 registerWidgetTask();
