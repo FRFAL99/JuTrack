@@ -1,9 +1,15 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-09-12 — **tutti e quattro i piani e il redesign visivo sono finiti nel codice, il
-quinto piano è a dodici step su tredici, quattro passi nati fuori dai piani hanno chiuso i due
-rischi sui dati e le due cose che mancavano al negozio, e la build EAS che tiene tutto questo è
-installata sul telefono**.
+Aggiornato: 2026-09-12 — **il criterio di «fatto» end-to-end è stato soddisfatto**: la mattina del
+12 settembre il sync è stato visto funzionare nei due versi con un telefono vero, coi membri e i
+saldi giusti, e i due widget si sono popolati con numeri identici a un calcolo indipendente. Tutti e
+quattro i piani e il redesign sono nel codice, il quinto è a dodici step su tredici, e la build EAS
+che tiene tutto questo è installata.
+
+> **La sessione del 12 settembre è raccontata in
+> [La verifica su telefono](#la-verifica-su-telefono-del-12-settembre-step-41)**, divisa fra ciò che
+> ha una prova rileggibile e ciò che è riferito da chi aveva il telefono in mano. Il solo difetto
+> trovato è cosmetico: le anteprime dei widget nel selettore di Android sono riquadri vuoti.
 
 > **Il 5 settembre sono entrate le due cose che impedivano di pubblicare, e nessuna delle due
 > chiedeva un telefono.** L'**informativa privacy** è in produzione su
@@ -130,7 +136,7 @@ step su dodici nel codice**:
 | 38 — Traduzione EN, tre schermate  | ✅    | Spese, nuova spesa, gruppi, e i sei moduli condivisi sotto             |
 | 39 — Formato dei numeri per lingua | ✅    | `NumberFormat` nel core, `@/i18n/money` nell app, guardia ESLint       |
 | 40 — Traduzione EN, il resto       | ✅    | Grafici, dashboard, onboarding, pairing, backup/export/import, azzera  |
-| 41 — Verifica end-to-end           | ⬜    | Su telefono reale: notifiche, widget, lingua, valuta                   |
+| 41 — Verifica end-to-end           | 🟡    | Grosso modo fatto il 12 settembre; resta ciò che chiede giorni         |
 
 Robustezza dei dati — nati fuori dai piani, dalla rilettura del 17 agosto:
 
@@ -1272,6 +1278,84 @@ relay in produzione, invito di pairing, QR, fotocamera, **notifiche locali e wid
 > quattro mesi mai finiti in una build: il foglio di condivisione dell'export dovrebbe funzionare,
 > invece di ripiegare sugli appunti. **Non è stato ancora guardato** — vedi la lista qui sotto.
 
+## La verifica su telefono del 12 settembre (Step 41)
+
+**È la mattina in cui il criterio di «fatto» end-to-end è stato soddisfatto.** Mancava al piano
+originale, al v2, al v3, e il v4 lo aspettava per poter dire qualcosa dei suoi due campi nuovi. Dal
+1° agosto era la riga più vecchia di tutta la lista qui sotto.
+
+Il secondo dispositivo era `npm run peer` (vedi
+[prova-con-un-telefono-solo.md](prova-con-un-telefono-solo.md)), tenuto vivo per tutta la sessione
+contro il relay in produzione, sul gruppo di prova «Prova sync».
+
+### Visto dai log del peer e da uno screenshot, non solo riferito
+
+Queste hanno una prova che non passa dalla memoria di nessuno:
+
+- **Il deep link col fragment, per il giro intero.** Invito mandato **su WhatsApp**, toccato dalla
+  chat, pagina `/j` aperta nel browser, bottone toccato, app aperta sul gruppo giusto. Era il punto
+  rimandato quattro volte. La prova che il `k=` è arrivato non è un messaggio a schermo: senza la
+  chiave il vault non si decifra e l'ingresso non sarebbe avvenuto affatto.
+- **Due membri, non quattro, e col nome giusto.** Il peer ha visto
+  `👤 nuovo membro: Fra (a5ec0cb2…)`: il membro è nato dal **profilo**, non da un id casuale. È la
+  metà «app» del bug dei saldi dello Step 11, quella che un peer scritto a mano non avrebbe colto.
+- **La domanda «chi sei in questo gruppo?»**, senza la quale il membro non esisterebbe.
+- **Il sync nei due versi, senza toccare niente.** Una spesa dal peer è comparsa sul telefono
+  **istantaneamente e da sola**, senza tirare giù per aggiornare; una dal telefono è arrivata
+  decifrata al peer. Le quattro spese del telefono sono arrivate al peer **via GET**, con il
+  contatore dei POST del peer fermo alle sue: nessuna scorciatoia locale, il giro è quello vero.
+- **I saldi coincidono col calcolo a mano.** Dopo le prime due spese: `Fra: 3,85 € /
+Peer-default: -3,85 €`, contro 32,30 in cassa e 16,15 di quota a testa.
+- **La coda offline dello Step 17.** Telefono in aereo, due spese — **visibili in coda
+  nell'interfaccia**, che è la metà di prodotto della stessa cosa — rete riaccesa, e sono partite da
+  sole in **~5 s**, arrivate al peer **nello stesso secondo**: la coda si svuota in blocco, serializzata.
+  Cinque secondi non contraddicono i 15 s di `offlineRetryMs`: è un **riprova ogni** 15 s, quindi
+  riaccendendo la rete si cade in un punto a caso della finestra, e il numero da confrontare è il
+  massimo.
+- **I due widget, verificati contro un calcolo indipendente.** Sulla home: saldo **33,60 €**
+  («Peer-default ti deve») e mese **105,80 €** («Spese in settembre»). Il peer, che fa i conti per
+  conto suo, diceva nello stesso momento `Fra: 33,60 €` e otto spese che sommano **105,80 €**.
+  Identici al centesimo.
+- **La prova che distingue i due widget**, quella che con un widget solo non si poteva fare: una
+  spesa da **5,00 € tutta sua** ha portato il totale del mese da 100,80 a 105,80 e ha lasciato il
+  saldo **fermo a 33,60**. È lo Step 35 nel suo punto esatto, dimostrato dall'aritmetica.
+- **Il selettore di widget di Android**, che la diagnostica non può guardare: entrambe le voci
+  compaiono cercando «ju», con i nomi giusti, la dimensione **3 × 2** e le descrizioni scritte in
+  `app.json` («Quanto ti devono e quanto devi nel gruppo aperto», «Il totale del mese in corso, nel
+  gruppo aperto»).
+- **La didascalia nomina il mese** — «Spese in settembre», non «questo mese». È la ragione per cui
+  lo Step 35 non usa la parola «questo», e si vede solo a widget popolato.
+
+### Riferito da Francesco, che aveva il telefono in mano
+
+Stessa sessione, senza una traccia che io possa rileggere. Vale come verifica — è lui che guarda —
+ma è bene che si sappia di che tipo di prova si tratta:
+
+- **Tutto il Blocco 1**: apertura con dati preesistenti, navigazione della nuova radice del tab
+  Gruppi, il form della spesa e la sua tastiera, le cinque `NavCard`, grafici e filtri, la dashboard
+  che sopravvive a chiusura e riapertura, valuta e lingua in Tu, e il `12.30` invece di `1230` in
+  inglese. Riferito come «mi tornano, su questo non ho problemi», **senza un resoconto voce per
+  voce**: le tre che chiedono di chiudere e riaprire l'app (dashboard, valuta, e il campo importo in
+  inglese) sono quelle che meriterebbero una seconda passata prima di considerarle chiuse.
+- **Il Blocco 3 tranne i widget**: diagnostica, permesso delle notifiche concesso dallo Step 31,
+  avviso di budget dello Step 32 con la sua notifica in primo piano e il canale separato. Riferito
+  come «ho testato tutto e mi sembra ok».
+
+### Il difetto trovato
+
+- **Le anteprime nel selettore di widget sono due riquadri vuoti** con la sola icona dell'app al
+  centro, invece di mostrare come sarà il widget. Etichette, dimensioni e descrizioni sono giuste —
+  quelle vengono da `app.json` — ma manca l'anteprima vera, e Android ripiega sull'icona. È
+  cosmetico e non tocca il funzionamento: **i widget, una volta messi sulla home, si popolano
+  correttamente**. Francesco l'ha visto e ha deciso di rimandarlo. Sta nella lista qui sotto.
+
+### Cosa resta, dopo questa mattina
+
+Quello che chiede **tempo** più che attenzione: la mezz'ora ad app chiusa dello Step 36, i tre
+giorni del promemoria dello Step 31, le ventiquattr'ore del caso _in ritardo_ dello Step 33, e il
+primo del mese dello Step 35. Più lo Step 33 nel suo caso _fermo_ e lo Step 14, che si provano
+insieme rigenerando un gruppo. E le voci della lista qui sotto che questa sessione non ha toccato.
+
 ## Cosa non è ancora stato verificato su hardware reale
 
 Va detto con precisione, perché è la differenza fra «testato» e «funzionante». Dopo la diagnostica
@@ -1328,11 +1412,10 @@ tondo e squircle, 48 px nel cassetto, silhouette nella tendina, icona a tema, i 
 **Step 36**, che vuole mezz'ora di app chiusa; lo Step 31 vero, che arriva a **tre giorni**; il caso
 _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step 35.
 
-- Il ciclo di sync completo **fra due telefoni fisici**: provato una volta e **fallito** (una sola
-  direzione, con ritardi di parecchi secondi, e membri duplicati). Le cause sono state corrette agli
-  Step 10 e 11, ma la riprova sul campo non è ancora stata fatta. È la verifica più importante della
-  lista: due membri e non quattro, saldo che coincide col calcolo a mano, e la spesa che compare
-  sull'altro telefono **in entrambi i versi**
+- ~~Il ciclo di sync completo, nei due versi, coi membri e i saldi giusti~~ — **fatto il 12
+  settembre 2026** contro `npm run peer`, vedi la sezione qui sopra. Resta da fare **fra due telefoni
+  fisici**: il peer monta i moduli veri dell'app, quindi copre la logica, ma non il secondo Android
+  con la sua rete, il suo doze e il suo `AppState`
 - La **schermata di onboarding** del profilo, che al primo avvio viene mostrata **fuori** dallo
   `Stack` di expo-router — come già facevano le schermate di attesa e di errore, ma quella è la prima
   interattiva a farlo
@@ -1352,17 +1435,16 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
 - **Tutto lo Step 12**, che è nuovo di oggi: due gruppi che tengono le spese davvero separate, il
   cambio di gruppo che non lascia appesi engine o persistenza, la **ripartenza pulita** che non
   cancelli più del dovuto, e la domanda «chi sei in questo gruppo?» a chi entra
-- **Tutto lo Step 13**, anch'esso di oggi, e in particolare i due punti dove può fallire in
-  silenzio: che Android consegni il link `jutrack://join#…` **con il fragment** alla rotta `/join`
-  (se lo perdesse per strada, l'app riceverebbe un invito senza chiave), e che il foglio di
-  `Share.share` compaia davvero nella build installata. La pagina `/j` è già in produzione e
-  risponde: quello che manca è il giro completo, dal link mandato in chat al gruppo aperto
-- La **scala del poll** dello Step 16: che una spesa scritta sull'altro telefono compaia entro pochi
-  secondi mentre entrambi sono aperti, e ancora entro un minuto dopo che uno è rimasto fermo cinque
-  minuti. È il punto 5 del criterio di «fatto» del piano v3, e a occhio si vede subito
-- L'**`offlineRetryMs`** dello Step 17: telefono in aereo, due spese, rete riaccesa → devono partire
-  entro ~15 s senza toccare nulla. È il sostituto del listener di connettività, quindi è la prova che
-  quel sostituto basta
+- **Dello Step 13 resta solo `Share.share`**: che il foglio di condivisione compaia davvero nella
+  build installata. ~~Il fragment consegnato da Android~~ è **fatto il 12 settembre**, e per il giro
+  intero — WhatsApp, pagina `/j`, bottone, gruppo aperto
+- ~~La **scala del poll** dello Step 16~~ — **fatta il 12 settembre**: istantanea con entrambi
+  aperti, ed entro il minuto dopo cinque minuti di telefono fermo. La seconda misura è «entro il
+  minuto» a occhio e non col cronometro, il che basta al criterio ma non dice a quale gradino fosse
+  sceso il poll
+- ~~L'**`offlineRetryMs`** dello Step 17~~ — **fatto il 12 settembre**: due spese in aereo, rete
+  riaccesa, partite da sole in ~5 s e arrivate al peer nello stesso secondo. Il sostituto del
+  listener di connettività basta
 - **La navigazione dello Step 18**: che il gesto «indietro» dentro il tab Gruppi torni all'elenco e
   non esca dall'app; che la tab bar resti visibile sul gruppo e sparisca sulle schermate-foglia; e
   soprattutto che **un invito ricevuto in chat apra ancora `/groups/<id>` col gruppo giusto**. Gli URL
@@ -1498,27 +1580,26 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
   avvisare di nuovo; e che nelle impostazioni di sistema il canale «Sincronizzazione» esista separato
   dagli altri due. La logica ha i test, incluso il tempo a app chiusa; quello che il telefono deve
   confermare è che l'avviso compaia davvero e che non si ripeta
-- **Il selettore di widget di Android**, che la diagnostica non può guardare: tenendo premuto sulla
-  home devono comparire «JuTrack — saldo» e «JuTrack — speso questo mese» con le loro descrizioni.
-  `getWidgetInfo` prova che i provider **rispondono**; solo il selettore prova che etichette e
-  dimensioni sono quelle scritte in `app.json`. Da qui in poi **entrambi** hanno un contenuto: un
-  widget che resta vuoto adesso è un difetto, non un'attesa
-- **Lo Step 34, che è il primo pezzo di JuTrack che vive fuori dall'app e non è verificabile
-  altrimenti.** Nell'ordine: che il widget «JuTrack — saldo» aggiunto alla home **si popoli** invece
-  di restare vuoto; che una spesa che sposta il saldo si veda sulla home **senza riaprire l'app**;
-  che dopo un **riavvio del telefono** il widget si ridisegni da solo — è il caso per cui esiste il
-  task headless, ed è quello che fallirebbe in silenzio se la registrazione all'ingresso del bundle
-  non funzionasse; che cambiando gruppo dalla pill il widget **segua**; e che azzerando il telefono
-  il saldo **sparisca dalla home**. Da guardare anche il tema scuro, disegnato da un ramo che l'app
-  non percorre mai, e il tocco sul rettangolo, che deve aprire l'app. Il primo avvio dopo questo
-  step è anche la prima esecuzione di `index.js` come entry: se l'app si apre, quel cambio ha
-  funzionato
-- **Lo Step 35, che aggiunge al 34 una prova che con un widget solo non si poteva fare**: registrare
-  una spesa e guardare **quale dei due si aggiorna** — una spesa tutta mia deve muovere il totale
-  del mese e lasciare fermo il saldo, un pareggio il contrario. Poi i due widget **affiancati sulla
-  home**, che devono leggersi come due cose diverse e non come lo stesso rettangolo ripetuto; e il
-  riavvio, che qui è il task headless con due nomi da distinguere invece di uno. La prova che chiede
-  pazienza è il **primo del mese**: il totale deve ripartire da zero alla prima apertura dell'app, e
+- ~~**Il selettore di widget di Android**~~ — **guardato il 12 settembre**: entrambe le voci
+  compaiono, con i nomi giusti, 3 × 2 e le descrizioni di `app.json`. **Ma le anteprime sono due
+  riquadri vuoti con la sola icona dell'app**, invece di mostrare il widget: manca un
+  `previewImage`/`previewLayout` e Android ripiega sull'icona. Cosmetico — i widget messi sulla home
+  si popolano — e **rimandato di proposito**. È l'unico difetto trovato in tutta la sessione
+- **Dello Step 34 il cuore è fatto e resta il contorno.** Il 12 settembre il widget «saldo» si è
+  **popolato** con 33,60 €, identici al calcolo indipendente del peer: quindi `index.js` come entry,
+  il foglietto in `app_meta` e il **tema scuro** — disegnato da un ramo che l'app non percorre mai —
+  funzionano tutti e tre. Restano: che una spesa che sposta il saldo si veda sulla home **senza
+  riaprire l'app**; che dopo un **riavvio del telefono** il widget si ridisegni da solo — è il caso
+  per cui esiste il task headless, e quello che fallirebbe in silenzio se la registrazione
+  all'ingresso del bundle non funzionasse; che cambiando gruppo dalla pill il widget **segua**; che
+  azzerando il telefono il saldo **sparisca dalla home**; e il tocco sul rettangolo, che deve aprire
+  l'app
+- ~~**Lo Step 35 nella prova che con un widget solo non si poteva fare**~~ — **fatta il 12
+  settembre, e dall'aritmetica**: una spesa da 5,00 € tutta sua ha portato il totale del mese da
+  100,80 a 105,80 e lasciato il saldo **fermo** a 33,60. I due widget **affiancati sulla home** si
+  leggono come due cose diverse, e la didascalia **nomina il mese** («Spese in settembre»), che è la
+  ragione per cui non dice «questo mese». Restano il riavvio, che qui è il task headless con due
+  nomi da distinguere invece di uno, e la prova che chiede pazienza, il **primo del mese**: il totale deve ripartire da zero alla prima apertura dell'app, e
   fino ad allora la didascalia deve dire il mese giusto per il numero che mostra — è la ragione per
   cui non dice «questo mese»
 - **Lo Step 36, che dalla build del 5 settembre è finalmente provabile**: `updatePeriodMillis` vale

@@ -4,6 +4,89 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-12 — Il criterio di «fatto» end-to-end, dopo sei settimane
+
+Nessun codice scritto. È la mattina in cui è stato **guardato** quello che da agosto era scritto e
+basta, ed è la riga più vecchia di tutta la lista: il sync visto funzionare su hardware, nei due
+versi, coi membri e i saldi giusti. Mancava al piano originale, al v2, al v3, e il v4 lo aspettava
+per poter dire qualcosa dei suoi due campi nuovi.
+
+Il secondo dispositivo era `npm run peer` contro il relay in produzione, tenuto vivo per tutta la
+sessione sul gruppo di prova «Prova sync».
+
+### Il dettaglio tecnico che ha reso possibile la sessione
+
+`npm run peer -- apri` è interattivo: **in background legge EOF al primo prompt e si chiude**, come
+è successo al primo tentativo (vissuto un secondo). Tenerlo vivo richiede uno stdin che non finisca,
+e poterlo pilotare richiede di scriverci dentro. La soluzione è una **FIFO**:
+
+```bash
+mkfifo $D/peer.fifo
+{ sleep 3000 > $D/peer.fifo & }          # un writer che tiene aperta la pipe
+npm run peer -- apri --verbose < $D/peer.fifo &
+echo "stato" > $D/peer.fifo              # e da qui lo si comanda
+```
+
+Da lì il peer risponde a `stato`, `spesa <importo> [nota]` e `invito`. **`invito` ristampa un invito
+fresco**, il che toglie di mezzo la scadenza a cinque minuti: senza quel comando la sessione si
+sarebbe impantanata sul primo passo.
+
+### Cosa ha una prova rileggibile
+
+- **Il deep link col fragment, per il giro intero**: invito su WhatsApp, toccato dalla chat, pagina
+  `/j`, bottone, app aperta sul gruppo. Rimandato quattro volte da agosto. La prova che il `k=` è
+  arrivato non è un messaggio a schermo: senza la chiave il vault non si decifra e l'ingresso non
+  avverrebbe affatto.
+- **`👤 nuovo membro: Fra (a5ec0cb2…)`** — due membri e non quattro, e il membro nato dal **profilo**
+  e non da un id casuale. È la metà «app» del bug dei saldi dello Step 11, quella che un peer scritto
+  a mano non avrebbe colto: è la ragione per cui `resolveMyMemberId` era stata estratta.
+- **I due versi.** Dal peer al telefono: comparsa **istantanea e da sola**, senza tirare giù per
+  aggiornare. Dal telefono al peer: arrivata decifrata. E le quattro spese del telefono sono arrivate
+  al peer **via GET**, col contatore dei POST del peer fermo alle proprie: nessuna scorciatoia
+  locale.
+- **I saldi a mano.** `Fra: 3,85 € / Peer-default: -3,85 €` contro 32,30 in cassa e 16,15 di quota.
+- **Lo Step 17.** Due spese in aereo — **visibili in coda nell'interfaccia** — rete riaccesa,
+  partite da sole in **~5 s** e arrivate al peer **nello stesso secondo**: la coda si svuota in
+  blocco, serializzata. Cinque secondi non contraddicono i 15 s: `offlineRetryMs` è un **riprova
+  ogni** 15 s, quindi si cade in un punto a caso della finestra e il numero da confrontare è il
+  massimo.
+- **Lo Step 16.** Istantanea con entrambi aperti; entro il minuto dopo cinque minuti di telefono
+  fermo. La seconda misura è a occhio, il che basta al criterio ma non dice a quale gradino fosse
+  sceso il poll.
+- **I due widget, contro un calcolo indipendente.** Sulla home: saldo **33,60 €** e mese **105,80
+  €**. Il peer, che fa i conti per conto suo, diceva nello stesso momento `Fra: 33,60 €` e otto
+  spese che sommano 105,80 €. Identici al centesimo — ed è la differenza fra «il widget mostra un
+  numero» e «il widget mostra il numero giusto».
+- **La prova che distingue i due widget**, impossibile con un widget solo: una spesa da **5,00 €
+  tutta sua** ha portato il mese da 100,80 a 105,80 lasciando il saldo **fermo** a 33,60. Lo Step 35
+  nel suo punto esatto, dimostrato dall'aritmetica invece che a occhio.
+- **Il selettore di widget**, che la diagnostica non può guardare: entrambe le voci, nomi giusti,
+  **3 × 2**, descrizioni di `app.json`. E la didascalia **nomina il mese** («Spese in settembre»).
+- **Il tema scuro dei widget**, disegnato da un ramo che l'app non percorre mai, visto nello
+  screenshot.
+
+### Cosa è riferito e basta
+
+Il Blocco 1 per intero e il Blocco 3 tranne i widget, confermati a voce da chi aveva il telefono
+(«mi tornano», «ho testato tutto e mi sembra ok») senza un resoconto voce per voce. **Vale come
+verifica — è lui che guarda — ma è di un altro tipo, e in STATO.md sta sotto un titolo diverso
+apposta.** Le tre che chiedono di chiudere e riaprire l'app — dashboard, valuta, e il campo importo
+`12.30` in inglese — meriterebbero una seconda passata: sono quelle che si saltano senza
+accorgersene, perché a schermo non si distinguono da quelle che il gesto non l'hanno avuto.
+
+### Il difetto trovato, uno solo
+
+**Le anteprime nel selettore di widget di Android sono due riquadri vuoti** con la sola icona
+dell'app al centro, invece di mostrare come sarà il widget. Etichette, dimensioni e descrizioni sono
+giuste — vengono da `app.json` — ma manca l'anteprima vera e Android ripiega sull'icona. Cosmetico:
+i widget messi sulla home si popolano correttamente. Rimandato di proposito.
+
+**Prossimo:** quello che chiede tempo invece che attenzione — la mezz'ora dello Step 36, i tre
+giorni del promemoria, le ventiquattr'ore del caso _in ritardo_ dello Step 33 — più il caso _fermo_
+dello Step 33 e lo Step 14, che si provano insieme rigenerando un gruppo. E l'anteprima dei widget.
+
+---
+
 ## 2026-09-12 — La build installata non era quella che i documenti dicevano
 
 Nessun codice cambiato: solo una correzione di ciò che il progetto credeva di sé, e non è un
