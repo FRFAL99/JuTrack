@@ -152,7 +152,7 @@ Verso la pubblicazione — anch'essi fuori dai piani, dalla rilettura del 5 sett
 | 44 — Informativa privacy | ✅    | `GET /privacy` sul relay, IT + EN, otto test, **in produzione** |
 | 45 — Icona definitiva    | ✅    | `icon-source.svg` come unica sorgente (lo script arriva col 46) |
 | 46 — Splash e pipeline   | ✅    | `npm run icone`, sette PNG dal vettoriale, splash vero          |
-| 47 — `expo-updates`      | ⬜    | Correzioni JS senza passare dal Play Store                      |
+| 47 — `expo-updates`      | ✅    | Correzioni JS senza Play Store, con `runtimeVersion` a impronta |
 | 48 — Crash reporting     | ⬜    | Sentry, e il passaggio corrispondente nell'informativa          |
 
 Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette passi:
@@ -1367,6 +1367,53 @@ libheif.
 
 **Serve una build EAS**, perché `expo-splash-screen` è un modulo nativo e `app.json` è cambiato. Per
 non spenderne tre, entra insieme allo Step 47 e allo Step 48.
+
+## Le correzioni senza passare dal negozio (Step 47)
+
+Una volta pubblicata, il primo difetto vero lo scopri da utente. Senza questo, il giro per
+correggerlo è build EAS → revisione del Play Store → attesa, e nel frattempo chi ha installato
+l'app ha quel difetto. Con `expo-updates` il JavaScript si spedisce da qui in qualche minuto.
+
+`expo-updates@~57.0.22`, più due righe in `app.json` e un canale per profilo in `eas.json`. Nessun
+codice: col comportamento di default l'app controlla all'avvio e applica al lancio successivo.
+
+### `runtimeVersion` a impronta, e la ragione è la storia di questo progetto
+
+```json
+"runtimeVersion": { "policy": "fingerprint" },
+"updates": { "url": "https://u.expo.dev/<projectId>" }
+```
+
+La policy decide **a quali build può arrivare un aggiornamento**, ed è la scelta che conta. Con
+`appVersion` basta che coincida il numero di versione: un aggiornamento JS che si aspetta un modulo
+nativo assente **arriverebbe lo stesso**, e l'app si chiuderebbe all'avvio sul telefono di chi l'ha
+installata — senza nessun modo di rimediare se non un'altra release.
+
+Con `fingerprint` l'aggiornamento raggiunge **solo** le build il cui lato nativo combacia davvero:
+l'impronta è l'hash di 118 sorgenti — i moduli autolinkati, i config plugin, `app.json`. Oggi vale
+`da213b95…`, e si ricalcola con:
+
+```bash
+cd apps/mobile && npx expo-updates fingerprint:generate --platform android
+```
+
+È la policy giusta **proprio per questo progetto**, che ha già pagato due volte lo scarto fra ciò
+che il JS si aspetta e ciò che il binario contiene: la development build senza `expo-file-system`,
+e l'`updatePeriodMillis` che stava in una build che nessuno sapeva di avere.
+
+> ⚠️ **Fra le 118 sorgenti c'è `packageJson:scripts`.** Aggiungere un comando `npm` — come il
+> `npm run icone` dello Step 46 — **cambia l'impronta**, e da quel momento le build installate prima
+> non ricevono più aggiornamenti: non si rompe niente, ma smettono in silenzio di aggiornarsi.
+> È il prezzo di una policy severa, e va saputo prima di toccare `package.json` con leggerezza.
+
+### I canali
+
+Ogni profilo di `eas.json` ha adesso il suo (`development`, `preview`, `production`): un
+`eas update --channel preview` raggiunge le build di prova senza sfiorare quelle del negozio.
+
+**Cosa `expo-updates` non può fare:** tutto ciò che è nativo. Un modulo nuovo, un permesso, una riga
+di `app.json` — quelli restano build EAS più release. Serve a correggere il JavaScript, che in
+JuTrack è quasi tutto, non a evitare il negozio.
 
 ## La verifica su telefono del 12 settembre (Step 41)
 

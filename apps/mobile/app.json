@@ -3,6 +3,12 @@
     "name": "JuTrack",
     "slug": "jutrack",
     "version": "0.1.0",
+    "runtimeVersion": {
+      "policy": "fingerprint"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/91640a35-dac1-4d52-be1d-938c17482d76"
+    },
     "scheme": "jutrack",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
