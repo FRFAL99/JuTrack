@@ -23,7 +23,7 @@ Due problemi dichiarati, verificati contro il codice attuale (`GroupHome.tsx`, `
 2. **Comporre i sedici widget dei Grafici non è chiaro**, per tre ragioni: si compone in
    `app/dashboard.tsx` e si guarda altrove, quindi l'effetto non si vede mentre lo si decide; sedici
    righe di pari peso con nomi astratti («Dodici mesi», «Quante spese, per fascia») non hanno
-   anteprima; e due chevron non dicono *dove* finirà la riga spostata.
+   anteprima; e due chevron non dicono _dove_ finirà la riga spostata.
 
 ## Direzione (decisioni 1–3)
 
@@ -44,9 +44,9 @@ per schermata**, tutto il resto scende di un gradino di contrasto.
 già scriveva [visualdesign.md](visualdesign.md#14-tipografia); su device il peso equivalente è
 quello di default.
 
-**Perché.** Un carattere per le cifre era il cuore di *Insegna* e di *Estratto*, e sarebbe stato
+**Perché.** Un carattere per le cifre era il cuore di _Insegna_ e di _Estratto_, e sarebbe stato
 possibile senza build EAS — `expo-font` è già autolinkata. Scartando quelle due direzioni cade anche
-la ragione per introdurlo: in *Lastra* il carattere non porta identità, la porta la gerarchia. Le
+la ragione per introdurlo: in _Lastra_ il carattere non porta identità, la porta la gerarchia. Le
 due regole tipografiche che contano restano quelle che ci sono già: `numeric` (cifre tabulari) su
 ogni importo e `tightTitle` sopra i 28px.
 
@@ -88,7 +88,7 @@ parte. È la stessa trappola che lo Step 39 ha già chiuso sul separatore di rag
 **Perché.** Il secondo separatore decimale, il terzo decimale e lo zero iniziale ripetuto li
 impediva `keyboardType="decimal-pad"`. Togliendola, senza questa funzione il campo mostrerebbe
 `1,2,3` e l'errore comparirebbe solo al salvataggio. Una validazione a valle non basta: il difetto è
-che la cifra sbagliata si può *scrivere*.
+che la cifra sbagliata si può _scrivere_.
 
 ### 7 · Tre gruppi, uno aperto per volta
 
@@ -106,9 +106,9 @@ in `text` o `textMuted`; solo il segnaposto in `textFaint`. Le frasi sono funzio
 accanto a `extraSummary`.
 
 **Perché.** È la regola che `extraSummary` già applica alla tendina di oggi, estesa a tutti e tre i
-gruppi: nascondere campi *compilati* dietro una riga muta è il modo in cui i dati si perdono senza
+gruppi: nascondere campi _compilati_ dietro una riga muta è il modo in cui i dati si perdono senza
 che nessuno se ne accorga. Il commento in `tokens.ts` — «testo terziario, mai per il contenuto» —
-vale esattamente qui: un riassunto a 2,1:1 di contrasto *è* una riga muta.
+vale esattamente qui: un riassunto a 2,1:1 di contrasto _è_ una riga muta.
 
 ### 9 · Data e Nota entrano in «Dettagli»
 
@@ -128,7 +128,7 @@ toccabile è più onesta di un campo che lo finge.
 **Decisione.** I sedici widget si dividono in **Mese** (10), **Abitudini** (3) e **Fra di voi** (3).
 Il capitolo è una proprietà del widget, dichiarata come `Record<WidgetId, Chapter>`.
 
-**Perché.** «Abitudini» non è un raggruppamento inventato: è *esattamente* l'insieme dei grafici che
+**Perché.** «Abitudini» non è un raggruppamento inventato: è _esattamente_ l'insieme dei grafici che
 leggono una finestra ancorata e non il periodo scelto — quelli che oggi si portano dietro, ciascuno,
 la stessa nota di scuse. La nota sale all'intestazione del capitolo e si scrive una volta sola.
 `Anticipato e a carico` resta in «Fra di voi» e tiene la sua, perché nel suo capitolo è l'unico
@@ -145,7 +145,7 @@ l'alternativa — un selettore a sé con miniature dei grafici (turno 2c).
 
 **Perché.** La composizione non era chiara per tre ragioni, e due sono di collocazione: si componeva
 in una schermata e si guardava in un'altra, quindi l'effetto non si vedeva mentre lo si decideva; e
-l'elenco dei widget *tolti* non esisteva in nessun posto — l'unico modo di vederli era il selettore,
+l'elenco dei widget _tolti_ non esisteva in nessun posto — l'unico modo di vederli era il selettore,
 dove una riga spenta si distingue da una accesa per la posizione di un interruttore. Comporre in
 posto risolve entrambe. Il selettore con le miniature (2c) risolveva solo la terza ragione — i nomi
 astratti — e a un costo maggiore: sedici miniature da disegnare e mantenere accanto a sedici grafici
@@ -153,10 +153,10 @@ veri.
 
 ### 12 · `moveWidget` va riscritta, non riusata
 
-**Decisione.** Nasce `moveWithin(layout, id, delta, chapter)`, che scambia fra i widget *visibili
-dello stesso capitolo*. `moveWidget` si cancella con il suo unico chiamante.
+**Decisione.** Nasce `moveWithin(layout, id, delta, chapter)`, che scambia fra i widget _visibili
+dello stesso capitolo_. `moveWidget` si cancella con il suo unico chiamante.
 
-**Perché.** Il commento attuale motiva lo scambio sull'elenco *intero*, spenti compresi, con «è
+**Perché.** Il commento attuale motiva lo scambio sull'elenco _intero_, spenti compresi, con «è
 l'elenco che si sta guardando mentre si riordina». Nel selettore era vero. In modalità modifica si
 guarda un capitolo, e solo i suoi widget accesi: con la regola di oggi la freccia sposterebbe la riga
 di un posto senza che a schermo cambi niente, e a quel punto sembra rotta. **È la stessa ragione che
@@ -169,15 +169,15 @@ funzione, o al prossimo lettore sembrerà un'incoerenza.
 `pointerEvents="none"`.
 
 **Perché.** A opacità 0,45 il widget resta montato e i suoi `Pressable` restano attivi: toccare una
-barra dei mesi cambierebbe il periodo *mentre si compone*, e toccare una cella della heatmap
+barra dei mesi cambierebbe il periodo _mentre si compone_, e toccare una cella della heatmap
 scriverebbe un giorno. È il prezzo di tenere il contenuto vero a schermo, ed è un prezzo di una riga.
 
 ### 14 · La × che rimuove è `danger`, non `expense`
 
 **Decisione.** `colors.danger` (#FF6B6B) e non `colors.expense` (#F06595).
 
-**Perché.** `tokens.ts` li definisce come due cose diverse: *uscite di denaro* e *azioni
-distruttive*. Su una schermata il cui soggetto sono i soldi, il rosa di `expense` si legge come un
+**Perché.** `tokens.ts` li definisce come due cose diverse: _uscite di denaro_ e _azioni
+distruttive_. Su una schermata il cui soggetto sono i soldi, il rosa di `expense` si legge come un
 importo. Il precedente giusto è `ListRow tone="danger"` in `tu.tsx`. I due colori sono vicini a
 vista: è proprio per questo che la distinzione va tenuta dove è dichiarata, cioè nei nomi.
 
@@ -195,34 +195,34 @@ Il layout salvato si rilegge com'è perché il capitolo è una proprietà del co
 
 ## Decisioni prese (riepilogo)
 
-| Ambito                          | Scelta                                                                          |
-| -------------------------------| --------------------------------------------------------------------------------|
-| Direzione visiva                | **Lastra** — stessi token, gerarchia rifatta. Scartate Insegna ed Estratto      |
-| Tipografia                       | Nessun font nuovo. Restano `numeric` e `tightTitle`                            |
-| Moduli nativi                    | **Nessuno nuovo.** Tastierino, capitoli e modalità modifica sono JS puro       |
-| Importo in Nuova spesa           | Tastierino in-app, `TextInput` con `showSoftInputOnFocus={false}`              |
-| Tasto decimale                   | Scrive `numberFormat().decimal`, non una virgola fissa                         |
-| Validazione della cifra digitata | `applyKey` in `amount-pad.ts`, non il solo `keyboardType`                       |
-| Struttura del form               | Tre gruppi apribili, uno alla volta; il salva non si muove                     |
-| Riassunto dei gruppi chiusi      | Porta il valore vero, non un segnaposto                                        |
-| Data e Nota                      | Entrano nel gruppo «Dettagli»; la data resta non modificabile                  |
+| Ambito                           | Scelta                                                                                |
+| -------------------------------- | ------------------------------------------------------------------------------------- |
+| Direzione visiva                 | **Lastra** — stessi token, gerarchia rifatta. Scartate Insegna ed Estratto            |
+| Tipografia                       | Nessun font nuovo. Restano `numeric` e `tightTitle`                                   |
+| Moduli nativi                    | **Nessuno nuovo.** Tastierino, capitoli e modalità modifica sono JS puro              |
+| Importo in Nuova spesa           | Tastierino in-app, `TextInput` con `showSoftInputOnFocus={false}`                     |
+| Tasto decimale                   | Scrive `numberFormat().decimal`, non una virgola fissa                                |
+| Validazione della cifra digitata | `applyKey` in `amount-pad.ts`, non il solo `keyboardType`                             |
+| Struttura del form               | Tre gruppi apribili, uno alla volta; il salva non si muove                            |
+| Riassunto dei gruppi chiusi      | Porta il valore vero, non un segnaposto                                               |
+| Data e Nota                      | Entrano nel gruppo «Dettagli»; la data resta non modificabile                         |
 | Widget dei Grafici               | Tre capitoli — Mese (10), Abitudini (3), Fra di voi (3) — `Record<WidgetId, Chapter>` |
-| Composizione dei Grafici         | **In loco** (2b): «Modifica» nei Grafici stessi. Scartato un selettore a sé (2c) |
-| Riordino dei widget              | `moveWithin` per capitolo, sostituisce `moveWidget`                             |
-| Interazione in modalità modifica | Contenuto sotto `pointerEvents="none"`                                         |
-| Colore della × di rimozione      | `colors.danger`, non `colors.expense`                                          |
-| `app/dashboard.tsx`              | Redirect a `/stats` per un ciclo, poi eliminato                                |
+| Composizione dei Grafici         | **In loco** (2b): «Modifica» nei Grafici stessi. Scartato un selettore a sé (2c)      |
+| Riordino dei widget              | `moveWithin` per capitolo, sostituisce `moveWidget`                                   |
+| Interazione in modalità modifica | Contenuto sotto `pointerEvents="none"`                                                |
+| Colore della × di rimozione      | `colors.danger`, non `colors.expense`                                                 |
+| `app/dashboard.tsx`              | Redirect a `/stats` per un ciclo, poi eliminato                                       |
 
 ## Step
 
 Nessuno step è nel codice. Prosegue la numerazione globale da 49, e vale la stessa regola delle
 altre serie: **uno step per sessione**.
 
-| Step                                        | Stato | Cosa contiene                                                              |
-| -------------------------------------------- | ----- | --------------------------------------------------------------------------- |
-| 49 — Il tastierino in-app per l'importo      | ⬜    | `TextInput` senza tastiera di sistema, `amount-pad.ts` con `applyKey`, tasto decimale per lingua (decisioni 4, 5, 6) |
-| 50 — I tre gruppi apribili della nuova spesa | ⬜    | `useState<GroupKey \| null>`, riassunto col valore vero, Data/Nota in «Dettagli» (decisioni 7, 8, 9) |
-| 51 — I capitoli dei grafici                  | ⬜    | `Record<WidgetId, Chapter>`, i sedici widget divisi in Mese/Abitudini/Fra di voi (decisione 10) |
+| Step                                         | Stato | Cosa contiene                                                                                                           |
+| -------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------- |
+| 49 — Il tastierino in-app per l'importo      | ⬜    | `TextInput` senza tastiera di sistema, `amount-pad.ts` con `applyKey`, tasto decimale per lingua (decisioni 4, 5, 6)    |
+| 50 — I tre gruppi apribili della nuova spesa | ⬜    | `useState<GroupKey \| null>`, riassunto col valore vero, Data/Nota in «Dettagli» (decisioni 7, 8, 9)                    |
+| 51 — I capitoli dei grafici                  | ⬜    | `Record<WidgetId, Chapter>`, i sedici widget divisi in Mese/Abitudini/Fra di voi (decisione 10)                         |
 | 52 — La composizione in loco                 | ⬜    | «Modifica» nei Grafici, `moveWithin`, `pointerEvents="none"`, × `danger`, redirect di `dashboard.tsx` (decisioni 11–15) |
 
 ## Resta aperto
@@ -233,7 +233,7 @@ Quattro punti discussi nei mockup e non decisi in questo giro:
   scorrere. Ridurre il default contraddirebbe la ragione scritta in `layout.ts` («una sottrazione
   fatta d'ufficio a chi aggiorna»), che però era stata scritta quando la schermata era una lista
   sola. Va deciso, non ereditato.
-- **Home spese e selettore gruppi.** Non ridisegnate in questo giro. In *Lastra* cambierebbero poco
+- **Home spese e selettore gruppi.** Non ridisegnate in questo giro. In _Lastra_ cambierebbero poco
   — la home è già la schermata più curata — ma «un solo numero grande per schermata» andrebbe
   verificato anche lì.
 - **Tema chiaro.** Fuori scope, come nel redesign precedente. I token nuovi non ce ne sono, quindi
