@@ -19,12 +19,16 @@
  *   npm run icone              rigenera i sette PNG
  *   npm run icone -- --verifica  confronta senza scrivere, esce 1 se divergono
  */
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 import sharp from 'sharp';
 
 const ASSETS = join(dirname(fileURLToPath(import.meta.url)), '..', 'assets');
+/** Gli asset del negozio non stanno in `assets/`: non entrano nell'app, ci vanno caricati
+ *  a mano nel Play Console, e tenerli separati evita di gonfiare il bundle. */
+const NEGOZIO = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'store');
 const SORGENTE = join(ASSETS, 'icon-source.svg');
 
 /** Il segno e' disegnato su una tela di 1024: e' la risoluzione a cui si rasterizza
@@ -50,7 +54,11 @@ const RE_SEGNO = /<g id="mark">[\s\S]*?<\/g>/;
 
 type Variante = {
   readonly file: string;
+  /** Dove scrivere. Di default `assets/`. */
+  readonly dove?: string;
+  /** Lato del quadrato, oppure larghezza se c'e' `alto`. */
   readonly lato: number;
+  readonly alto?: number;
   /** Se dato, l'alpha viene appiattito su questo colore e il PNG esce a tre canali. */
   readonly appiattisciSu?: string;
   readonly svg: (base: string, fondo: string) => string;
@@ -85,7 +93,71 @@ function varianti(fondo: string): readonly Variante[] {
     // Lo splash: solo il segno, su un fondo che mette app.json. Trasparente apposta,
     // cosi' lo stesso PNG serve al tema chiaro e a quello scuro.
     { file: 'splash-icon.png', lato: 1024, svg: soloSegno },
+    // L'immagine in primo piano della scheda del Play Store: 1024x500, obbligatoria.
+    // Non e' un asset dell'app, quindi va in `store/` e non in `assets/`.
+    {
+      file: 'feature-graphic-1024x500.png',
+      dove: NEGOZIO,
+      lato: 1024,
+      alto: 500,
+      appiattisciSu: fondo,
+      svg: (s) => insegna(s, fondo),
+    },
   ];
+}
+
+/**
+ * L'insegna della scheda del Play Store: il segno a sinistra, il nome a destra.
+ *
+ * Riusa la geometria del vettoriale invece di ridisegnarla: `<defs>` porta la maschera
+ * con la J, e il gruppo `mark` viene riscalato dentro la tela da 1024x500. Cosi' il
+ * banner del negozio e l'icona non possono divergere, che e' l'unico modo di tenerli
+ * uguali senza ricordarsi di farlo.
+ *
+ * **Il testo dipende da un font installato sulla macchina**, ed e' precisamente la
+ * dipendenza invisibile che il commento dell'icona dice di evitare. Qui si accetta, per
+ * due ragioni: l'insegna e' un asset del negozio che si carica una volta, e non entra
+ * nell'app; e l'assenza del font non e' silenziosa, perche' `fontDisponibile()` la
+ * ferma prima di disegnare invece di lasciare che ne venga sostituito un altro.
+ */
+function insegna(base: string, fondo: string): string {
+  const defs = estrai(base, /<defs>[\s\S]*?<\/defs>/, 'il blocco <defs> con la maschera')[0];
+  const segno = estrai(base, RE_SEGNO, 'il gruppo id="mark"')[0];
+
+  // Il segno misura 370x514 dentro una tela di 1024, centrato in (512,512). Portato a
+  // 300 di altezza sta nella fascia da 500 con un respiro di 100 sopra e sotto.
+  const scala = 300 / 514;
+  const centro = 512 * scala;
+  // 248 e non 204: il blocco segno+testo misura circa 744 di larghezza, e centrarlo
+  // sulla tela invece di appoggiarlo a sinistra lo tiene intero anche dove il Play
+  // Store ritaglia l'insegna ai lati.
+  const tx = 248 - centro;
+  const ty = 250 - centro;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500" width="1024" height="500">
+${defs}
+<rect width="1024" height="500" fill="${fondo}"/>
+<g transform="translate(${tx.toFixed(2)},${ty.toFixed(2)}) scale(${scala.toFixed(4)})">${segno}</g>
+<text x="420" y="252" font-family="${FONT}" font-size="86" font-weight="700" fill="${INCHIOSTRO}">JuTrack</text>
+<text x="422" y="304" font-family="${FONT}" font-size="28" font-weight="400" fill="${NEBBIA}">Dividi le spese. Cifrate sul telefono.</text>
+</svg>`;
+}
+
+/** Il font dell'insegna. Vicino al carattere che Android usa dentro l'app, quindi il
+ *  banner non stona con le schermate che gli stanno accanto sulla scheda. */
+const FONT = 'Noto Sans';
+const INCHIOSTRO = '#16171C';
+const NEBBIA = '#6B7080';
+
+/** Muore se il font non c'e', invece di lasciare che librsvg ne sostituisca un altro:
+ *  una sostituzione non da' errore e si nota solo guardando l'immagine. */
+function fontDisponibile(): boolean {
+  try {
+    const elenco = execFileSync('fc-list', [':', 'family'], { encoding: 'utf8' });
+    return elenco.split(/[,\n]/).some((f) => f.trim() === FONT);
+  } catch {
+    return false;
+  }
 }
 
 /** Ricolora di bianco il solo `fill` dentro `<g id="mark">`: quelli della maschera
@@ -101,7 +173,8 @@ function bianco(svg: string): string {
 
 async function rendi(v: Variante, base: string, fondo: string): Promise<Buffer> {
   let img = sharp(Buffer.from(v.svg(base, fondo)), { density: 72 });
-  if (v.lato !== TELA) img = img.resize(v.lato, v.lato, { fit: 'fill' });
+  const alto = v.alto ?? v.lato;
+  if (v.lato !== TELA || v.alto !== undefined) img = img.resize(v.lato, alto, { fit: 'fill' });
   if (v.appiattisciSu) img = img.flatten({ background: v.appiattisciSu });
   return img.png({ compressionLevel: 9 }).toBuffer();
 }
@@ -128,17 +201,26 @@ async function main(): Promise<void> {
   const fondo = estrai(base, RE_FONDO, 'il rettangolo id="ground" con un fill esadecimale')[1]!;
   estrai(base, RE_SEGNO, 'il gruppo id="mark"');
 
+  if (!fontDisponibile()) {
+    throw new Error(
+      `Il font «${FONT}» non e' installato: l'insegna del negozio uscirebbe con un ` +
+        `carattere sostituito, e non lo direbbe nessuno. Installarlo, oppure cambiare ` +
+        `FONT in icone.mts con uno presente in \`fc-list\`.`,
+    );
+  }
+
   console.log(`Sorgente: ${SORGENTE}`);
   console.log(`Fondo letto dal file: ${fondo}\n`);
 
   let divergenti = 0;
   for (const v of varianti(fondo)) {
     const prodotto = await rendi(v, base, fondo);
-    const dove = join(ASSETS, v.file);
+    const dove = join(v.dove ?? ASSETS, v.file);
 
     if (!verifica) {
+      await mkdir(dirname(dove), { recursive: true });
       await writeFile(dove, prodotto);
-      console.log(`  scritto  ${v.file.padEnd(30)} ${v.lato}x${v.lato}`);
+      console.log(`  scritto  ${v.file.padEnd(30)} ${v.lato}x${v.alto ?? v.lato}`);
       continue;
     }
 
