@@ -254,15 +254,44 @@ Piano v7 — [piano-v7-data-e-vocabolario-del-gruppo.md](piano-v7-data-e-vocabol
 
 | Step                                    | Stato | Cosa contiene                                                                    |
 | --------------------------------------- | ----- | -------------------------------------------------------------------------------- |
-| 58 — La data della spesa si sceglie     | ⬜    | `MonthGrid` condiviso coi filtri, «Oggi»/«Ieri», `assertIsoDate` in scrittura    |
+| 58 — La data della spesa si sceglie     | ✅    | `MonthGrid` condiviso coi filtri, «Oggi»/«Ieri», `assertIsoDate` in scrittura    |
 | 59 — Il vocabolario del gruppo          | ⬜    | Catalogo `tag`/`store` nel vault, chiave derivata dal nome, due schermate        |
 | 60 — Le correzioni dal check del codice | ⬜    | Italiano fisso negli `Alert`, `isKnownCurrency` mai collegata, `peak` divergente |
 
-**Il 58 e il 59 toccano la stessa schermata** («Nuova spesa» → «Dettagli»), e il **59 è l'unico dei
-tre con un rischio vero**: tocca modello, export (formato a **v3**) e form insieme. Il trabocchetto
-scritto nel piano e da non perdere: `app/(gruppo)/expense/[id].tsx` **omette `date` dalla patch**,
-quindi senza toccarlo la data sarebbe scegliabile su una spesa nuova e scartata in silenzio su una in
-modifica — cioè sembrerebbe funzionare.
+**Lo Step 58 è entrato il 13 settembre.** La data di una spesa si sceglie: la riga di
+«Dettagli» che era di sola lettura apre due pillole — «Oggi» e «Ieri», che sono la risposta
+quasi sempre — e sotto la griglia del mese. La griglia è la stessa dei filtri dei Grafici,
+estratta in `features/calendar/MonthGrid.tsx`: **non sa cosa sia un intervallo né cosa sia una
+scelta singola**, riceve `stateOf` e `onPress`, e i due selettori restano due perché la
+differenza — un giorno o due — sta nelle sei righe di chi chiama e non nelle quarantadue
+celle. `DayGridPicker` è ora un involucro, a comportamento invariato.
+
+Tre cose emerse scrivendo, che il piano non aveva:
+
+1. **Il contenitore di `DayGridPicker` non poteva diventare un frammento.** Il genitore
+   (`PeriodPicker`) è un flex con `gap: spacing.md` e prima riceveva **un** figlio solo:
+   restituire griglia e didascalia come fratelli avrebbe cambiato la spaziatura di una
+   schermata che questo step non doveva toccare.
+2. **La riga della data è diventata un pulsante alto quanto una riga di testo.** Da contenuto
+   a bersaglio senza che nulla lo dicesse: ha preso `minHeight: 44` e il fondo premuto, come
+   il `minHeight: 52` di `Button`.
+3. **Le due chiavi del navigatore mese sono uscite da `stats.grid`** e stanno in un blocco
+   `calendar`: una chiave `stats.*` letta da un selettore della nuova spesa è un nome che
+   mente. `yesterdayIso` è uscita da dentro `formatDayTitle`, dove era un `Date` locale con
+   un `setDate`, e ora passa da `addDays` — aritmetica sulla stringa, nessun fuso.
+
+`MonthGrid` legge il mese corrente dal `today` che riceve invece di rileggere l'orologio:
+due letture nello stesso componente possono cadere ai lati della mezzanotte, e la freccia
+resterebbe accesa su un mese dalle celle tutte spente.
+
+**1338 test verdi** (651 core + 633 app + 54 relay), typecheck, lint e `format:check` puliti,
+e il bundle Android esporta.
+
+**Il 59 e il 60 restano da fare**, e il **59 è quello con un rischio vero**: tocca la stessa
+schermata («Nuova spesa» → «Dettagli») ma insieme a modello ed export (formato a **v3**). Il trabocchetto che
+il piano segnalava — `app/(gruppo)/expense/[id].tsx` che **ometteva `date` dalla patch** — è
+chiuso dal 58: senza toccarlo la data sarebbe stata scegliabile su una spesa nuova e scartata in
+silenzio su una in modifica, cioè avrebbe fatto finta di funzionare.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani

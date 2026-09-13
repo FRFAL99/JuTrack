@@ -29,6 +29,11 @@ export default function EditExpenseScreen() {
   const handleSubmit = (values: ExpenseFormValues): void => {
     store.updateExpense(expense.id, {
       amountCents: values.amountCents,
+      // `date` **va scritta**, dallo Step 58: prima il form non la lasciava cambiare, quindi
+      // ometterla qui non si notava. Da quando si sceglie, ometterla sarebbe il difetto
+      // peggiore possibile — la data si potrebbe correggere a schermo e sparirebbe al
+      // salvataggio, senza che nulla lo dica.
+      date: values.date,
       categoryId: values.categoryId,
       note: values.note,
       store: values.store,

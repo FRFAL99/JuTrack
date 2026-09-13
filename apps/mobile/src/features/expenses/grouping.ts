@@ -1,4 +1,4 @@
-import type { Cents, Expense } from '@jutrack/core';
+import { addDays, type Cents, type Expense } from '@jutrack/core';
 import { t } from '@/i18n/translate';
 
 export interface DaySection {
@@ -37,14 +37,24 @@ export function todayIso(now: Date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Data locale di ieri in formato `YYYY-MM-DD`.
+ *
+ * Passa da `addDays` di `@jutrack/core`, che fa aritmetica sulla **stringa** in UTC: il
+ * primo gennaio torna al 31 dicembre dell'anno prima senza che qui si debba sapere quanti
+ * giorni ha dicembre. Era scritta in linea dentro `formatDayTitle` con un `Date` locale e
+ * un `setDate`; dallo Step 58 la chiede anche `DayPicker`, per la pillola «Ieri».
+ */
+export function yesterdayIso(now: Date = new Date()): string {
+  return addDays(todayIso(now), -1);
+}
+
 /** Intestazione leggibile per una data. */
 export function formatDayTitle(isoDate: string, now: Date = new Date()): string {
   const today = todayIso(now);
   if (isoDate === today) return t('date.today');
 
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (isoDate === todayIso(yesterday)) return t('date.yesterday');
+  if (isoDate === yesterdayIso(now)) return t('date.yesterday');
 
   const [yearPart, monthPart, dayPart] = isoDate.split('-');
   const year = Number(yearPart);

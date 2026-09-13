@@ -274,6 +274,10 @@ export const en: Dictionary = {
       version: 'JuTrack {{app}} · core {{core}}',
     },
   },
+  calendar: {
+    previousMonth: 'Previous month',
+    nextMonth: 'Next month',
+  },
   stats: {
     filters: {
       periodA11y: 'Period: {{label}}. Tap to change the filters',
@@ -312,8 +316,6 @@ export const en: Dictionary = {
       fromTo: 'From {{opening}} to {{closing}}',
     },
     grid: {
-      previousMonth: 'Previous month',
-      nextMonth: 'Next month',
       startHint: 'Tap a day to start a new range.',
       endHint: 'From {{day}}: tap the day it ends.',
     },

@@ -104,6 +104,56 @@ describe('VaultStore — spese', () => {
     ).toThrow(/non può essere negativo/);
   });
 
+  it('rifiuta una data malformata', () => {
+    const { store, a } = makeCouple();
+    expect(() =>
+      store.addExpense({
+        amountCents: 1000,
+        date: '2026-8-1',
+        paidBy: a,
+        split: { mode: 'single', shares: { [a]: 1000 } },
+      }),
+    ).toThrow(/data non valida/);
+  });
+
+  // Il 30 febbraio ha la forma giusta: se passasse, `monthOf` lo metterebbe in un mese
+  // esistente e la spesa sarebbe contata in un giorno che non c'è.
+  it('rifiuta un giorno che non esiste', () => {
+    const { store, a } = makeCouple();
+    expect(() =>
+      store.addExpense({
+        amountCents: 1000,
+        date: '2026-02-30',
+        paidBy: a,
+        split: { mode: 'single', shares: { [a]: 1000 } },
+      }),
+    ).toThrow(/data non valida/);
+  });
+
+  it('rifiuta una data malformata anche in modifica', () => {
+    const { store, a, b } = makeCouple();
+    const created = store.addExpense({
+      amountCents: 1000,
+      date: '2026-08-01',
+      paidBy: a,
+      split: buildSplit('equal', 1000, [a, b]),
+    });
+    expect(() => store.updateExpense(created.id, { date: 'ieri' })).toThrow(/data non valida/);
+    // La spesa non si è mossa: la guardia scatta prima della transazione.
+    expect(store.getExpense(created.id)?.date).toBe('2026-08-01');
+  });
+
+  it('accetta una data scelta diversa da oggi', () => {
+    const { store, a, b } = makeCouple();
+    const created = store.addExpense({
+      amountCents: 1000,
+      date: '2026-08-01',
+      paidBy: a,
+      split: buildSplit('equal', 1000, [a, b]),
+    });
+    expect(store.updateExpense(created.id, { date: '2024-02-29' }).date).toBe('2024-02-29');
+  });
+
   it('rifiuta uno split incoerente', () => {
     const { store, a, b } = makeCouple();
     expect(() =>

@@ -293,6 +293,15 @@ export const it = {
       version: 'JuTrack {{app}} · core {{core}}',
     },
   },
+  /**
+   * La griglia di un mese, condivisa fra il filtro di periodo dei Grafici e la data della
+   * spesa (Step 58). Stava sotto `stats.grid`: da quando ha due chiamanti, una chiave
+   * `stats.*` letta da un selettore della nuova spesa sarebbe un nome che mente.
+   */
+  calendar: {
+    previousMonth: 'Mese precedente',
+    nextMonth: 'Mese successivo',
+  },
   stats: {
     filters: {
       periodA11y: 'Periodo: {{label}}. Tocca per cambiare i filtri',
@@ -331,8 +340,6 @@ export const it = {
       fromTo: 'Dal {{opening}} al {{closing}}',
     },
     grid: {
-      previousMonth: 'Mese precedente',
-      nextMonth: 'Mese successivo',
       startHint: 'Tocca un giorno per cominciare un intervallo nuovo.',
       endHint: 'Dal {{day}}: tocca il giorno in cui finisce.',
     },

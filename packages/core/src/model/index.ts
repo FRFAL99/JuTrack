@@ -35,6 +35,8 @@ export {
   type NumberFormat,
 } from './money';
 
+export { assertIsoDate, isIsoDate } from './dates';
+
 export { newId, budgetKey, parseBudgetKey } from './ids';
 
 export {

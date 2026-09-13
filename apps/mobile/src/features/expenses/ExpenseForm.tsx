@@ -32,6 +32,7 @@ import { AvatarStack } from '@/components/AvatarStack';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
+import { DayPicker } from '@/features/calendar/DayPicker';
 import { CategoryIcon } from '@/features/categories/CategoryIcon';
 import { useCategories, useCurrencyCode, useExpenses, useMembers, useMyMemberId } from '@/state';
 import { numeric, useTheme } from '@/theme';
@@ -163,6 +164,16 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
    * insieme sullo stesso schermo non ci stanno.
    */
   const [writingNote, setWritingNote] = useState(false);
+  /**
+   * La data è **stato**, dallo Step 58.
+   *
+   * Era `const date = initial?.date ?? todayIso()`, una costante fra i valori derivati: una
+   * spesa nasceva sempre oggi e nessuna poteva essere corretta. Il default non cambia — nove
+   * volte su dieci la spesa si registra mentre la si fa.
+   */
+  const [date, setDate] = useState(initial?.date ?? todayIso());
+  /** La griglia è chiusa: a dire che la data è già quella giusta basta la riga. */
+  const [pickingDate, setPickingDate] = useState(false);
   const [store, setStore] = useState(initial?.store ?? '');
   const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
   const [tagDraft, setTagDraft] = useState('');
@@ -234,7 +245,6 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
 
   const payer = members.find((m) => m.id === paidBy);
   const category = categories.find((c) => c.id === categoryId);
-  const date = initial?.date ?? todayIso();
 
   const whoSummary: SummaryPart[] =
     payer === undefined
@@ -562,18 +572,43 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
           />
           {openGroup === 'details' && (
             <View style={{ padding: spacing.lg, gap: spacing.md }}>
-              {/* La data **non è modificabile**, come non lo era prima: un selettore vuole
-                  un modulo nativo (`@react-native-community/datetimepicker`), quindi una
-                  build EAS nuova. Mostrarla resta utile — su una spesa vecchia dice di
-                  quale giorno si sta parlando — e una riga che non si tocca è più onesta di
-                  un campo che finge. */}
-              <View style={styles.detailRow}>
-                <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-                  {t('expense.date')}
-                </Text>
-                <Text style={[numeric, { color: colors.text, fontSize: fontSize.sm }]}>
-                  {formatDayTitle(date)}
-                </Text>
+              {/* La data **si sceglie**, dallo Step 58. Il commento che stava qui diceva
+                  che serviva `@react-native-community/datetimepicker`, e quindi una build
+                  EAS: era vero quando è stato scritto e ha smesso di esserlo allo Step 27,
+                  quando i filtri dei Grafici hanno prodotto una griglia di giorni fatta di
+                  `Pressable`. È quella, ora condivisa in `features/calendar/`.
+
+                  Si apre **in linea** e non in un foglio: il gruppo apribile è già il
+                  contenitore, e un `Modal` dentro un gruppo aperto sarebbe un secondo
+                  livello per la stessa domanda. */}
+              <View style={{ gap: spacing.sm }}>
+                <Pressable
+                  onPress={() => setPickingDate((open) => !open)}
+                  accessibilityRole="button"
+                  accessibilityState={{ expanded: pickingDate }}
+                  /* Il nome del campo e il suo valore insieme: la riga da sola direbbe
+                     «Ieri» senza dire di cosa, come per i tre gruppi qui sopra. */
+                  accessibilityLabel={`${t('expense.date')}, ${formatDayTitle(date)}`}
+                  style={({ pressed }) => [
+                    styles.detailRow,
+                    { backgroundColor: pressed ? colors.surfacePressed : 'transparent' },
+                  ]}
+                >
+                  <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
+                    {t('expense.date')}
+                  </Text>
+                  <View style={styles.dateValue}>
+                    <Text style={[numeric, { color: colors.text, fontSize: fontSize.sm }]}>
+                      {formatDayTitle(date)}
+                    </Text>
+                    <Feather
+                      name={pickingDate ? 'chevron-up' : 'chevron-down'}
+                      size={16}
+                      color={colors.textFaint}
+                    />
+                  </View>
+                </Pressable>
+                {pickingDate && <DayPicker value={date} onChange={setDate} />}
               </View>
 
               <View style={{ gap: spacing.sm }}>
@@ -891,7 +926,16 @@ const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   people: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   shareRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  detailRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  // `minHeight: 44` da quando la riga si tocca (Step 58): prima era testo, e un bersaglio
+  // alto quanto una riga di `sm` sarebbe sotto la soglia di qualunque dito. Stessa famiglia
+  // del `minHeight: 52` di `Button` e dell'`hitSlop` dei chevron del mese.
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    minHeight: 44,
+  },
+  dateValue: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   noteRow: { flexDirection: 'row', alignItems: 'center' },
   // `minWidth` e non `width`: le tre icone sono da 22, ma al posto della prima c'è la pila
   // degli avatar, che è più larga di quanto sono i cerchi perché si sovrappongono. Fissata a

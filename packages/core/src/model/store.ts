@@ -22,6 +22,7 @@ import {
   writeRecord,
 } from './doc';
 import { normalizeStore, normalizeTags } from '../insights/naming';
+import { assertIsoDate } from './dates';
 import { newId } from './ids';
 import { assertCents, splitByWeights, splitEvenly, type Cents } from './money';
 import type {
@@ -184,6 +185,9 @@ export class VaultStore {
   addExpense(input: NewExpenseInput): Expense {
     assertCents(input.amountCents);
     if (input.amountCents < 0) throw new Error('l importo di una spesa non può essere negativo');
+    // Dallo Step 58 la data la sceglie una persona e non più `todayIso()`. Vedi `dates.ts`:
+    // una data malformata non si manifesta qui, sparisce dai totali mensili molto più tardi.
+    assertIsoDate(input.date);
     assertSplitBalances(input.split, input.amountCents);
 
     const id = newId(this.random);
@@ -229,7 +233,10 @@ export class VaultStore {
     const fields: Record<string, unknown> = { updatedAt: this.timestamp() };
     if (patch.amountCents !== undefined) fields.amountCents = patch.amountCents;
     if (patch.currency !== undefined) fields.currency = patch.currency;
-    if (patch.date !== undefined) fields.date = patch.date;
+    if (patch.date !== undefined) {
+      assertIsoDate(patch.date);
+      fields.date = patch.date;
+    }
     if (patch.categoryId !== undefined) fields.categoryId = patch.categoryId;
     if (patch.note !== undefined) fields.note = patch.note;
     if (patch.store !== undefined) fields.store = normalizeStore(patch.store);

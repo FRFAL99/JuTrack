@@ -9,6 +9,7 @@ import {
   groupByDay,
   shortMonthLabel,
   todayIso,
+  yesterdayIso,
 } from './grouping';
 
 function expense(date: string, amountCents: number, id = date + amountCents): Expense {
@@ -196,5 +197,28 @@ describe('in inglese', () => {
   it('ripiega ancora sull input se il mese non esiste', () => {
     expect(formatMonthTitle('2026-13', now)).toBe('2026-13');
     expect(shortMonthLabel('2026-99')).toBe('2026-99');
+  });
+});
+
+describe('yesterdayIso', () => {
+  it('torna indietro di un giorno', () => {
+    expect(yesterdayIso(new Date(2026, 8, 13, 10))).toBe('2026-09-12');
+  });
+
+  // Il caso per cui esiste `addDays` invece di un `setDate` scritto a mano: qui il mese e
+  // l'anno cambiano insieme, e nessuno deve sapere quanti giorni ha dicembre.
+  it('scavalca il primo dell anno', () => {
+    expect(yesterdayIso(new Date(2026, 0, 1, 10))).toBe('2025-12-31');
+  });
+
+  it('scavalca il primo del mese, e conosce gli anni bisestili', () => {
+    expect(yesterdayIso(new Date(2026, 2, 1, 10))).toBe('2026-02-28');
+    expect(yesterdayIso(new Date(2024, 2, 1, 10))).toBe('2024-02-29');
+  });
+
+  // È la data **locale**, come `todayIso`: costruita da `toISOString` darebbe già il giorno
+  // dopo per una spesa registrata la sera in Italia.
+  it('resta sul giorno locale anche a tarda sera', () => {
+    expect(yesterdayIso(new Date(2026, 8, 13, 23, 30))).toBe('2026-09-12');
   });
 });
