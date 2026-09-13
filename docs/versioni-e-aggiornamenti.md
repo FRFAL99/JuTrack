@@ -85,6 +85,16 @@ git diff <commit-della-build-installata>..HEAD --stat -- apps/mobile/package.jso
 
 Vuoto = il bundle non può riferirsi a niente che non ci sia già.
 
+## Registro degli aggiornamenti via etere
+
+| Data       | Canale       | Impronta    | Cosa portava                                                                                                            |
+| ---------- | ------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------- |
+| 2026-09-13 | `production` | `d862b56d…` | Step 49–57, dal commit `6dfbbeb`. Il **primo** della storia del progetto: gruppo `dcf68b3d-30a1-4214-b85d-e91f76024c2d` |
+
+Si rilegge con `npx eas-cli channel:view production` e `npx eas-cli update:list`. Per tornare
+indietro: `npx eas-cli update:rollback`, oppure ripubblicare dal commit precedente — un aggiornamento
+via etere si disfa in un minuto, ed è la ragione per cui è meno rischioso di una build.
+
 ## Il numero che si legge in fondo a «Tu»
 
 Arriva da `Constants.expoConfig?.version`, cioè da `app.json`. Fino al 13 settembre era la stringa
