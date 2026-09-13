@@ -4,7 +4,7 @@ Una riga per step, dallo 0 in avanti. È l'unico posto in cui guardare per saper
 uno step, a che piano appartiene e se è chiuso**; com'è andata sta in [devlog.md](devlog.md), dove
 siamo adesso sta in [STATO.md](STATO.md).
 
-## Prossimo numero libero: **61**
+## Prossimo numero libero: **67**
 
 ## Le regole
 
@@ -86,6 +86,12 @@ Stato: ✅ chiuso · 🟡 in parte · ⬜ non fatto.
 | 58  | La data della spesa si sceglie          | v7        | ✅    | —          |
 | 59  | Il vocabolario del gruppo               | v7        | ✅    | —          |
 | 60  | Le correzioni dal check del codice      | v7        | ✅    | 2026-09-13 |
+| 61  | Il foglio di calcolo al posto dei CSV   | v8        | ⬜    | —          |
+| 62  | Il file Excel contiene tutto il gruppo  | v8        | ⬜    | —          |
+| 63  | Il backup dice di che gruppo è          | v8        | ⬜    | —          |
+| 64  | L'import sceglie un file                | v8        | ⬜    | —          |
+| 65  | La cartella, e il backup che si fa solo | v8        | ⬜    | —          |
+| 66  | L'avviso «il backup invecchia»          | v8        | ⬜    | —          |
 
 ## Le note che la tabella non può contenere
 
@@ -104,3 +110,5 @@ negozio`. Lo Step 45 ha prodotto `icon-source.svg`; lo script che lo consuma è 
   [v6](piano-v6-spesa-rapida-e-grafici-componibili.md) e
   [v7](piano-v7-data-e-vocabolario-del-gruppo.md). Il [v5](piano-v5-notifiche-widget-profilo.md) è
   a dodici step su tredici: manca solo la coda dello Step 41.
+- **Il [v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md) è aperto**, scritto il 13
+  settembre 2026 e non ancora cominciato: occupa gli Step 61–66, tutti ⬜.

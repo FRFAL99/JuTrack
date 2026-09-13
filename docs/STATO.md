@@ -63,9 +63,13 @@ del 5 settembre (commit `9606e0f`) combacia con `main`, e tutto ciò che è entr
 
 ## Il piano in corso
 
-**Nessuno.** Il Piano v7 è chiuso il 13 settembre con lo Step 60. Il prossimo piano parte da
-[piano-TEMPLATE.md](piano-TEMPLATE.md), si chiama `piano-v8-<slug>.md` e dichiara in testa quali
-step occupa — il primo libero è il **61**, come dice [registro.md](registro.md).
+Il **[v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md) — i dati escono in un foglio di
+calcolo, e il backup si fa da solo**, scritto il 13 settembre e non ancora cominciato. Occupa gli
+**Step 61–66**: il `.xlsx` prende il posto dei due CSV (e supera
+[l'ADR 0003](adr/0003-formati-di-export.md)), il formato JSON sale alla v4 col nome del gruppo,
+l'import impara a scegliere un file invece di farsi incollare, e il backup di tutti i gruppi si
+scrive da sé in una cartella scelta una volta. **Nessuno dei sei step chiede una build EAS**, quindi
+`version` in `app.json` resta invariata.
 
 ## Dove sta cosa
 
