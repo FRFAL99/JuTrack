@@ -1669,21 +1669,3 @@ Quello che chiede **tempo** più che attenzione: la mezz'ora ad app chiusa dello
 giorni del promemoria dello Step 31, le ventiquattr'ore del caso _in ritardo_ dello Step 33, e il
 primo del mese dello Step 35. Più lo Step 33 nel suo caso _fermo_ e lo Step 14, che si provano
 insieme rigenerando un gruppo. E le voci della lista qui sotto che questa sessione non ha toccato.
-
-## Se un giorno si vuole pubblicare
-
-Non è stato fatto, per scelta: si sta ancora provando la development build — quella del 5 settembre,
-che è la punta di `main`.
-
-```bash
-cd apps/mobile && npx eas-cli build -p android --profile preview      # APK autonomo, senza Metro
-cd apps/mobile && npx eas-cli build -p android --profile production   # app bundle per il Play Store
-```
-
-- Piano EAS Free: **15 build Android al mese**, concorrenza 1, timeout 45 minuti. Ne sono state
-  consumate **tre in agosto** (1, 12 e 15) e **una a settembre** (il 5), tutte col profilo
-  `development` e tutte riuscite, fra i 13 e i 19 minuti l'una.
-- Il keystore è custodito da EAS ed è quello che lega gli aggiornamenti all'app già installata:
-  perderlo significa non poter più aggiornare quell'installazione.
-- Il profilo `preview` è quello che serve per far provare l'app a qualcun altro: gira senza Metro,
-  quindi senza il computer acceso.

@@ -117,3 +117,23 @@ Arriva da `Constants.expoConfig?.version`, cioè da `app.json`. Fino al 13 sette
 `'0.1.0'` **scritta a mano** nel componente: la versione pubblicata era già 1.0.0, quindi l'unico
 numero che un tester potesse riferire era falso. Un numero scritto due volte è un numero che prima o
 poi diverge.
+
+## Le build EAS, e la quota
+
+Una build nativa si fa da `apps/mobile`, con uno dei due profili:
+
+```bash
+cd apps/mobile && npx eas-cli build -p android --profile preview      # APK autonomo, senza Metro
+cd apps/mobile && npx eas-cli build -p android --profile production   # app bundle per il Play Store
+```
+
+- Piano EAS Free: **15 build Android al mese**, concorrenza 1, timeout 45 minuti. Ne sono state
+  consumate **tre in agosto** (1, 12 e 15) e **una a settembre** (il 5), tutte col profilo
+  `development` e tutte riuscite, fra i 13 e i 19 minuti l'una.
+- Il keystore è custodito da EAS ed è quello che lega gli aggiornamenti all'app già installata:
+  perderlo significa non poter più aggiornare quell'installazione.
+- Il profilo `preview` è quello che serve per far provare l'app a qualcun altro: gira senza Metro,
+  quindi senza il computer acceso.
+
+È il motivo per cui ogni piano dichiara nella decisione 0 se consuma una build: quindici al mese
+sono poche, e un update via etere non ne consuma nessuna.
