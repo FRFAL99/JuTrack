@@ -13,6 +13,69 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Step 63: il file di backup dice di che gruppo è
+
+Il formato d'export sale alla **v4**, e porta due campi nuovi: `groupName` e `app`.
+
+Lo Step 42 ci aveva rinunciato, e la ragione era buona: «`VaultSnapshot` contiene i cinque insiemi
+di record, mentre il nome sta in `meta`, che la fotografia non attraversa», e non valeva alzare la
+versione del formato per un campo solo. Adesso le ragioni sono tre insieme. Lo Step 65 scriverà **un
+file per gruppo** dentro una cartella, e senza il nome quei file sarebbero distinguibili solo
+aprendoli. `suggestedName` proponeva la data dell'export — «l'unica cosa che distingue due file dello
+stesso vault», ma solo perché il nome non c'era. E `app` risponde alla domanda che ci si fa davanti a
+un file che si comporta male: con che cosa è stato scritto.
+
+**Il nome arriva come parametro, non dallo snapshot**, e `VaultSnapshot` non è stato toccato. Vive in
+`model/types.ts` perché è `snapshot()` a produrla: infilarci dentro il nome farebbe dipendere il
+modello dall'export invece del contrario. La schermata lo prende da `store.getGroupName()`, che il
+commento in `store.ts` dichiara essere la versione autorevole rispetto alla copia nel registro
+locale.
+
+**Sono metadati, e non si comportano come i record.** Si leggono con gli stessi helper difensivi di
+tutto il resto, ma un metadato illeggibile vale `null` e basta: **nessun nuovo livello di rifiuto**, e
+non finisce nemmeno fra gli scarti. Il motivo è che nessuno dei due entra nel documento — il nome si
+può correggere prima di confermare. Sbagliare di qua costa un'etichetta sbagliata a schermo;
+sbagliare di là costerebbe un dato falso sincronizzato per sempre. C'è un test che passa `42`, `null`
+e un oggetto come `groupName` e verifica che il file entri lo stesso, senza scarti.
+
+**Un file v3 non ha il nome, e non è un errore.** Vale `null`, con la stessa additività dei fallback
+`''` e `[]` che un file v1 usa per `store` e `tags` — la stessa regola, vista dall'altro lato.
+
+**Il test della versione futura era più debole di quanto sembrasse.** Diceva `root.version = 99`, e
+sarebbe restato verde anche se il rifiuto fosse scattato cinque versioni troppo tardi, cioè proprio
+dove serve. Adesso c'è anche il caso al confine, legato alla costante: `EXPORT_FORMAT_VERSION + 1`
+deve essere rifiutato e `EXPORT_FORMAT_VERSION` deve passare.
+
+### Il giro completo, che non esisteva
+
+`import.test.ts` nel core arrivava fino alla fotografia riletta; `build.test.ts` nell'app partiva da
+una fotografia scritta a mano. **In mezzo non c'era nessuno** a dire che le due combaciano — ed è in
+mezzo che vive la promessa della schermata, «per conservarli». Un campo aggiunto al modello e
+dimenticato in `readExpense` sarebbe passato da entrambi i test senza che nessuno se ne accorgesse.
+
+Adesso c'è: `toJsonExport` → `parseVaultExport` → `encodeSnapshotAsState` → `snapshot()`, confrontato
+con l'originale **per intero**, tombstone, pareggi e vocabolario compresi.
+
+**E ha trovato subito una cosa**, anche se non un guasto: il giro **non conserva l'ordine**.
+`snapshot()` riordina i record — le spese per data e, a parità, per id — quindi due spese dello
+stesso giorno escono in un ordine e rientrano nell'altro. Nessun dato perso: il confronto normalizza
+le collezioni prima di guardarle, perché fissare le posizioni in un test vorrebbe dire promettere un
+ordinamento che il modello non promette. Il contenuto, quello sì, deve tornare identico.
+
+**Due commenti rimasti indietro dallo Step 61**, corretti qui: `json.ts` e `store.ts:667` nominavano
+ancora il CSV come «il formato per leggere i dati altrove».
+
+### Verifica
+
+**1422 test verdi** (723 core + 645 app + 54 relay), `typecheck`, `lint` e `format:check` puliti,
+`expo export --platform android` completato. Nessuna build EAS.
+
+Provato anche fuori dai test, generando i file da Node: un v4 porta `"groupName": "Casa"` e
+`"app": "1.0.0"` subito dopo `exportedAt`; un v3 con quei campi rimossi si rilegge con `null` e
+**zero scarti**; un v5 viene rifiutato con «Il file è in formato v5, e questa app arriva alla v4».
+
+---
+
 ## 2026-09-13 — Step 62: il file Excel contiene tutto il gruppo
 
 Lo Step 61 aveva portato due fogli, Spese e Pareggi — cioè esattamente quello che sapeva fare il

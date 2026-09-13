@@ -88,7 +88,7 @@ Stato: ✅ chiuso · 🟡 in parte · ⬜ non fatto.
 | 60  | Le correzioni dal check del codice      | v7        | ✅    | 2026-09-13 |
 | 61  | Il foglio di calcolo al posto dei CSV   | v8        | ✅    | 2026-09-13 |
 | 62  | Il file Excel contiene tutto il gruppo  | v8        | ✅    | 2026-09-13 |
-| 63  | Il backup dice di che gruppo è          | v8        | ⬜    | —          |
+| 63  | Il backup dice di che gruppo è          | v8        | ✅    | 2026-09-13 |
 | 64  | L'import sceglie un file                | v8        | ⬜    | —          |
 | 65  | La cartella, e il backup che si fa solo | v8        | ⬜    | —          |
 | 66  | L'avviso «il backup invecchia»          | v8        | ⬜    | —          |

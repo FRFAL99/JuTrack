@@ -664,7 +664,8 @@ export class VaultStore {
    *
    * Con `includeDeleted` include anche i tombstone: l'export JSON deve conservarli, perché
    * un file che li perde, reimportato, farebbe riapparire spese che qualcuno aveva
-   * cancellato di proposito. Il CSV invece li lascia fuori.
+   * cancellato di proposito. Il `.xlsx` invece li lascia fuori, così la somma di una
+   * colonna corrisponde a quello che l'app mostra.
    *
    * Categorie archiviate sempre incluse: le spese passate continuano a riferirle, e senza
    * di esse l'export mostrerebbe id grezzi al posto dei nomi.

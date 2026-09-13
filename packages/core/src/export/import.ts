@@ -29,6 +29,13 @@
  * `VaultStore` fa rispettare in scrittura, e questo è l'unico punto in cui dei record
  * arrivano già formati senza passare da `addExpense`. Una spesa le cui quote non tornano
  * produrrebbe un saldo sbagliato per sempre, e nessuno saprebbe da dove viene.
+ *
+ * **I metadati non sono record, e non si comportano come loro.** `exportedAt`, `groupName`
+ * e `app` si leggono con gli stessi helper difensivi, ma un metadato illeggibile vale
+ * `null` e basta: non aggiunge un livello di rifiuto e non finisce fra gli scarti. La
+ * ragione è che nessuno di loro entra nel documento — il nome si può correggere prima di
+ * confermare, e gli altri due si leggono e basta. Sbagliare di qua costa un'etichetta
+ * sbagliata a schermo; sbagliare di là costerebbe un dato falso sincronizzato per sempre.
  */
 import type { Cents } from '../model/money';
 import { isValidCents } from '../model/money';
@@ -71,10 +78,23 @@ export interface ImportCounts {
 }
 
 export interface ImportReport {
-  /** La versione: 1 non ha `store` né `tags`, 2 sì, 3 ha anche il `vocabulary`. */
+  /**
+   * La versione: 1 non ha `store` né `tags`, 2 sì, 3 ha anche il `vocabulary`, 4 il nome
+   * del gruppo e la versione dell'app.
+   */
   version: number;
   /** Quando il file è stato prodotto, `null` se non lo dice o lo dice male. */
   exportedAt: string | null;
+  /**
+   * Il nome del gruppo da cui viene il file, `null` per i file fino alla v3.
+   *
+   * **Assente non vuol dire sbagliato.** Un file v3 il nome non ce l'ha perché quando è
+   * stato scritto il formato non lo prevedeva: si legge `null` e si tira avanti, come per
+   * `store` e `tags` su un file v1. Non è un motivo di scarto, e nemmeno di avviso.
+   */
+  groupName: string | null;
+  /** La versione dell'app che ha scritto il file, `null` se non lo dice. */
+  app: string | null;
   kept: ImportCounts;
   /** Vuoto quando è entrato tutto, che è il caso di un file non manomesso. */
   skipped: ImportSkip[];
@@ -211,6 +231,11 @@ export function parseVaultExport(text: string): ImportResult {
     report: {
       version,
       exportedAt: nullableStr(root.exportedAt),
+      // Metadati, non record: si leggono con gli stessi helper difensivi di tutto il resto
+      // e valgono `null` quando mancano, senza aggiungere un livello di rifiuto. Un nome
+      // sbagliato non produce dati sbagliati — si può correggere prima di confermare.
+      groupName: nullableStr(root.groupName),
+      app: nullableStr(root.app),
       kept: {
         expenses: expenses.length,
         categories: categories.length,

@@ -38,6 +38,31 @@ describe('buildVaultExport', () => {
     });
   });
 
+  it('porta il nome del gruppo e la versione dell’app, quando gliele si danno', () => {
+    expect(
+      buildVaultExport(snapshot, { now: fixedNow, groupName: 'Casa', app: '1.0.0' }),
+    ).toMatchObject({ groupName: 'Casa', app: '1.0.0' });
+  });
+
+  it('senza di quelle scrive `null`, e una stringa vuota vale come assente', () => {
+    // Chi legge non deve distinguere due modi di dire «non si sa».
+    expect(buildVaultExport(snapshot, { now: fixedNow })).toMatchObject({
+      groupName: null,
+      app: null,
+    });
+    expect(buildVaultExport(snapshot, { now: fixedNow, groupName: '', app: '' })).toMatchObject({
+      groupName: null,
+      app: null,
+    });
+  });
+
+  it('il nome non entra nei record: arriva da fuori, non dallo snapshot', () => {
+    const conNome = buildVaultExport(snapshot, { now: fixedNow, groupName: 'Casa' });
+    const senzaNome = buildVaultExport(snapshot, { now: fixedNow });
+    expect(conNome.expenses).toEqual(senzaNome.expenses);
+    expect(conNome.members).toEqual(senzaNome.members);
+  });
+
   it('riporta tutte e cinque le collezioni, anche quelle vuote', () => {
     const exported = buildVaultExport(snapshot, { now: fixedNow });
     expect(Object.keys(exported)).toEqual(

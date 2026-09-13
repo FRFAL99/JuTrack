@@ -96,4 +96,21 @@ describe('suggestedName', () => {
   it('ripiega anche su una data illeggibile, invece di scrivere «Invalid Date»', () => {
     expect(suggestedName('non è una data')).toBe('Gruppo importato');
   });
+
+  it('preferisce il nome del gruppo, quando il file lo porta (formato v4)', () => {
+    // È l'unica proposta che chi importa riconosce a colpo d'occhio: la data dice solo
+    // quale dei suoi export è, non di quale gruppo.
+    expect(suggestedName('2026-08-04T10:00:00.000Z', 'Casa')).toBe('Casa');
+    expect(suggestedName(null, 'Casa')).toBe('Casa');
+  });
+
+  it('un nome fatto di soli spazi non è un nome: torna a valere la data', () => {
+    expect(suggestedName('2026-08-04T10:00:00.000Z', '   ')).toBe('Importato del 4/8/2026');
+  });
+
+  it('senza nome si comporta esattamente come prima dello Step 63', () => {
+    // I file fino alla v3 il campo non ce l'hanno: i due gradini di prima devono restare.
+    expect(suggestedName('2026-08-04T10:00:00.000Z', null)).toBe('Importato del 4/8/2026');
+    expect(suggestedName(null, null)).toBe('Gruppo importato');
+  });
 });

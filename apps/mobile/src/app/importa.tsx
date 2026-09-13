@@ -96,7 +96,7 @@ export default function ImportScreen() {
       }
 
       setRead({ snapshot: result.snapshot, report: result.report });
-      setName(suggestedName(result.report.exportedAt));
+      setName(suggestedName(result.report.exportedAt, result.report.groupName));
     }, 0);
   };
 
@@ -199,6 +199,23 @@ export default function ImportScreen() {
             {/* Il riassunto **non** è una `Note`: non commenta la schermata, dice cosa sta
                 per entrare nei dati. È contenuto, e il contenuto non va in `textFaint`. */}
             <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
+              {/* Da che gruppo viene, quando il file lo dice (formato v4). Sta **prima** dei
+                  conteggi perché è la domanda che si fa per prima davanti a un file trovato
+                  in una cartella: «questo quale dei miei gruppi era?». Un file fino alla v3
+                  quel campo non ce l'ha, e allora questa riga semplicemente non c'è — non è
+                  un'assenza da segnalare. */}
+              {read.report.groupName !== null && (
+                <Text
+                  style={{
+                    color: colors.text,
+                    fontSize: fontSize.sm,
+                    lineHeight: 20,
+                    fontWeight: '600',
+                  }}
+                >
+                  {t('importScreen.summary.fromGroup', { name: read.report.groupName })}
+                </Text>
+              )}
               <Text style={{ color: colors.text, fontSize: fontSize.sm, lineHeight: 20 }}>
                 {describeKept(read.report.kept)}.
               </Text>

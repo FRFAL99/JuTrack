@@ -90,6 +90,14 @@ confuse:
   somma che corrisponde a ciò che l'app mostra. Nel JSON invece ci sono tutte.
 - **I timestamp restano testo, le date no.** `createdAt` e compagni sono UTC ed Excel non ha fuso:
   convertirli sposterebbe in silenzio il giorno di una spesa creata dopo le 22:00.
+- **Il JSON è alla versione 4** (`EXPORT_FORMAT_VERSION` in `export/json.ts`), e la storia delle
+  versioni è scritta lì sopra: la **4** ha `groupName` e `app`, la 3 il `vocabulary`, la 2 `store` e
+  `tags`. La regola dello Step 42 non cambia: **le versioni vecchie si leggono, quelle future no** —
+  un client vecchio che leggesse a metà un formato nuovo scriverebbe nel documento una versione
+  mutilata dei dati, e la sincronizzerebbe.
+- **`groupName` e `app` sono metadati, non record**: un valore illeggibile vale `null` e non produce
+  né un rifiuto né uno scarto, perché nessuno dei due entra nel documento e il nome si può correggere
+  prima di confermare l'import.
 - **Nessun file di export contiene la chiave del vault** — c'è un test che lo verifica.
 - **La passphrase del backup è l'unico punto del progetto in cui la sicurezza dipende da una scelta
   umana.** Il campo dà un giudizio (minimo 12 caratteri, si consigliano quattro parole slegate), ma

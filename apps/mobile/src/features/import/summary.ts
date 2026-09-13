@@ -68,19 +68,25 @@ export function groupSkips(skipped: ImportSkip[]): { reason: string; count: numb
 }
 
 /**
- * Il nome da proporre per il gruppo importato.
+ * Il nome da proporre per il gruppo importato, in tre gradini.
  *
- * **L'export non porta con sé il nome del gruppo**, e non è una dimenticanza: `VaultSnapshot`
- * contiene i cinque insiemi di record, mentre il nome sta in `meta` dentro il documento, che
- * l'export non attraversa. Aggiungerlo vorrebbe dire alzare la versione del formato per un
- * campo che si può chiedere — e chi importa un file vecchio quel campo non ce l'avrebbe
- * comunque.
+ * **Dallo Step 63 il file può dire come si chiamava il gruppo** (formato v4), e allora si
+ * propone quello: è l'unica proposta che chi importa riconosce a colpo d'occhio. Fino alla
+ * v3 quel campo non c'era — `VaultSnapshot` contiene i soli record, mentre il nome sta in
+ * `meta` dentro il documento — quindi i file vecchi continuano a passare per i due gradini
+ * di prima, ed è il motivo per cui questa funzione ne ha tre e non uno.
  *
- * Si ripiega sulla data in cui il file è stato prodotto, che è l'unica cosa che distingue
- * due export dello stesso vault: «Importato del 4/8/2026». Senza nemmeno quella, il nome
+ * Il ripiego è la data in cui il file è stato prodotto, che è l'unica cosa che distingue due
+ * export dello stesso vault: «Importato del 4/8/2026». Senza nemmeno quella, il nome
  * generico — e chi importa può comunque scriverne uno suo prima di confermare.
+ *
+ * **Il nome non si sanifica qui.** `GroupRegistry.register` passa già da `normalizeGroupName`
+ * e ripiega sul nome di default se resta vuoto: rifarlo adesso vorrebbe dire due regole da
+ * tenere allineate, e la seconda invecchierebbe.
  */
-export function suggestedName(exportedAt: string | null): string {
+export function suggestedName(exportedAt: string | null, groupName: string | null = null): string {
+  if (groupName !== null && groupName.trim() !== '') return groupName;
+
   if (exportedAt === null) return t('importScreen.summary.defaultName');
   const when = new Date(exportedAt);
   if (Number.isNaN(when.getTime())) return t('importScreen.summary.defaultName');

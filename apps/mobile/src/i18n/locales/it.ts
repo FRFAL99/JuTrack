@@ -804,6 +804,7 @@ export const it = {
     summary: {
       none: 'niente',
       defaultName: 'Gruppo importato',
+      fromGroup: 'Dal gruppo «{{name}}».',
       importedOn: 'Importato del {{day}}/{{month}}/{{year}}',
       expenses: { one: '{{count}} spesa', other: '{{count}} spese' },
       members: { one: '{{count}} persona', other: '{{count}} persone' },

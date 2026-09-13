@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
+import Constants from 'expo-constants';
 import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, View } from 'react-native';
 import { toJsonExport, toXlsxExport } from '@jutrack/core';
@@ -154,7 +155,12 @@ export default function ExportScreen() {
           <Button
             label={t('exportScreen.jsonButton')}
             onPress={runText('vault', 'vault', 'application/json', () =>
-              toJsonExport(store.snapshot()),
+              // Il nome viene da `getGroupName()` e non dalla copia nel registro locale:
+              // quella è una copia, e in caso di divergenza è lei a doversi aggiornare.
+              toJsonExport(store.snapshot(), {
+                groupName: store.getGroupName(),
+                app: Constants.expoConfig?.version ?? null,
+              }),
             )}
             loading={busy === 'vault'}
             disabled={busy !== null}

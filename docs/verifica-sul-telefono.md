@@ -262,6 +262,14 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
   Se manca il foglio di condivisione il bottone del `.xlsx` è **spento**: è voluto, un file binario
   non può ripiegare sugli appunti. Il JSON accanto invece deve continuare a ripiegarci.
 
+- **Il nome del gruppo dentro il file, dello Step 63.** Rinomina un gruppo in «Casa» → esporta il
+  JSON → aprilo in un editor: subito dopo `exportedAt` devono esserci `"groupName": "Casa"`,
+  `"version": 4` e `"app"` con la versione dell'app. Poi `/importa`, incolla, e **prima** dei
+  conteggi deve comparire «Dal gruppo «Casa».» con il campo del nome **già compilato con «Casa»**,
+  non con la data. Il caso che vale la pena provare è l'altro: un export **vecchio**, fatto prima di
+  oggi, che il nome non ce l'ha — deve rileggersi lo stesso, senza scarti, proponendo la data come
+  faceva prima.
+
 - **Lo Step 31, di cui sul telefono si vede quasi tutto subito — tranne la notifica.** Accendere
   «Promemoria spese» deve far comparire il dialogo di Android, e da lì il passaggio 15 della
   diagnostica deve passare a «permesso concesso»; l'interruttore deve sopravvivere a un riavvio, e

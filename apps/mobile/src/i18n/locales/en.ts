@@ -741,6 +741,7 @@ export const en: Dictionary = {
     summary: {
       none: 'nothing',
       defaultName: 'Imported group',
+      fromGroup: 'From the group “{{name}}”.',
       importedOn: 'Imported on {{month}}/{{day}}/{{year}}',
       expenses: { one: '{{count}} expense', other: '{{count}} expenses' },
       members: { one: '{{count}} person', other: '{{count}} people' },

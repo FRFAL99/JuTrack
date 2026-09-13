@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { parseVaultExport, type ImportCounts, type ImportResult } from './import';
-import { toJsonExport } from './json';
+import { EXPORT_FORMAT_VERSION, toJsonExport } from './json';
 import type { VaultSnapshot } from '../model/types';
 
 const snapshot: VaultSnapshot = {
@@ -109,7 +109,7 @@ describe('parseVaultExport — il giro completo', () => {
 
   it('riporta la versione e l’istante dichiarati dal file', () => {
     const { report } = expectOk(parseVaultExport(toJsonExport(snapshot)));
-    expect(report.version).toBe(3);
+    expect(report.version).toBe(EXPORT_FORMAT_VERSION);
     expect(report.exportedAt).not.toBeNull();
   });
 });
@@ -134,6 +134,20 @@ describe('parseVaultExport — il file intero si rifiuta', () => {
     const result = parseVaultExport(fileWith((root) => (root.version = 99)));
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.reason).toMatch(/v99/);
+  });
+
+  it('al primo numero oltre quello corrente, non solo a un 99 lontano', () => {
+    // Il confine è `EXPORT_FORMAT_VERSION + 1`, e va legato alla costante: un test che
+    // nomina solo il 99 resterebbe verde anche se il rifiuto scattasse cinque versioni
+    // troppo tardi, cioè proprio dove servirebbe.
+    const appena = EXPORT_FORMAT_VERSION + 1;
+    const result = parseVaultExport(fileWith((root) => (root.version = appena)));
+    expect(result.ok).toBe(false);
+
+    // E la versione corrente deve continuare a passare, o il confine sarebbe di uno storto.
+    expect(parseVaultExport(fileWith((root) => (root.version = EXPORT_FORMAT_VERSION))).ok).toBe(
+      true,
+    );
   });
 
   it('quando la versione non è un intero', () => {
@@ -380,5 +394,44 @@ describe('parseVaultExport — i metadati mancanti non fanno perdere il record',
 
     const { snapshot: read } = expectOk(parseVaultExport(file));
     expect(read.expenses.find((e) => e.id === 'e1')?.tags).toEqual(['casa', 'spesa']);
+  });
+});
+
+describe('parseVaultExport — il nome del gruppo (formato v4)', () => {
+  it('riporta il nome e la versione dell’app che il file dichiara', () => {
+    const file = toJsonExport(snapshot, { groupName: 'Casa', app: '1.0.0' });
+    const { report } = expectOk(parseVaultExport(file));
+    expect(report.groupName).toBe('Casa');
+    expect(report.app).toBe('1.0.0');
+  });
+
+  it('un file v3 non ha il nome, e non è un errore', () => {
+    // Stessa additività dei fallback `''` e `[]` che un file v1 usa per `store` e `tags`,
+    // vista dall'altro lato: il campo manca perché il formato non lo prevedeva.
+    const v3 = fileWith((root) => {
+      root.version = 3;
+      delete root.groupName;
+      delete root.app;
+    });
+    const { report } = expectOk(parseVaultExport(v3));
+    expect(report.groupName).toBeNull();
+    expect(report.app).toBeNull();
+    expect(report.skipped).toEqual([]);
+  });
+
+  it('un nome illeggibile vale «non si sa», non uno scarto', () => {
+    // È un metadato: non entra nel documento e si può correggere prima di confermare.
+    // Rifiutare il file per colpa sua vorrebbe dire perdere le spese per un'etichetta.
+    for (const rotto of [42, null, { a: 1 }, '']) {
+      const { report } = expectOk(parseVaultExport(fileWith((root) => (root.groupName = rotto))));
+      expect(report.groupName).toBeNull();
+      expect(report.skipped).toEqual([]);
+    }
+  });
+
+  it('il nome non arriva dallo snapshot, quindi non tocca i record', () => {
+    const conNome = expectOk(parseVaultExport(toJsonExport(snapshot, { groupName: 'Casa' })));
+    const senzaNome = expectOk(parseVaultExport(toJsonExport(snapshot)));
+    expect(conNome.snapshot).toEqual(senzaNome.snapshot);
   });
 });
