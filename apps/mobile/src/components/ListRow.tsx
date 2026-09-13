@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Pressable, Text } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
 import { useTheme } from '@/theme';
@@ -6,6 +7,22 @@ interface ListRowProps {
   label: string;
   /** Lo stato corrente dell'impostazione, a destra prima del chevron. */
   value?: string;
+  /**
+   * `warning` sul **valore**, non sulla label.
+   *
+   * Distinto da `tone`, che colora la label per le righe che portano a un gesto
+   * distruttivo: qui a non andare bene non è dove la riga porta, è **ciò che dice** — gli
+   * avvisi accesi che Android non lascia arrivare. Colorare la label direbbe che è la voce
+   * a essere pericolosa.
+   */
+  valueTone?: 'default' | 'warning';
+  /**
+   * Nodo al posto del valore, per gli stati che una parola non descrive.
+   *
+   * Lo usa la riga del colore personale: «Blu» sarebbe un nome inventato da tenere
+   * allineato alla palette, e la pallina *è* l'informazione. Esclusivo con `value`.
+   */
+  accessory?: ReactNode;
   /**
    * `danger` colora la label, per le righe che portano a un gesto che distrugge dati.
    *
@@ -28,7 +45,14 @@ interface ListRowProps {
  * l'ultima e quanto rientrare il filetto: una riga che si porta dietro il proprio bordo
  * inferiore ne lascia sempre uno di troppo in fondo all'elenco.
  */
-export function ListRow({ label, value, tone = 'default', onPress }: ListRowProps) {
+export function ListRow({
+  label,
+  value,
+  valueTone = 'default',
+  accessory,
+  tone = 'default',
+  onPress,
+}: ListRowProps) {
   const { colors, spacing, fontSize } = useTheme();
 
   return (
@@ -57,10 +81,19 @@ export function ListRow({ label, value, tone = 'default', onPress }: ListRowProp
       </Text>
 
       {value !== undefined && (
-        <Text numberOfLines={1} style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
+        <Text
+          numberOfLines={1}
+          style={{
+            flexShrink: 1,
+            color: valueTone === 'warning' ? colors.warning : colors.textMuted,
+            fontSize: fontSize.sm,
+          }}
+        >
           {value}
         </Text>
       )}
+
+      {accessory}
 
       <Feather name="chevron-right" size={18} color={colors.textFaint} />
     </Pressable>

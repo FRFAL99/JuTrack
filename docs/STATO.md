@@ -187,7 +187,16 @@ Piano v6 — [piano-v6-spesa-rapida-e-grafici-componibili.md](piano-v6-spesa-rap
 | 51 — I capitoli dei grafici                  | ✅    | Sedici widget divisi in Mese (10) / Abitudini (3) / Fra di voi (3)                |
 | 52 — La composizione in loco                 | ✅    | «Modifica» dentro i Grafici, `moveWithin`, `app/dashboard.tsx` diventa redirect   |
 
-**1307 test verdi** (639 core + 614 app + 54 relay), typecheck, lint e `format:check` puliti.
+**Fuori dai piani, lo stesso 13 settembre: lo Step 53** ha ridotto «Tu» a righe che dicono il proprio
+valore. Lingua, Valuta, Colore e Avvisi non stanno più tutti aperti — erano tre selettori e quattro
+interruttori con altrettante spiegazioni, circa centosessanta righe di schermata — ma in quattro righe
+che si aprono in un foglio dal basso (`SettingSheet`). È la **decisione 8 del Piano v6 applicata a una
+schermata che quel piano non toccava**: «Tu» era nel turno 1 dell'artifact insieme alle altre due, ma
+non era mai diventata uno step. Resta uno **Step 54** per l'intestazione, la card del sync e la
+sezione del gruppo — dove serve uno stato nuovo, «Backup della chiave · Mai fatto», che oggi non
+esiste.
+
+**1320 test verdi** (639 core + 627 app + 54 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -1646,6 +1655,11 @@ del giro:
   mentre la lista scorre; la × deve essere rossa `danger` e non rosa `expense`.
 - **Il redirect.** Aprire `/dashboard` (o riaprire l'app con quella come ultima rotta salvata) deve
   portare ai Grafici, non a una schermata inesistente.
+- **«Tu» (53).** Le quattro righe devono dire il proprio valore, e toccarne una deve far salire un
+  foglio dal basso che si chiude toccando fuori **o** con la ×. La prova che conta è quella degli
+  avvisi: accenderli tutti, poi **revocare il permesso alle notifiche dalle impostazioni di
+  Android** — la riga deve diventare arancione e dire «Bloccati da Android», che è l'unico modo di
+  accorgersene senza aspettare un avviso che non arriva.
 
 **Blocco 2 — con `npm run peer` dall'altra parte (~20 min).** È il criterio di «fatto» che manca a
 tutti i piani. Il link mandato in chat che apre `/groups/<id>` **col fragment**, `Share.share`, la

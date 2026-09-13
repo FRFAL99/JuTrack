@@ -223,8 +223,21 @@ export const en: Dictionary = {
       title: 'Currency',
       hint: 'Applies to this phone only, and to the expenses you add from here. JuTrack does not convert between currencies: within a group it is best to pick just one.',
     },
+    color: {
+      title: 'Colour',
+      hint: 'It’s the colour you appear in, in avatars and charts, across all your groups. Other people see their own.',
+    },
     alerts: {
       title: 'Alerts',
+      summary: {
+        all: 'All {{count}} on',
+        none: 'None',
+        some: {
+          one: '{{count}} of {{total}} on',
+          other: '{{count}} of {{total}} on',
+        },
+        blocked: 'Blocked by Android',
+      },
       reminderTitle: 'Expense reminder',
       reminderHint: 'If {{days}} days go by without you adding an expense',
       budgetTitle: 'Monthly budget',
@@ -258,6 +271,7 @@ export const en: Dictionary = {
       export: 'Export your data',
     },
     device: {
+      maintenance: 'Data and diagnostics',
       title: 'This phone',
       importExport: 'Import a JSON export',
       probe: 'Diagnostics',

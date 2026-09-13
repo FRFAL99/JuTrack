@@ -4,6 +4,92 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Step 53: le quattro scelte di «Tu» diventano quattro righe
+
+Fuori dai piani: «Tu» era l'unica delle tre schermate mostrate nel turno 1 dell'artifact a non essere
+mai diventata uno step del Piano v6, e la cosa non era stata decisa — era rimasta fuori e basta.
+
+### Il problema
+
+`tu.tsx` mostrava **tutto aperto**: la fila dei colori del profilo, il selettore di lingua a pillole,
+quello di valuta, e **quattro interruttori** con quattro righe di spiegazione sotto, più due note in
+fondo. Circa centosessanta righe di schermata per cose che si toccano una volta l'anno, davanti a
+ogni apertura del tab.
+
+Adesso sono quattro righe che dicono il proprio valore — Lingua `Italiano`, Valuta `EUR €`, Colore
+(una pallina), Avvisi `Tutti e 4 attivi` — e si aprono in un foglio dal basso.
+
+### È la decisione 8 del Piano v6, applicata a una schermata che quel piano non toccava
+
+Non è un'idea nuova: la riga chiusa porta il **valore**, non un segnaposto, e `textFaint` resta ai
+soli segnaposto. Le frasi stanno in `features/profile/summary.ts` con 13 test, accanto a
+`group-summary.ts` nella forma se non nella cartella.
+
+**Il caso che rende la regola necessaria è `blocked`.** È lo stato in cui gli interruttori sono accesi
+ma Android non ci lascia notificare — chi ha revocato il permesso dopo averlo dato — e prima stava
+scritto in arancione sotto i quattro interruttori. Chiudendo la sezione quella riga sarebbe sparita,
+e l'unico modo di scoprire che gli avvisi non arrivano sarebbe stato non riceverne nessuno. Adesso
+`blocked` **vince su tutto** nel riassunto e la riga diventa arancione.
+
+La distinzione opposta conta quanto quella: **«Nessuno acceso» non è un avviso**. È una scelta
+legittima ed è anche il default — `settings.ts` dice perché: accendere d'ufficio significherebbe
+chiedere il permesso a chi non ha chiesto niente. Colorarla d'arancione la farebbe sembrare un guasto
+da riparare. Perciò `alertsTone` guarda **solo** `blocked`.
+
+### Un foglio, non una schermata
+
+Il mockup disegna un chevron `›`, che vuol dire «si va via». Non è quello che è stato fatto: queste
+quattro scelte si fanno guardando la riga da cui si è partiti — «Valuta: EUR €» — e tornare indietro
+per verificare che il valore sia cambiato è un giro per niente. `SettingSheet` lascia la riga visibile
+dietro e non aggiunge quattro rotte. È il `Modal` di React Native, come `GroupSwitcherSheet`, e per la
+stessa ragione già scritta lì: `@gorhom/bottom-sheet` porterebbe due moduli nativi, cioè una build
+EAS nuova per un gesto.
+
+Le note («vale solo su questo telefono», «JuTrack non converte le valute») **non sono sparite**: sono
+dentro il foglio, dove si leggono _mentre_ si sceglie invece che sotto un selettore sempre aperto che
+nessuno guardava più.
+
+`sheet` è un `useState<SettingKey | null>` e non quattro booleani: due fogli aperti insieme non sono
+uno stato che deve poter esistere, e con quattro booleani lo diventa. È la stessa forma di `openGroup`
+in `ExpenseForm`.
+
+### Due difetti trovati strada facendo
+
+**Due sezioni con la stessa intestazione.** La sezione nuova doveva chiamarsi «Questo telefono», ma
+quel titolo ce l'aveva già il blocco in fondo — import, diagnostica, azzeramento. Erano entrambe vere
+e per questo indistinguibili. Il blocco in fondo si chiama ora **«Dati e diagnostica»**, che è cosa
+contiene: manutenzione, non preferenze. È lo stesso difetto già corretto allo Step 51 fra il capitolo
+«Fra di voi» e il widget omonimo.
+
+**Un commento diventato falso.** Sopra la riga del sync c'era scritto «Resta in italiano fino allo
+Step 38, ed è deliberato». Lo Step 38 è stato fatto, `describe.ts` passa da `t()` sette volte, e il
+commento raccontava una cosa che non è più vera da un mese.
+
+### Cosa cambia nei componenti condivisi
+
+`ListRow` prende due prop opzionali: `accessory` (un nodo al posto del valore, per la pallina del
+colore — «Blu» sarebbe un'etichetta inventata da tenere allineata alla palette) e `valueTone`, che
+colora **il valore** e non la label. La distinzione conta: `tone="danger"` esiste già e colora la
+label per le righe che portano a un gesto distruttivo; qui a non andare bene non è dove la riga porta,
+è ciò che dice.
+
+I quattro interruttori sono usciti in `features/profile/AlertSwitches.tsx` senza cambiare una parola,
+note comprese.
+
+### Cosa resta, per uno Step 54
+
+L'intestazione (avatar a sinistra invece che centrato), la card sopraelevata del sync, e la sezione
+del gruppo — dove il mockup mostra «Backup della chiave · **Mai fatto**» in arancione. Quello stato
+**non esiste**: nessuno registra se un backup sia mai stato fatto, e va aggiunta una chiave in
+`app_meta`.
+
+### Verificato
+
+`npm run typecheck`, `npm run lint`, `npm run format:check` puliti; `npm test` **1320 verdi** (639
+core + 627 app + 54 relay). Niente su telefono.
+
+---
+
 ## 2026-09-13 — Step 52: la composizione in loco, e il Piano v6 è chiuso
 
 Ultimo dei quattro step, decisioni 11–15. La composizione della dashboard non è più una schermata a

@@ -1,25 +1,13 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import {
-  Alert,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
-import { BUDGET_NEAR_THRESHOLD, CORE_VERSION } from '@jutrack/core';
+import { CORE_VERSION } from '@jutrack/core';
 import { initialOf } from '@/components/avatar';
 import { ListRow } from '@/components/ListRow';
 import { Screen } from '@/components/Screen';
 import { SectionLabel } from '@/components/SectionLabel';
-import { BACKUP_MIN_EXPENSES } from '@/features/notifications/backup';
-import { REMINDER_DAYS } from '@/features/notifications/reminder';
-import { SYNC_STALL_HOURS } from '@/features/notifications/sync';
 import {
   useNotificationSettings,
   type NotificationKind,
@@ -27,6 +15,9 @@ import {
 import { ColorChoice } from '@/features/profile/ColorChoice';
 import { CurrencyPicker } from '@/features/profile/CurrencyPicker';
 import { LanguagePicker } from '@/features/profile/LanguagePicker';
+import { AlertSwitches } from '@/features/profile/AlertSwitches';
+import { SettingSheet } from '@/features/profile/SettingSheet';
+import { alertsSummary, alertsTone, currencyLabel, languageName } from '@/features/profile/summary';
 import { describeSync, syncTone } from '@/features/sync/describe';
 import {
   MAX_PROFILE_NAME,
@@ -58,6 +49,9 @@ import { useTheme } from '@/theme';
  * che la scrive `describe.ts` anche in fondo alla lista spese, e i nomi di gruppi e persone,
  * che stanno nel documento condiviso e non sono testo dell'app.
  */
+/** Le quattro impostazioni che si aprono in un foglio. */
+type SettingKey = 'color' | 'language' | 'currency' | 'alerts';
+
 export default function TuScreen() {
   const { t, i18n } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
@@ -71,6 +65,14 @@ export default function TuScreen() {
 
   const [editingName, setEditingName] = useState(false);
   const [draftName, setDraftName] = useState(profile.name);
+  /**
+   * Quale foglio è aperto, o nessuno.
+   *
+   * Uno `useState` con quattro valori e non quattro booleani: due fogli aperti insieme non
+   * sono uno stato che deve poter esistere, e con quattro booleani lo diventa — basta
+   * dimenticare di chiuderne uno. È la stessa forma di `openGroup` in `ExpenseForm`.
+   */
+  const [sheet, setSheet] = useState<SettingKey | null>(null);
 
   // Come per il vecchio profile.tsx: il nome si salva sul blur, non a ogni tasto, o ogni
   // lettera produrrebbe un update Yjs e una riga nel log del relay.
@@ -170,8 +172,6 @@ export default function TuScreen() {
       )}
 
       <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>{t('you.name.hint')}</Text>
-
-      <ColorChoice value={profile.color} onChange={(color) => void update({ color })} />
     </View>
   );
 
@@ -180,139 +180,53 @@ export default function TuScreen() {
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
         <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
 
-        {/* Prima della valuta, e prima di tutto il resto: è la sezione che decide in che
-            lingua si legge ogni altra sezione, e chi la sta cercando perché non capisce
-            quello che ha davanti non deve scorrere per trovarla. Il valore mostrato è
-            quello **in uso** — `i18n.language` e non `profile.language` — così chi non ha
-            ancora scelto vede evidenziata la lingua che il telefono gli ha dato. */}
-        <SectionLabel>{t('you.language.title')}</SectionLabel>
-        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
-          <LanguagePicker
-            value={i18n.language}
-            onChange={(next) => void update({ language: next })}
-          />
-          <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            {t('you.language.hint')}
-          </Text>
-        </View>
+        {/* Le quattro scelte di questo telefono, **chiuse**. Prima stavano tutte aperte: tre
+            selettori e quattro interruttori con altrettante righe di spiegazione, cioè metà
+            schermata occupata da cose che si toccano una volta l'anno.
 
-        <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
+            La riga chiusa porta il valore, non un segnaposto — è la regola della decisione 8
+            del Piano v6, applicata a una schermata che quel piano non toccava. Le frasi
+            stanno in `features/profile/summary.ts`, dove hanno dei test.
 
-        <SectionLabel>{t('you.currency.title')}</SectionLabel>
-        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
-          <CurrencyPicker value={currency} onChange={(next) => void update({ currency: next })} />
-          {/* La nota non è un dettaglio legale: JuTrack non ha tassi di cambio, quindi due
-              persone dello stesso gruppo che scelgono valute diverse vedono totali che
-              sommano unità diverse. Il campo è locale al telefono, la scelta no. */}
-          <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            {t('you.currency.hint')}
-          </Text>
-        </View>
-
-        <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
-
-        <SectionLabel>{t('you.alerts.title')}</SectionLabel>
-        {/* `sm` e non `xs`: con tre interruttori uno sotto l'altro, quattro punti di stacco
-            farebbero leggere le righe come un blocco solo. */}
-        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
-          <View style={styles.switchRow}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
-                {t('you.alerts.reminderTitle')}
-              </Text>
-              {/* I numeri restano costanti del codice e diventano segnaposto, non parole
-                  del dizionario: tradurre «3» non ha senso, e una lingua che lo scrivesse
-                  a mano lo lascerebbe indietro il giorno in cui `REMINDER_DAYS` cambia. */}
-              <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-                {t('you.alerts.reminderHint', { days: REMINDER_DAYS })}
-              </Text>
-            </View>
-            <Switch
-              value={notifications.settings.reminder}
-              onValueChange={(on) => toggle('reminder', on)}
-              disabled={!notifications.ready}
-              accessibilityLabel={t('you.alerts.reminderTitle')}
+            La lingua resta la prima: è la sezione che decide in che lingua si legge ogni
+            altra riga, e chi la cerca perché non capisce quello che ha davanti non deve
+            scorrere per trovarla. Il valore mostrato è quello **in uso** — `i18n.language` e
+            non `profile.language` — così chi non ha ancora scelto vede la lingua che il
+            telefono gli ha dato. */}
+        <SectionLabel>{t('you.device.title')}</SectionLabel>
+        <ListRow
+          label={t('you.language.title')}
+          value={languageName(i18n.language)}
+          onPress={() => setSheet('language')}
+        />
+        <Rule inset={spacing.lg} color={colors.divider} />
+        <ListRow
+          label={t('you.currency.title')}
+          value={currencyLabel(currency)}
+          onPress={() => setSheet('currency')}
+        />
+        <Rule inset={spacing.lg} color={colors.divider} />
+        {/* Il colore non ha un nome: «Blu» sarebbe un'etichetta inventata da tenere
+            allineata alla palette, e la pallina *è* l'informazione. */}
+        <ListRow
+          label={t('you.color.title')}
+          accessory={
+            <View
+              style={[
+                styles.swatch,
+                { backgroundColor: profile.color, borderColor: colors.border },
+              ]}
             />
-          </View>
-
-          <View style={styles.switchRow}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
-                {t('you.alerts.budgetTitle')}
-              </Text>
-              {/* La soglia si legge dal core invece di scriverla qui: è la stessa che
-                  colora le barre nei Grafici, e due numeri da tenere allineati sarebbero
-                  due numeri che prima o poi divergono. */}
-              <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-                {t('you.alerts.budgetHint', {
-                  percent: Math.round(BUDGET_NEAR_THRESHOLD * 100),
-                })}
-              </Text>
-            </View>
-            <Switch
-              value={notifications.settings.budget}
-              onValueChange={(on) => toggle('budget', on)}
-              disabled={!notifications.ready}
-              accessibilityLabel={t('you.alerts.budgetTitle')}
-            />
-          </View>
-
-          <View style={styles.switchRow}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
-                {t('you.alerts.syncTitle')}
-              </Text>
-              {/* Le ore si leggono dalla costante, come la soglia dei budget si legge dal
-                  core: un numero scritto due volte è un numero che prima o poi diverge. */}
-              <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-                {t('you.alerts.syncHint', { hours: SYNC_STALL_HOURS })}
-              </Text>
-            </View>
-            <Switch
-              value={notifications.settings.sync}
-              onValueChange={(on) => toggle('sync', on)}
-              disabled={!notifications.ready}
-              accessibilityLabel={t('you.alerts.syncTitle')}
-            />
-          </View>
-
-          <View style={styles.switchRow}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
-                {t('you.alerts.backupTitle')}
-              </Text>
-              {/* La soglia si legge dalla costante, come le altre tre. La riga dice anche
-                  «una volta sola per gruppo», che è la cosa che distingue questo avviso
-                  dagli altri: la chiave non cambia mai, quindi salvarla una volta chiude
-                  la questione per sempre. */}
-              <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-                {t('you.alerts.backupHint', { count: BACKUP_MIN_EXPENSES })}
-              </Text>
-            </View>
-            <Switch
-              value={notifications.settings.backup}
-              onValueChange={(on) => toggle('backup', on)}
-              disabled={!notifications.ready}
-              accessibilityLabel={t('you.alerts.backupTitle')}
-            />
-          </View>
-
-          {/* Il limite va detto, non scoperto: i due avvisi li produce l'app guardando il
-              documento e il motore, quindi arrivano quando l'app è aperta — subito per
-              quello che succede qui, all'apertura successiva per il resto. */}
-          <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            {t('you.alerts.scope')}
-          </Text>
-
-          {/* L'interruttore resta acceso perché la scelta è di chi l'ha fatta: spegnerlo
-              d'ufficio la farebbe sparire senza spiegazione. A dire che non funziona è
-              questa riga, non un tocco che si disfa da solo. */}
-          {notifications.blocked && (
-            <Text style={{ color: colors.warning, fontSize: fontSize.xxs }}>
-              {t('you.alerts.blocked')}
-            </Text>
-          )}
-        </View>
+          }
+          onPress={() => setSheet('color')}
+        />
+        <Rule inset={spacing.lg} color={colors.divider} />
+        <ListRow
+          label={t('you.alerts.title')}
+          value={alertsSummary(notifications.settings, notifications.blocked)}
+          valueTone={alertsTone(notifications.blocked)}
+          onPress={() => setSheet('alerts')}
+        />
 
         <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
 
@@ -320,9 +234,9 @@ export default function TuScreen() {
         <View style={{ paddingHorizontal: spacing.lg, gap: 2 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
             <View style={[styles.dot, { backgroundColor: dotColor }]} />
-            {/* Resta in italiano fino allo Step 38, ed è deliberato: la frase la scrive
-                `describe.ts`, che la scrive anche in fondo alla lista spese. Tradurre un
-                modulo condiviso vuol dire tradurre le schermate che lo usano. */}
+            {/* La frase la scrive `describe.ts`, che la scrive anche in fondo alla lista
+                spese: dallo Step 38 passa da `t()` come tutto il resto, e legge la lingua
+                quando gira. */}
             <Text style={{ color: colors.text, fontSize: fontSize.sm, flex: 1 }} numberOfLines={2}>
               {syncText}
             </Text>
@@ -376,7 +290,11 @@ export default function TuScreen() {
         )}
 
         <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
-        <SectionLabel>{t('you.device.title')}</SectionLabel>
+        {/* «Dati e diagnostica» e non un secondo «Questo telefono»: lo erano entrambe, e
+            due sezioni con la stessa intestazione sulla stessa schermata non si
+            distinguono. Qui sotto ci sono l'import, la diagnostica e l'azzeramento — cioè
+            manutenzione, non preferenze. */}
+        <SectionLabel>{t('you.device.maintenance')}</SectionLabel>
         {/* Sta qui e non fra le voci del gruppo, benché sia il gemello di «Backup della
             chiave»: l'import **crea** un gruppo, quindi è una cosa del telefono, e va
             raggiungibile proprio quando di gruppi non ce n'è nessuno — che è il caso in cui
@@ -409,6 +327,48 @@ export default function TuScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      {/* I quattro fogli. Uno solo può essere aperto, perché `sheet` è un valore e non
+          quattro booleani. */}
+      <SettingSheet
+        visible={sheet === 'language'}
+        onClose={() => setSheet(null)}
+        title={t('you.language.title')}
+        hint={t('you.language.hint')}
+      >
+        <LanguagePicker
+          value={i18n.language}
+          onChange={(next) => void update({ language: next })}
+        />
+      </SettingSheet>
+
+      <SettingSheet
+        visible={sheet === 'currency'}
+        onClose={() => setSheet(null)}
+        title={t('you.currency.title')}
+        hint={t('you.currency.hint')}
+      >
+        <CurrencyPicker value={currency} onChange={(next) => void update({ currency: next })} />
+      </SettingSheet>
+
+      <SettingSheet
+        visible={sheet === 'color'}
+        onClose={() => setSheet(null)}
+        title={t('you.color.title')}
+        hint={t('you.color.hint')}
+      >
+        <ColorChoice value={profile.color} onChange={(color) => void update({ color })} />
+      </SettingSheet>
+
+      {/* Le due note in fondo restano dentro il foglio e non salgono in `hint`: dicono cosa
+          fanno gli interruttori, e vanno lette accanto a loro. */}
+      <SettingSheet
+        visible={sheet === 'alerts'}
+        onClose={() => setSheet(null)}
+        title={t('you.alerts.title')}
+      >
+        <AlertSwitches settings={notifications} onToggle={toggle} />
+      </SettingSheet>
     </Screen>
   );
 }
@@ -420,6 +380,7 @@ function Rule({ inset, color }: { inset: number; color: string }) {
 
 const styles = StyleSheet.create({
   avatar: { alignItems: 'center', justifyContent: 'center' },
+  swatch: { width: 18, height: 18, borderRadius: 9, borderWidth: StyleSheet.hairlineWidth },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   dot: { width: 7, height: 7, borderRadius: 3.5 },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },

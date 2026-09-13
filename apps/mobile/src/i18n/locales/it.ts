@@ -239,8 +239,21 @@ export const it = {
       title: 'Valuta',
       hint: 'Vale solo su questo telefono, e per le spese che registri da qui. JuTrack non converte fra valute: in un gruppo conviene sceglierne una sola.',
     },
+    color: {
+      title: 'Colore',
+      hint: 'È il colore con cui compari negli avatar e nei grafici, in tutti i tuoi gruppi. Le altre persone vedono il loro.',
+    },
     alerts: {
       title: 'Avvisi',
+      summary: {
+        all: 'Tutti e {{count}} attivi',
+        none: 'Nessuno',
+        some: {
+          one: '{{count}} di {{total}} attivo',
+          other: '{{count}} di {{total}} attivi',
+        },
+        blocked: 'Bloccati da Android',
+      },
       reminderTitle: 'Promemoria spese',
       reminderHint: 'Se passano {{days}} giorni senza che tu registri una spesa',
       budgetTitle: 'Budget del mese',
@@ -277,6 +290,7 @@ export const it = {
       export: 'Esporta i dati',
     },
     device: {
+      maintenance: 'Dati e diagnostica',
       title: 'Questo telefono',
       importExport: 'Importa un export JSON',
       probe: 'Diagnostica',
