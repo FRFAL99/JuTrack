@@ -804,7 +804,7 @@ export const en: Dictionary = {
       'One row per expense, one column for each person’s share. Dates and amounts are already numbers: sort and sum them without fixing anything first.',
     sheetButton: 'Spreadsheet (.xlsx)',
     sheetSplitHint:
-      'Settlements are in a separate sheet: they are not expenses, and adding them would give a total that means nothing.',
+      'Seven sheets: Expenses, Settlements, Categories, Budgets, People, Vocabulary and a Summary with totals by month and category and the balances. Settlements stay separate because they are not expenses, and adding them would give a total that means nothing.',
     jsonTitle: 'To keep them',
     jsonBody:
       'A full copy: expenses, categories, people, budgets and settlements, deleted ones included. It is the format to keep on hand, and the only one that can be imported back.',

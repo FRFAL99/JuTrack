@@ -250,11 +250,14 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
   aprirlo. Cinque cose, nell'ordine in cui si rompono:
   1. **si apre senza chiedere di riparare il file** — è l'esito che nessun test copre, e il sospetto
      numero uno è `styles.xml`;
-  2. ci sono **due fogli**, «Spese» e «Pareggi», e la riga 1 resta ferma scorrendo;
+  2. ci sono **sette fogli** — Spese, Pareggi, Categorie, Budget, Persone, Vocabolario, Riepilogo —
+     e sui primi sei la riga 1 resta ferma scorrendo (sul Riepilogo no, ed è voluto);
   3. la colonna **`data`** si ordina come data, non come testo (in Excel è allineata a destra);
-  4. selezionando **`importo`** la somma automatica dà un numero, e coincide col totale che l'app
-     mostra per lo stesso periodo;
-  5. la nota mostra **`=SOMMA(…)` senza apice davanti** e non viene valutata, e l'accentata è giusta.
+  4. selezionando **`importo`** la somma automatica dà un numero, e coincide sia col totale che
+     l'app mostra per lo stesso periodo **sia col «Per mese» del Riepilogo**;
+  5. la nota mostra **`=SOMMA(…)` senza apice davanti** e non viene valutata, e l'accentata è giusta;
+  6. nel **Riepilogo**, le quote per categoria sono **percentuali** (non `0,98`) e i saldi sommano a
+     zero.
 
   Se manca il foglio di condivisione il bottone del `.xlsx` è **spento**: è voluto, un file binario
   non può ripiegare sugli appunti. Il JSON accanto invece deve continuare a ripiegarci.

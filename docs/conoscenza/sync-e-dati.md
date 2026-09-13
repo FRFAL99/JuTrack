@@ -61,7 +61,7 @@ confuse:
 
 | Schermata               | Cosa produce                                | Cifrato?                     |
 | ----------------------- | ------------------------------------------- | ---------------------------- |
-| **Esporta i dati**      | Un `.xlsx` a più fogli, un JSON integrale   | **No.** Escono in chiaro     |
+| **Esporta i dati**      | Un `.xlsx` a sette fogli, un JSON integrale | **No.** Escono in chiaro     |
 | **Backup della chiave** | Un blob `JTBK1.…` con dentro solo la chiave | Sì, con la passphrase scelta |
 
 - **Il foglio di calcolo si legge, il JSON si conserva.** Il `.xlsx` perde struttura (le quote
@@ -77,6 +77,15 @@ confuse:
 - **Le formule NON si disinnescano, ed è deliberato.** Una cella `t="inlineStr"` non è mai una
   formula per Excel: anteporle un apice, come faceva il CSV, corromperebbe un testo che una persona
   ha scritto. C'è un test che afferma che una nota `=SOMMA(A1:A9)` esce intatta.
+- **Sette fogli**: Spese, Pareggi, Categorie, Budget, Persone, Vocabolario e un **Riepilogo** con i
+  totali per mese e per categoria, i saldi e i pagamenti minimi. Il Riepilogo **non calcola niente
+  per conto proprio** — usa `totalsByMonth`, `totalsByCategory`, `computeBalances` e `simplifyDebts`,
+  le stesse funzioni dei grafici, e il foglio Budget chiama `budgetStatuses`. È l'unico modo perché i
+  numeri del file e quelli dell'app non possano divergere, e c'è un test che afferma l'invariante:
+  **la somma della colonna `importo` di Spese è uguale al totale per mese del Riepilogo**.
+- **Il Riepilogo è l'unico foglio senza intestazione**, quindi senza riga congelata e senza filtro:
+  le sue colonne non hanno un significato unico per tutta l'altezza (la A è un mese, poi una
+  categoria, poi una persona), e un'intestazione mentirebbe su tre quarti del foglio.
 - **Le spese cancellate restano fuori** dal `.xlsx`, così selezionare la colonna «importo» dà una
   somma che corrisponde a ciò che l'app mostra. Nel JSON invece ci sono tutte.
 - **I timestamp restano testo, le date no.** `createdAt` e compagni sono UTC ed Excel non ha fuso:

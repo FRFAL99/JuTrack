@@ -13,6 +13,70 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Step 62: il file Excel contiene tutto il gruppo
+
+Lo Step 61 aveva portato due fogli, Spese e Pareggi — cioè esattamente quello che sapeva fare il
+CSV. Adesso sono **sette**: le Categorie (archiviate comprese, perché le spese vecchie le riferiscono
+ancora), i Budget, le Persone, il Vocabolario, e in fondo un **Riepilogo**.
+
+**Il Riepilogo non calcola niente per conto proprio.** `totalsByMonth`, `totalsByCategory`,
+`computeBalances` e `simplifyDebts` sono le stesse funzioni che disegnano i grafici e la schermata
+dei saldi. Se il foglio rifacesse i conti, prima o poi darebbe un numero diverso da quello dell'app,
+e chi legge non saprebbe a quale dei due credere — né quale dei due si sta sbagliando. Per lo stesso
+motivo il foglio Budget non somma le spese a mano: chiama `budgetStatuses` una volta per mese, che è
+l'unico modo di avere lo stesso «speso» della schermata dei budget.
+
+**Il piano prevedeva qui un trabocchetto che non c'è più.** Diceva: il foglio Spese deve mostrare le
+cancellate, il Riepilogo non deve contarle, e serve un test che tenga separate le due cose. Ma allo
+Step 61 le cancellate sono state tenute fuori **da tutto** per default, quindi la divergenza non può
+nascere. Al suo posto c'è un test più utile, che afferma l'invariante vera: **la somma della colonna
+`importo` del foglio Spese è uguale al totale per mese del Riepilogo**. Se un giorno i due fogli si
+scollegheranno, sarà quel test a dirlo.
+
+**Il Riepilogo non ha intestazione, ed è il motivo per cui `Sheet.header` ora può essere vuoto.** Le
+sue colonne non hanno un significato unico per tutta l'altezza: la A è un mese, poi una categoria,
+poi una persona. Un'intestazione mentirebbe su tre quarti del foglio, e l'`autoFilter` che
+l'accompagna metterebbe insieme quattro tabelle diverse. Senza intestazione non si congela niente e
+non si filtra niente — che per un foglio da guardare, non da interrogare, è giusto così.
+
+**Le larghezze delle colonne ora si calcolano dal contenuto**, non dalla sola intestazione: `id` e
+`note` non chiedono lo stesso spazio, e colonne larghe uguale costringono ad allargarle a mano prima
+di poter leggere. Limiti 8 e 42 caratteri — sopra, una nota lunga spingerebbe tutto il resto fuori
+dallo schermo.
+
+**Uno stile nuovo, il quinto: la percentuale.** La quota di ogni categoria sul totale resta nel file
+come frazione fra 0 e 1 (`numFmtId="10"`, cioè `0.00%`), così chi la usa in una formula non deve
+dividere per cento. Il test sugli stili adesso conta anche gli `xf` e non solo l'attributo `count`:
+dichiararne cinque e scriverne quattro produrrebbe un file che Excel apre ignorando l'ultimo, e il
+solo confronto del contatore non se ne sarebbe accorto.
+
+**Una cosa che a vederla sembra un difetto e non lo è.** Nel Riepilogo, «Per mese» elenca anche i
+mesi **senza spese**, a zero. È `totalsByMonth` che riempie l'intervallo fra il primo e l'ultimo
+mese, ed è la stessa serie che disegna il grafico dei mesi: un buco nel calendario è
+un'informazione, e toglierlo qui vorrebbe dire far divergere il foglio dal grafico per ragioni
+estetiche.
+
+### La prova col file vero
+
+Il file di prova è stato rigenerato con tutti e sette i fogli e riaperto con **LibreOffice**, che li
+rende tutti e sette. Nel Riepilogo: le quote come percentuali (98,02% e 1,98%), gli importi col
+separatore delle migliaia secondo il locale del lettore (`1,234.56`), i saldi che sommano a zero e
+«Siete in pari.» al posto della sezione vuota.
+
+Il verificatore OPC è stato esteso: oltre alle relazioni e ai content type, ora controlla anche che
+**ogni stile indicizzato da una cella esista davvero** in `cellXfs` e che nessun nome di foglio
+superi i 31 caratteri o contenga i sei segni vietati. Esito: stili usati 1-4 su 5 dichiarati,
+nessun problema.
+
+### Verifica
+
+**1409 test verdi** (715 core + 640 app + 54 relay), `typecheck`, `lint` e `format:check` puliti,
+`expo export --platform android` completato. Nessuna build EAS.
+
+**Resta da fare a mano, a piano finito:** aprire il file in **Excel** e in **Fogli Google**.
+
+---
+
 ## 2026-09-13 — Step 61: il foglio di calcolo prende il posto dei due CSV
 
 L'export tabellare esisteva per «leggere i dati altrove», e in un Excel con locale italiano finiva

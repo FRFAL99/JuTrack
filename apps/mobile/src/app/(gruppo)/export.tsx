@@ -142,8 +142,8 @@ export default function ExportScreen() {
             disabled={busy !== null || !sharingAvailable}
           />
         </View>
-        {/* Perché i pareggi sono un foglio a parte: è la sola domanda che il file lascia
-            aperta, e sta **sotto** il bottone perché è la risposta a averlo premuto. */}
+        {/* Cosa c'è dentro il file, e perché i pareggi sono un foglio a parte. Sta **sotto**
+            il bottone perché è la risposta a averlo premuto, non la domanda che lo precede. */}
         <View style={{ paddingTop: spacing.sm }}>
           <Note>{t('exportScreen.sheetSplitHint')}</Note>
         </View>

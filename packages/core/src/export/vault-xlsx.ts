@@ -27,8 +27,21 @@
 import type { Cents } from '../model/money';
 import { assertCents } from '../model/money';
 import type { Expense, Member, VaultSnapshot } from '../model/types';
+import { computeBalances, simplifyDebts } from '../insights/balance';
+import { totalsByCategory, totalsByMonth } from '../insights/breakdown';
+import { budgetStatuses, type BudgetState } from '../insights/budget';
 import { buildWorkbook } from './xlsx/workbook';
-import { date, EMPTY, money, text, type Cell, type Sheet } from './xlsx/parts';
+import {
+  date,
+  EMPTY,
+  heading,
+  money,
+  number,
+  percent,
+  text,
+  type Cell,
+  type Sheet,
+} from './xlsx/parts';
 
 /**
  * Formatta centesimi come decimale col punto, senza separatore delle migliaia.
@@ -197,10 +210,211 @@ function settlementsSheet(snapshot: VaultSnapshot, includeDeleted: boolean): She
   return { name: 'Pareggi', header, rows };
 }
 
-/** I fogli, nell'ordine in cui compaiono nelle linguette. */
+/* -------------------------------------------------------------------------- */
+/* I fogli di contorno                                                         */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Le categorie, archiviate comprese.
+ *
+ * Una categoria non si cancella mai, si archivia (`model/types.ts`): sparisce dai menu ma
+ * le spese continuano a riferirla. Ometterle qui renderebbe illeggibile la colonna
+ * «categoria» del foglio Spese proprio per le spese più vecchie.
+ */
+function categoriesSheet(snapshot: VaultSnapshot): Sheet {
+  return {
+    name: 'Categorie',
+    header: ['nome', 'icona', 'colore', 'archiviata', 'id'],
+    rows: snapshot.categories.map((category): Cell[] => [
+      text(category.name),
+      text(category.icon),
+      text(category.color),
+      text(category.archived ? 'sì' : ''),
+      text(category.id),
+    ]),
+  };
+}
+
+function membersSheet(snapshot: VaultSnapshot): Sheet {
+  return {
+    name: 'Persone',
+    header: ['nome', 'colore', 'id'],
+    rows: snapshot.members.map((member): Cell[] => [
+      text(member.name),
+      text(member.color),
+      text(member.id),
+    ]),
+  };
+}
+
+/**
+ * I budget, con quanto è stato speso davvero contro il limite.
+ *
+ * **Lo speso non si ricalcola qui**: `budgetStatuses` lavora un mese per volta, quindi si
+ * raggruppa per mese e la si chiama una volta per gruppo. Sommare le spese a mano sarebbe
+ * stato più corto e avrebbe prodotto, prima o poi, un numero diverso da quello della
+ * schermata dei budget — che è il modo peggiore di sbagliare, perché non si nota.
+ */
+function budgetsSheet(snapshot: VaultSnapshot): Sheet {
+  const categoryNames = new Map(snapshot.categories.map((c) => [c.id, c.name]));
+  const months = [...new Set(snapshot.budgets.map((b) => b.month))].sort();
+
+  const rows: Cell[][] = [];
+  for (const month of months) {
+    for (const status of budgetStatuses(snapshot.budgets, snapshot.expenses, month)) {
+      rows.push([
+        text(month),
+        text(categoryNames.get(status.categoryId) ?? status.categoryId),
+        money(centsToDecimal(status.limitCents)),
+        money(centsToDecimal(status.spentCents)),
+        money(centsToDecimal(status.remainingCents)),
+        text(BUDGET_STATE_LABEL[status.state]),
+      ]);
+    }
+  }
+
+  return {
+    name: 'Budget',
+    header: ['mese', 'categoria', 'limite', 'speso', 'resta', 'stato'],
+    rows,
+  };
+}
+
+/** Le tre parole della schermata budget, perché il foglio non ne inventi altre. */
+const BUDGET_STATE_LABEL: Record<BudgetState, string> = {
+  under: 'sotto',
+  near: 'vicino',
+  over: 'superato',
+};
+
+/**
+ * Il vocabolario del gruppo: i tag e i negozi proponibili (Step 59).
+ *
+ * Non è un'entità che le spese riferiscono — `Expense.store` e `Expense.tags` restano
+ * testo — quindi il foglio serve a sapere **cosa il gruppo si aspetta di scrivere**, non a
+ * risolvere riferimenti. Le voci cancellate ci sono con la loro data: qui un tombstone non
+ * falsa nessuna somma, perché non c'è niente da sommare.
+ */
+function vocabularySheet(snapshot: VaultSnapshot): Sheet {
+  return {
+    name: 'Vocabolario',
+    header: ['tipo', 'nome', 'cancellato_il', 'chiave'],
+    rows: snapshot.vocabulary.map((entry): Cell[] => [
+      text(entry.kind === 'tag' ? 'tag' : 'negozio'),
+      text(entry.name),
+      text(entry.deletedAt ?? ''),
+      text(entry.key),
+    ]),
+  };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Riepilogo                                                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Quattro tabelle piccole, una sotto l'altra, in un foglio senza intestazione.
+ *
+ * **Non calcola niente per conto proprio.** `totalsByMonth`, `totalsByCategory`,
+ * `computeBalances` e `simplifyDebts` sono le stesse funzioni che disegnano i grafici e la
+ * schermata dei saldi: se il foglio rifacesse i conti, prima o poi darebbe un numero
+ * diverso da quello che l'app mostra, e chi legge non saprebbe a quale credere.
+ *
+ * **`header` è vuoto di proposito.** Le colonne qui non hanno un significato unico per
+ * tutta l'altezza — la A è un mese, poi una categoria, poi una persona — quindi
+ * un'intestazione mentirebbe su tre quarti del foglio, e il filtro che l'accompagna
+ * metterebbe insieme tabelle diverse.
+ */
+function summarySheet(snapshot: VaultSnapshot): Sheet {
+  const categoryNames = new Map(snapshot.categories.map((c) => [c.id, c.name]));
+  const memberNames = new Map(snapshot.members.map((m) => [m.id, m.name]));
+  const who = (id: string): string => memberNames.get(id) ?? id;
+
+  const rows: Cell[][] = [];
+  const section = (...titles: string[]): void => {
+    if (rows.length > 0) rows.push([]);
+    rows.push(titles.map(heading));
+  };
+
+  section('Per mese', 'spese', 'totale');
+  for (const month of totalsByMonth(snapshot.expenses)) {
+    rows.push([
+      text(month.month),
+      number(String(month.count)),
+      money(centsToDecimal(month.totalCents)),
+    ]);
+  }
+
+  section('Per categoria', 'spese', 'totale', 'quota');
+  for (const total of totalsByCategory(snapshot.expenses)) {
+    rows.push([
+      // `null` raccoglie le spese senza categoria: va nominato, o quella riga sembra un bug.
+      text(
+        total.categoryId === null
+          ? 'senza categoria'
+          : (categoryNames.get(total.categoryId) ?? total.categoryId),
+      ),
+      number(String(total.count)),
+      money(centsToDecimal(total.totalCents)),
+      percent(total.share.toFixed(4)),
+    ]);
+  }
+
+  const balances = computeBalances(
+    snapshot.expenses,
+    snapshot.settlements,
+    snapshot.members.map((m) => m.id),
+  );
+
+  section('Saldi', 'ha pagato', 'gli spetta', 'pareggi', 'saldo');
+  for (const balance of balances) {
+    rows.push([
+      text(who(balance.memberId)),
+      money(centsToDecimal(balance.paidCents)),
+      money(centsToDecimal(balance.owedCents)),
+      money(centsToDecimal(balance.settledCents)),
+      money(centsToDecimal(balance.netCents)),
+    ]);
+  }
+
+  section('Chi deve dare a chi', '', 'importo');
+  const transfers = simplifyDebts(balances);
+  if (transfers.length === 0) {
+    rows.push([text('Siete in pari.')]);
+  }
+  for (const transfer of transfers) {
+    rows.push([
+      text(who(transfer.fromMember)),
+      text(`→ ${who(transfer.toMember)}`),
+      money(centsToDecimal(transfer.amountCents)),
+    ]);
+  }
+
+  return { name: 'Riepilogo', header: [], rows };
+}
+
+/* -------------------------------------------------------------------------- */
+/* Il file                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * I sette fogli, nell'ordine in cui compaiono nelle linguette.
+ *
+ * I dati prima, il riepilogo in fondo: chi apre il file cerca le sue spese, e chi vuole i
+ * totali li ha già visti nell'app. L'ordine inverso metterebbe davanti la tabella che si
+ * legge una volta sola.
+ */
 export function vaultSheets(snapshot: VaultSnapshot, options: XlsxOptions = {}): Sheet[] {
   const includeDeleted = options.includeDeleted ?? false;
-  return [expensesSheet(snapshot, includeDeleted), settlementsSheet(snapshot, includeDeleted)];
+  return [
+    expensesSheet(snapshot, includeDeleted),
+    settlementsSheet(snapshot, includeDeleted),
+    categoriesSheet(snapshot),
+    budgetsSheet(snapshot),
+    membersSheet(snapshot),
+    vocabularySheet(snapshot),
+    summarySheet(snapshot),
+  ];
 }
 
 /** Il file `.xlsx`, pronto da scrivere su disco o da passare al foglio di condivisione. */

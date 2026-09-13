@@ -867,7 +867,7 @@ export const it = {
       'Una riga per spesa, una colonna per la quota di ciascuno. Date e importi sono già numeri: si ordinano e si sommano senza sistemare niente.',
     sheetButton: 'Foglio di calcolo (.xlsx)',
     sheetSplitHint:
-      'I pareggi sono in un foglio a parte: non sono spese, e sommarli darebbe un totale che non vuol dire niente.',
+      'Sette fogli: Spese, Pareggi, Categorie, Budget, Persone, Vocabolario e un Riepilogo con i totali per mese e per categoria e i saldi. I pareggi stanno a parte perché non sono spese, e sommarli darebbe un totale che non vuol dire niente.',
     jsonTitle: 'Per conservarli',
     jsonBody:
       'Copia integrale: spese, categorie, persone, budget e pareggi, comprese quelle cancellate. È il formato da tenere da parte, ed è l’unico che si può reimportare.',

@@ -27,8 +27,12 @@
 export type Cell =
   | { kind: 'empty' }
   | { kind: 'text'; value: string }
+  /** Un testo in grassetto: i titoli delle sezioni dentro un foglio di riepilogo. */
+  | { kind: 'heading'; value: string }
   | { kind: 'number'; value: string }
   | { kind: 'money'; value: string }
+  /** Una quota fra 0 e 1, mostrata come percentuale. */
+  | { kind: 'percent'; value: string }
   /** Una data `YYYY-MM-DD`. Diventa un seriale Excel, quindi si ordina e si filtra. */
   | { kind: 'date'; value: string };
 
@@ -36,6 +40,10 @@ export const EMPTY: Cell = { kind: 'empty' };
 
 export function text(value: string): Cell {
   return value === '' ? EMPTY : { kind: 'text', value };
+}
+
+export function heading(value: string): Cell {
+  return { kind: 'heading', value };
 }
 
 export function number(value: string): Cell {
@@ -46,6 +54,10 @@ export function money(value: string): Cell {
   return { kind: 'money', value };
 }
 
+export function percent(value: string): Cell {
+  return { kind: 'percent', value };
+}
+
 export function date(value: string): Cell {
   return { kind: 'date', value };
 }
@@ -53,6 +65,14 @@ export function date(value: string): Cell {
 export interface Sheet {
   /** Il nome sulla linguetta. Al massimo 31 caratteri, senza `[ ] : * ? / \`. */
   name: string;
+  /**
+   * L'intestazione delle colonne, sulla riga 1.
+   *
+   * **Vuota per un foglio a sezioni** come il Riepilogo, dove le colonne non hanno un
+   * significato unico per tutta l'altezza: lì un'intestazione mentirebbe su tre quarti del
+   * foglio, e il filtro che la accompagna filtrerebbe insieme tabelle diverse. Senza
+   * intestazione non si congela niente e non si mette nessun filtro.
+   */
   header: string[];
   rows: Cell[][];
 }
@@ -161,7 +181,7 @@ const XML_HEAD = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
 /* -------------------------------------------------------------------------- */
 
 /** Gli indici di `cellXfs` in `styles.xml`. Vanno letti insieme a `stylesXml`. */
-export const STYLE = { normal: 0, header: 1, date: 2, money: 3 } as const;
+export const STYLE = { normal: 0, header: 1, date: 2, money: 3, percent: 4 } as const;
 
 /**
  * Il foglio di stili minimo.
@@ -185,12 +205,14 @@ export function stylesXml(): string {
     '<fill><patternFill patternType="gray125"/></fill></fills>' +
     '<borders count="1"><border/></borders>' +
     '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
-    '<cellXfs count="4">' +
+    '<cellXfs count="5">' +
     '<xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
     '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyFont="1"/>' +
     // 14 è il formato data predefinito di Excel: si mostra secondo il locale di chi apre.
     '<xf numFmtId="14" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
     '<xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
+    // 10 è `0.00%`, anch'esso predefinito: il valore nel file resta una frazione fra 0 e 1.
+    '<xf numFmtId="10" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/>' +
     '</cellXfs>' +
     '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>' +
     '</styleSheet>'
@@ -208,10 +230,14 @@ function cellXml(cell: Cell, reference: string): string {
     case 'text':
       // `xml:space="preserve"`: senza, uno spazio in testa o in coda a una nota sparisce.
       return `<c r="${reference}" t="inlineStr"><is><t xml:space="preserve">${escapeXml(cell.value)}</t></is></c>`;
+    case 'heading':
+      return `<c r="${reference}" t="inlineStr" s="${STYLE.header}"><is><t>${escapeXml(cell.value)}</t></is></c>`;
     case 'number':
       return `<c r="${reference}"><v>${cell.value}</v></c>`;
     case 'money':
       return `<c r="${reference}" s="${STYLE.money}"><v>${cell.value}</v></c>`;
+    case 'percent':
+      return `<c r="${reference}" s="${STYLE.percent}"><v>${cell.value}</v></c>`;
     case 'date': {
       const serial = dateSerial(cell.value);
       // Una data che non è una data esce come testo invece di sparire: un record storto
@@ -222,13 +248,50 @@ function cellXml(cell: Cell, reference: string): string {
   }
 }
 
-/** Larghezze: dall'intestazione, entro limiti che tengono il foglio leggibile. */
-function colsXml(header: string[]): string {
-  if (header.length === 0) return '';
-  const cols = header
-    .map((label, index) => {
-      const width = Math.min(40, Math.max(10, label.length + 4));
-      return `<col min="${index + 1}" max="${index + 1}" width="${width}" customWidth="1"/>`;
+/** Quanti caratteri occupa una cella, per decidere la larghezza della sua colonna. */
+function cellWidth(cell: Cell): number {
+  switch (cell.kind) {
+    case 'empty':
+      return 0;
+    case 'text':
+    case 'heading':
+      return cell.value.length;
+    case 'date':
+      // Il seriale si mostra come data, quindi conta quanto una data, non quanto il numero.
+      return 10;
+    default:
+      return cell.value.length;
+  }
+}
+
+/**
+ * Larghezze calcolate dal contenuto, non dalla sola intestazione.
+ *
+ * Le colonne larghe uguale costringono ad allargarle a mano prima di poter leggere: una
+ * nota lunga e un `id` non chiedono lo stesso spazio. I limiti sono 8 e 42 caratteri —
+ * sotto l'intestazione si troncherebbe, sopra una nota lunga spingerebbe tutto il resto
+ * fuori dallo schermo, ed è meglio allargarla a mano quella che serve che subirle tutte.
+ */
+function colsXml(sheet: Sheet): string {
+  const columns = Math.max(sheet.header.length, ...sheet.rows.map((row) => row.length), 0);
+  if (columns === 0) return '';
+
+  const widths: number[] = [];
+  for (let i = 0; i < columns; i++) {
+    widths[i] = (sheet.header[i]?.length ?? 0) + 2;
+  }
+  for (const row of sheet.rows) {
+    for (let i = 0; i < row.length; i++) {
+      const cell = row[i];
+      if (cell === undefined) continue;
+      widths[i] = Math.max(widths[i] ?? 0, cellWidth(cell) + 2);
+    }
+  }
+
+  const cols = widths
+    .map((width, index) => {
+      const clamped = Math.min(42, Math.max(8, width));
+      return `<col min="${index + 1}" max="${index + 1}" width="${clamped}" customWidth="1"/>`;
     })
     .join('');
   return `<cols>${cols}</cols>`;
@@ -242,22 +305,26 @@ function colsXml(header: string[]): string {
  * esattamente il lavoro che un foglio di calcolo dovrebbe evitare.
  */
 export function sheetXml(sheet: Sheet): string {
+  const hasHeader = sheet.header.length > 0;
   const lastColumn = columnName(Math.max(0, sheet.header.length - 1));
 
-  const headerRow =
-    '<row r="1">' +
-    sheet.header
-      .map(
-        (label, index) =>
-          `<c r="${columnName(index)}1" t="inlineStr" s="${STYLE.header}"><is><t>${escapeXml(label)}</t></is></c>`,
-      )
-      .join('') +
-    '</row>';
+  const headerRow = hasHeader
+    ? '<row r="1">' +
+      sheet.header
+        .map(
+          (label, index) =>
+            `<c r="${columnName(index)}1" t="inlineStr" s="${STYLE.header}"><is><t>${escapeXml(label)}</t></is></c>`,
+        )
+        .join('') +
+      '</row>'
+    : '';
+
+  // Con l'intestazione i record partono dalla riga 2; senza, dalla 1.
+  const firstBodyRow = hasHeader ? 2 : 1;
 
   const bodyRows = sheet.rows
     .map((row, rowIndex) => {
-      // +2 e non +1: la riga 1 è l'intestazione, quindi il primo record sta sulla 2.
-      const rowNumber = rowIndex + 2;
+      const rowNumber = rowIndex + firstBodyRow;
       const cells = row
         .map((cell, index) => cellXml(cell, `${columnName(index)}${rowNumber}`))
         .join('');
@@ -268,12 +335,14 @@ export function sheetXml(sheet: Sheet): string {
   return (
     XML_HEAD +
     '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
-    '<sheetViews><sheetView workbookViewId="0">' +
-    '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>' +
-    '</sheetView></sheetViews>' +
-    colsXml(sheet.header) +
+    (hasHeader
+      ? '<sheetViews><sheetView workbookViewId="0">' +
+        '<pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/>' +
+        '</sheetView></sheetViews>'
+      : '') +
+    colsXml(sheet) +
     `<sheetData>${headerRow}${bodyRows}</sheetData>` +
-    (sheet.header.length > 0 ? `<autoFilter ref="A1:${lastColumn}1"/>` : '') +
+    (hasHeader ? `<autoFilter ref="A1:${lastColumn}1"/>` : '') +
     '</worksheet>'
   );
 }

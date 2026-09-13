@@ -19,7 +19,7 @@ dicendo tre cose false su sé stesso.
 la mattina dello stesso giorno: il sync visto funzionare nei due versi fra due telefoni veri, coi
 membri e i saldi giusti, e i due widget popolati con numeri identici a un calcolo indipendente.
 
-**Sessantadue step, dallo 0 al 61**, elencati uno per riga in [registro.md](registro.md). Sei piani
+**Sessantatré step, dallo 0 al 62**, elencati uno per riga in [registro.md](registro.md). Sei piani
 chiusi su sette — l'originale, il [v2](piano-v2-profili-gruppi-sync.md),
 [v3](piano-v3-tab-gruppi-azzeramento-sync.md), [v4](piano-v4-grafici-e-dashboard.md),
 [v6](piano-v6-spesa-rapida-e-grafici-componibili.md) e
@@ -27,7 +27,7 @@ chiusi su sette — l'originale, il [v2](piano-v2-profili-gruppi-sync.md),
 ([visualdesign.md](visualdesign.md)). Il [v5](piano-v5-notifiche-widget-profilo.md) è a dodici step
 su tredici: manca solo la coda dello Step 41.
 
-**1395 test verdi** (701 core + 640 app + 54 relay), con `typecheck`, `lint` e `format:check`
+**1409 test verdi** (715 core + 640 app + 54 relay), con `typecheck`, `lint` e `format:check`
 puliti.
 
 **Gli aggiornamenti via etere funzionano, e ne sono già partiti due** il 13 settembre: gli Step
@@ -64,20 +64,21 @@ del 5 settembre (commit `9606e0f`) combacia con `main`, e tutto ciò che è entr
 ## Il piano in corso
 
 Il **[v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md) — i dati escono in un foglio di
-calcolo, e il backup si fa da solo**, scritto il 13 settembre. Occupa gli **Step 61–66**, e **il 61
-è chiuso**: il `.xlsx` ha preso il posto dei due CSV, che sono usciti dal repo, e
-l'[ADR 0004](adr/0004-l-xlsx-al-posto-del-csv.md) supera la
-[0003](adr/0003-formati-di-export.md) nella parte tabellare.
+calcolo, e il backup si fa da solo**, scritto il 13 settembre. Occupa gli **Step 61–66**, e i primi **due
+sono chiusi**: il `.xlsx` ha preso il posto dei due CSV, che sono usciti dal repo — con
+l'[ADR 0004](adr/0004-l-xlsx-al-posto-del-csv.md) che supera la
+[0003](adr/0003-formati-di-export.md) nella parte tabellare — e il file contiene ora **sette fogli**,
+riepilogo compreso.
 
-Restano i **62–66**: gli altri cinque fogli del file Excel più un riepilogo, il formato JSON che sale
-alla v4 col nome del gruppo dentro, l'import che impara a scegliere un file invece di farsi
-incollare, il backup di tutti i gruppi che si scrive da sé in una cartella scelta una volta, e
-l'avviso quando quel backup invecchia. **Nessuno dei sei step chiede una build EAS**, quindi
+Restano i **63–66**: il formato JSON che sale alla v4 col nome del gruppo dentro, l'import che
+impara a scegliere un file invece di farsi incollare, il backup di tutti i gruppi che si scrive da sé
+in una cartella scelta una volta, e l'avviso quando quel backup invecchia. **Nessuno dei sei step chiede una build EAS**, quindi
 `version` in `app.json` resta invariata.
 
-Del 61 **manca una prova**, ed è nella lista di [verifica-sul-telefono.md](verifica-sul-telefono.md):
-il `.xlsx` è stato aperto con LibreOffice e validato come pacchetto OPC, ma non ancora con **Excel**
-né con **Fogli Google**.
+Del `.xlsx` **manca una prova**, ed è nella lista di
+[verifica-sul-telefono.md](verifica-sul-telefono.md): il file è stato aperto con LibreOffice e
+validato come pacchetto OPC, ma non ancora con **Excel** né con **Fogli Google**. Si fa una volta
+sola, a piano finito.
 
 ## Dove sta cosa
 

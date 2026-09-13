@@ -152,9 +152,13 @@ describe('stylesXml', () => {
     );
   });
 
-  it('definisce i quattro stili che le celle indicizzano', () => {
-    expect(stylesXml()).toContain('<cellXfs count="4">');
-    expect(STYLE).toEqual({ normal: 0, header: 1, date: 2, money: 3 });
+  it('definisce i cinque stili che le celle indicizzano', () => {
+    // `count` e il numero di `xf` devono coincidere: se si aggiunge uno stile e si dimentica
+    // il contatore, Excel apre il file e ignora gli stili oltre il conteggio dichiarato.
+    const xml = stylesXml();
+    expect(xml).toContain('<cellXfs count="5">');
+    expect(xml.match(/<xf [^>]*xfId="0"/g)).toHaveLength(5);
+    expect(STYLE).toEqual({ normal: 0, header: 1, date: 2, money: 3, percent: 4 });
   });
 });
 

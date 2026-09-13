@@ -221,7 +221,8 @@ describe('le cancellazioni', () => {
 describe('il foglio Pareggi', () => {
   it('è un foglio a parte, perché i pareggi non sono spese', () => {
     // In un unico foglio qualcuno sommerebbe due colonne che non vanno sommate.
-    expect(vaultSheets(snapshot).map((s) => s.name)).toEqual(['Spese', 'Pareggi']);
+    const names = vaultSheets(snapshot).map((s) => s.name);
+    expect(names.slice(0, 2)).toEqual(['Spese', 'Pareggi']);
   });
 
   it('risolve i nomi dei due membri', () => {
@@ -254,10 +255,13 @@ describe('toXlsxExport', () => {
     expect(name).toBe('[Content_Types].xml');
   });
 
-  it('funziona su un vault vuoto: due fogli con la sola intestazione', () => {
+  it('funziona su un vault vuoto: i fogli ci sono, con la sola intestazione', () => {
     const sheets = vaultSheets(empty);
-    expect(sheets).toHaveLength(2);
-    expect(sheets[0]!.rows).toEqual([]);
+    expect(sheets).toHaveLength(7);
+    // Tutti vuoti tranne il Riepilogo, che ha comunque i titoli delle sue sezioni.
+    for (const s of sheets.filter((x) => x.name !== 'Riepilogo')) {
+      expect(s.rows).toEqual([]);
+    }
     expect(() => toXlsxExport(empty)).not.toThrow();
   });
 
@@ -274,5 +278,194 @@ describe('toXlsxExport', () => {
   it('la data che finisce nel file è il seriale, non la stringa ISO', () => {
     const text = new TextDecoder().decode(toXlsxExport(snapshot));
     expect(text).toContain(`<v>${dateSerial('2026-07-04')}</v>`);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Step 62 — il file contiene tutto il gruppo                                  */
+/* -------------------------------------------------------------------------- */
+
+/** Il foglio col nome dato. */
+function sheet(sheets: ReturnType<typeof vaultSheets>, name: string) {
+  return sheets.find((s) => s.name === name)!;
+}
+
+/** Le celle di una riga che comincia con un certo testo, nel Riepilogo. */
+function sectionRows(sheets: ReturnType<typeof vaultSheets>, title: string): Cell[][] {
+  const rows = sheet(sheets, 'Riepilogo').rows;
+  const start = rows.findIndex((row) => row[0]?.kind === 'heading' && row[0].value === title);
+  expect(start).toBeGreaterThanOrEqual(0);
+
+  const out: Cell[][] = [];
+  for (let i = start + 1; i < rows.length; i++) {
+    const row = rows[i]!;
+    // La sezione finisce alla riga vuota che precede il titolo successivo.
+    if (row.length === 0 || row[0]?.kind === 'heading') break;
+    out.push(row);
+  }
+  return out;
+}
+
+const ricco: VaultSnapshot = {
+  ...snapshot,
+  categories: [
+    { id: 'spesa', name: 'Spesa', icon: '🛒', color: '#C2255C', archived: false },
+    { id: 'vecchia', name: 'Vecchia', icon: '📦', color: '#888888', archived: true },
+  ],
+  budgets: [{ categoryId: 'spesa', month: '2026-07', limitCents: 10000 }],
+  vocabulary: [
+    { kind: 'tag', key: 'casa', name: 'casa', deletedAt: null },
+    { kind: 'store', key: 'esselunga', name: 'Esselunga', deletedAt: null },
+  ],
+};
+
+describe('i sette fogli', () => {
+  it('sono nell’ordine in cui compaiono le linguette: i dati prima, il riepilogo in fondo', () => {
+    expect(vaultSheets(ricco).map((s) => s.name)).toEqual([
+      'Spese',
+      'Pareggi',
+      'Categorie',
+      'Budget',
+      'Persone',
+      'Vocabolario',
+      'Riepilogo',
+    ]);
+  });
+
+  it('non hanno nomi che Excel rifiuta, e il file si costruisce', () => {
+    expect(() => toXlsxExport(ricco)).not.toThrow();
+  });
+});
+
+describe('il foglio Categorie', () => {
+  it('contiene anche le archiviate, perché le spese vecchie le riferiscono ancora', () => {
+    const rows = sheet(vaultSheets(ricco), 'Categorie').rows;
+    expect(rows).toHaveLength(2);
+    expect(rows[1]![0]).toEqual({ kind: 'text', value: 'Vecchia' });
+    expect(rows[1]![3]).toEqual({ kind: 'text', value: 'sì' });
+    expect(rows[0]![3]).toEqual({ kind: 'empty' });
+  });
+});
+
+describe('il foglio Budget', () => {
+  it('dice quanto è stato speso davvero, non solo il limite', () => {
+    // La spesa di prova è 25.00 su un limite di 100.00 nello stesso mese.
+    const rows = sheet(vaultSheets(ricco), 'Budget').rows;
+    expect(rows).toHaveLength(1);
+    expect(rows[0]!.map((c) => (c.kind === 'empty' ? '' : c.value))).toEqual([
+      '2026-07',
+      'Spesa',
+      '100.00',
+      '25.00',
+      '75.00',
+      'sotto',
+    ]);
+  });
+
+  it('usa le parole della schermata budget, non altre', () => {
+    const sforato: VaultSnapshot = {
+      ...ricco,
+      budgets: [{ categoryId: 'spesa', month: '2026-07', limitCents: 1000 }],
+    };
+    const rows = sheet(vaultSheets(sforato), 'Budget').rows;
+    expect(rows[0]![5]).toEqual({ kind: 'text', value: 'superato' });
+    // Il resto è negativo, e `centsToDecimal` porta il segno davanti.
+    expect(rows[0]![4]).toEqual({ kind: 'money', value: '-15.00' });
+  });
+});
+
+describe('il foglio Vocabolario', () => {
+  it('traduce il tipo invece di scrivere «store»', () => {
+    const rows = sheet(vaultSheets(ricco), 'Vocabolario').rows;
+    expect(rows[0]![0]).toEqual({ kind: 'text', value: 'tag' });
+    expect(rows[1]![0]).toEqual({ kind: 'text', value: 'negozio' });
+  });
+});
+
+describe('il foglio Riepilogo', () => {
+  it('non ha intestazione, quindi niente filtro e niente riga congelata', () => {
+    // Le colonne non hanno un significato unico per tutta l'altezza: la A è un mese, poi
+    // una categoria, poi una persona.
+    const riepilogo = sheet(vaultSheets(ricco), 'Riepilogo');
+    expect(riepilogo.header).toEqual([]);
+
+    const xml = new TextDecoder().decode(toXlsxExport(ricco));
+    expect(xml).not.toContain('<autoFilter ref="A1:1"/>');
+  });
+
+  it('**il totale per mese coincide con la somma della colonna importo di Spese**', () => {
+    // È l'invariante che tiene insieme i due fogli: se divergessero, chi legge il file non
+    // saprebbe a quale credere — e nessuno dei due direbbe di essere quello sbagliato.
+    const sheets = vaultSheets(ricco);
+
+    const spese = sheet(sheets, 'Spese');
+    const importo = spese.header.indexOf('importo');
+    const sommaSpese = spese.rows.reduce((sum, row) => {
+      const cell = row[importo]!;
+      return sum + (cell.kind === 'money' ? Number(cell.value) : 0);
+    }, 0);
+
+    const sommaRiepilogo = sectionRows(sheets, 'Per mese').reduce((sum, row) => {
+      const cell = row[2]!;
+      return sum + (cell.kind === 'money' ? Number(cell.value) : 0);
+    }, 0);
+
+    expect(sommaRiepilogo).toBeCloseTo(sommaSpese, 2);
+    expect(sommaRiepilogo).toBeCloseTo(25, 2);
+  });
+
+  it('nomina le spese senza categoria invece di lasciare una riga muta', () => {
+    const senza: VaultSnapshot = { ...ricco, expenses: [expense({ categoryId: null })] };
+    const righe = sectionRows(vaultSheets(senza), 'Per categoria');
+    expect(righe[0]![0]).toEqual({ kind: 'text', value: 'senza categoria' });
+  });
+
+  it('scrive la quota come percentuale, con il valore ancora fra 0 e 1', () => {
+    const righe = sectionRows(vaultSheets(ricco), 'Per categoria');
+    expect(righe[0]![3]).toEqual({ kind: 'percent', value: '1.0000' });
+  });
+
+  it('i saldi sono quelli di computeBalances, pareggi compresi', () => {
+    // Anna ha pagato 25.00 e gliene spettano 12.50; ha ricevuto un pareggio da 12.50.
+    const righe = sectionRows(vaultSheets(ricco), 'Saldi');
+    const anna = righe.find((r) => r[0]?.kind === 'text' && r[0].value === 'Anna')!;
+    expect(anna.map((c) => (c.kind === 'empty' ? '' : c.value))).toEqual([
+      'Anna',
+      '25.00',
+      '12.50',
+      '-12.50',
+      '0.00',
+    ]);
+  });
+
+  it('quando non c’è niente da saldare lo dice, invece di lasciare la sezione vuota', () => {
+    const righe = sectionRows(vaultSheets(ricco), 'Chi deve dare a chi');
+    expect(righe[0]![0]).toEqual({ kind: 'text', value: 'Siete in pari.' });
+  });
+
+  it('elenca i pagamenti minimi quando i conti non tornano', () => {
+    const aperto: VaultSnapshot = { ...ricco, settlements: [] };
+    const righe = sectionRows(vaultSheets(aperto), 'Chi deve dare a chi');
+    expect(righe[0]!.map((c) => (c.kind === 'empty' ? '' : c.value))).toEqual([
+      'Bruno',
+      '→ Anna',
+      '12.50',
+    ]);
+  });
+
+  it('le spese cancellate non entrano nei totali', () => {
+    const conCancellata: VaultSnapshot = {
+      ...ricco,
+      expenses: [
+        expense(),
+        expense({ id: 'e2', amountCents: 9900, deletedAt: '2026-07-06T08:00:00.000Z' }),
+      ],
+    };
+    const righe = sectionRows(vaultSheets(conCancellata), 'Per mese');
+    const totale = righe.reduce((sum, row) => {
+      const cell = row[2]!;
+      return sum + (cell.kind === 'money' ? Number(cell.value) : 0);
+    }, 0);
+    expect(totale).toBeCloseTo(25, 2);
   });
 });
