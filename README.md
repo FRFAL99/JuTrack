@@ -93,8 +93,20 @@ Poi si scansiona il QR con Expo Go.
 
 ## Stato
 
-In sviluppo. **Punto di partenza: [docs/STATO.md](docs/STATO.md)** — cosa è fatto, cosa manca, cosa è
-bloccato. Il dettaglio cronologico è in [docs/devlog.md](docs/devlog.md).
+Nel Play Store dal 12 settembre 2026, in test chiuso. **Punto di partenza:
+[docs/STATO.md](docs/STATO.md)** — cosa è fatto, cosa manca, cosa è bloccato.
+
+La documentazione ha cinque ingressi, uno per domanda:
+
+| Vuoi sapere…                          | Leggi                                                          |
+| ------------------------------------- | -------------------------------------------------------------- |
+| dove siamo oggi                       | [docs/STATO.md](docs/STATO.md)                                 |
+| che numero ha uno step, e se è chiuso | [docs/registro.md](docs/registro.md)                           |
+| com'è andata una giornata             | [docs/devlog.md](docs/devlog.md)                               |
+| come funziona una cosa, adesso        | [docs/conoscenza/](docs/conoscenza/)                           |
+| cosa provare col telefono in mano     | [docs/verifica-sul-telefono.md](docs/verifica-sul-telefono.md) |
+
+Chi ci lavora, umano o agente, parte da [CLAUDE.md](CLAUDE.md).
 
 Relay in produzione: https://jutrack-relay.jutrack-relayfrfal.workers.dev
 
