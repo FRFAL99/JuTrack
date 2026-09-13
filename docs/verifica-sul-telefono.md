@@ -262,6 +262,23 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
   Se manca il foglio di condivisione il bottone del `.xlsx` è **spento**: è voluto, un file binario
   non può ripiegare sugli appunti. Il JSON accanto invece deve continuare a ripiegarci.
 
+- **Il selettore di file dello Step 64, che è il primo a dipendere da una funzione nativa arrivata
+  via etere.** La development build installata è del **5 settembre**, e questo codice ci arriva come
+  aggiornamento OTA: l'OTA porta JavaScript, non codice nativo. Quindi la prova ha **due esiti
+  buoni**, e vanno distinti prima di guardare lo schermo.
+  - `/importa` → se il bottone **«Scegli il file» c'è**: toccarlo apre il selettore di sistema,
+    scegliere un `jutrack-vault-*.json` riempie il campo **senza incollare niente**, e da lì
+    «Leggi il file» prosegue come prima. Prova anche a **chiudere il selettore senza scegliere**:
+    non deve comparire nessun avviso, la schermata resta com'era.
+  - Se il bottone **non c'è**: è l'altro esito buono, non un guasto — quella build nativa non ha
+    `pickFileAsync`, e gli appunti funzionano come sempre. In quel caso serve una build EAS nuova
+    per averlo, e va scritto qui.
+  - `/backup` deve comportarsi **allo stesso modo** dell'import: o il bottone c'è in tutte e due, o
+    in nessuna delle due. La passphrase resta da digitare in ogni caso.
+  - Ultima: scegliere un file **che non è un export di JuTrack** (una foto rinominata, un JSON
+    qualsiasi) deve produrre il messaggio di `parseVaultExport` — «Questo non è un file JSON…» o
+    «Questo file non è un export di JuTrack» — e **non** un errore del selettore.
+
 - **Il nome del gruppo dentro il file, dello Step 63.** Rinomina un gruppo in «Casa» → esporta il
   JSON → aprilo in un editor: subito dopo `exportedAt` devono esserci `"groupName": "Casa"`,
   `"version": 4` e `"app"` con la versione dell'app. Poi `/importa`, incolla, e **prima** dei

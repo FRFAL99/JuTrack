@@ -752,6 +752,7 @@ export const it = {
     restorePassphrasePlaceholder: 'Passphrase del backup',
     restorePassphraseA11y: 'Passphrase del backup da ripristinare',
     verifying: 'Verifica…',
+    pickButton: 'Scegli il file del backup',
     restoreButton: 'Ripristina la chiave',
     alreadyPresent: {
       title: 'Gruppo già presente',
@@ -788,6 +789,13 @@ export const it = {
       'Incolla il contenuto dell’export JSON, quello che comincia con una graffa e contiene «jutrack-export».',
     filePlaceholder: '{ "format": "jutrack-export", …',
     fileA11y: 'Contenuto del file di export',
+    pickButton: 'Scegli il file',
+    picking: 'Apertura…',
+    pickFailedTitle: 'Non si riesce a leggere il file',
+    pickUnavailable: {
+      title: 'Selettore non disponibile',
+      body: 'Questa versione dell’app non riesce ad aprire il selettore di file. Incolla il contenuto qui sotto, oppure aggiorna l’app.',
+    },
     pasteButton: 'Incolla dagli appunti',
     reading: 'Lettura…',
     readButton: 'Leggi il file',

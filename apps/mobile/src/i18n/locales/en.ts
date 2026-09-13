@@ -689,6 +689,7 @@ export const en: Dictionary = {
     restorePassphrasePlaceholder: 'Backup passphrase',
     restorePassphraseA11y: 'Passphrase of the backup to restore',
     verifying: 'Checking…',
+    pickButton: 'Choose the backup file',
     restoreButton: 'Restore the key',
     alreadyPresent: {
       title: 'Group already present',
@@ -725,6 +726,13 @@ export const en: Dictionary = {
       'Paste the contents of the JSON export, the one that starts with a curly brace and contains “jutrack-export”.',
     filePlaceholder: '{ "format": "jutrack-export", …',
     fileA11y: 'Contents of the export file',
+    pickButton: 'Choose the file',
+    picking: 'Opening…',
+    pickFailedTitle: 'Cannot read the file',
+    pickUnavailable: {
+      title: 'Picker not available',
+      body: 'This version of the app cannot open the file picker. Paste the contents below, or update the app.',
+    },
     pasteButton: 'Paste from clipboard',
     reading: 'Reading…',
     readButton: 'Read the file',

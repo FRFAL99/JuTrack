@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { deriveVaultKeys, exportBackup, importBackup } from '@jutrack/core';
 import { Button } from '@/components/Button';
+import { isFilePickerAvailable, pickKeyFile } from '@/features/import/pick';
 import { ModalScreen } from '@/components/ModalScreen';
 import { Note } from '@/components/Note';
 import { SectionLabel } from '@/components/SectionLabel';
@@ -52,6 +53,7 @@ export default function BackupScreen() {
   const [restorePassphrase, setRestorePassphrase] = useState('');
   const [restoring, setRestoring] = useState(false);
   const [restoreError, setRestoreError] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
 
   const assessment = assessPassphrase(passphrase);
   const mismatch = confirmation !== '' && confirmation !== passphrase;
@@ -133,6 +135,39 @@ export default function BackupScreen() {
         );
       })
       .finally(() => setExporting(false));
+  };
+
+  /**
+   * Sceglie il file del backup, con lo stesso schema di `/importa`.
+   *
+   * Le due schermate erano coerenti quando entrambe chiedevano di incollare (Step 42), e
+   * devono restarlo ora che entrambe sanno scegliere: chi ha imparato il gesto di là se lo
+   * aspetta di qua. La passphrase resta da digitare — quella non sta in nessun file, ed è
+   * tutto il punto.
+   */
+  const chooseFile = (): void => {
+    setPicking(true);
+    setRestoreError(null);
+    void pickKeyFile()
+      .then((outcome) => {
+        if (outcome.status === 'read') {
+          setRestoreBlob(outcome.content.trim());
+          return;
+        }
+        if (outcome.status === 'cancelled') return;
+        if (outcome.status === 'unavailable') {
+          Alert.alert(
+            t('importScreen.pickUnavailable.title'),
+            t('importScreen.pickUnavailable.body'),
+          );
+          return;
+        }
+        Alert.alert(
+          t('importScreen.pickFailedTitle'),
+          outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
+        );
+      })
+      .finally(() => setPicking(false));
   };
 
   const handleRestore = (): void => {
@@ -292,6 +327,15 @@ export default function BackupScreen() {
             accessibilityLabel={t('backup.restorePassphraseA11y')}
             style={fieldStyle}
           />
+          {isFilePickerAvailable() && (
+            <Button
+              label={picking ? t('importScreen.picking') : t('backup.pickButton')}
+              variant="secondary"
+              onPress={chooseFile}
+              loading={picking}
+              disabled={picking || restoring}
+            />
+          )}
           <Button
             label={restoring ? t('backup.verifying') : t('backup.restoreButton')}
             variant="secondary"

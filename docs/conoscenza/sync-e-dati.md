@@ -98,6 +98,10 @@ confuse:
 - **`groupName` e `app` sono metadati, non record**: un valore illeggibile vale `null` e non produce
   né un rifiuto né uno scarto, perché nessuno dei due entra nel documento e il nome si può correggere
   prima di confermare l'import.
+- **Dallo Step 64 il file si sceglie**, in `/importa` come in `/backup`: `File.pickFileAsync` di
+  `expo-file-system`, che è già nella build. Gli appunti restano come ripiego, perché la build
+  nativa installata può essere più vecchia del JavaScript che le arriva via etere — e in quel caso
+  il bottone non compare affatto invece di fallire al tocco.
 - **Nessun file di export contiene la chiave del vault** — c'è un test che lo verifica.
 - **La passphrase del backup è l'unico punto del progetto in cui la sicurezza dipende da una scelta
   umana.** Il campo dà un giudizio (minimo 12 caratteri, si consigliano quattro parole slegate), ma

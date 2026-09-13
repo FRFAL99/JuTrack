@@ -13,6 +13,64 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Step 64: si sceglie un file, e gli appunti restano
+
+Per sei volte questo progetto ha rifiutato un modulo nativo per una comodità, e lo Step 42 l'aveva
+scritto in cima a `/importa`: «si incolla, non si sceglie un file, perché `expo-document-picker` è un
+modulo nativo, cioè una build EAS nuova». Era vero allora. **Oggi non lo è più**:
+`expo-file-system@57.0.1` — già nella build dallo Step 30 — espone `File.pickFileAsync`, e il
+selettore costa zero moduli nuovi e zero build. Il commento è stato riscritto, non cancellato: la
+regola che lo aveva prodotto è ancora buona, ha solo smesso di applicarsi qui.
+
+**La difesa dello Step 9 non copriva questo caso, ed è il punto dello step.** Il caricamento pigro di
+`features/export/share.ts` avvolge il `require` in un `try/catch` e difende dal caso in cui il
+**modulo** manchi. Qui il caso è un altro: il modulo si carica benissimo, ma la sua parte **nativa**
+è quella di una build compilata prima che `pickFileAsync` esistesse — e gli aggiornamenti via etere
+portano JavaScript, non codice nativo. È la chiamata a lanciare, non l'import. Difendere solo il
+`require` avrebbe lasciato scoperto esattamente il caso che si verificherà: la development build
+installata è del 5 settembre, e questo codice ci arriva via OTA.
+
+Quindi il `try/catch` avvolge **la chiamata**, e ci sta dentro anche il controllo
+`typeof fs.File?.pickFileAsync === 'function'`. Se manca, l'esito è `unavailable` e non un guasto:
+la schermata mostra gli appunti, cioè la strada di prima, che resta aperta e non è un ripiego
+umiliante ma la cosa che funzionava ieri.
+
+**Gli appunti restano anche dove il selettore funziona**, e non per nostalgia: sono due gesti
+diversi. Il file è la strada che regge un vault grande — un JSON di migliaia di spese il tetto degli
+appunti lo tocca — e infatti «Scegli il file» è il **primo** bottone. Dove il selettore non risponde,
+quel bottone non c'è proprio, invece di esserci e fallire al tocco.
+
+**Annullare non è un guasto**, ed è la sola decisione vera di tutto il modulo: chi apre il selettore
+e lo richiude ha deciso di non scegliere niente, e mostrargli un avviso vorrebbe dire rimproverarlo
+per aver cambiato idea. È anche l'unica cosa che si può sbagliare in silenzio, quindi è l'unica
+estratta in una funzione pura — `outcomeOf` — e coperta da test. Il resto di `pick.ts` è impianto:
+carica un modulo, chiama una funzione, cattura un errore, e su Node non c'è niente da provare che
+non sia un finto. È la stessa scelta dichiarata in `share.ts`, che per la stessa ragione non ha test.
+
+**Il tipo MIME si dichiara ma non si pretende.** Si filtra per `application/json`, e si accetta
+comunque quello che arriva: il tipo dichiarato da un fornitore di documenti è un'indicazione, non una
+garanzia, e un `.json` passato da una chat si presenta spesso come `text/plain`. A decidere se il
+contenuto è un export di JuTrack è **`parseVaultExport`**, che è nato per questo e che sa dire
+_perché_ no. Un secondo giudice, più ignorante, avrebbe solo prodotto rifiuti che il primo non
+avrebbe dato.
+
+**`/backup` prende lo stesso bottone.** Le due schermate erano coerenti quando entrambe chiedevano di
+incollare, ed è la coerenza che va conservata: chi impara il gesto di là se lo aspetta di qua. La
+passphrase, invece, si continua a digitare — quella non sta in nessun file, ed è tutto il punto.
+
+### Verifica
+
+**1426 test verdi** (723 core + 649 app + 54 relay), `typecheck`, `lint` e `format:check` puliti,
+`expo export --platform android` completato — che qui conta il doppio, perché è l'unico passaggio che
+risolve con Metro un import nuovo verso un modulo nativo.
+
+**Nessuna build EAS.** Ed è proprio per questo che il ripiego è la parte importante: lo step arriva
+via etere su una build nativa che non è stata ricompilata. Il criterio col telefono in mano è in
+[verifica-sul-telefono.md](verifica-sul-telefono.md), e comprende il caso in cui il selettore non
+compaia affatto.
+
+---
+
 ## 2026-09-13 — Step 63: il file di backup dice di che gruppo è
 
 Il formato d'export sale alla **v4**, e porta due campi nuovi: `groupName` e `app`.

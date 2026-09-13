@@ -9,6 +9,7 @@ import { ModalScreen } from '@/components/ModalScreen';
 import { Note } from '@/components/Note';
 import { SectionLabel } from '@/components/SectionLabel';
 import { encodeSnapshotAsState } from '@/features/import/build';
+import { isFilePickerAvailable, pickJsonFile } from '@/features/import/pick';
 import { describeKept, groupSkips, keptTotal, suggestedName } from '@/features/import/summary';
 import { plural } from '@/i18n/translate';
 import { expoRandom } from '@/platform';
@@ -39,10 +40,16 @@ import { useTheme } from '@/theme';
  * **Sta sulla radice e funziona senza gruppo**, come `/backup`, `/azzera` e `/dashboard`: chi
  * importa lo fa spesso su un telefono appena azzerato, dove di gruppi non ce n'è nessuno.
  *
- * **Si incolla, non si sceglie un file.** Un selettore di file vuole
- * `expo-document-picker`, cioè un modulo nativo, cioè una build EAS nuova — la sesta volta
- * che il progetto rifiuta un modulo nativo per una comodità. `/backup` chiede di incollare
- * per la stessa ragione, e le due schermate restano coerenti fra loro.
+ * **Dallo Step 64 si sceglie un file, e si può ancora incollare.** Fino ad allora qui si
+ * incollava soltanto, e la ragione scritta era buona: un selettore voleva
+ * `expo-document-picker`, cioè un modulo nativo, cioè una build EAS nuova per una comodità.
+ * Quella ragione **non vale più** — `expo-file-system`, già nella build dallo Step 30,
+ * espone `File.pickFileAsync` — e il bottone arriva insieme a `/backup`, perché le due
+ * schermate erano coerenti prima e devono restarlo.
+ *
+ * **Gli appunti non se ne vanno**, e non per nostalgia: la build nativa installata potrebbe
+ * essere più vecchia del JavaScript che le arriva via etere, e in quel caso il selettore non
+ * risponde. Vedi `features/import/pick.ts`, che è il posto in cui quel caso è gestito.
  */
 export default function ImportScreen() {
   const { t } = useTranslation();
@@ -52,6 +59,7 @@ export default function ImportScreen() {
   const [text, setText] = useState('');
   const [name, setName] = useState('');
   const [reading, setReading] = useState(false);
+  const [picking, setPicking] = useState(false);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [read, setRead] = useState<{ snapshot: VaultSnapshot; report: ImportReport } | null>(null);
@@ -132,13 +140,48 @@ export default function ImportScreen() {
       .finally(() => setImporting(false));
   };
 
+  /** Rimpiazza il contenuto e butta via il riassunto, che valeva per il testo di prima. */
+  const replaceText = (next: string): void => {
+    setText(next);
+    setRead(null);
+    setError(null);
+  };
+
   const pasteFromClipboard = (): void => {
     void Clipboard.getStringAsync().then((content) => {
-      if (content !== '') setText(content);
+      if (content !== '') replaceText(content);
     });
   };
 
+  const chooseFile = (): void => {
+    setPicking(true);
+    void pickJsonFile()
+      .then((outcome) => {
+        if (outcome.status === 'read') {
+          replaceText(outcome.content);
+          return;
+        }
+        // Annullato: la schermata resta com'era, senza dire niente. Dire «non hai scelto
+        // niente» a chi ha appena deciso di non scegliere niente è rumore.
+        if (outcome.status === 'cancelled') return;
+
+        if (outcome.status === 'unavailable') {
+          Alert.alert(
+            t('importScreen.pickUnavailable.title'),
+            t('importScreen.pickUnavailable.body'),
+          );
+          return;
+        }
+        Alert.alert(
+          t('importScreen.pickFailedTitle'),
+          outcome.error instanceof Error ? outcome.error.message : String(outcome.error),
+        );
+      })
+      .finally(() => setPicking(false));
+  };
+
   const skips = read === null ? [] : groupSkips(read.report.skipped);
+  const pickerAvailable = isFilePickerAvailable();
 
   return (
     <ModalScreen title={t('importScreen.title')}>
@@ -155,13 +198,9 @@ export default function ImportScreen() {
         <View style={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
           <TextInput
             value={text}
-            onChangeText={(next) => {
-              setText(next);
-              // Il riassunto vale per il testo da cui è stato ricavato: lasciarlo a schermo
-              // mentre il contenuto cambia farebbe importare un file diverso da quello letto.
-              setRead(null);
-              setError(null);
-            }}
+            // Il riassunto vale per il testo da cui è stato ricavato: lasciarlo a schermo
+            // mentre il contenuto cambia farebbe importare un file diverso da quello letto.
+            onChangeText={replaceText}
             placeholder={t('importScreen.filePlaceholder')}
             placeholderTextColor={colors.textMuted}
             multiline
@@ -171,10 +210,24 @@ export default function ImportScreen() {
             style={[fieldStyle, { minHeight: 120, textAlignVertical: 'top' }]}
           />
 
+          {/* **«Scegli il file» è il primo bottone**, perché è la strada che funziona con un
+              vault grande: gli appunti hanno un tetto, e un JSON di migliaia di spese lo
+              tocca. Gli appunti restano sotto, in secondario, per le build in cui il
+              selettore non risponde — e lì il bottone sopra non c'è proprio. */}
+          {pickerAvailable && (
+            <Button
+              label={picking ? t('importScreen.picking') : t('importScreen.pickButton')}
+              variant="secondary"
+              onPress={chooseFile}
+              loading={picking}
+              disabled={picking || reading}
+            />
+          )}
           <Button
             label={t('importScreen.pasteButton')}
             variant="secondary"
             onPress={pasteFromClipboard}
+            disabled={picking}
           />
           <Button
             label={reading ? t('importScreen.reading') : t('importScreen.readButton')}

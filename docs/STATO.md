@@ -19,7 +19,7 @@ dicendo tre cose false su sé stesso.
 la mattina dello stesso giorno: il sync visto funzionare nei due versi fra due telefoni veri, coi
 membri e i saldi giusti, e i due widget popolati con numeri identici a un calcolo indipendente.
 
-**Sessantaquattro step, dallo 0 al 63**, elencati uno per riga in [registro.md](registro.md). Sei piani
+**Sessantacinque step, dallo 0 al 64**, elencati uno per riga in [registro.md](registro.md). Sei piani
 chiusi su sette — l'originale, il [v2](piano-v2-profili-gruppi-sync.md),
 [v3](piano-v3-tab-gruppi-azzeramento-sync.md), [v4](piano-v4-grafici-e-dashboard.md),
 [v6](piano-v6-spesa-rapida-e-grafici-componibili.md) e
@@ -27,7 +27,7 @@ chiusi su sette — l'originale, il [v2](piano-v2-profili-gruppi-sync.md),
 ([visualdesign.md](visualdesign.md)). Il [v5](piano-v5-notifiche-widget-profilo.md) è a dodici step
 su tredici: manca solo la coda dello Step 41.
 
-**1422 test verdi** (723 core + 645 app + 54 relay), con `typecheck`, `lint` e `format:check`
+**1426 test verdi** (723 core + 649 app + 54 relay), con `typecheck`, `lint` e `format:check`
 puliti.
 
 **Gli aggiornamenti via etere funzionano, e ne sono già partiti due** il 13 settembre: gli Step
@@ -64,16 +64,15 @@ del 5 settembre (commit `9606e0f`) combacia con `main`, e tutto ciò che è entr
 ## Il piano in corso
 
 Il **[v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md) — i dati escono in un foglio di
-calcolo, e il backup si fa da solo**, scritto il 13 settembre. Occupa gli **Step 61–66**, e i primi **tre
+calcolo, e il backup si fa da solo**, scritto il 13 settembre. Occupa gli **Step 61–66**, e i primi **quattro
 sono chiusi**: il `.xlsx` ha preso il posto dei due CSV, che sono usciti dal repo — con
 l'[ADR 0004](adr/0004-l-xlsx-al-posto-del-csv.md) che supera la
 [0003](adr/0003-formati-di-export.md) nella parte tabellare — il file contiene **sette fogli**,
 riepilogo compreso, e il **formato JSON è salito alla v4**, che porta dentro il nome del gruppo e la
-versione dell'app.
+versione dell'app, e **l'import sceglie un file** invece di farsi incollare — anche in `/backup`.
 
-Restano i **64–66**: l'import che impara a scegliere un file invece di farsi incollare, il backup di
-tutti i gruppi che si scrive da sé in una cartella scelta una volta, e l'avviso quando quel backup
-invecchia. **Nessuno dei sei step chiede una build EAS**, quindi
+Restano i **65–66**: il backup di tutti i gruppi che si scrive da sé in una cartella scelta una
+volta, e l'avviso quando quel backup invecchia. **Nessuno dei sei step chiede una build EAS**, quindi
 `version` in `app.json` resta invariata.
 
 Del `.xlsx` **manca una prova**, ed è nella lista di
