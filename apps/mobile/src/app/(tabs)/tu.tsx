@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import Feather from '@expo/vector-icons/Feather';
+import Constants from 'expo-constants';
 import { CORE_VERSION } from '@jutrack/core';
 import { initialOf } from '@/components/avatar';
 import { ListRow } from '@/components/ListRow';
@@ -381,7 +382,14 @@ export default function TuScreen() {
             </Text>
           </Pressable>
           <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            {t('you.device.version', { app: '0.1.0', core: CORE_VERSION })}
+            {/* Letta da `app.json` e non scritta qui: era ferma a «0.1.0» mentre la
+                versione pubblicata sul Play Store era già 1.0.0 — cioè il numero che si
+                legge in fondo a questa schermata, l'unico che un tester possa riferire, era
+                falso. Un numero scritto due volte è un numero che prima o poi diverge. */}
+            {t('you.device.version', {
+              app: Constants.expoConfig?.version ?? '—',
+              core: CORE_VERSION,
+            })}
           </Text>
         </View>
       </ScrollView>

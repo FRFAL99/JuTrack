@@ -18,17 +18,20 @@ import type { ConfigContext, ExpoConfig } from 'expo/config';
  * scegliere. Uno schema diverso renderebbe invece falso `pairing.schemePrefix`, che nei
  * dizionari è scritto `jutrack://`.
  *
+ * **`APP_VARIANT` non si passa da `eas.json`**, e il giro lungo è il punto. `@expo/fingerprint`
+ * hasha `eas.json` come **file intero**: una riga aggiunta al solo profilo `development` sposta la
+ * `runtimeVersion` di *tutti* i profili, e con lei taglia fuori da ogni `eas update` le build già
+ * installate. Misurato il 13 settembre 2026 — con quella riga dentro, l'impronta passava da
+ * `d862b56d` a `832a0a87` e la 1.0.0 in test chiuso sul Play Store smetteva di ricevere
+ * aggiornamenti. Lo Step 47 esiste per evitare esattamente questo. La variabile sta quindi fra le
+ * variabili d'ambiente del progetto su EAS: `eas env:list development`.
+ *
+ * **E la spiegazione non può stare in `eas.json`**: scriverla lì dentro come commento ha spostato
+ * l'impronta una seconda volta. Il file va lasciato identico, byte per byte, finché non c'è una
+ * ragione vera per cambiarlo — e quando ci sarà, servirà una build nuova per ogni profilo.
+ *
  * **Fuori dalla variante questo file non tocca niente**: restituisce la configurazione di
  * `app.json` com'è, e infatti non compare fra le sorgenti dell'impronta di `preview`.
- *
- * **A cambiare l'impronta è stato `eas.json`**, misurato il 13 settembre confrontando le
- * sorgenti prima e dopo: `@expo/fingerprint` lo hasha **come file intero**, quindi aggiungere
- * un `env` al solo profilo `development` ha spostato la `runtimeVersion` di *tutti* i profili.
- * È una trappola da ricordare, perché lo Step 47 esiste proprio per mandare `eas update` alle
- * build già installate: **toccare `eas.json` le taglia fuori**, anche per una riga che
- * riguarda un altro profilo. Qui non si è perso niente — la preview sul telefono era già
- * irraggiungibile da quando `version` è passata a 1.0.0 — ma la prossima volta va saputo
- * prima.
  */
 export default ({ config }: ConfigContext): ExpoConfig => {
   const base = config as ExpoConfig;

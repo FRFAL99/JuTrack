@@ -6,6 +6,18 @@ saldi giusti, e i due widget si sono popolati con numeri identici a un calcolo i
 quattro i piani e il redesign sono nel codice, il quinto è a dodici step su tredici, e la build EAS
 che tiene tutto questo è installata.
 
+> **L'app è nel Play Store dal 12 settembre 2026.** Account Play Console aperto, **1.0.0** caricata
+> (build `807161bd`, commit `777b958`, versionCode 2) e in **test chiuso con un'altra persona**: il
+> profilo sviluppatore non è più un blocco. Restano gli **screenshot** della scheda — l'insegna
+> 1024×500 è in `store/` — e il calendario: **12 tester per 14 giorni** che Google chiede a un
+> account personale prima della produzione. Oggi i tester sono due.
+>
+> Da qui in avanti vale [versioni-e-aggiornamenti.md](versioni-e-aggiornamenti.md), e la regola
+> controintuitiva è una: **un `eas update` si pubblica con `version` invariata**, perché `version`
+> entra nell'impronta della `runtimeVersion` e alzarla impedisce all'aggiornamento di arrivare. Il
+> binario in test ha impronta `d862b56d…`, **la stessa di `main` oggi**: gli Step 49–57 sono tutti
+> JavaScript e possono andare via etere, senza consumare una build.
+
 > **Lo stesso 12 settembre, dopo la verifica su telefono, sono state prese le 15 decisioni del
 > [Piano v6](piano-v6-spesa-rapida-e-grafici-componibili.md)**: un secondo giro di redesign, su
 > spesa rapida e grafici componibili, da due artifact Claude Design (un mockup a più direzioni e il
