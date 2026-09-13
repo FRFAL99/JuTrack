@@ -91,7 +91,7 @@ Stato: ✅ chiuso · 🟡 in parte · ⬜ non fatto.
 | 63  | Il backup dice di che gruppo è          | v8        | ✅    | 2026-09-13 |
 | 64  | L'import sceglie un file                | v8        | ✅    | 2026-09-13 |
 | 65  | La cartella, e il backup che si fa solo | v8        | ✅    | 2026-09-13 |
-| 66  | L'avviso «il backup invecchia»          | v8        | ⬜    | —          |
+| 66  | L'avviso «il backup invecchia»          | v8        | ✅    | 2026-09-13 |
 
 ## Le note che la tabella non può contenere
 
@@ -105,10 +105,14 @@ negozio`. Lo Step 45 ha prodotto `icon-source.svg`; lo script che lo consuma è 
 - **Step 58 e 59 non hanno una entry di devlog.** Buco dichiarato in testa a [devlog.md](devlog.md)
   e non ricostruito a posteriori di proposito. Quello che si sa è nel
   [piano v7](piano-v7-data-e-vocabolario-del-gruppo.md).
-- **I piani chiusi sono sei:** l'originale (0–9), [v2](piano-v2-profili-gruppi-sync.md),
+- **I piani chiusi sono sette:** l'originale (0–9), [v2](piano-v2-profili-gruppi-sync.md),
   [v3](piano-v3-tab-gruppi-azzeramento-sync.md), [v4](piano-v4-grafici-e-dashboard.md),
-  [v6](piano-v6-spesa-rapida-e-grafici-componibili.md) e
-  [v7](piano-v7-data-e-vocabolario-del-gruppo.md). Il [v5](piano-v5-notifiche-widget-profilo.md) è
-  a dodici step su tredici: manca solo la coda dello Step 41.
-- **Il [v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md) è aperto**, scritto il 13
-  settembre 2026 e non ancora cominciato: occupa gli Step 61–66, tutti ⬜.
+  [v6](piano-v6-spesa-rapida-e-grafici-componibili.md),
+  [v7](piano-v7-data-e-vocabolario-del-gruppo.md) e
+  [v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md). Il
+  [v5](piano-v5-notifiche-widget-profilo.md) è a dodici step su tredici: manca solo la coda dello
+  Step 41.
+- **Il [v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md) è chiuso** il 13 settembre 2026,
+  sei step su sei (61–66). Resta una sola cosa da fare, e non è codice: aprire il `.xlsx` in Excel e
+  in Fogli Google, e provare col telefono il backup automatico — è in
+  [verifica-sul-telefono.md](verifica-sul-telefono.md).

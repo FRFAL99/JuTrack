@@ -11,6 +11,7 @@ import { LanguageSync } from '@/i18n/LanguageSync';
 import { GroupIdentityGate } from '@/features/groups/GroupIdentityGate';
 import { AutoBackup } from '@/features/backup/AutoBackup';
 import { BackupWatcher } from '@/features/notifications/BackupWatcher';
+import { DataBackupWatcher } from '@/features/notifications/DataBackupWatcher';
 import { BudgetWatcher } from '@/features/notifications/BudgetWatcher';
 import { ReminderScheduler } from '@/features/notifications/ReminderScheduler';
 import { SyncWatcher } from '@/features/notifications/SyncWatcher';
@@ -180,6 +181,11 @@ function Shell() {
                     dice che senza backup i dati non tornano sta in cima a `/backup`, cioè
                     la legge solo chi il backup lo sta già facendo. */}
                 <BackupWatcher />
+                {/* Il gemello del precedente, per i **dati** invece che per la chiave. Sta
+                    accanto a lui e non altrove perché la differenza fra i due è tutta nel
+                    fatto che uno vale per sempre e l'altro invecchia: tenerli vicini è il
+                    modo di non riscoprirlo. */}
+                <DataBackupWatcher />
                 {/* Tiene aggiornato il saldo che si legge sulla home di Android. Qui e non
                     in una schermata per la ragione più forte delle tre: quel saldo si
                     guarda **fuori** dall'app, e chi apre l'app solo per registrare una

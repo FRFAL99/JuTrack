@@ -272,6 +272,11 @@ export const it = {
           cambia mai, quindi salvarla una volta chiude la questione per sempre. */
       backupHint:
         'Una volta per gruppo, se supera le {{count}} spese senza che tu abbia mai salvato la sua chiave',
+      dataBackupTitle: 'Backup dei dati vecchio',
+      /** «Di nuovo» è la parola che lo distingue da quello sopra: la chiave salvata una
+          volta chiude la questione per sempre, i dati invecchiano a ogni spesa. */
+      dataBackupHint:
+        'Quando {{count}} spese o più non sono ancora in un backup. Torna ogni volta che succede di nuovo',
       scope:
         'Gli avvisi sui budget e sulla sincronizzazione riguardano il gruppo aperto e arrivano mentre l’app è in uso.',
       blocked:
@@ -389,6 +394,7 @@ export const it = {
       budget: 'Budget del mese',
       sync: 'Sincronizzazione',
       backup: 'Backup della chiave',
+      dataBackup: 'Backup dei dati',
     },
     reminder: {
       firstTitle: 'La prima spesa',
@@ -416,6 +422,13 @@ export const it = {
     backup: {
       title: 'Chiave non salvata',
       body: '«{{name}}» ha {{count}} e su questo telefono non risulta un backup della sua chiave. Senza, se perdi il telefono non tornano: nessuno può recuperarle.',
+    },
+    dataBackup: {
+      title: 'Backup dei dati da rifare',
+      never:
+        '«{{name}}» ha {{count}} e non risulta ancora nessun backup dei dati. Scegli una cartella in Tu → Backup automatico.',
+      stale:
+        'In «{{name}}» ci sono {{count}} che non sono nell’ultimo backup. Fanne uno da Tu → Backup automatico.',
     },
     sync: {
       blockedTitle: 'Sincronizzazione fermata',

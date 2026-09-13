@@ -2,6 +2,7 @@ import { useTranslation } from 'react-i18next';
 import { StyleSheet, Switch, Text, View } from 'react-native';
 import { BUDGET_NEAR_THRESHOLD } from '@jutrack/core';
 import { BACKUP_MIN_EXPENSES } from '@/features/notifications/backup';
+import { DATA_BACKUP_MIN_NEW } from '@/features/notifications/data-backup';
 import { REMINDER_DAYS } from '@/features/notifications/reminder';
 import { SYNC_STALL_HOURS } from '@/features/notifications/sync';
 import type {
@@ -16,7 +17,7 @@ interface AlertSwitchesProps {
 }
 
 /**
- * I quattro interruttori degli avvisi, dentro il foglio che li apre.
+ * I cinque interruttori degli avvisi, dentro il foglio che li apre.
  *
  * **Erano in `tu.tsx`, sempre aperti.** Quattro righe con altrettante spiegazioni sotto,
  * più due note in fondo: centodieci righe di schermata per delle cose che si toccano una
@@ -111,6 +112,27 @@ export function AlertSwitches({ settings, onToggle }: AlertSwitchesProps) {
           onValueChange={(on) => toggle('backup', on)}
           disabled={!settings.ready}
           accessibilityLabel={t('you.alerts.backupTitle')}
+        />
+      </View>
+
+      <View style={styles.switchRow}>
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
+            {t('you.alerts.dataBackupTitle')}
+          </Text>
+          {/* **La riga dice «di nuovo», ed è la parola che lo distingue da quello
+              sopra.** Là la chiave, salvata una volta, chiude la questione per sempre;
+              qui i dati invecchiano a ogni spesa, quindi l'avviso torna. Senza quella
+              parola i due sembrerebbero lo stesso avviso scritto due volte. */}
+          <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+            {t('you.alerts.dataBackupHint', { count: DATA_BACKUP_MIN_NEW })}
+          </Text>
+        </View>
+        <Switch
+          value={settings.settings.dataBackup}
+          onValueChange={(on) => toggle('dataBackup', on)}
+          disabled={!settings.ready}
+          accessibilityLabel={t('you.alerts.dataBackupTitle')}
         />
       </View>
 

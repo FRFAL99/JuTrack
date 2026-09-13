@@ -39,6 +39,7 @@ const SYNC_KIND = 'sync';
 
 /** L'etichetta dell'avviso di chiave mai salvata (Step 43). */
 const BACKUP_KIND = 'backup';
+const DATA_BACKUP_KIND = 'data-backup';
 
 /**
  * Il canale Android su cui esce il promemoria.
@@ -79,6 +80,13 @@ const SYNC_CHANNEL = 'sincronizzazione';
  * senza che zittire gli altri tre zittisca questo.
  */
 const BACKUP_CHANNEL = 'backup';
+/**
+ * Canale separato da quello della chiave, e non è pignoleria: su Android i canali si
+ * silenziano uno per uno dalle impostazioni di sistema. Metterli insieme vorrebbe dire che
+ * chi zittisce «il backup sta invecchiando» — che può tornare spesso — zittisce anche «la
+ * chiave non risulta salvata», che è l'avviso su cui il progetto ha scritto di più.
+ */
+const DATA_BACKUP_CHANNEL = 'backup-dati';
 
 /** Disdice i promemoria già programmati, e nient'altro. */
 export async function cancelReminder(): Promise<void> {
@@ -222,6 +230,16 @@ export async function notifyBackup(content: AlertContent): Promise<boolean> {
     { id: BACKUP_CHANNEL, name: t('notifications.channels.backup') },
     content,
     'invio dell’avviso di backup',
+  );
+}
+
+/** L'avviso che il backup dei dati di un gruppo sta invecchiando (Step 66). */
+export async function notifyDataBackup(content: AlertContent): Promise<boolean> {
+  return notifyNow(
+    DATA_BACKUP_KIND,
+    { id: DATA_BACKUP_CHANNEL, name: t('notifications.channels.dataBackup') },
+    content,
+    'invio dell’avviso di backup dei dati',
   );
 }
 

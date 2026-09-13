@@ -8,6 +8,7 @@ const ALL_OFF: NotificationSettings = {
   budget: false,
   sync: false,
   backup: false,
+  dataBackup: false,
 };
 const on = (...kinds: (keyof NotificationSettings)[]): NotificationSettings => ({
   ...ALL_OFF,
@@ -51,13 +52,16 @@ describe('currencyLabel', () => {
 });
 
 describe('alertsSummary', () => {
-  it('conta i quattro dal tipo, non da un numero scritto a mano', () => {
-    expect(alertsTotal(ALL_OFF)).toBe(4);
+  it('conta i cinque dal tipo, non da un numero scritto a mano', () => {
+    // È il test che ha reso indolore l'aggiunta del quinto avviso (Step 66): `alertsTotal`
+    // conta le chiavi del tipo, quindi qui è bastato cambiare il numero atteso invece di
+    // andare a cercare dove fosse scritto «4» dentro il codice.
+    expect(alertsTotal(ALL_OFF)).toBe(5);
   });
 
   it('tutti accesi', () => {
-    expect(alertsSummary(on('reminder', 'budget', 'sync', 'backup'), false)).toBe(
-      'Tutti e 4 attivi',
+    expect(alertsSummary(on('reminder', 'budget', 'sync', 'backup', 'dataBackup'), false)).toBe(
+      'Tutti e 5 attivi',
     );
   });
 
@@ -66,8 +70,8 @@ describe('alertsSummary', () => {
   });
 
   it('qualcuno acceso dice quanti su quanti', () => {
-    expect(alertsSummary(on('reminder'), false)).toBe('1 di 4 attivo');
-    expect(alertsSummary(on('reminder', 'sync'), false)).toBe('2 di 4 attivi');
+    expect(alertsSummary(on('reminder'), false)).toBe('1 di 5 attivo');
+    expect(alertsSummary(on('reminder', 'sync'), false)).toBe('2 di 5 attivi');
   });
 
   it('bloccati vince su tutto', () => {
@@ -95,9 +99,11 @@ describe('in inglese', () => {
 
   it('traduce i riassunti degli avvisi', async () => {
     await i18n.changeLanguage('en');
-    expect(alertsSummary(on('reminder', 'budget', 'sync', 'backup'), false)).toBe('All 4 on');
+    expect(alertsSummary(on('reminder', 'budget', 'sync', 'backup', 'dataBackup'), false)).toBe(
+      'All 5 on',
+    );
     expect(alertsSummary(ALL_OFF, false)).toBe('None');
-    expect(alertsSummary(on('reminder'), false)).toBe('1 of 4 on');
+    expect(alertsSummary(on('reminder'), false)).toBe('1 of 5 on');
     expect(alertsSummary(ALL_OFF, true)).toBe('Blocked by Android');
   });
 });

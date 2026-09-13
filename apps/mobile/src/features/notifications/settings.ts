@@ -7,11 +7,12 @@
  * update cifrato per ogni interruttore toccato. `wipe.ts` la porta via da sola con il suo
  * `DELETE FROM app_meta`.
  *
- * **Un interruttore per avviso, non uno solo.** Sono quattro motivi diversi di essere
+ * **Un interruttore per avviso, non uno solo.** Sono cinque motivi diversi di essere
  * interrotti — non registri spese, hai sforato un budget, la sincronizzazione è ferma, la
- * chiave di un gruppo non è mai stata salvata — e chi ne vuole uno non vuole necessariamente
- * gli altri. `parseSettings` era scritta perché aggiungerne uno non toccasse le righe degli
- * altri: l'ha dimostrato il terzo, e adesso di nuovo il quarto.
+ * chiave di un gruppo non è mai stata salvata, il backup dei dati sta invecchiando — e chi
+ * ne vuole uno non vuole necessariamente gli altri. `parseSettings` era scritta perché
+ * aggiungerne uno non toccasse le righe degli altri: l'hanno dimostrato il terzo, il quarto
+ * e adesso il quinto.
  */
 
 export interface NotificationSettings {
@@ -23,6 +24,15 @@ export interface NotificationSettings {
   sync: boolean;
   /** Avviso «la chiave di questo gruppo non risulta salvata da nessuna parte» (Step 43). */
   backup: boolean;
+  /**
+   * Avviso «il backup dei dati sta invecchiando» (Step 66).
+   *
+   * **È l'unico dei cinque che si riarma**, e la ragione è crittografica quanto quella che
+   * rende `backup` definitivo: la `vaultKey` non cambia mai, quindi salvarla una volta basta
+   * per sempre; i **dati** invece cambiano a ogni spesa, e un backup di ieri invecchia da
+   * solo. Il nome lungo serve proprio a non confonderlo col precedente.
+   */
+  dataBackup: boolean;
 }
 
 /** La chiave in `app_meta`. Una sola per tutti gli avvisi. */
@@ -40,6 +50,7 @@ export const DEFAULT_SETTINGS: NotificationSettings = {
   budget: false,
   sync: false,
   backup: false,
+  dataBackup: false,
 };
 
 /**
@@ -64,12 +75,13 @@ export function parseSettings(raw: string | null): NotificationSettings {
   }
   if (typeof parsed !== 'object' || parsed === null) return DEFAULT_SETTINGS;
 
-  const { reminder, budget, sync, backup } = parsed as Record<string, unknown>;
+  const { reminder, budget, sync, backup, dataBackup } = parsed as Record<string, unknown>;
   return {
     reminder: reminder === true,
     budget: budget === true,
     sync: sync === true,
     backup: backup === true,
+    dataBackup: dataBackup === true,
   };
 }
 

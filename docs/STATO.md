@@ -19,15 +19,16 @@ dicendo tre cose false su sé stesso.
 la mattina dello stesso giorno: il sync visto funzionare nei due versi fra due telefoni veri, coi
 membri e i saldi giusti, e i due widget popolati con numeri identici a un calcolo indipendente.
 
-**Sessantasei step, dallo 0 al 65**, elencati uno per riga in [registro.md](registro.md). Sei piani
-chiusi su sette — l'originale, il [v2](piano-v2-profili-gruppi-sync.md),
+**Sessantasette step, dallo 0 al 66**, elencati uno per riga in [registro.md](registro.md). Sette piani
+chiusi su otto — l'originale, il [v2](piano-v2-profili-gruppi-sync.md),
 [v3](piano-v3-tab-gruppi-azzeramento-sync.md), [v4](piano-v4-grafici-e-dashboard.md),
-[v6](piano-v6-spesa-rapida-e-grafici-componibili.md) e
-[v7](piano-v7-data-e-vocabolario-del-gruppo.md) — più i sette passi del redesign
+[v6](piano-v6-spesa-rapida-e-grafici-componibili.md),
+[v7](piano-v7-data-e-vocabolario-del-gruppo.md) e
+[v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md) — più i sette passi del redesign
 ([visualdesign.md](visualdesign.md)). Il [v5](piano-v5-notifiche-widget-profilo.md) è a dodici step
 su tredici: manca solo la coda dello Step 41.
 
-**1456 test verdi** (723 core + 679 app + 54 relay), con `typecheck`, `lint` e `format:check`
+**1469 test verdi** (723 core + 692 app + 54 relay), con `typecheck`, `lint` e `format:check`
 puliti.
 
 **Gli aggiornamenti via etere funzionano, e ne sono già partiti due** il 13 settembre: gli Step
@@ -51,6 +52,11 @@ all'aggiornamento di arrivare, in silenzio.
   dalla verifica del 12 settembre, ed è cosmetico: i widget, una volta posati, funzionano.
 - **`app/dashboard.tsx` è un redirect da cancellare.** Lo Step 52 l'ha ridotto a un rimando verso i
   Grafici, tenendolo in vita per non rompere i link esistenti; va tolto a un ciclo di distanza.
+- **Il piano v8 va provato col telefono in mano**, ed è la sola cosa che i test non possono dire:
+  aprire il `.xlsx` in **Excel** e in **Fogli Google**, e fare il giro completo del backup automatico
+  — in particolare **chiudere l'app dai recenti e riaprirla**, che è l'unico modo di sapere se il
+  permesso sulla cartella è davvero persistente. I passaggi sono in
+  [verifica-sul-telefono.md](verifica-sul-telefono.md).
 - **La guardia su `paidBy` è stata tentata e ritirata** nello Step 60 — è l'ottava voce di otto del
   check a freddo, l'unica non chiusa. La ragione per cui non si poteva mettere è nel devlog del 13
   settembre, e va riletta prima di ritentarla.
@@ -63,23 +69,17 @@ del 5 settembre (commit `9606e0f`) combacia con `main`, e tutto ciò che è entr
 
 ## Il piano in corso
 
-Il **[v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md) — i dati escono in un foglio di
-calcolo, e il backup si fa da solo**, scritto il 13 settembre. Occupa gli **Step 61–66**, e i primi **cinque
-sono chiusi**: il `.xlsx` ha preso il posto dei due CSV, che sono usciti dal repo — con
+**Nessuno.** Il [Piano v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md) è chiuso il 13
+settembre con lo Step 66: il `.xlsx` ha preso il posto dei due CSV — con
 l'[ADR 0004](adr/0004-l-xlsx-al-posto-del-csv.md) che supera la
-[0003](adr/0003-formati-di-export.md) nella parte tabellare — il file contiene **sette fogli**,
-riepilogo compreso, e il **formato JSON è salito alla v4**, che porta dentro il nome del gruppo e la
-versione dell'app, **l'import sceglie un file** invece di farsi incollare — anche in `/backup` — e
-il **backup di tutti i gruppi si scrive da sé** in una cartella scelta una volta, con la sua sezione
-in «Tu».
+[0003](adr/0003-formati-di-export.md) — il file ha sette fogli, il formato JSON è alla v4 col nome
+del gruppo dentro, l'import sceglie un file, il backup di tutti i gruppi si scrive da sé in una
+cartella scelta una volta, e un quinto avviso dice quando quel backup invecchia. **Nessuno dei sei
+step ha richiesto una build EAS**: viaggiano tutti via etere.
 
-Resta il **66**: l'avviso quando quel backup invecchia. **Nessuno dei sei step chiede una build EAS**, quindi
-`version` in `app.json` resta invariata.
-
-Del `.xlsx` **manca una prova**, ed è nella lista di
-[verifica-sul-telefono.md](verifica-sul-telefono.md): il file è stato aperto con LibreOffice e
-validato come pacchetto OPC, ma non ancora con **Excel** né con **Fogli Google**. Si fa una volta
-sola, a piano finito.
+Il prossimo piano parte da [piano-TEMPLATE.md](piano-TEMPLATE.md), si chiama `piano-v9-<slug>.md` e
+dichiara in testa quali step occupa — il primo libero è il **67**, come dice
+[registro.md](registro.md).
 
 ## Dove sta cosa
 

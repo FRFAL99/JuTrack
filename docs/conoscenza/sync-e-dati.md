@@ -98,6 +98,11 @@ confuse:
 - **`groupName` e `app` sono metadati, non record**: un valore illeggibile vale `null` e non produce
   né un rifiuto né uno scarto, perché nessuno dei due entra nel documento e il nome si può correggere
   prima di confermare l'import.
+- **Dallo Step 66 un quinto avviso** dice quando il backup dei dati invecchia
+  (`notifications/data-backup.ts`). **È l'unico dei cinque che si riarma**: la chiave salvata una
+  volta vale per sempre, i dati no. La soglia è in **spese entrate dopo l'ultimo backup** (venti),
+  non in giorni — un gruppo fermo non ha niente da salvare. Canale Android separato da quello della
+  chiave, perché i canali si silenziano uno per uno.
 - **Dallo Step 65 c'è il backup automatico** (`features/backup/`): una cartella scelta **una volta**
   con `Directory.pickDirectoryAsync()`, il cui permesso Android è **persistente**. All'apertura
   dell'app, passati 7 giorni, si scrive il JSON di **ogni** gruppo tenendone le ultime 3 copie. Non

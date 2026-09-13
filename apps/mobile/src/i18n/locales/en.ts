@@ -246,6 +246,9 @@ export const en: Dictionary = {
       backupTitle: 'Key not saved',
       backupHint:
         'Once per group, if it grows past {{count}} expenses without you ever saving its key',
+      dataBackupTitle: 'Data backup is old',
+      dataBackupHint:
+        'When {{count}} expenses or more are not in a backup yet. It comes back every time it happens again',
       scope:
         'Budget and sync alerts are about the open group, and they arrive while the app is in use.',
       blocked: 'Android is blocking JuTrack notifications: turn them back on in system settings.',
@@ -347,6 +350,7 @@ export const en: Dictionary = {
       budget: 'Monthly budgets',
       sync: 'Syncing',
       backup: 'Key backup',
+      dataBackup: 'Data backup',
     },
     reminder: {
       firstTitle: 'Your first expense',
@@ -371,6 +375,13 @@ export const en: Dictionary = {
     backup: {
       title: 'Key not backed up',
       body: '“{{name}}” has {{count}} and this phone has no record of a backup of its key. Without one, if you lose the phone they are gone: nobody can recover them.',
+    },
+    dataBackup: {
+      title: 'Data backup is due',
+      never:
+        '“{{name}}” has {{count}} and no data backup is on record yet. Choose a folder in You → Automatic backup.',
+      stale:
+        '“{{name}}” has {{count}} that are not in the latest backup. Make one from You → Automatic backup.',
     },
     sync: {
       blockedTitle: 'Syncing stopped',

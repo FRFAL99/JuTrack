@@ -13,6 +13,89 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Step 66: l'avviso che il backup invecchia, e il Piano v8 è chiuso
+
+Il quinto avviso, e il primo che si **riarma**.
+
+Il commento in cima a `notifications/backup.ts` classificava i quattro esistenti: il promemoria (31)
+è una **scadenza**, il budget (32) una **condizione**, la sincronizzazione ferma (33) una condizione
+**su una scadenza**, la chiave non salvata (43) una condizione **che non torna più indietro** — «un
+backup fatto oggi vale per sempre», perché la `vaultKey` è generata una volta e non cambia mai.
+
+**Per i dati quella frase è falsa**, e da lì discende tutto il resto. Un backup di ieri invecchia a
+ogni spesa nuova, quindi il gruppo non esce dal giro per sempre: esce finché non si riaccumula
+abbastanza. Copiare `backup.ts` avrebbe importato la regola «salvato una volta, fuori dal giro per
+sempre», che qui è esattamente il difetto da evitare — e sarebbe stata la cosa più facile da fare,
+perché i due file si somigliano in tutto il resto.
+
+**Il riarmo sta in un campo, non in un booleano.** Il segno è `warnedFor`, cioè il `lastBackupAt` che
+valeva quando si è avvisato: un backup nuovo cambia quel numero, il confronto non torna più e il
+gruppo rientra. Un `notified: true` avrebbe silenziato il gruppo per sempre, e nessuno se ne sarebbe
+accorto — l'avviso semplicemente non sarebbe mai più arrivato.
+
+**La soglia è in spese entrate dopo l'ultimo backup, non in giorni.** Un gruppo fermo da due mesi non
+ha niente da salvare, e avvisarlo insegnerebbe a ignorare l'avviso proprio prima che diventi vero. È
+il criterio dello Step 43 — «quello che si rischia si misura in quanto c'è dentro» — applicato a un
+bersaglio che si muove. Il numero che serve a calcolarla, `expenseCount` al momento del backup, è
+registrato da `features/backup/auto.ts` **fin dallo Step 65**, e per questa ragione: registrarlo
+adesso avrebbe voluto dire non averlo per i backup già fatti.
+
+**Venti spese, contro le cinque dello Step 43.** Là la soglia si attraversa una volta sola nella vita
+del gruppo; qui si riattraversa in continuazione, e una soglia bassa produrrebbe un avviso ogni pochi
+giorni — cioè il modo più rapido di far spegnere l'interruttore, che è il solo esito peggiore del non
+avvisare affatto.
+
+**La direzione dell'errore, sui segni illeggibili, è l'opposta di `backup.ts`.** Là un segno rotto
+deve valere «chiave mai salvata», perché sbagliare dall'altra parte produce silenzio su una chiave a
+rischio. Qui vale «mai avvisato», che porta al massimo a un avviso ripetuto una volta: il dato non è
+a rischio, perché a salvarlo è `auto.ts` e non questo file, e il solo danno possibile è il fastidio.
+
+**Un `Math.max` che non è prudenza generica.** Se dall'ultimo backup si fossero cancellate più spese
+di quante ne sono entrate, la differenza sarebbe negativa — e un numero negativo qui finirebbe dritto
+dentro la frase della notifica. C'è il test.
+
+**Canale Android separato da quello della chiave.** I canali si silenziano uno per uno dalle
+impostazioni di sistema: metterli insieme vorrebbe dire che chi zittisce «il backup dei dati
+invecchia», che può tornare spesso, zittisce anche «la chiave non risulta salvata» — l'avviso su cui
+il progetto ha scritto di più.
+
+**Due frasi e non una**: «non risulta nessun backup» manda a scegliere una cartella, «venti spese non
+sono nell'ultimo backup» manda a farne uno. Dirle con la stessa frase manderebbe chi non ha ancora
+scelto una cartella a cercare un bottone che per lui non esiste.
+
+**Il quinto interruttore non ha toccato le righe degli altri quattro**, che è ciò per cui
+`parseSettings` era stata scritta: l'avevano già dimostrato il terzo e il quarto. E `alertsTotal`
+conta le chiavi del tipo invece di un numero scritto a mano, quindi nei test è bastato cambiare
+`4` in `5` invece di andare a cercare dove il quattro fosse nascosto nel codice.
+
+### Verifica
+
+**1469 test verdi** (723 core + 692 app + 54 relay), `typecheck`, `lint` e `format:check` puliti,
+`expo export --platform android` completato. Nessuna build EAS.
+
+### Il Piano v8 è chiuso
+
+Sei step su sei, tutti in giornata, **nessuno dei quali ha richiesto una build EAS**: viaggiano tutti
+via etere sulla build del 5 settembre. Il `.xlsx` ha preso il posto dei due CSV
+([ADR 0004](adr/0004-l-xlsx-al-posto-del-csv.md), che supera la
+[0003](adr/0003-formati-di-export.md)), il file ha sette fogli con un riepilogo che riusa le funzioni
+dei grafici, il formato JSON è alla v4 col nome del gruppo dentro, l'import sceglie un file, il
+backup di tutti i gruppi si scrive da sé in una cartella scelta una volta, e un quinto avviso dice
+quando quel backup invecchia.
+
+**Quello che resta non è codice.** Il `.xlsx` è stato aperto con LibreOffice e validato come
+pacchetto OPC, ma non in **Excel** né in **Fogli Google**; e del backup automatico non è stato
+provato niente col telefono in mano — in particolare il gesto che conta, chiudere l'app dai recenti e
+riaprirla per vedere se il permesso sulla cartella è persistente. È tutto in
+[verifica-sul-telefono.md](verifica-sul-telefono.md).
+
+**Due misure che il piano aveva sbagliato**, e che è giusto lasciare scritte: la dimensione del
+`.xlsx` (stimata 500-700 byte a riga, misurata ~980) e il rimedio per la scrittura in una cartella
+SAF (il piano teneva pronto `StorageAccessFramework` legacy; serviva invece `Directory.createFile`,
+che la nuova API ha e che il messaggio d'errore nativo indicava a parole).
+
+---
+
 ## 2026-09-13 — Step 65: una cartella scelta una volta, e il backup ci finisce da solo
 
 Il piano segnava questo step a **rischio alto** e diceva di provare per primo il punto fragile —

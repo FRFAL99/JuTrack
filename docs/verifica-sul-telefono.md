@@ -262,6 +262,14 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
   Se manca il foglio di condivisione il bottone del `.xlsx` è **spento**: è voluto, un file binario
   non può ripiegare sugli appunti. Il JSON accanto invece deve continuare a ripiegarci.
 
+- **L'avviso dello Step 66, che è l'unico dei cinque che torna.** Accendi «Backup dei dati vecchio»
+  in Tu → Avvisi, fai un backup, poi **inserisci venti spese** e riapri l'app: deve arrivare una
+  notifica che nomina **il gruppo** e dice quante spese non sono nel backup. Toccarla apre l'app.
+  Poi il pezzo che lo distingue dagli altri quattro: **fai un altro backup e aggiungine altre
+  venti** — l'avviso deve **tornare**. Se non torna, `warnedFor` non si sta riarmando, ed è il
+  difetto che questo step esisteva per evitare. Senza cartella scelta il testo dev'essere l'altro,
+  quello che manda a sceglierne una.
+
 - **Il backup automatico dello Step 65 — è lo step meno provato di tutto il piano v8.** Il codice
   nativo dice che scrivere in una cartella SAF si fa con `Directory.createFile` e non con
   `File.create`, ed è quello che il codice fa; ma fra «il sorgente Kotlin dice così» e «funziona sul
