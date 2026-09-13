@@ -18,7 +18,9 @@ import { LanguagePicker } from '@/features/profile/LanguagePicker';
 import { AlertSwitches } from '@/features/profile/AlertSwitches';
 import { SettingSheet } from '@/features/profile/SettingSheet';
 import { alertsSummary, alertsTone, currencyLabel, languageName } from '@/features/profile/summary';
-import { describeSync, syncTone } from '@/features/sync/describe';
+import { Card } from '@/components/Card';
+import type { SyncState } from '@jutrack/core';
+import { describeSync, steadySyncTone, syncTone, type SyncTone } from '@/features/sync/describe';
 import {
   MAX_PROFILE_NAME,
   normalizeProfileName,
@@ -93,7 +95,32 @@ export default function TuScreen() {
   };
 
   const { text: syncText } = describeSync(syncState);
-  const tone = syncTone(syncState.phase);
+  /**
+   * Il pallino **non lampeggia a ogni chiamata**.
+   *
+   * `syncing` è un momento, non uno stato: col tono grezzo il verde si spegnerebbe e si
+   * riaccenderebbe a ogni giro del motore, e da fermi sembra un guasto intermittente. Il
+   * pallino risponde a «i dati sono allineati?», e una chiamata in volo non cambia la
+   * risposta; a dire cosa sta succedendo adesso è il testo accanto.
+   *
+   * Il precedente è **stato**, e si aggiorna **durante il render** quando la fase cambia: è
+   * lo schema che React documenta per «correggere uno stato quando una prop cambia», e qui
+   * è l'unico che passa le due regole dei hook — un `ref` non si può leggere in render
+   * (`react-hooks/refs`), e un `setState` dentro un `useEffect` è vietato a sua volta
+   * (`react-hooks/set-state-in-effect`). React riesegue il render subito, senza dipingere
+   * nulla in mezzo, quindi non c'è nessun fotogramma col tono vecchio.
+   *
+   * `steadySyncTone` è idempotente, quindi il doppio giro della modalità Strict non sposta
+   * niente — c'è un test che lo tiene fermo.
+   */
+  const [seen, setSeen] = useState<{ phase: SyncState['phase']; tone: SyncTone }>(() => ({
+    phase: syncState.phase,
+    tone: syncTone(syncState.phase),
+  }));
+  if (seen.phase !== syncState.phase) {
+    setSeen({ phase: syncState.phase, tone: steadySyncTone(syncState.phase, seen.tone) });
+  }
+  const tone = seen.tone;
   const dotColor =
     tone === 'warn' ? colors.warning : tone === 'ok' ? colors.income : colors.textMuted;
   const syncReady = vault.phase === 'ready';
@@ -124,61 +151,129 @@ export default function TuScreen() {
   };
 
   const identityHeader = (
-    <View style={{ alignItems: 'center', paddingHorizontal: spacing.lg, gap: spacing.md }}>
+    <View style={[styles.identity, { paddingHorizontal: spacing.lg, gap: 14 }]}>
       <View
         style={[
           styles.avatar,
-          { backgroundColor: profile.color, borderRadius: 30, width: 60, height: 60 },
+          { backgroundColor: profile.color, borderRadius: 26, width: 52, height: 52 },
         ]}
       >
-        <Text style={{ color: colors.textOnAccent, fontSize: 26, fontWeight: fontWeight.bold }}>
+        <Text style={{ color: colors.textOnAccent, fontSize: 22, fontWeight: fontWeight.bold }}>
           {initialOf(profile.name)}
         </Text>
       </View>
 
-      {editingName ? (
-        <TextInput
-          autoFocus
-          value={draftName}
-          onChangeText={setDraftName}
-          onBlur={commitName}
-          onSubmitEditing={commitName}
-          placeholder={t('you.name.label')}
-          placeholderTextColor={colors.textMuted}
-          maxLength={MAX_PROFILE_NAME}
-          returnKeyType="done"
-          accessibilityLabel={t('you.name.label')}
-          style={{
-            color: colors.text,
-            fontSize: fontSize.xxl,
-            fontWeight: fontWeight.bold,
-            textAlign: 'center',
-            minWidth: 160,
-          }}
-        />
-      ) : (
-        <Pressable
-          onPress={() => setEditingName(true)}
-          accessibilityRole="button"
-          accessibilityLabel={t('you.name.edit')}
-          accessibilityHint={profile.name}
-          style={styles.nameRow}
-        >
-          <Text style={{ color: colors.text, fontSize: fontSize.xxl, fontWeight: fontWeight.bold }}>
+      <View style={{ flex: 1, gap: 2 }}>
+        {editingName ? (
+          <TextInput
+            autoFocus
+            value={draftName}
+            onChangeText={setDraftName}
+            onBlur={commitName}
+            onSubmitEditing={commitName}
+            placeholder={t('you.name.label')}
+            placeholderTextColor={colors.textMuted}
+            maxLength={MAX_PROFILE_NAME}
+            returnKeyType="done"
+            accessibilityLabel={t('you.name.label')}
+            style={{
+              color: colors.text,
+              fontSize: fontSize.xl,
+              fontWeight: fontWeight.heavy,
+              padding: 0,
+            }}
+          />
+        ) : (
+          <Text
+            numberOfLines={1}
+            style={{
+              color: colors.text,
+              fontSize: fontSize.xl,
+              fontWeight: fontWeight.heavy,
+              letterSpacing: -0.4,
+            }}
+          >
             {profile.name}
           </Text>
-          <Feather name="edit-2" size={16} color={colors.textMuted} />
-        </Pressable>
-      )}
+        )}
+        <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+          {t('you.name.hint')}
+        </Text>
+      </View>
 
-      <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>{t('you.name.hint')}</Text>
+      {/* La matita è un bersaglio **suo**, non il nome stesso: il nome è lungo quanto è
+          lungo, e su un nome di tre lettere l'area toccabile sarebbe minuscola. */}
+      <Pressable
+        onPress={() => setEditingName(true)}
+        accessibilityRole="button"
+        accessibilityLabel={t('you.name.edit')}
+        accessibilityHint={profile.name}
+        hitSlop={8}
+        style={({ pressed }) => ({
+          width: 32,
+          height: 32,
+          borderRadius: 16,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: pressed ? colors.surfacePressed : colors.surface,
+          borderWidth: StyleSheet.hairlineWidth,
+          borderColor: colors.border,
+        })}
+      >
+        <Feather name="edit-2" size={15} color={colors.textMuted} />
+      </Pressable>
     </View>
   );
 
   return (
     <Screen header={identityHeader}>
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
-        <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
+        {/* Lo stato del sync è la sola cosa di questa schermata che **cambia da sola**, ed è
+            l'unica che si viene a guardare senza volerne toccare nessun'altra: sta in una
+            card sopraelevata in cima, non in una sezione fra le altre. */}
+        <Card
+          variant="raised"
+          style={{
+            marginHorizontal: spacing.lg,
+            marginTop: spacing.md,
+            marginBottom: spacing.lg,
+            paddingVertical: 14,
+            paddingHorizontal: spacing.lg,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: spacing.sm + 2,
+          }}
+        >
+          <View style={[styles.dot, { backgroundColor: dotColor }]} />
+          <View style={{ flex: 1, gap: 2 }}>
+            <Text
+              numberOfLines={2}
+              style={{
+                color: colors.text,
+                fontSize: fontSize.sm,
+                fontWeight: fontWeight.semibold,
+              }}
+            >
+              {syncText}
+            </Text>
+            <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+              {t('you.sync.privacy')}
+            </Text>
+          </View>
+          <Pressable onPress={syncNow} disabled={!syncReady} hitSlop={8}>
+            <Text
+              style={{
+                color: colors.accent,
+                fontSize: fontSize.xs,
+                opacity: syncReady ? 1 : 0.4,
+              }}
+            >
+              {t('you.sync.action')}
+            </Text>
+          </Pressable>
+        </Card>
+
+        <View style={[styles.rule, { backgroundColor: colors.border }]} />
 
         {/* Le quattro scelte di questo telefono, **chiuse**. Prima stavano tutte aperte: tre
             selettori e quattro interruttori con altrettante righe di spiegazione, cioè metà
@@ -227,37 +322,6 @@ export default function TuScreen() {
           valueTone={alertsTone(notifications.blocked)}
           onPress={() => setSheet('alerts')}
         />
-
-        <View style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]} />
-
-        <SectionLabel>{t('you.sync.title')}</SectionLabel>
-        <View style={{ paddingHorizontal: spacing.lg, gap: 2 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <View style={[styles.dot, { backgroundColor: dotColor }]} />
-            {/* La frase la scrive `describe.ts`, che la scrive anche in fondo alla lista
-                spese: dallo Step 38 passa da `t()` come tutto il resto, e legge la lingua
-                quando gira. */}
-            <Text style={{ color: colors.text, fontSize: fontSize.sm, flex: 1 }} numberOfLines={2}>
-              {syncText}
-            </Text>
-            <Pressable onPress={syncNow} disabled={!syncReady} hitSlop={8}>
-              <Text
-                style={{
-                  color: colors.accent,
-                  fontSize: fontSize.sm,
-                  opacity: syncReady ? 1 : 0.4,
-                }}
-              >
-                {t('you.sync.action')}
-              </Text>
-            </Pressable>
-          </View>
-          <Text
-            style={{ color: colors.textFaint, fontSize: fontSize.xxs, paddingLeft: spacing.sm + 7 }}
-          >
-            {t('you.sync.privacy')}
-          </Text>
-        </View>
 
         {group !== null && (
           <>
@@ -379,6 +443,7 @@ function Rule({ inset, color }: { inset: number; color: string }) {
 }
 
 const styles = StyleSheet.create({
+  identity: { flexDirection: 'row', alignItems: 'center' },
   avatar: { alignItems: 'center', justifyContent: 'center' },
   swatch: { width: 18, height: 18, borderRadius: 9, borderWidth: StyleSheet.hairlineWidth },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },

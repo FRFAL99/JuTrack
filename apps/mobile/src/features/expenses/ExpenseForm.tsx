@@ -10,6 +10,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Feather from '@expo/vector-icons/Feather';
 import {
   buildSplit,
@@ -130,6 +131,7 @@ const ROW_INSET = 48;
 export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: ExpenseFormProps) {
   const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
+  const insets = useSafeAreaInsets();
   const categories = useCategories();
   const members = useMembers();
   const myMemberId = useMyMemberId();
@@ -154,7 +156,13 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
       : formatCents(initial.amountCents).replaceAll(numberFormat().group, ''),
   );
   const [note, setNote] = useState(initial?.note ?? '');
-  const [editingNote, setEditingNote] = useState(false);
+  /**
+   * La nota è aperta: il tastierino si smonta come per un gruppo.
+   *
+   * A scriverla è la tastiera di sistema — è testo libero, non cifre — e due tastiere
+   * insieme sullo stesso schermo non ci stanno.
+   */
+  const [writingNote, setWritingNote] = useState(false);
   const [store, setStore] = useState(initial?.store ?? '');
   const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
   const [tagDraft, setTagDraft] = useState('');
@@ -220,7 +228,9 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   const toggleGroup = (key: GroupKey): void =>
     setOpenGroup((current) => (current === key ? null : key));
 
-  const amountShape = openGroup === null ? AMOUNT_ALONE : AMOUNT_BESIDE;
+  /** Qualcosa si sta scrivendo, e non è l'importo: la cifra scende e il tastierino sparisce. */
+  const aside = openGroup !== null || writingNote;
+  const amountShape = aside ? AMOUNT_BESIDE : AMOUNT_ALONE;
 
   const payer = members.find((m) => m.id === paidBy);
   const category = categories.find((c) => c.id === categoryId);
@@ -366,7 +376,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
           {/* La quota a testa sta **sotto la cifra** e non dentro il gruppo: è la
               conseguenza diretta del numero che si sta scrivendo. Sparisce a gruppo aperto,
               dove a dirla sono i riquadri delle persone, uno per uno. */}
-          {openGroup === null && mode === 'equal' && members.length > 1 && (
+          {!aside && mode === 'equal' && members.length > 1 && (
             <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
               {splitPreview(amountCents, members.length, symbol)}
             </Text>
@@ -379,6 +389,39 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
         {/* 2. I tre gruppi, in un contenitore solo: sono le tre domande che restano dopo
             l'importo, e una card per ciascuna le farebbe sembrare tre schermate. */}
         <Card variant="flat" style={{ marginHorizontal: spacing.lg }}>
+          {/* **La nota è il primo campo, e non si apre: si scrive.** Stava dentro
+              «Dettagli», dove nessuno la trovava — chi registra una spesa la sta anche
+              nominando, e il nome non è un dettaglio facoltativo da andare a cercare sotto
+              una riga chiusa. È l'unica riga della card senza chevron, di proposito: dice
+              che qui non c'è niente da aprire. */}
+          <View
+            style={[
+              styles.noteRow,
+              { paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, gap: spacing.sm + 2 },
+            ]}
+          >
+            <View style={styles.icon}>
+              <Feather name="edit-3" size={15} color={colors.textMuted} />
+            </View>
+            <TextInput
+              value={note}
+              onChangeText={setNote}
+              onFocus={() => setWritingNote(true)}
+              onBlur={() => setWritingNote(false)}
+              placeholder={t('expense.notePrompt')}
+              placeholderTextColor={colors.textFaint}
+              returnKeyType="done"
+              accessibilityLabel={t('expense.noteLabel')}
+              style={{
+                flex: 1,
+                color: colors.text,
+                fontSize: fontSize.md,
+                paddingVertical: spacing.sm,
+              }}
+            />
+          </View>
+          <Divider inset={false} />
+
           {/* Con una persona sola «chi paga e come si divide» non si pone. */}
           {members.length > 1 && (
             <>
@@ -508,7 +551,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
               rado. Il riassunto chiuso continua a dire la data, quindi non si perde nulla. */}
           <GroupRow
             title={t('expense.group.details')}
-            summary={detailsSummary(date, note, store, tags)}
+            summary={detailsSummary(date, store, tags)}
             open={openGroup === 'details'}
             onPress={() => toggleGroup('details')}
             left={<Feather name="list" size={15} color={colors.textMuted} />}
@@ -532,45 +575,6 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
                   {formatDayTitle(date)}
                 </Text>
               </View>
-
-              {editingNote ? (
-                <TextInput
-                  autoFocus
-                  value={note}
-                  onChangeText={setNote}
-                  onBlur={() => setEditingNote(false)}
-                  onSubmitEditing={() => setEditingNote(false)}
-                  placeholder={t('expense.notePlaceholder')}
-                  placeholderTextColor={colors.textFaint}
-                  returnKeyType="done"
-                  accessibilityLabel={t('expense.noteLabel')}
-                  style={fieldBox}
-                />
-              ) : (
-                <Pressable
-                  onPress={() => setEditingNote(true)}
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    note === '' ? t('expense.noteAdd') : t('expense.noteRead', { note })
-                  }
-                  style={styles.detailRow}
-                >
-                  <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-                    {t('expense.note')}
-                  </Text>
-                  <Text
-                    numberOfLines={1}
-                    style={{
-                      flex: 1,
-                      textAlign: 'right',
-                      color: note === '' ? colors.textFaint : colors.text,
-                      fontSize: fontSize.sm,
-                    }}
-                  >
-                    {note === '' ? t('expense.noteOptional') : note}
-                  </Text>
-                </Pressable>
-              )}
 
               <View style={{ gap: spacing.sm }}>
                 <Text style={sectionTitle}>{t('expense.extra.store')}</Text>
@@ -646,11 +650,20 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
 
       {/* Il tastierino si smonta a gruppo aperto: lo spazio serve a ciò che si sta
           scegliendo, e l'importo in quel momento non si sta scrivendo. */}
-      {openGroup === null && (
-        <AmountPad onKey={(char) => setAmountText((text) => applyKey(text, char))} />
-      )}
+      {!aside && <AmountPad onKey={(char) => setAmountText((text) => applyKey(text, char))} />}
 
-      <View style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.md }}>
+      {/* `insets.bottom`: la barra sta **fuori** dallo scorrimento, quindi niente la spinge
+          più sopra la barra dei gesti di Android. `ModalScreen` applica solo l'inset
+          superiore — il suo commento dice «la safe area inferiore è gestita dalla tab bar»,
+          che è vero per le schermate a tab e falso per una modale, che la tab bar la copre.
+          Finché il salva scorreva col contenuto non si vedeva; da quando è ancorato, sì. */}
+      <View
+        style={{
+          paddingHorizontal: spacing.lg,
+          paddingTop: spacing.md,
+          paddingBottom: Math.max(insets.bottom, spacing.md),
+        }}
+      >
         <Button
           label={submitLabel}
           onPress={handleSubmit}
@@ -879,6 +892,7 @@ const styles = StyleSheet.create({
   people: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   shareRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   detailRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  noteRow: { flexDirection: 'row', alignItems: 'center' },
   // `minWidth` e non `width`: le tre icone sono da 22, ma al posto della prima c'è la pila
   // degli avatar, che è più larga di quanto sono i cerchi perché si sovrappongono. Fissata a
   // 22 la schiaccerebbe; il filetto resta comunque allineato sotto le icone singole.

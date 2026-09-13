@@ -30,6 +30,25 @@ export function syncTone(phase: SyncState['phase']): SyncTone {
   return 'muted';
 }
 
+/**
+ * Il tono del pallino che **non cambia mentre una chiamata è in corso**.
+ *
+ * `syncing` è un momento, non uno stato: fra un `synced` e il successivo il tono passerebbe
+ * da `ok` a `muted` e poi di nuovo a `ok`, cioè il pallino verde si spegne e si riaccende a
+ * ogni giro del motore. Letto da fermi sembra un guasto intermittente, e non lo è.
+ *
+ * Qui il pallino risponde a **«i dati sono allineati?»** — che una chiamata sia in volo non
+ * cambia la risposta, che resta l'ultima conosciuta. A dire cosa sta succedendo *adesso* è il
+ * testo accanto, che continua a passare da `describeSync`: le due cose sono diverse e possono
+ * dire cose diverse nello stesso istante senza contraddirsi.
+ *
+ * `previous` va tenuto da chi disegna, perché è l'unica parte che ha memoria. Le altre fasi
+ * passano com'è: `idle` e `blocked` non sono momenti, sono dove si è.
+ */
+export function steadySyncTone(phase: SyncState['phase'], previous: SyncTone): SyncTone {
+  return phase === 'syncing' ? previous : syncTone(phase);
+}
+
 export function describeSync(state: SyncState, now = Date.now()): { icon: string; text: string } {
   switch (state.phase) {
     case 'idle':

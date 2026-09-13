@@ -61,34 +61,31 @@ export function categorySummary(name: string | null): SummaryPart[] {
 }
 
 /**
- * «Oggi · facoltativi», oppure «Oggi · una nota · Esselunga · 2 tag».
+ * «Oggi · facoltativi», oppure «Oggi · Esselunga · 2 tag».
  *
  * La data c'è **sempre** e non è mai un segnaposto: su una spesa vecchia è l'unica cosa che
  * dice di quale giorno si sta parlando, ed è la ragione per cui la riga non può limitarsi a
  * dire «Dettagli». Il resto lo compone `extraSummary`, che tronca già il nome del negozio
  * per non far mangiare al `numberOfLines` proprio il «· 2 tag» in coda.
+ *
+ * **La nota non compare più qui**: dalla prova su telefono è uscita dal gruppo ed è
+ * diventata un campo principale, sempre visibile sotto l'importo. Un riassunto che dicesse
+ * «una nota» per una cosa che si vede già due righe sopra sarebbe rumore.
  */
 export function detailsSummary(
   date: string,
-  note: string,
   store: string,
   tags: string[],
   /** Come in `formatDayTitle`: iniettabile perché «Oggi» dipende da che giorno è. */
   now: Date = new Date(),
 ): SummaryPart[] {
-  const filled: string[] = [];
-  if (note.trim() !== '') filled.push(t('expense.group.detailsNote'));
-  if (store.trim() !== '' || tags.some((tag) => tag.trim() !== '')) {
-    filled.push(extraSummary(store, tags));
-  }
+  const filled = store.trim() !== '' || tags.some((tag) => tag.trim() !== '');
 
   return [
     { text: formatDayTitle(date, now), tone: 'muted' },
-    filled.length === 0
-      ? { text: t('expense.group.detailsEmpty'), tone: 'faint' }
-      : // Il punto mediano resta nel codice: è punteggiatura, non una parola, e si scrive
-        // uguale in tutte e due le lingue. Stessa scelta di `extraSummary`.
-        { text: filled.join(' · '), tone: 'muted' },
+    filled
+      ? { text: extraSummary(store, tags), tone: 'muted' }
+      : { text: t('expense.group.detailsEmpty'), tone: 'faint' },
   ];
 }
 

@@ -4,6 +4,81 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Step 54: le tre cose che ha detto il telefono
+
+Primo giro di correzioni nate dall'aver avuto l'app **in mano**, non da un piano. Tutte e tre da
+Francesco, dopo la prima prova vera degli step 49–53.
+
+### Il pallino del sync non lampeggia più
+
+**Chiesto:** «preferirei che rimanga fissa, e che indichi lo stato corrente».
+
+`syncTone` mappava `syncing` su `muted`, quindi fra un `synced` e il successivo il pallino verde si
+spegneva e si riaccendeva a ogni giro del motore. Da fermi si legge come un guasto intermittente, e
+non lo è.
+
+`steadySyncTone(phase, previous)` tiene il tono di prima mentre una chiamata è in corso. La divisione
+che ne esce è netta e vale la pena scriverla: **il pallino risponde a «i dati sono allineati?», il
+testo accanto a «cosa sta succedendo adesso»**. Sono due domande diverse e possono dare risposte
+diverse nello stesso istante senza contraddirsi. `idle` e `blocked` passano com'è: non sono momenti,
+sono dove si è.
+
+**Tre tentativi per scrivere la memoria, e le due regole che li hanno bocciati.** Un `ref` letto in
+render → `react-hooks/refs`. Un `setState` dentro `useEffect` → `react-hooks/set-state-in-effect`.
+Quello che passa è lo schema che React documenta per «correggere uno stato quando una prop cambia»:
+stato aggiornato **durante il render**, con la fase vista accanto al tono. React riesegue subito
+senza dipingere in mezzo, quindi non c'è nessun fotogramma col valore vecchio. `steadySyncTone` è
+idempotente e c'è un test che lo tiene fermo, perché la modalità Strict quel render lo fa due volte.
+
+### «Tu» prende l'intestazione e la card dell'artifact
+
+Era la parte dello Step 54 rimasta in sospeso. L'avatar passa da centrato a sinistra, il nome da 34
+a 28 punti con la matita in un cerchio **suo** — prima il bersaglio era il nome, che su un nome di
+tre lettere è un'area minuscola. Lo stato del sync diventa una card sopraelevata in cima: è la sola
+cosa della schermata che **cambia da sola**, e l'unica che si viene a guardare senza voler toccare
+nient'altro.
+
+### La nota esce da «Dettagli» e diventa il primo campo
+
+**Chiesto:** «non capisco come aggiungere una nota... se dobbiamo dare un nome alla spesa... è un
+campo che dobbiamo riempire tra quelli principali».
+
+Contraddice la **decisione 9 del Piano v6**, che ce l'aveva messa dentro insieme alla data. La
+decisione non era sbagliata sulla carta — la nota _è_ facoltativa — ma sbagliava il soggetto: chi
+registra una spesa la sta anche **nominando**, e il nome non è un dettaglio da andare a cercare sotto
+una riga chiusa. Nessun ragionamento ci sarebbe arrivato: ci è voluto vedere qualcuno che apre il
+form e non trova il campo.
+
+È il primo campo della card, ed è l'unica riga **senza chevron**: dice che qui non c'è niente da
+aprire, si scrive e basta. Il segnaposto è «Che spesa è?» e non l'esempio lungo di prima, perché in
+una riga compatta l'istruzione deve stare su una riga. Scrivendoci dentro, il tastierino si smonta e
+l'importo scende a 38 come per un gruppo aperto: due tastiere sullo stesso schermo non ci stanno. Il
+riassunto di «Dettagli» non parla più della nota — dirlo per una cosa che si vede due righe sopra
+sarebbe rumore — e cinque chiavi di dizionario sono rimaste senza chiamanti.
+
+### Il salva era davvero sotto la barra dei gesti
+
+**Chiesto:** «questo è corretto averlo qua o potremmo avere problemi in alcuni telefoni?».
+
+Sì, ed era un difetto vero. `ModalScreen` applica solo `insets.top`; il suo commento dice «la safe
+area inferiore è gestita dalla tab bar», che è vero per una schermata a tab e **falso per una
+modale**, che la tab bar la copre. Finché il salva scorreva col contenuto non si vedeva — bastava
+scorrere. **L'ha introdotto lo Step 50** ancorandolo in fondo: da lì in poi il bottone stava sotto la
+barra dei gesti, di quanto dipende dal telefono. Adesso la barra prende
+`Math.max(insets.bottom, spacing.md)`.
+
+Vale la pena notare come è saltato fuori: non da un test, non da una rilettura, ma da qualcuno che ha
+guardato lo schermo e ha detto «non è che qui abbiamo un problema?». Tre step scritti sopra quel
+difetto senza vederlo.
+
+### Verificato
+
+`npm run typecheck`, `npm run lint`, `npm run format:check` puliti; `npm test` **1322 verdi** (639
+core + 629 app + 54 relay). **Questa volta una parte è stata vista sul telefono**: gli step 49–53
+girano sulla development build nuova, ed è da lì che vengono tutte e tre queste correzioni.
+
+---
+
 ## 2026-09-13 — Step 53: le quattro scelte di «Tu» diventano quattro righe
 
 Fuori dai piani: «Tu» era l'unica delle tre schermate mostrate nel turno 1 dell'artifact a non essere

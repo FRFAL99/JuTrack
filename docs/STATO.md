@@ -196,7 +196,15 @@ non era mai diventata uno step. Resta uno **Step 54** per l'intestazione, la car
 sezione del gruppo — dove serve uno stato nuovo, «Backup della chiave · Mai fatto», che oggi non
 esiste.
 
-**1320 test verdi** (639 core + 627 app + 54 relay), typecheck, lint e `format:check` puliti.
+**Il 13 settembre gli step 49–53 sono stati visti su un telefono vero**, sulla development build
+nuova (commit `b9b9593`) — e da lì è nato lo **Step 54**, tre correzioni che nessun ragionamento
+avrebbe prodotto: il pallino del sync non lampeggia più a ogni chiamata, «Tu» prende l'intestazione e
+la card dell'artifact, la **nota esce da «Dettagli» e diventa il primo campo** della nuova spesa
+(contro la decisione 9 del Piano v6: chi registra una spesa la sta anche nominando), e il salva
+ancorato in fondo prende la safe area inferiore — **era davvero sotto la barra dei gesti**, difetto
+introdotto dallo Step 50 e rimasto invisibile per tre step.
+
+**1322 test verdi** (639 core + 629 app + 54 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani

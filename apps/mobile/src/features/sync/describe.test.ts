@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import i18n from '@/i18n';
 import type { SyncState } from '@jutrack/core';
-import { describeSync, syncTone } from './describe';
+import { describeSync, steadySyncTone, syncTone } from './describe';
 
 const NOW = new Date('2026-08-01T12:00:00Z').getTime();
 
@@ -105,5 +105,31 @@ describe('in inglese', () => {
       NOW,
     ).text;
     expect(text).toBe('Not synced: HTTP 503');
+  });
+});
+
+describe('steadySyncTone', () => {
+  it('durante una chiamata tiene il tono di prima', () => {
+    // Senza, fra un «aggiornato» e il successivo il pallino verde si spegne e si riaccende a
+    // ogni giro del motore: letto da fermi sembra un guasto intermittente.
+    expect(steadySyncTone('syncing', 'ok')).toBe('ok');
+    expect(steadySyncTone('syncing', 'warn')).toBe('warn');
+    expect(steadySyncTone('syncing', 'muted')).toBe('muted');
+  });
+
+  it('ogni altra fase passa com è', () => {
+    // `idle` e `blocked` non sono momenti, sono dove si è: vanno mostrati.
+    expect(steadySyncTone('synced', 'muted')).toBe('ok');
+    expect(steadySyncTone('error', 'ok')).toBe('warn');
+    expect(steadySyncTone('offline', 'ok')).toBe('warn');
+    expect(steadySyncTone('blocked', 'ok')).toBe('warn');
+    expect(steadySyncTone('idle', 'ok')).toBe('muted');
+  });
+
+  it('applicarla due volte di fila non cambia niente', () => {
+    // Chi disegna la chiama in fase di render tenendo il precedente in un ref: con React in
+    // modalità Strict quel render avviene due volte, e il secondo non deve spostare niente.
+    const once = steadySyncTone('syncing', 'ok');
+    expect(steadySyncTone('syncing', once)).toBe(once);
   });
 });

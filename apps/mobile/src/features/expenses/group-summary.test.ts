@@ -64,55 +64,40 @@ describe('categorySummary', () => {
 
 describe('detailsSummary', () => {
   it('senza niente dice la data e che il resto è facoltativo', () => {
-    expect(read(detailsSummary('2026-09-13', '', '', [], NOW))).toBe('Oggi · facoltativi');
+    expect(read(detailsSummary('2026-09-13', '', [], NOW))).toBe('Oggi · facoltativi');
   });
 
   it('la data non è mai un segnaposto', () => {
     // Su una spesa vecchia è l'unica cosa che dice di quale giorno si sta parlando.
-    expect(detailsSummary('2026-09-13', '', '', [], NOW)[0]).toEqual({
-      text: 'Oggi',
-      tone: 'muted',
-    });
+    expect(detailsSummary('2026-09-13', '', [], NOW)[0]).toEqual({ text: 'Oggi', tone: 'muted' });
   });
 
-  it('dice che c è una nota senza ricopiarla', () => {
-    // Ricopiarla allungherebbe la riga fino a mangiarsi ciò che viene dopo; a servire è
-    // il **segnale** che lì sotto c è qualcosa.
-    expect(read(detailsSummary('2026-09-13', 'spesa al super', '', [], NOW))).toBe(
-      'Oggi · una nota',
-    );
+  it('non parla della nota, che ora è un campo principale', () => {
+    // Dopo la prova su telefono la nota è uscita dal gruppo: dirlo qui per una cosa che si
+    // vede due righe sopra sarebbe rumore.
+    expect(read(detailsSummary('2026-09-13', '', [], NOW))).not.toContain('nota');
   });
 
   it('riusa extraSummary per negozio e tag', () => {
-    expect(read(detailsSummary('2026-09-13', '', 'Esselunga', ['casa', 'regalo'], NOW))).toBe(
+    expect(read(detailsSummary('2026-09-13', 'Esselunga', ['casa', 'regalo'], NOW))).toBe(
       'Oggi · Esselunga · 2 tag',
     );
   });
 
-  it('mette insieme tutto quello che è compilato', () => {
-    expect(read(detailsSummary('2026-09-13', 'nota', 'Coop', ['casa'], NOW))).toBe(
-      'Oggi · una nota · Coop · 1 tag',
-    );
-  });
-
-  it('non conta una nota di soli spazi né tag vuoti', () => {
-    expect(read(detailsSummary('2026-09-13', '   ', '', ['', '  '], NOW))).toBe(
-      'Oggi · facoltativi',
-    );
+  it('non conta tag vuoti', () => {
+    expect(read(detailsSummary('2026-09-13', '', ['', '  '], NOW))).toBe('Oggi · facoltativi');
   });
 
   it('una data vecchia la scrive per esteso', () => {
-    expect(read(detailsSummary('2026-08-15', '', '', [], NOW))).toBe(
-      'sabato 15 agosto · facoltativi',
-    );
+    expect(read(detailsSummary('2026-08-15', '', [], NOW))).toBe('sabato 15 agosto · facoltativi');
   });
 
   it('solo il posto vuoto è faint', () => {
-    expect(detailsSummary('2026-09-13', '', '', [], NOW).map((p) => p.tone)).toEqual([
+    expect(detailsSummary('2026-09-13', '', [], NOW).map((p) => p.tone)).toEqual([
       'muted',
       'faint',
     ]);
-    expect(detailsSummary('2026-09-13', 'nota', '', [], NOW).map((p) => p.tone)).toEqual([
+    expect(detailsSummary('2026-09-13', 'Coop', [], NOW).map((p) => p.tone)).toEqual([
       'muted',
       'muted',
     ]);
@@ -130,6 +115,6 @@ describe('in inglese', () => {
       'Anna pays · half and half',
     );
     expect(read(categorySummary(null))).toBe('Category · none');
-    expect(read(detailsSummary('2026-09-13', '', '', [], NOW))).toBe('Today · optional');
+    expect(read(detailsSummary('2026-09-13', '', [], NOW))).toBe('Today · optional');
   });
 });
