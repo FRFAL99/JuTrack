@@ -12,7 +12,7 @@
 > su telefono. Non ha più niente davanti — la development build installata è quella del 5 settembre
 > 2026, commit `9606e0f`, che è la punta di `main` e contiene anche l'`updatePeriodMillis` dello
 > Step 36. Il percorso in quattro blocchi è in
-> [STATO.md](STATO.md#cosa-non-è-ancora-stato-verificato-su-hardware-reale).
+> [STATO.md](verifica-sul-telefono.md#cosa-non-è-ancora-stato-verificato-su-hardware-reale).
 >
 > **Sullo Step 31 il piano diceva «promemoria periodico», e periodico non è.** Una notifica locale
 > si programma prima e scatta da sola, senza che nessuno possa rivalutare la condizione al momento
@@ -369,7 +369,7 @@ descrizioni di filtri.
 ### Step 41 — Verifica end-to-end
 
 Notifiche e widget sono per natura non verificabili senza telefono: vanno nella lista di "verificato
-su hardware reale" di [STATO.md](STATO.md#cosa-non-è-ancora-stato-verificato-su-hardware-reale), non
+su hardware reale" di [STATO.md](verifica-sul-telefono.md#cosa-non-è-ancora-stato-verificato-su-hardware-reale), non
 spuntati solo perché i test passano. Da controllare nell'ordine in cui un guasto rende inutile
 provare il resto: **(1)** le tre notifiche compaiono davvero nella tendina di sistema; **(2)** i due
 widget aggiunti alla home si popolano e si aggiornano dopo l'uso dell'app; **(3)** cambiare lingua nel

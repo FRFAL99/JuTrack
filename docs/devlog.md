@@ -3333,7 +3333,7 @@ puliti, `expo export --platform android` completato.
 
 **Prossimo:** Step 24 — «Informazioni aggiuntive» nel form della spesa, con `Chip` promosso a
 componente condiviso e i due punti esistenti di `ExpenseForm.tsx` convertiti nello stesso commit.
-Resta prima di tutto, però, [la prova sui due telefoni](STATO.md#cosa-non-è-ancora-stato-verificato-su-hardware-reale):
+Resta prima di tutto, però, [la prova sui due telefoni](verifica-sul-telefono.md#cosa-non-è-ancora-stato-verificato-su-hardware-reale):
 finché il sync non è stato visto funzionare in entrambi i versi non si può sapere se un negozio
 scritto di qua arriva di là — che è il criterio di «fatto» di questo step.
 

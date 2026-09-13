@@ -442,7 +442,7 @@ Il piano v2 è riuscito quando, su due telefoni fisici:
 7. Uscendo da un gruppo, l'altro telefono non ne risente.
 
 Restano da confermare anche i punti mai verificati su hardware elencati in
-[STATO.md](STATO.md#cosa-non-è-ancora-stato-verificato-su-hardware-reale), in particolare che
+[STATO.md](verifica-sul-telefono.md#cosa-non-è-ancora-stato-verificato-su-hardware-reale), in particolare che
 `expo-sqlite` persista fra due riavvii dell'app.
 
 ---
