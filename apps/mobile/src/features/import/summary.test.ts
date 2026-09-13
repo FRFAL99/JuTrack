@@ -3,7 +3,15 @@ import type { ImportCounts, ImportSkip } from '@jutrack/core';
 import { describeKept, groupSkips, keptTotal, suggestedName } from './summary';
 
 function counts(patch: Partial<ImportCounts> = {}): ImportCounts {
-  return { expenses: 0, categories: 0, members: 0, budgets: 0, settlements: 0, ...patch };
+  return {
+    expenses: 0,
+    categories: 0,
+    members: 0,
+    budgets: 0,
+    settlements: 0,
+    vocabulary: 0,
+    ...patch,
+  };
 }
 
 function skip(reason: string, id = 'x'): ImportSkip {

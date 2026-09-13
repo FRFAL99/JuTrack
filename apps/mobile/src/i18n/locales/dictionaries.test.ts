@@ -126,6 +126,10 @@ describe('dizionari', () => {
       // «Budget» al singolare è invariato in italiano, come «tag» in
       // expense.extra.tagCount.one: solo il plurale inglese cambia forma.
       'importScreen.summary.budgets.one',
+      // «tag» è invariabile in italiano e prende la s solo al plurale inglese: è lo stesso
+      // caso di expense.extra.tagCount.one, e vale sia per il singolare del conteggio
+      // nell'elenco sia per il nome della famiglia fra i suggerimenti.
+      'vocabulary.tag.count.one',
       // «OK» è la stessa sigla in entrambe le lingue.
       'probe.ok',
       // «SecureStore» è il nome del modulo, non una parola italiana: etichetta e risultato

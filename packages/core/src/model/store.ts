@@ -18,12 +18,19 @@ import {
   readExpense,
   readMember,
   readSettlement,
+  readVocabularyEntry,
   settlementsMap,
+  vocabularyMap,
   writeRecord,
 } from './doc';
-import { normalizeStore, normalizeTags } from '../insights/naming';
+import {
+  normalizeStore,
+  normalizeTags,
+  normalizeVocabulary,
+  vocabularyKeyOf,
+} from '../insights/naming';
 import { assertIsoDate } from './dates';
-import { newId } from './ids';
+import { newId, vocabularyKey } from './ids';
 import { assertCents, splitByWeights, splitEvenly, type Cents } from './money';
 import type {
   Budget,
@@ -36,7 +43,10 @@ import type {
   Settlement,
   SplitMode,
   VaultSnapshot,
+  VocabularyEntry,
+  VocabularyKind,
 } from './types';
+import { VOCABULARY_KINDS } from './types';
 
 export interface StoreDeps {
   random: RandomSource;
@@ -403,6 +413,73 @@ export class VaultStore {
     return out;
   }
 
+  /* --------------------------- Vocabolario ------------------------------ */
+
+  /**
+   * Aggiunge una voce all'elenco, o ne riaccende una tolta. `null` se il nome è vuoto.
+   *
+   * **Idempotente sulla chiave**, che è il punto di averla derivata dal nome: due telefoni
+   * che aggiungono «Vacanza» separatamente scrivono la stessa chiave e convergono su una
+   * voce sola. Con un id casuale ne nascerebbero due, identiche a vedersi e impossibili da
+   * fondere — proprio nel caso peggiore, che è due persone che guardano lo stesso elenco di
+   * suggerimenti.
+   *
+   * Su una voce che esiste già **si riscrive solo `deletedAt`**: la grafia resta quella
+   * scelta la prima volta. `vacanza` e `Vacanza` sono la stessa voce, e chi scrive per
+   * secondo non deve poter rinominare quella dell'altro senza volerlo.
+   */
+  addVocabularyEntry(kind: VocabularyKind, name: string): VocabularyEntry | null {
+    const spelling = normalizeVocabulary(kind, name);
+    if (spelling === '') return null;
+
+    const key = vocabularyKeyOf(kind, spelling);
+    const composite = vocabularyKey(kind, key);
+    const exists = vocabularyMap(this.doc).get(composite) !== undefined;
+
+    this.transact(() => {
+      writeRecord(
+        vocabularyMap(this.doc),
+        composite,
+        exists ? { deletedAt: null } : { name: spelling, deletedAt: null },
+      );
+    });
+
+    return this.getVocabularyEntry(kind, key);
+  }
+
+  /**
+   * Toglie una voce dall'elenco.
+   *
+   * **Tombstone, mai `delete` della chiave**: la rimozione fisica non si propaga in modo
+   * affidabile e la voce tornerebbe dall'altro telefono. Nessuna spesa resta orfana — le
+   * spese portano la parola, non un riferimento — quindi qui «togliere» vuol dire soltanto
+   * «smetti di propormela».
+   */
+  removeVocabularyEntry(kind: VocabularyKind, key: string): void {
+    const composite = vocabularyKey(kind, key);
+    if (vocabularyMap(this.doc).get(composite) === undefined) return;
+    this.transact(() => {
+      writeRecord(vocabularyMap(this.doc), composite, { deletedAt: this.timestamp() });
+    });
+  }
+
+  getVocabularyEntry(kind: VocabularyKind, key: string): VocabularyEntry | null {
+    const record = vocabularyMap(this.doc).get(vocabularyKey(kind, key));
+    return record === undefined ? null : readVocabularyEntry(vocabularyKey(kind, key), record);
+  }
+
+  /** Le voci di una famiglia, in ordine alfabetico come le categorie. */
+  listVocabulary(kind: VocabularyKind, includeDeleted = false): VocabularyEntry[] {
+    const out: VocabularyEntry[] = [];
+    vocabularyMap(this.doc).forEach((record, composite) => {
+      const entry = readVocabularyEntry(composite, record);
+      if (entry === null || entry.kind !== kind) return;
+      if (!includeDeleted && entry.deletedAt !== null) return;
+      out.push(entry);
+    });
+    return out.sort((a, b) => a.name.localeCompare(b.name, 'it'));
+  }
+
   /* ----------------------------- Pareggi -------------------------------- */
 
   addSettlement(input: {
@@ -526,6 +603,16 @@ export class VaultStore {
         });
       }
 
+      for (const entry of snapshot.vocabulary) {
+        // Come per `store` e `tags`: **non si normalizza**. Il testo era già passato per le
+        // regole quando la voce è entrata la prima volta, e rifarlo con regole future
+        // cambierebbe la chiave durante quello che deve essere un ripristino.
+        writeRecord(vocabularyMap(this.doc), vocabularyKey(entry.kind, entry.key), {
+          name: entry.name,
+          deletedAt: entry.deletedAt,
+        });
+      }
+
       for (const settlement of snapshot.settlements) {
         writeRecord(settlementsMap(this.doc), settlement.id, {
           fromMember: settlement.fromMember,
@@ -543,7 +630,7 @@ export class VaultStore {
   /**
    * Il documento non contiene record.
    *
-   * Guarda le cinque mappe e non `meta`: il nome del gruppo viene scritto da chi crea il
+   * Guarda le sei mappe di record e non `meta`: il nome del gruppo viene scritto da chi crea il
    * gruppo, quindi c'è già quando l'import comincia, e non è un record che possa entrare in
    * conflitto con niente.
    */
@@ -553,7 +640,8 @@ export class VaultStore {
       categoriesMap(this.doc).size +
       membersMap(this.doc).size +
       budgetsMap(this.doc).size +
-      settlementsMap(this.doc).size;
+      settlementsMap(this.doc).size +
+      vocabularyMap(this.doc).size;
 
     if (filled > 0) {
       throw new Error(
@@ -580,6 +668,11 @@ export class VaultStore {
       members: this.listMembers(),
       budgets: this.listBudgets(),
       settlements: this.listSettlements(includeDeleted),
+      // Percorse da `VOCABULARY_KINDS` e non nominate a mano: una famiglia aggiunta domani
+      // finirebbe nell'export da sola, invece di mancarvi finché qualcuno non se ne accorge.
+      // I tombstone ci sono sempre — un file che li perde, reimportato, farebbe riapparire
+      // voci che qualcuno aveva tolto, che è la stessa ragione delle spese cancellate.
+      vocabulary: VOCABULARY_KINDS.flatMap((kind) => this.listVocabulary(kind, true)),
     };
   }
 }

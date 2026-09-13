@@ -69,6 +69,41 @@ export interface Category {
   archived: boolean;
 }
 
+/** Le due famiglie del vocabolario di un gruppo. */
+export type VocabularyKind = 'tag' | 'store';
+
+/** Tutte le famiglie, per chi deve percorrerle senza dimenticarne una (`snapshot`). */
+export const VOCABULARY_KINDS: readonly VocabularyKind[] = ['tag', 'store'];
+
+/**
+ * Una voce proponibile per il negozio o per i tag di una spesa.
+ *
+ * **Non è un'entità che le spese riferiscono.** `Expense.store` e `Expense.tags` restano
+ * testo: questo è un elenco di ciò che conviene *proporre*, non di ciò che esiste. La
+ * conseguenza che serve: togliere una voce non rende orfana nessuna spesa, perché la spesa
+ * si porta dietro la parola. È la differenza con `Category`, che infatti si archivia e non
+ * si cancella mai.
+ *
+ * **L'identità è la chiave, derivata dal nome** con `tagKey`/`storeKey`, e non un id
+ * casuale come per le altre entità. Due telefoni che aggiungono «Vacanza» separatamente
+ * convergono così su una voce sola invece di produrne due indistinguibili; e la voce di
+ * catalogo e la barra dei grafici sono la stessa identità per costruzione, perché è su
+ * quella chiave che i grafici già raggruppano.
+ *
+ * Il prezzo, accettato: **una voce non si rinomina.** Cambiare il nome cambierebbe la
+ * chiave, e le spese già registrate continuerebbero comunque a portare la parola vecchia —
+ * è il limite già dichiarato per i tag. Si toglie e si riaggiunge.
+ */
+export interface VocabularyEntry {
+  kind: VocabularyKind;
+  /** Forma canonica su cui due grafie della stessa cosa si riconoscono uguali. */
+  key: string;
+  /** La grafia da mostrare: quella scelta la prima volta che la voce è entrata. */
+  name: string;
+  /** Tombstone: valorizzato quando la voce è tolta dall'elenco. */
+  deletedAt: IsoTimestamp | null;
+}
+
 export interface Member {
   id: string;
   name: string;
@@ -94,6 +129,8 @@ export interface VaultSnapshot {
   members: Member[];
   budgets: Budget[];
   settlements: Settlement[];
+  /** Il vocabolario del gruppo, tombstone compresi. Assente nei file d'export fino alla v2. */
+  vocabulary: VocabularyEntry[];
 }
 
 /** Pareggio: un membro salda il proprio debito verso un altro. */

@@ -21,6 +21,7 @@ import {
   useMyMemberId,
   useSyncState,
   useVaultRuntime,
+  useVocabulary,
   type GroupRecord,
 } from '@/state';
 import { useTheme } from '@/theme';
@@ -56,6 +57,8 @@ function ManageGroup({ current }: { current: GroupRecord }) {
   const members = useMembers();
   const syncState = useSyncState();
   const categories = useCategories();
+  const tags = useVocabulary('tag');
+  const stores = useVocabulary('store');
 
   const [draft, setDraft] = useState(current.name);
   const [leaving, setLeaving] = useState(false);
@@ -230,6 +233,21 @@ function ManageGroup({ current }: { current: GroupRecord }) {
           label={t('manage.group.categories')}
           value={plural('manage.group.categoriesValue', categories.length)}
           onPress={() => router.push('/categories')}
+        />
+        <Rule inset={spacing.lg} color={colors.divider} />
+        {/* Accanto a «Categorie» perché sono la stessa cosa: elenchi del gruppo, non del
+            telefono. Togliere una voce da questi due però non archivia nulla — le spese
+            portano la parola e non un riferimento. */}
+        <ListRow
+          label={t('vocabulary.tag.title')}
+          value={plural('vocabulary.tag.count', tags.length)}
+          onPress={() => router.push('/tags')}
+        />
+        <Rule inset={spacing.lg} color={colors.divider} />
+        <ListRow
+          label={t('vocabulary.store.title')}
+          value={plural('vocabulary.store.count', stores.length)}
+          onPress={() => router.push('/stores')}
         />
         <Rule inset={spacing.lg} color={colors.divider} />
         <ListRow label={t('manage.group.budget')} onPress={() => router.push('/budget')} />

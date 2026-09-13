@@ -41,11 +41,15 @@ import type {
   Settlement,
   SplitMode,
   VaultSnapshot,
+  VocabularyEntry,
+  VocabularyKind,
 } from '../model/types';
+import { VOCABULARY_KINDS } from '../model/types';
+import { vocabularyKeyOf } from '../insights/naming';
 import { EXPORT_FORMAT_NAME, EXPORT_FORMAT_VERSION } from './json';
 
 /** Le famiglie di record, per dire nel report da quale viene uno scarto. */
-export type ImportKind = 'expense' | 'category' | 'member' | 'budget' | 'settlement';
+export type ImportKind = 'expense' | 'category' | 'member' | 'budget' | 'settlement' | 'vocabulary';
 
 /** Un record che non è entrato, e perché. Il «perché» è la parte utile. */
 export interface ImportSkip {
@@ -63,10 +67,11 @@ export interface ImportCounts {
   members: number;
   budgets: number;
   settlements: number;
+  vocabulary: number;
 }
 
 export interface ImportReport {
-  /** La versione dichiarata dal file: 1 non ha `store` né `tags`, 2 sì. */
+  /** La versione: 1 non ha `store` né `tags`, 2 sì, 3 ha anche il `vocabulary`. */
   version: number;
   /** Quando il file è stato prodotto, `null` se non lo dice o lo dice male. */
   exportedAt: string | null;
@@ -196,10 +201,13 @@ export function parseVaultExport(text: string): ImportResult {
   const expenses = readExpenses(objectList(root.expenses), memberIds, categoryIds, skipped);
   const budgets = readBudgets(objectList(root.budgets), categoryIds, skipped);
   const settlements = readSettlements(objectList(root.settlements), memberIds, skipped);
+  // Assente nei file fino alla v2, e `objectList` lo rende un elenco vuoto: le spese portano
+  // comunque le loro parole, quindi un file vecchio non perde dati, perde suggerimenti.
+  const vocabulary = readVocabulary(objectList(root.vocabulary), skipped);
 
   return {
     ok: true,
-    snapshot: { expenses, categories, members, budgets, settlements },
+    snapshot: { expenses, categories, members, budgets, settlements, vocabulary },
     report: {
       version,
       exportedAt: nullableStr(root.exportedAt),
@@ -209,6 +217,7 @@ export function parseVaultExport(text: string): ImportResult {
         members: members.length,
         budgets: budgets.length,
         settlements: settlements.length,
+        vocabulary: vocabulary.length,
       },
       skipped,
     },
@@ -550,6 +559,68 @@ function readSettlements(
 }
 
 /** Quanti record entrerebbero in tutto: serve a dire «non c'è niente da importare». */
+/**
+ * Il vocabolario del gruppo.
+ *
+ * **La chiave si ricalcola dal nome invece di fidarsi di quella nel file.** È l'unico
+ * record in cui chiave e contenuto devono restare d'accordo: una voce che dichiarasse
+ * `key: 'spesa'` e `name: 'Vacanza'` non verrebbe mai proposta per «vacanza» né tolta
+ * toccandola, e resterebbe nell'elenco senza modo di sbarazzarsene. Ricalcolando, una
+ * chiave manomessa si raddrizza invece di entrare.
+ *
+ * Non si normalizza il **nome** — quello è la grafia scelta da chi l'ha creata, e riscriverla
+ * con regole future cambierebbe dei dati durante un ripristino.
+ */
+function readVocabulary(rows: Record<string, unknown>[], skipped: ImportSkip[]): VocabularyEntry[] {
+  const seen = new Set<string>();
+  const out: VocabularyEntry[] = [];
+
+  for (const row of rows) {
+    const kind = row.kind;
+    if (!isVocabularyKind(kind)) {
+      skipped.push({
+        kind: 'vocabulary',
+        id: str(row.key, '(senza chiave)'),
+        reason: 'famiglia sconosciuta',
+      });
+      continue;
+    }
+
+    const name = nonEmptyStr(row.name);
+    if (name === null) {
+      skipped.push({
+        kind: 'vocabulary',
+        id: str(row.key, '(senza chiave)'),
+        reason: 'manca il nome',
+      });
+      continue;
+    }
+
+    const key = vocabularyKeyOf(kind, name);
+    const id = `${kind}:${key}`;
+    if (seen.has(id)) {
+      skipped.push({ kind: 'vocabulary', id, reason: 'chiave ripetuta' });
+      continue;
+    }
+    seen.add(id);
+
+    out.push({ kind, key, name, deletedAt: nullableStr(row.deletedAt) });
+  }
+
+  return out;
+}
+
+function isVocabularyKind(value: unknown): value is VocabularyKind {
+  return typeof value === 'string' && VOCABULARY_KINDS.includes(value as VocabularyKind);
+}
+
 export function totalKept(counts: ImportCounts): number {
-  return counts.expenses + counts.categories + counts.members + counts.budgets + counts.settlements;
+  return (
+    counts.expenses +
+    counts.categories +
+    counts.members +
+    counts.budgets +
+    counts.settlements +
+    counts.vocabulary
+  );
 }

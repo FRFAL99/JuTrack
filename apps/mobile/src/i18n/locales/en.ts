@@ -180,13 +180,10 @@ export const en: Dictionary = {
     notePrompt: 'Expense name',
     noteLabel: 'Expense note',
     extra: {
-      title: 'Additional details',
       optional: 'Optional',
       tagCount: { one: '{{count}} tag', other: '{{count}} tags' },
       store: 'Store',
-      storePlaceholder: 'Where it happened',
       tags: 'Tags',
-      tagPlaceholder: 'Add a tag',
     },
     row: {
       uncategorized: 'Uncategorised',
@@ -272,6 +269,40 @@ export const en: Dictionary = {
       idBody:
         'This is how the other phones recognise you inside a group. It is a random number, generated once on this phone: it is not an account, there is nothing to sign in to, and on its own it says nothing about you. It only matters if something goes wrong and you need to say which person we are talking about.\n\n{{id}}',
       version: 'JuTrack {{app}} · core {{core}}',
+    },
+  },
+  vocabulary: {
+    tag: {
+      title: 'Tags',
+      note: 'The labels you can put on an expense. Removing one does not touch the expenses that use it: the word stays where it is, it just stops being offered.',
+      placeholder: 'Add a tag',
+      empty: 'No tags yet. Tap one of the suggestions below.',
+      count: { one: '{{count}} tag', other: '{{count}} tags' },
+    },
+    store: {
+      title: 'Shops',
+      note: 'The places where you shop. Picking them from here instead of retyping them stops the per-shop charts from counting the same name twice.',
+      placeholder: 'Add a shop',
+      empty: 'No shops yet. Add one above.',
+      count: { one: '{{count}} shop', other: '{{count}} shops' },
+    },
+    inList: 'In the list',
+    suggestedTitle: 'Suggested',
+    usedTitle: 'Already used, not in the list',
+    usedNote: 'Words that appear in your expenses. Tap them to add them to the list.',
+    add: 'Add',
+    removeA11y: 'Remove {{name}} from the list',
+    addA11y: 'Add {{name}} to the list',
+    newEntry: 'New entry',
+    suggested: {
+      mealVouchers: 'Meal vouchers',
+      holiday: 'Holiday',
+      gift: 'Gift',
+      work: 'Work',
+      refundable: 'Refundable',
+      subscription: 'Subscription',
+      cash: 'Cash',
+      health: 'Health',
     },
   },
   calendar: {
@@ -647,6 +678,7 @@ export const en: Dictionary = {
       categories: { one: '{{count}} category', other: '{{count}} categories' },
       budgets: { one: '{{count}} budget', other: '{{count}} budgets' },
       settlements: { one: '{{count}} settlement', other: '{{count}} settlements' },
+      vocabulary: { one: '{{count}} list entry', other: '{{count}} list entries' },
     },
   },
   wipe: {

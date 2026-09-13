@@ -52,5 +52,6 @@ export {
   useExpenses,
   useMembers,
   useSettlements,
+  useVocabulary,
 } from './hooks';
 export { seedDefaults } from './seed';

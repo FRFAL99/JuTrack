@@ -10,14 +10,23 @@
  * annidata. Vedi `readExpense` per il motivo.
  */
 import * as Y from 'yjs';
-import type { Budget, Category, Expense, ExpenseSplit, Member, Settlement } from './types';
-import { budgetKey, parseBudgetKey } from './ids';
+import type {
+  Budget,
+  Category,
+  Expense,
+  ExpenseSplit,
+  Member,
+  Settlement,
+  VocabularyEntry,
+} from './types';
+import { budgetKey, parseBudgetKey, parseVocabularyKey } from './ids';
 
 export const EXPENSES = 'expenses';
 export const CATEGORIES = 'categories';
 export const MEMBERS = 'members';
 export const BUDGETS = 'budgets';
 export const SETTLEMENTS = 'settlements';
+export const VOCABULARY = 'vocabulary';
 export const META = 'meta';
 
 export type RecordMap = Y.Map<unknown>;
@@ -36,6 +45,20 @@ export function budgetsMap(doc: Y.Doc): Y.Map<RecordMap> {
 }
 export function settlementsMap(doc: Y.Doc): Y.Map<RecordMap> {
   return doc.getMap<RecordMap>(SETTLEMENTS);
+}
+/**
+ * Il vocabolario del gruppo: tag e negozi proponibili.
+ *
+ * Chiave composita `<famiglia>:<chiave del nome>` invece di un id casuale, come per
+ * `budgets` e per la stessa ragione di fondo: l'identità della voce **è** il suo contenuto.
+ * Qui in più serve alla convergenza — due telefoni che aggiungono «Vacanza» senza
+ * consultarsi scrivono la stessa chiave, quindi la stessa voce.
+ *
+ * Su un documento creato prima dello Step 59 questa mappa è semplicemente vuota: `getMap`
+ * la crea al volo, e non c'è nulla da migrare.
+ */
+export function vocabularyMap(doc: Y.Doc): Y.Map<RecordMap> {
+  return doc.getMap<RecordMap>(VOCABULARY);
 }
 
 /**
@@ -171,6 +194,26 @@ export function readBudget(key: string, map: RecordMap): Budget | null {
     categoryId: parsed.categoryId,
     month: parsed.month,
     limitCents: num(map, 'limitCents'),
+  };
+}
+
+/**
+ * Legge una voce di vocabolario. `null` se la chiave non è una chiave di vocabolario.
+ *
+ * La grafia ripiega sulla chiave quando manca: una pillola vuota non si potrebbe né leggere
+ * né togliere dall'elenco, mentre la chiave è la stessa parola in minuscolo — brutta ma
+ * utilizzabile. Stessa logica dei default di `readCategory`.
+ */
+export function readVocabularyEntry(composite: string, map: RecordMap): VocabularyEntry | null {
+  const parsed = parseVocabularyKey(composite);
+  if (parsed === null) return null;
+
+  const name = str(map, 'name');
+  return {
+    kind: parsed.kind,
+    key: parsed.key,
+    name: name === '' ? parsed.key : name,
+    deletedAt: nullableStr(map, 'deletedAt'),
   };
 }
 

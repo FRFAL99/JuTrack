@@ -15,8 +15,6 @@ import Feather from '@expo/vector-icons/Feather';
 import {
   buildSplit,
   currencySymbol,
-  knownStores,
-  knownTags,
   normalizeTags,
   parseAmount,
   storeKey,
@@ -33,12 +31,12 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
 import { DayPicker } from '@/features/calendar/DayPicker';
+import { VocabularyPicker } from '@/features/vocabulary/VocabularyPicker';
 import { CategoryIcon } from '@/features/categories/CategoryIcon';
-import { useCategories, useCurrencyCode, useExpenses, useMembers, useMyMemberId } from '@/state';
+import { useCategories, useCurrencyCode, useMembers, useMyMemberId, useVaultStore } from '@/state';
 import { numeric, useTheme } from '@/theme';
 import { AmountPad } from './AmountPad';
 import { applyKey } from './amount-pad';
-import { tagChoices } from './extra-fields';
 import { categorySummary, detailsSummary, payerSummary, type SummaryPart } from './group-summary';
 import { formatDayTitle, todayIso } from './grouping';
 import { describeGap, previewShareCents, splitModeLabel, splitPreview } from './split-text';
@@ -136,9 +134,11 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   const categories = useCategories();
   const members = useMembers();
   const myMemberId = useMyMemberId();
-  // Il vocabolario di negozi e tag si deriva dalle spese del gruppo (Step 23): non esiste
-  // un elenco da gestire, esiste ciò che è già stato scritto.
-  const expenses = useExpenses();
+  // Dallo Step 59 negozi e tag sono un **elenco del gruppo**, non più un vocabolario
+  // derivato dalle spese: le pillole le compone `VocabularyPicker`, che legge il catalogo e
+  // ci aggiunge in coda le parole già usate ma mai messe in elenco. Qui serve solo il vault,
+  // per far entrare in elenco ciò che si scrive col «+».
+  const vault = useVaultStore();
   const profileCurrency = useCurrencyCode();
 
   // Una spesa già registrata conserva la propria valuta anche se nel frattempo il profilo
@@ -176,7 +176,11 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   const [pickingDate, setPickingDate] = useState(false);
   const [store, setStore] = useState(initial?.store ?? '');
   const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
+  // Una bozza per campo, e stanno **qui** e non dentro i due selettori: `handleSubmit` deve
+  // poterle vedere, o chi tocca «Salva» senza confermare col tasto «fine» perderebbe ciò
+  // che ha scritto. Era già la regola del vecchio campo dei tag.
   const [tagDraft, setTagDraft] = useState('');
+  const [storeDraft, setStoreDraft] = useState('');
   // Chiusi anche su una spesa che ha già negozio, tag o una categoria: a dire che sotto c'è
   // qualcosa è il riassunto sulla riga, non l'apertura d'ufficio del gruppo.
   const [openGroup, setOpenGroup] = useState<GroupKey | null>(null);
@@ -206,11 +210,6 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
 
   const memberIds = useMemo(() => members.map((m) => m.id), [members]);
 
-  // Sei suggerimenti bastano: `knownStores` è ordinata per frequenza, quindi i primi sono
-  // quelli che si ripetono davvero, e una riga di pillole non deve diventare un elenco.
-  const storeHints = useMemo(() => knownStores(expenses).slice(0, 6), [expenses]);
-  const tagHints = useMemo(() => tagChoices(tags, knownTags(expenses)), [tags, expenses]);
-
   const toggleTag = (tag: string): void => {
     const key = tagKey(tag);
     setTags((current) =>
@@ -220,10 +219,25 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
     );
   };
 
-  /** Aggiunge il tag scritto a mano. `normalizeTags` scarta il vuoto e i doppioni. */
+  /**
+   * Il `+` fa due cose insieme: mette la voce **in elenco** e la sceglie.
+   *
+   * Sono due perché l'elenco è del gruppo e la scelta è di questa spesa. Scrivere una voce
+   * senza metterla in elenco la lascerebbe da riscrivere la volta dopo, che è il difetto da
+   * cui nasce questo step.
+   */
   const commitTagDraft = (): void => {
+    if (tagDraft.trim() === '') return;
+    vault.addVocabularyEntry('tag', tagDraft);
     setTags((current) => normalizeTags([...current, tagDraft]));
     setTagDraft('');
+  };
+
+  const commitStoreDraft = (): void => {
+    if (storeDraft.trim() === '') return;
+    const entry = vault.addVocabularyEntry('store', storeDraft);
+    if (entry !== null) setStore(entry.name);
+    setStoreDraft('');
   };
 
   const customTotal = useMemo(
@@ -288,14 +302,19 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   const handleSubmit = (): void => {
     setTouched(true);
     if (!canSubmit || amountCents === null) return;
+    // Le bozze a metà scrittura contano come scritte: chi tocca «Salva» senza aver premuto
+    // «fine» sulla tastiera si aspetta di ritrovarle, non di averle perse. E poiché entrano
+    // nella spesa, entrano anche nell'elenco del gruppo — altrimenti la volta dopo sarebbero
+    // da riscrivere, che è il difetto che questo step toglie.
+    if (tagDraft.trim() !== '') vault.addVocabularyEntry('tag', tagDraft);
+    if (storeDraft.trim() !== '') vault.addVocabularyEntry('store', storeDraft);
+
     onSubmit({
       amountCents,
       date,
       categoryId,
       note: note.trim(),
-      // Il tag a metà scrittura conta come scritto: chi tocca «Salva» senza aver premuto
-      // «fine» sulla tastiera si aspetta di ritrovarlo, non di averlo perso.
-      store,
+      store: storeDraft.trim() === '' ? store : storeDraft,
       tags: normalizeTags([...tags, tagDraft]),
       currency,
       paidBy,
@@ -561,7 +580,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
               rado. Il riassunto chiuso continua a dire la data, quindi non si perde nulla. */}
           <GroupRow
             title={t('expense.group.details')}
-            summary={detailsSummary(date, store, tags)}
+            summary={detailsSummary(date, storeDraft.trim() === '' ? store : storeDraft, tags)}
             open={openGroup === 'details'}
             onPress={() => toggleGroup('details')}
             left={<Feather name="list" size={15} color={colors.textMuted} />}
@@ -611,62 +630,30 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
                 {pickingDate && <DayPicker value={date} onChange={setDate} />}
               </View>
 
+              {/* Negozio e tag sono **lo stesso campo con due cardinalità**, dallo Step
+                  59: si sceglie da un elenco del gruppo invece di riscrivere. Il `+` mette
+                  una voce nuova in elenco e la sceglie. */}
               <View style={{ gap: spacing.sm }}>
                 <Text style={sectionTitle}>{t('expense.extra.store')}</Text>
-                <TextInput
-                  value={store}
-                  onChangeText={setStore}
-                  placeholder={t('expense.extra.storePlaceholder')}
-                  placeholderTextColor={colors.textFaint}
-                  autoCapitalize="words"
-                  accessibilityLabel={t('expense.extra.store')}
-                  style={fieldBox}
+                <VocabularyPicker
+                  kind="store"
+                  chosen={store === '' ? [] : [store]}
+                  onToggle={(name) => setStore(storeKey(name) === storeKey(store) ? '' : name)}
+                  draft={storeDraft}
+                  onDraftChange={setStoreDraft}
+                  onCommitDraft={commitStoreDraft}
                 />
-                {storeHints.length > 0 && (
-                  <View style={styles.chips}>
-                    {storeHints.map((hint) => {
-                      const selected = storeKey(hint) === storeKey(store);
-                      return (
-                        <Chip
-                          key={hint}
-                          label={hint}
-                          selected={selected}
-                          onPress={() => setStore(selected ? '' : hint)}
-                        />
-                      );
-                    })}
-                  </View>
-                )}
               </View>
 
               <View style={{ gap: spacing.sm }}>
                 <Text style={sectionTitle}>{t('expense.extra.tags')}</Text>
-                {tagHints.length > 0 && (
-                  <View style={styles.chips}>
-                    {tagHints.map((tag) => (
-                      <Chip
-                        key={tagKey(tag)}
-                        label={tag}
-                        selected={tags.some((t) => tagKey(t) === tagKey(tag))}
-                        onPress={() => toggleTag(tag)}
-                      />
-                    ))}
-                  </View>
-                )}
-                <TextInput
-                  value={tagDraft}
-                  onChangeText={setTagDraft}
-                  onSubmitEditing={commitTagDraft}
-                  onBlur={commitTagDraft}
-                  placeholder={t('expense.extra.tagPlaceholder')}
-                  placeholderTextColor={colors.textFaint}
-                  autoCapitalize="none"
-                  returnKeyType="done"
-                  // `submit` e non il default `blurAndSubmit`: chi mette due tag di
-                  // seguito non deve ritoccare il campo dopo il primo.
-                  submitBehavior="submit"
-                  accessibilityLabel={t('expense.extra.tagPlaceholder')}
-                  style={fieldBox}
+                <VocabularyPicker
+                  kind="tag"
+                  chosen={tags}
+                  onToggle={toggleTag}
+                  draft={tagDraft}
+                  onDraftChange={setTagDraft}
+                  onCommitDraft={commitTagDraft}
                 />
               </View>
             </View>

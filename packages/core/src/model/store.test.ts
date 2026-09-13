@@ -524,6 +524,7 @@ describe('nome del gruppo', () => {
       'expenses',
       'members',
       'settlements',
+      'vocabulary',
     ]);
   });
 });
@@ -657,6 +658,7 @@ describe('importSnapshot', () => {
       members: [{ id: 'anna', name: 'Anna', color: '#000000' }],
       budgets: [],
       settlements: [],
+      vocabulary: [],
     });
     expect(restored.getMember('anna')?.name).toBe('Anna');
   });
@@ -700,7 +702,119 @@ describe('importSnapshot', () => {
       members: [],
       budgets: [],
       settlements: [],
+      vocabulary: [],
     });
     expect(store.snapshot().expenses).toEqual([]);
+  });
+});
+
+describe('VaultStore — vocabolario del gruppo', () => {
+  it('aggiunge una voce e la ritrova nella sua famiglia', () => {
+    const store = makeStore();
+    const entry = store.addVocabularyEntry('tag', 'Vacanza');
+
+    expect(entry).toEqual({ kind: 'tag', key: 'vacanza', name: 'Vacanza', deletedAt: null });
+    expect(store.listVocabulary('tag').map((one) => one.name)).toEqual(['Vacanza']);
+    // Le due famiglie non si vedono fra loro.
+    expect(store.listVocabulary('store')).toEqual([]);
+  });
+
+  it('ripulisce la grafia e rifiuta un nome vuoto', () => {
+    const store = makeStore();
+    expect(store.addVocabularyEntry('store', '  Esselunga   di   sotto ')?.name).toBe(
+      'Esselunga di sotto',
+    );
+    expect(store.addVocabularyEntry('tag', '   ')).toBeNull();
+    expect(store.listVocabulary('tag')).toEqual([]);
+  });
+
+  /**
+   * Il comportamento per cui la chiave è derivata dal nome e non casuale.
+   *
+   * Con `newId` queste sarebbero due voci, identiche a vedersi e impossibili da fondere.
+   */
+  it('riconosce due grafie della stessa voce, e tiene la prima', () => {
+    const store = makeStore();
+    store.addVocabularyEntry('tag', 'Vacanza');
+    store.addVocabularyEntry('tag', 'vacanza');
+
+    const tags = store.listVocabulary('tag');
+    expect(tags).toHaveLength(1);
+    // La grafia resta quella scelta la prima volta: chi scrive per secondo non rinomina
+    // la voce dell'altro senza volerlo.
+    expect(tags[0]?.name).toBe('Vacanza');
+  });
+
+  it('toglie una voce con un tombstone, senza cancellare la chiave', () => {
+    const store = makeStore();
+    store.addVocabularyEntry('tag', 'Vacanza');
+    store.removeVocabularyEntry('tag', 'vacanza');
+
+    expect(store.listVocabulary('tag')).toEqual([]);
+    expect(store.listVocabulary('tag', true)).toHaveLength(1);
+    expect(store.getVocabularyEntry('tag', 'vacanza')?.deletedAt).not.toBeNull();
+  });
+
+  it('riaggiungere una voce tolta la riaccende invece di crearne un altra', () => {
+    const store = makeStore();
+    store.addVocabularyEntry('tag', 'Vacanza');
+    store.removeVocabularyEntry('tag', 'vacanza');
+    store.addVocabularyEntry('tag', 'Vacanza');
+
+    expect(store.listVocabulary('tag')).toHaveLength(1);
+    expect(store.listVocabulary('tag', true)).toHaveLength(1);
+    expect(store.getVocabularyEntry('tag', 'vacanza')?.deletedAt).toBeNull();
+  });
+
+  it('togliere una voce non tocca le spese che la nominano', () => {
+    const { store, a } = makeCouple();
+    store.addVocabularyEntry('tag', 'Vacanza');
+    const spesa = store.addExpense({
+      amountCents: 1000,
+      date: '2026-08-01',
+      paidBy: a,
+      split: { mode: 'single', shares: { [a]: 1000 } },
+      tags: ['Vacanza'],
+      store: 'Esselunga',
+    });
+
+    store.removeVocabularyEntry('tag', 'vacanza');
+
+    // È la conseguenza di aver lasciato `tags` come testo: la parola è nella spesa, non un
+    // riferimento a una riga che è appena sparita.
+    expect(store.getExpense(spesa.id)?.tags).toEqual(['Vacanza']);
+  });
+
+  it('regge un nome che contiene due punti', () => {
+    const store = makeStore();
+    store.addVocabularyEntry('store', 'Coop: centro');
+    expect(store.listVocabulary('store').map((one) => one.name)).toEqual(['Coop: centro']);
+    expect(store.getVocabularyEntry('store', 'coop: centro')).not.toBeNull();
+  });
+
+  it('entra nello snapshot con i tombstone, e torna con importSnapshot', () => {
+    const store = makeStore();
+    store.addVocabularyEntry('tag', 'Vacanza');
+    store.addVocabularyEntry('store', 'Esselunga');
+    store.addVocabularyEntry('tag', 'Buoni pasto');
+    store.removeVocabularyEntry('tag', 'buoni pasto');
+
+    const snapshot = store.snapshot();
+    expect(snapshot.vocabulary).toHaveLength(3);
+
+    const copia = makeStore();
+    copia.importSnapshot(snapshot);
+    expect(copia.listVocabulary('tag').map((one) => one.name)).toEqual(['Vacanza']);
+    expect(copia.listVocabulary('store').map((one) => one.name)).toEqual(['Esselunga']);
+    // Il tombstone è sopravvissuto: senza, «Buoni pasto» tornerebbe fra i suggerimenti.
+    expect(copia.getVocabularyEntry('tag', 'buoni pasto')?.deletedAt).not.toBeNull();
+  });
+
+  it('un documento con solo vocabolario non è vuoto per importSnapshot', () => {
+    const store = makeStore();
+    store.addVocabularyEntry('tag', 'Vacanza');
+    // Senza `vocabularyMap` nella somma di `assertEmpty`, un import qui dentro fonderebbe
+    // in silenzio due elenchi.
+    expect(() => store.importSnapshot(makeStore().snapshot())).toThrow(/documento vuoto/);
   });
 });

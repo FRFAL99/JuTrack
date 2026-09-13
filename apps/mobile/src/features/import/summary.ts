@@ -21,6 +21,10 @@ const LABELS: (keyof ImportCounts)[] = [
   'categories',
   'budgets',
   'settlements',
+  // Il vocabolario del gruppo (Step 59). Va elencato **e** contato: `keptTotal` passa di
+  // qui, e un file che portasse solo l'elenco di tag e negozi direbbe altrimenti «non c'è
+  // niente da importare» mentre qualcosa da importare c'è.
+  'vocabulary',
 ];
 
 /**

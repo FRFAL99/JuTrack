@@ -54,6 +54,13 @@ const snapshot: VaultSnapshot = {
       deletedAt: null,
     },
   ],
+  vocabulary: [
+    { kind: 'tag', key: 'vacanza', name: 'Vacanza', deletedAt: null },
+    // Una voce tolta: il file deve conservarla, o reimportandolo tornerebbe fra i
+    // suggerimenti una parola che qualcuno aveva scelto di non vedere più.
+    { kind: 'tag', key: 'buoni pasto', name: 'Buoni pasto', deletedAt: '2026-07-07T08:00:00.000Z' },
+    { kind: 'store', key: 'esselunga', name: 'Esselunga', deletedAt: null },
+  ],
 };
 
 /** Il file buono, come lo produce l'app. Da qui in giù si guasta un pezzo per volta. */
@@ -80,7 +87,7 @@ describe('parseVaultExport — il giro completo', () => {
   it('non scarta niente da un file non toccato', () => {
     const { report } = expectOk(parseVaultExport(goodFile));
     expect(report.skipped).toEqual([]);
-    expect(totalKept(report.kept)).toBe(7);
+    expect(totalKept(report.kept)).toBe(10);
   });
 
   it('conserva i tombstone: un import che li perde resuscita le spese cancellate', () => {
@@ -97,7 +104,7 @@ describe('parseVaultExport — il giro completo', () => {
 
   it('riporta la versione e l’istante dichiarati dal file', () => {
     const { report } = expectOk(parseVaultExport(toJsonExport(snapshot)));
-    expect(report.version).toBe(2);
+    expect(report.version).toBe(3);
     expect(report.exportedAt).not.toBeNull();
   });
 });
@@ -328,6 +335,7 @@ describe('parseVaultExport — record malformati', () => {
       members: [],
       budgets: [],
       settlements: [],
+      vocabulary: [],
     });
 
     const { report } = expectOk(parseVaultExport(empty));

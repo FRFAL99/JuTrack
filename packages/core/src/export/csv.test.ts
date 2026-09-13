@@ -39,6 +39,7 @@ const snapshot: VaultSnapshot = {
   members: [member('anna', 'Anna'), member('bruno', 'Bruno')],
   budgets: [],
   settlements: [],
+  vocabulary: [],
 };
 
 /** Righe del CSV senza BOM, per confronti leggibili. */

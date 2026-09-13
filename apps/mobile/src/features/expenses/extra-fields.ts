@@ -1,4 +1,3 @@
-import { tagKey } from '@jutrack/core';
 import { plural, t } from '@/i18n/translate';
 
 /**
@@ -40,26 +39,6 @@ export function extraSummary(store: string, tags: string[]): string {
   if (name !== '') return name;
   if (tagged !== '') return tagged;
   return t('expense.extra.optional');
-}
-
-/**
- * Le pillole da mostrare: prima i tag scelti, poi quelli già usati nel gruppo.
- *
- * I tag scelti stanno in cima perché sono lo **stato** della spesa che si sta scrivendo, e
- * devono restare visibili senza scorrere quando i suggerimenti sono molti. Il confronto è
- * sulla chiave, come ovunque per i tag: uno appena scritto come `Regalo` non deve
- * ricomparire più sotto perché nel gruppo esiste già come `regalo`.
- */
-export function tagChoices(chosen: string[], known: string[]): string[] {
-  const seen = new Set(chosen.map(tagKey));
-  const out = [...chosen];
-  for (const tag of known) {
-    const key = tagKey(tag);
-    if (seen.has(key)) continue;
-    seen.add(key);
-    out.push(tag);
-  }
-  return out;
 }
 
 /** Taglia per grafemi e non per unità UTF-16: `name[0]` spezzerebbe una coppia surrogata. */

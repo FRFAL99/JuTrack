@@ -321,3 +321,70 @@ describe('convergenza fra due dispositivi', () => {
     expect(new VaultStore(target, { random: testRandom }).listExpenses()).toHaveLength(1);
   });
 });
+
+describe('convergenza del vocabolario del gruppo', () => {
+  /**
+   * Il test che giustifica la chiave derivata dal nome invece di un id casuale.
+   *
+   * Non è uno scenario di laboratorio: il vocabolario nasce da due persone che guardano lo
+   * stesso elenco di suggerimenti, su due telefoni, magari lo stesso giorno. Con `newId`
+   * qui resterebbero **due** voci «Vacanza», identiche a vedersi, nessuna delle due
+   * eliminabile toccando l'altra.
+   */
+  it('due dispositivi che aggiungono la stessa voce convergono su una sola', () => {
+    const { docA, docB, storeA, storeB } = twoDevices();
+
+    storeA.addVocabularyEntry('tag', 'Vacanza');
+    storeB.addVocabularyEntry('tag', 'Vacanza');
+    sync(docA, docB);
+
+    expect(storeA.listVocabulary('tag')).toHaveLength(1);
+    expect(storeB.listVocabulary('tag')).toEqual(storeA.listVocabulary('tag'));
+  });
+
+  it('convergono anche su due grafie diverse della stessa voce', () => {
+    const { docA, docB, storeA, storeB } = twoDevices();
+
+    storeA.addVocabularyEntry('store', 'Esselunga');
+    storeB.addVocabularyEntry('store', 'esselunga');
+    sync(docA, docB);
+
+    expect(storeA.listVocabulary('store')).toHaveLength(1);
+    expect(storeB.listVocabulary('store')).toEqual(storeA.listVocabulary('store'));
+  });
+
+  it('voci diverse restano distinte e arrivano su entrambi', () => {
+    const { docA, docB, storeA, storeB } = twoDevices();
+
+    storeA.addVocabularyEntry('tag', 'Vacanza');
+    storeB.addVocabularyEntry('tag', 'Buoni pasto');
+    // Stesso nome, famiglia diversa: sono due voci, e non devono fondersi.
+    storeB.addVocabularyEntry('store', 'Vacanza');
+    sync(docA, docB);
+
+    expect(storeA.listVocabulary('tag').map((one) => one.name)).toEqual(['Buoni pasto', 'Vacanza']);
+    expect(storeA.listVocabulary('store').map((one) => one.name)).toEqual(['Vacanza']);
+    expect(storeB.listVocabulary('tag')).toEqual(storeA.listVocabulary('tag'));
+  });
+
+  /**
+   * Togliere è un tombstone: se fosse una `delete` della chiave, la voce tornerebbe qui.
+   *
+   * A ha tolto la voce mentre B la stava usando; B non l'ha toccata. Dopo la fusione deve
+   * restare tolta su entrambi — una `delete` invece lascerebbe che lo stato di B la
+   * reintroducesse, e l'elenco tornerebbe da solo come prima.
+   */
+  it('una voce tolta su un dispositivo resta tolta dopo la fusione', () => {
+    const { docA, docB, storeA, storeB } = twoDevices();
+
+    storeA.addVocabularyEntry('tag', 'Vacanza');
+    sync(docA, docB);
+    expect(storeB.listVocabulary('tag')).toHaveLength(1);
+
+    storeA.removeVocabularyEntry('tag', 'vacanza');
+    sync(docA, docB);
+
+    expect(storeB.listVocabulary('tag')).toEqual([]);
+    expect(storeA.listVocabulary('tag')).toEqual([]);
+  });
+});

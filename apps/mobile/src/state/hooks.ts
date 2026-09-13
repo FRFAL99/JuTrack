@@ -7,6 +7,8 @@ import type {
   IsoMonth,
   Member,
   Settlement,
+  VocabularyEntry,
+  VocabularyKind,
 } from '@jutrack/core';
 import { useVaultRuntime } from './VaultProvider';
 
@@ -109,4 +111,19 @@ export function useExpense(id: string | undefined): Expense | null {
     dependsOnDocument(version);
     return id === undefined ? null : store.getExpense(id);
   }, [store, version, id]);
+}
+
+/**
+ * Le voci proponibili di una famiglia, tolte quelle rimosse dall'elenco.
+ *
+ * Stessa forma di `useCategories`, inclusa la dipendenza dalla versione del documento: è
+ * quella a far ridisegnare le pillole del form quando l'altro telefono aggiunge un tag.
+ */
+export function useVocabulary(kind: VocabularyKind): VocabularyEntry[] {
+  const { store } = useVaultRuntime();
+  const version = useDocVersion();
+  return useMemo(() => {
+    dependsOnDocument(version);
+    return store.listVocabulary(kind);
+  }, [store, version, kind]);
 }

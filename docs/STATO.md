@@ -255,7 +255,7 @@ Piano v7 — [piano-v7-data-e-vocabolario-del-gruppo.md](piano-v7-data-e-vocabol
 | Step                                    | Stato | Cosa contiene                                                                    |
 | --------------------------------------- | ----- | -------------------------------------------------------------------------------- |
 | 58 — La data della spesa si sceglie     | ✅    | `MonthGrid` condiviso coi filtri, «Oggi»/«Ieri», `assertIsoDate` in scrittura    |
-| 59 — Il vocabolario del gruppo          | ⬜    | Catalogo `tag`/`store` nel vault, chiave derivata dal nome, due schermate        |
+| 59 — Il vocabolario del gruppo          | ✅    | Catalogo `tag`/`store` nel vault, chiave derivata dal nome, due schermate        |
 | 60 — Le correzioni dal check del codice | ⬜    | Italiano fisso negli `Alert`, `isKnownCurrency` mai collegata, `peak` divergente |
 
 **Lo Step 58 è entrato il 13 settembre.** La data di una spesa si sceglie: la riga di
@@ -287,11 +287,55 @@ resterebbe accesa su un mese dalle celle tutte spente.
 **1338 test verdi** (651 core + 633 app + 54 relay), typecheck, lint e `format:check` puliti,
 e il bundle Android esporta.
 
-**Il 59 e il 60 restano da fare**, e il **59 è quello con un rischio vero**: tocca la stessa
-schermata («Nuova spesa» → «Dettagli») ma insieme a modello ed export (formato a **v3**). Il trabocchetto che
-il piano segnalava — `app/(gruppo)/expense/[id].tsx` che **ometteva `date` dalla patch** — è
-chiuso dal 58: senza toccarlo la data sarebbe stata scegliabile su una spesa nuova e scartata in
-silenzio su una in modifica, cioè avrebbe fatto finta di funzionare.
+**Lo Step 59 è entrato il 13 settembre.** Tag e negozi non sono più due caselle di testo con
+dei suggerimenti derivati: sono un **elenco del gruppo**, con due schermate in «Gestione
+gruppo» accanto a «Categorie» e, nel form, pillole più un `+` che mette una voce in elenco e
+la sceglie insieme.
+
+**`Expense.tags` e `Expense.store` non sono cambiati: restano testo.** È la decisione che
+rende tutto additivo — zero migrazione, `insights/stores.ts`, `query.ts`, i filtri e i grafici
+intatti — e che dà a «togliere una voce» il significato giusto: la spesa porta la parola e non
+un riferimento, quindi togliere non archivia niente e non lascia orfano nessuno. È la
+differenza con le categorie, che infatti si archiviano soltanto.
+
+**La chiave di una voce è derivata dal nome** (`tagKey`/`storeKey`), non un `newId`: due
+telefoni che toccano «Vacanza» separatamente convergono su una voce sola, ed è provato in
+`convergence.test.ts`. Il prezzo dichiarato è che una voce non si rinomina — si toglie e si
+riaggiunge. Rimozione = tombstone, mai `delete` della chiave, con il suo test di fusione.
+
+**`parseVocabularyKey` taglia al primo `:` e non all'ultimo come `parseBudgetKey`**: là la
+parte variabile sta davanti, qui sta dietro ed è un nome scritto da una persona. Un negozio
+chiamato «Coop: centro» sarebbe finito in una famiglia inesistente e sparito dall'elenco senza
+che nulla lo dicesse. C'è un test che confronta le due funzioni sulla stessa chiave.
+
+Quattro cose nate scrivendo:
+
+1. **Il tipo obbligatorio ha fatto il lavoro.** Aggiungere `vocabulary` a `VaultSnapshot` ha
+   rotto la compilazione in nove punti — export, import, `assertEmpty`, sei fixture: nessuno
+   di quei posti poteva dimenticarsene in silenzio.
+2. **`totalKept` e `LABELS` di `features/import/summary.ts` andavano estesi**, o un file che
+   portasse solo l'elenco avrebbe detto «non c'è niente da importare».
+3. **La casella di testo è finita dietro il `+`**, non lasciata a schermo: una casella visibile
+   invita a riscrivere, ed è riscrivere che produceva due insegne per lo stesso negozio.
+4. **Le bozze del `+` stanno nel form e non nei selettori**, così `handleSubmit` le vede: chi
+   tocca «Salva» senza premere «fine» ritrova ciò che ha scritto, e quella parola entra anche
+   in elenco.
+
+Tolte tre chiavi orfane da `expense.extra` (`title` era morta dallo Step 50, le altre due da
+questo), e dichiarata l'eccezione per `vocabulary.tag.count.one`: «tag» è invariabile in
+italiano e prende la s solo al plurale inglese.
+
+**Export a v3.** Un file v2 resta leggibile e vale come elenco vuoto: le spese portano
+comunque le loro parole, quindi non si perdono dati, si perdono suggerimenti — e si riadottano
+dal blocco «già usati» della schermata di gestione. Quel blocco è anche ciò che impedisce, sui
+gruppi nati prima di questo step, che i tag già scritti diventino irraggiungibili il giorno in
+cui la tendina sostituisce il testo libero.
+
+**1363 test verdi** (670 core + 639 app + 54 relay), typecheck, lint e `format:check` puliti,
+e il bundle Android esporta.
+
+**Resta il 60**: le correzioni dal check del codice, di cui il pezzo più concreto sono i due
+`Alert` di «esci dal gruppo» e «rigenera» ancora in italiano fisso.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani

@@ -33,6 +33,7 @@ const snapshot: VaultSnapshot = {
   ],
   budgets: [{ categoryId: 'spesa', month: '2026-07', limitCents: 30000 }],
   settlements: [],
+  vocabulary: [],
 };
 
 /** Rilegge lo stato come farebbe il gruppo appena creato quando lo si apre. */
@@ -68,6 +69,7 @@ describe('encodeSnapshotAsState', () => {
       members: [],
       budgets: [],
       settlements: [],
+      vocabulary: [],
     };
     expect(reopen(encodeSnapshotAsState(empty, random)).listExpenses()).toEqual([]);
   });

@@ -1,5 +1,6 @@
 import { bytesToHex } from '../crypto/encoding';
 import type { RandomSource } from '../crypto/types';
+import { VOCABULARY_KINDS, type VocabularyKind } from './types';
 
 /**
  * Identificatori dei record.
@@ -27,4 +28,31 @@ export function parseBudgetKey(key: string): { categoryId: string; month: string
     categoryId: key.slice(0, separator),
     month: key.slice(separator + 1),
   };
+}
+
+/** Chiave composita di una voce di vocabolario: la famiglia, e la chiave del nome. */
+export function vocabularyKey(kind: VocabularyKind, key: string): string {
+  return `${kind}:${key}`;
+}
+
+/**
+ * Inversa di `vocabularyKey`. `null` se la chiave è malformata.
+ *
+ * **Taglia al PRIMO `:`, e non all'ultimo come `parseBudgetKey`.** Là la parte variabile —
+ * il `categoryId` — sta davanti, e il mese che la segue non può contenere due punti; qui è
+ * l'opposto: la famiglia è un token fisso in testa, e a seguire c'è la chiave di un nome
+ * scritto da una persona, che i due punti può contenerli benissimo («Coop: centro»). Con
+ * `lastIndexOf` quel negozio diventerebbe una voce di famiglia `store:Coop` — che non è una
+ * famiglia — e sparirebbe dall'elenco senza che niente lo dica.
+ */
+export function parseVocabularyKey(
+  composite: string,
+): { kind: VocabularyKind; key: string } | null {
+  const separator = composite.indexOf(':');
+  if (separator <= 0 || separator === composite.length - 1) return null;
+
+  const kind = composite.slice(0, separator);
+  if (!VOCABULARY_KINDS.includes(kind as VocabularyKind)) return null;
+
+  return { kind: kind as VocabularyKind, key: composite.slice(separator + 1) };
 }

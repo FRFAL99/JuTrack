@@ -24,6 +24,7 @@ const snapshot: VaultSnapshot = {
   members: [{ id: 'anna', name: 'Anna', color: '#000000' }],
   budgets: [{ categoryId: 'spesa', month: '2026-07', limitCents: 30000 }],
   settlements: [],
+  vocabulary: [],
 };
 
 const fixedNow = (): Date => new Date('2026-08-01T12:00:00.000Z');

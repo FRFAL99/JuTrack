@@ -9,7 +9,7 @@
  * sola. Si conserva la grafia scritta dall'utente, si aggrega sulla chiave, e a schermo
  * compare la grafia **più usata**. Senza questo, «top negozi» diventa un elenco di refusi.
  */
-import type { Expense } from '../model/types';
+import type { Expense, VocabularyKind } from '../model/types';
 
 /** Spazi ai margini tolti, spazi interni collassati. È la grafia che si salva. */
 function tidy(value: string): string {
@@ -62,6 +62,23 @@ export function normalizeTags(tags: string[]): string[] {
     out.push(tag);
   }
   return out;
+}
+
+/**
+ * Le due regole di sopra, scelte dalla famiglia — il solo punto in cui si smista.
+ *
+ * Esistono perché dallo Step 59 il vocabolario del gruppo tratta tag e negozi con lo stesso
+ * codice, e senza queste ogni chiamante ripeterebbe `kind === 'tag' ? … : …`. Smistare in un
+ * posto solo è anche ciò che permette alle due regole di divergere davvero il giorno in cui
+ * servisse, che è la ragione per cui `tagKey` e `storeKey` sono due funzioni.
+ */
+export function vocabularyKeyOf(kind: VocabularyKind, value: string): string {
+  return kind === 'tag' ? tagKey(value) : storeKey(value);
+}
+
+/** La grafia da salvare per una voce di vocabolario. Stringa vuota se non resta nulla. */
+export function normalizeVocabulary(kind: VocabularyKind, value: string): string {
+  return kind === 'tag' ? (normalizeTags([value])[0] ?? '') : normalizeStore(value);
 }
 
 /** I negozi già usati, dal più frequente al meno. */

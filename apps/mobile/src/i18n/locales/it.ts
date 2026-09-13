@@ -188,13 +188,10 @@ export const it = {
     notePrompt: 'Nome spesa',
     noteLabel: 'Nota della spesa',
     extra: {
-      title: 'Informazioni aggiuntive',
       optional: 'Facoltativi',
       tagCount: { one: '{{count}} tag', other: '{{count}} tag' },
       store: 'Negozio',
-      storePlaceholder: 'Dove è stata fatta',
       tags: 'Tag',
-      tagPlaceholder: 'Aggiungi un tag',
     },
     row: {
       uncategorized: 'Senza categoria',
@@ -298,6 +295,41 @@ export const it = {
    * spesa (Step 58). Stava sotto `stats.grid`: da quando ha due chiamanti, una chiave
    * `stats.*` letta da un selettore della nuova spesa sarebbe un nome che mente.
    */
+  /** Il vocabolario del gruppo: tag e negozi proponibili (Step 59). */
+  vocabulary: {
+    tag: {
+      title: 'Tag',
+      note: 'Le etichette che puoi mettere su una spesa. Toglierne una non tocca le spese che la usano: la parola resta dov’è, smette solo di essere proposta.',
+      placeholder: 'Aggiungi un tag',
+      empty: 'Nessun tag ancora. Tocca uno dei suggerimenti qui sotto.',
+      count: { one: '{{count}} tag', other: '{{count}} tag' },
+    },
+    store: {
+      title: 'Negozi',
+      note: 'I posti dove fate la spesa. Scegliendoli da qui invece di riscriverli, i grafici per negozio smettono di contare due volte la stessa insegna.',
+      placeholder: 'Aggiungi un negozio',
+      empty: 'Nessun negozio ancora. Aggiungine uno qui sopra.',
+      count: { one: '{{count}} negozio', other: '{{count}} negozi' },
+    },
+    inList: 'In elenco',
+    suggestedTitle: 'Suggeriti',
+    usedTitle: 'Già usati, non in elenco',
+    usedNote: 'Parole che compaiono nelle tue spese. Toccale per metterle in elenco.',
+    add: 'Aggiungi',
+    removeA11y: 'Togli {{name}} dall’elenco',
+    addA11y: 'Aggiungi {{name}} all’elenco',
+    newEntry: 'Nuova voce',
+    suggested: {
+      mealVouchers: 'Buoni pasto',
+      holiday: 'Vacanza',
+      gift: 'Regalo',
+      work: 'Lavoro',
+      refundable: 'Da rimborsare',
+      subscription: 'Abbonamento',
+      cash: 'Contanti',
+      health: 'Salute',
+    },
+  },
   calendar: {
     previousMonth: 'Mese precedente',
     nextMonth: 'Mese successivo',
@@ -673,6 +705,7 @@ export const it = {
       categories: { one: '{{count}} categoria', other: '{{count}} categorie' },
       budgets: { one: '{{count}} budget', other: '{{count}} budget' },
       settlements: { one: '{{count}} pareggio', other: '{{count}} pareggi' },
+      vocabulary: { one: '{{count}} voce di elenco', other: '{{count}} voci di elenco' },
     },
   },
   wipe: {

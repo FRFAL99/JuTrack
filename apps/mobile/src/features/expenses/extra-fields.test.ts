@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import i18n from '@/i18n';
-import { extraSummary, tagChoices } from './extra-fields';
+import { extraSummary } from './extra-fields';
 
 describe('extraSummary', () => {
   it('senza niente dice Facoltativi', () => {
@@ -37,26 +37,6 @@ describe('extraSummary', () => {
 
   it('ignora gli spazi attorno al negozio', () => {
     expect(extraSummary('  Coop  ', [])).toBe('Coop');
-  });
-});
-
-describe('tagChoices', () => {
-  it('mette in cima i tag scelti, poi gli altri già usati', () => {
-    expect(tagChoices(['regalo'], ['casa', 'viaggio'])).toEqual(['regalo', 'casa', 'viaggio']);
-  });
-
-  it('non ripete un tag scelto che esiste già nel gruppo con un altra grafia', () => {
-    // Scritto `Regalo` qui e `regalo` altrove è lo stesso tag: due pillole sarebbero due
-    // modi di scegliere la stessa cosa.
-    expect(tagChoices(['Regalo'], ['regalo', 'casa'])).toEqual(['Regalo', 'casa']);
-  });
-
-  it('non duplica i suggerimenti che differiscono solo per maiuscole', () => {
-    expect(tagChoices([], ['casa', 'Casa'])).toEqual(['casa']);
-  });
-
-  it('regge le due liste vuote', () => {
-    expect(tagChoices([], [])).toEqual([]);
   });
 });
 

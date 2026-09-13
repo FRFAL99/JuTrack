@@ -10,7 +10,11 @@ export type {
   Settlement,
   SplitMode,
   VaultSnapshot,
+  VocabularyEntry,
+  VocabularyKind,
 } from './types';
+
+export { VOCABULARY_KINDS } from './types';
 
 export {
   CURRENCIES,
@@ -37,7 +41,7 @@ export {
 
 export { assertIsoDate, isIsoDate } from './dates';
 
-export { newId, budgetKey, parseBudgetKey } from './ids';
+export { newId, budgetKey, parseBudgetKey, parseVocabularyKey, vocabularyKey } from './ids';
 
 export {
   VaultStore,

@@ -18,11 +18,15 @@ import type { VaultSnapshot } from '../model/types';
  * Va alzata quando cambia la forma dei record. Un domani il reimport dovrà saper leggere
  * anche i file vecchi, ed è il campo che glielo permette.
  *
+ * - **3** — c'è il `vocabulary` del gruppo: l'elenco di tag e negozi proponibili. Un file
+ *   di versione 2 resta leggibile e vale come elenco vuoto — le spese portano comunque le
+ *   loro parole, quindi non si perde nulla se non i suggerimenti, che si riadottano dal
+ *   blocco «già usati» della schermata di gestione.
  * - **2** — le spese hanno `store` e `tags`. Un file di versione 1 resta leggibile: i due
  *   campi vanno letti come `''` e `[]`, come già fa `readExpense` sui record vecchi.
  * - **1** — la forma iniziale.
  */
-export const EXPORT_FORMAT_VERSION = 2;
+export const EXPORT_FORMAT_VERSION = 3;
 
 export const EXPORT_FORMAT_NAME = 'jutrack-export';
 
@@ -55,6 +59,7 @@ export function buildVaultExport(
     members: snapshot.members,
     budgets: snapshot.budgets,
     settlements: snapshot.settlements,
+    vocabulary: snapshot.vocabulary,
   };
 }
 
