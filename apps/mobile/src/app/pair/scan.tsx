@@ -4,8 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import * as Clipboard from 'expo-clipboard';
 import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
+import { Note } from '@/components/Note';
+import { SectionLabel } from '@/components/SectionLabel';
 import {
   loadCameraModule,
   requestCameraPermission,
@@ -26,7 +27,7 @@ type PermissionPhase = CameraPermission | 'unknown';
  */
 export default function PairScanScreen() {
   const { t } = useTranslation();
-  const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
+  const { colors, spacing, radius, fontSize } = useTheme();
   const { submit, error, adopting } = useAdoptPairing();
 
   const camera = loadCameraModule();
@@ -90,31 +91,34 @@ export default function PairScanScreen() {
             />
           </View>
         ) : (
-          <Card style={{ gap: spacing.xs }}>
-            <Text
-              style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-            >
+          /* La fotocamera che non c'è **non** è un commento: è lo stato in cui si è, e dice
+             perché il riquadro sopra è vuoto. Resta in `warning` e a piena leggibilità;
+             sotto, in nota, come rimediare. */
+          <View style={{ marginHorizontal: -spacing.lg }}>
+            <SectionLabel>
               {permission === 'unknown'
                 ? t('pairing.scan.activating')
                 : t('pairing.scan.cameraUnavailable')}
-            </Text>
-            <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
+            </SectionLabel>
+            <Note tone={permission === 'unknown' ? 'default' : 'warning'}>
               {describePermission(permission, t)}
-            </Text>
-          </Card>
+            </Note>
+          </View>
         )}
 
-        <Card style={{ gap: spacing.sm }}>
-          <Text
-            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-          >
-            {t('pairing.scan.pasteHeading')}
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            {t('pairing.scan.pasteHintIntro')}{' '}
-            <Text style={{ color: colors.text }}>{t('pairing.scan.schemePrefix')}</Text>
-            {t('pairing.scan.pasteHintRest')}
-          </Text>
+        {/* **La coda di questa frase è un avviso, non una spiegazione**: «contiene la chiave
+            del gruppo in chiaro: dopo averlo usato, non lasciarlo in giro». Resta separata e
+            in `warning`, perché incollata in fondo a una nota grigia sarebbe la parte che non
+            si legge. */}
+        <View style={{ marginHorizontal: -spacing.lg }}>
+          <SectionLabel>{t('pairing.scan.pasteHeading')}</SectionLabel>
+          <Note>
+            {t('pairing.scan.pasteHintIntro')} {t('pairing.scan.schemePrefix')}
+          </Note>
+          <Note tone="warning">{t('pairing.scan.pasteHintRest')}</Note>
+        </View>
+
+        <View style={{ gap: spacing.sm }}>
           <TextInput
             value={manual}
             onChangeText={setManual}
@@ -151,17 +155,17 @@ export default function PairScanScreen() {
               style={{ flex: 1 }}
             />
           </View>
-        </Card>
+        </View>
 
         {shown !== null && (
-          <Card style={{ borderColor: colors.danger }}>
+          <View style={{ paddingTop: spacing.sm }}>
             <Text
               style={{ color: colors.danger, fontSize: fontSize.sm, lineHeight: 20 }}
               selectable
             >
               {shown}
             </Text>
-          </Card>
+          </View>
         )}
       </ScrollView>
     </ModalScreen>

@@ -2,10 +2,11 @@ import { useEffect, useRef } from 'react';
 import * as Linking from 'expo-linking';
 import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, Text } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
+import { Note } from '@/components/Note';
+import { SectionLabel } from '@/components/SectionLabel';
 import { useAdoptPairing } from '@/features/pairing/useAdoptPairing';
 import { useTheme } from '@/theme';
 
@@ -23,7 +24,7 @@ import { useTheme } from '@/theme';
  */
 export default function JoinScreen() {
   const { t } = useTranslation();
-  const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const { colors, spacing, fontSize } = useTheme();
   const url = Linking.useLinkingURL();
   const { submit, error, adopting } = useAdoptPairing();
 
@@ -41,42 +42,38 @@ export default function JoinScreen() {
 
   return (
     <ModalScreen title={t('pairing.join.title')}>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
-        <Card style={{ gap: spacing.xs }}>
-          <Text
-            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-          >
-            {waiting
-              ? t('pairing.join.noInviteTitle')
-              : adopting
-                ? t('pairing.join.enteringTitle')
-                : t('pairing.receivedTitle')}
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            {waiting ? t('pairing.join.noInviteHint') : t('pairing.join.receivedHint')}
-          </Text>
-        </Card>
+      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
+        <SectionLabel>
+          {waiting
+            ? t('pairing.join.noInviteTitle')
+            : adopting
+              ? t('pairing.join.enteringTitle')
+              : t('pairing.receivedTitle')}
+        </SectionLabel>
+        <Note>{waiting ? t('pairing.join.noInviteHint') : t('pairing.join.receivedHint')}</Note>
 
         {error !== null && (
-          <Card style={{ borderColor: colors.danger }}>
+          <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.md }}>
             <Text
               style={{ color: colors.danger, fontSize: fontSize.sm, lineHeight: 20 }}
               selectable
             >
               {error}
             </Text>
-          </Card>
+          </View>
         )}
 
-        <Button
-          label={t('pairing.join.pasteOrScan')}
-          onPress={() => router.replace('/pair/scan')}
-        />
-        <Button
-          label={t('pairing.join.backToGroups')}
-          variant="secondary"
-          onPress={() => router.replace('/')}
-        />
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+          <Button
+            label={t('pairing.join.pasteOrScan')}
+            onPress={() => router.replace('/pair/scan')}
+          />
+          <Button
+            label={t('pairing.join.backToGroups')}
+            variant="secondary"
+            onPress={() => router.replace('/')}
+          />
+        </View>
       </ScrollView>
     </ModalScreen>
   );

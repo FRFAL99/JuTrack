@@ -11,6 +11,8 @@ import {
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
+import { Note } from '@/components/Note';
+import { SectionLabel } from '@/components/SectionLabel';
 import { RELAY_URL } from '@/config';
 import { GroupRequired } from '@/features/groups/GroupRequired';
 import { PairingQr } from '@/features/pairing/PairingQr';
@@ -142,6 +144,13 @@ function InviteToGroup({ group }: { group: GroupRecord }) {
   return (
     <ModalScreen title={t('pairing.invite.title', { name: group.name })}>
       <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
+        {/* **Questa card non scende di peso, ed è l'unica del giro.**
+            È il consenso: finché non si tocca «Ho capito» la chiave non viene nemmeno
+            materializzata, e queste tre righe sono ciò che si legge prima di farla uscire
+            dal telefono. Le altre schermate del pairing sono operative — come si manda un
+            link, come si inquadra un QR — e quelle sono diventate note. Qui alleggerire
+            vorrebbe dire rendere più facile non leggere l'unica cosa che, se saltata,
+            consegna il gruppo alla persona sbagliata. */}
         <Card style={{ gap: spacing.sm }}>
           <Text
             style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
@@ -182,60 +191,48 @@ function InviteToGroup({ group }: { group: GroupRecord }) {
           </Card>
         ) : (
           <>
-            <Card style={{ gap: spacing.sm }}>
-              <Text
-                style={{
-                  color: colors.text,
-                  fontSize: fontSize.md,
-                  fontWeight: fontWeight.semibold,
-                }}
-              >
-                {t('pairing.invite.sendLinkHeading')}
-              </Text>
-              <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-                {t('pairing.invite.linkValidFor', { remaining: formatRemaining(remaining) })}
-              </Text>
-              <Button label={t('pairing.invite.shareLink')} onPress={share} />
-              <Button
-                label={copied ? t('pairing.invite.linkCopied') : t('pairing.invite.copyLink')}
-                variant="secondary"
-                onPress={copy}
-              />
-            </Card>
-
-            <Card style={{ gap: spacing.sm, alignItems: showQr ? 'center' : 'stretch' }}>
-              <Text
-                style={{
-                  color: colors.text,
-                  fontSize: fontSize.md,
-                  fontWeight: fontWeight.semibold,
-                  alignSelf: 'flex-start',
-                }}
-              >
-                {t('pairing.invite.scanHeading')}
-              </Text>
-              <Text
-                style={{
-                  color: colors.textMuted,
-                  fontSize: fontSize.sm,
-                  lineHeight: 20,
-                  alignSelf: 'flex-start',
-                }}
-              >
-                {t('pairing.invite.showQrHint')}
-              </Text>
-              {showQr ? (
-                <View style={{ padding: spacing.md, backgroundColor: '#FFFFFF', borderRadius: 8 }}>
-                  <PairingQr value={invite.qr} size={qrSize} />
-                </View>
-              ) : (
+            {/* Da qui in giù è **operativo**: come si manda, come si inquadra. Il conto
+                alla rovescia però resta in chiaro e non in `Note` — non è un commento, è
+                lo stato dell'invito che si ha davanti, e scade. */}
+            <View style={{ marginHorizontal: -spacing.lg }}>
+              <SectionLabel>{t('pairing.invite.sendLinkHeading')}</SectionLabel>
+              <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
+                <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
+                  {t('pairing.invite.linkValidFor', { remaining: formatRemaining(remaining) })}
+                </Text>
+              </View>
+              <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+                <Button label={t('pairing.invite.shareLink')} onPress={share} />
                 <Button
-                  label={t('pairing.invite.showQr')}
+                  label={copied ? t('pairing.invite.linkCopied') : t('pairing.invite.copyLink')}
                   variant="secondary"
-                  onPress={() => setShowQr(true)}
+                  onPress={copy}
                 />
-              )}
-            </Card>
+              </View>
+
+              <SectionLabel>{t('pairing.invite.scanHeading')}</SectionLabel>
+              <Note>{t('pairing.invite.showQrHint')}</Note>
+              <View
+                style={{
+                  paddingHorizontal: spacing.lg,
+                  alignItems: showQr ? 'center' : 'stretch',
+                }}
+              >
+                {showQr ? (
+                  <View
+                    style={{ padding: spacing.md, backgroundColor: '#FFFFFF', borderRadius: 8 }}
+                  >
+                    <PairingQr value={invite.qr} size={qrSize} />
+                  </View>
+                ) : (
+                  <Button
+                    label={t('pairing.invite.showQr')}
+                    variant="secondary"
+                    onPress={() => setShowQr(true)}
+                  />
+                )}
+              </View>
+            </View>
 
             <Button
               label={t('pairing.invite.regenerate')}

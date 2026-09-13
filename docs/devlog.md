@@ -4,6 +4,50 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Step 57: il pairing, e la sola card che non doveva scendere
+
+Ultimo pezzo fuori stile: le quattro schermate che collegano un secondo telefono a un gruppo —
+`pair/invite`, `pair/scan`, `pair/index` e `join`. Erano 1742 caratteri di prosa, la sezione più
+lunga del dizionario.
+
+### Qui la regola non è «alleggerire»
+
+In tutte le altre schermate il testo lungo era una **spiegazione**. Qui una parte è un **consenso**:
+è il giro in cui la chiave del gruppo esce dal telefono, e chi la riceve entra nei conti.
+
+Per questo la card in cima a `pair/invite` è rimasta esattamente com'era — tre paragrafi a
+`fontSize.sm`, con la frase che conta in `colors.text`. **Finché non si tocca «Ho capito» la chiave
+non viene nemmeno materializzata**: quelle righe sono l'unica cosa che sta fra il gesto e un gruppo
+consegnato alla persona sbagliata, e alleggerirle per uniformità avrebbe reso più facile non
+leggerle. È la stessa eccezione della card rossa di `azzera` e dell'avviso di `backup`, ed è la terza
+volta che la stessa regola decide nello stesso modo.
+
+Tutto ciò che viene **dopo** la generazione è invece operativo — come si manda un link, come si fa
+inquadrare un QR — e quello è diventato `SectionLabel` più `Note`.
+
+### Due righe che sembravano commenti e non lo erano
+
+**Il conto alla rovescia dell'invito** («valido ancora 4:32») non è finito in `Note`: non commenta la
+schermata, è lo stato di ciò che si ha davanti, e scade. È rimasto in `textMuted` a corpo pieno.
+
+**La fotocamera che non c'è**, in `pair/scan`, idem: dice _perché_ il riquadro sopra è vuoto. Il
+titolo resta un'intestazione e il modo di rimediare scende in nota, ma in `warning`, non in grigio.
+
+E una che andava spezzata in due: il suggerimento del campo «incolla qui» finiva con «**contiene la
+chiave del gruppo in chiaro: dopo averlo usato, non lasciarlo in giro**». Era la coda di una frase
+esplicativa — cioè la parte che non si legge. Adesso è una `Note` separata in `warning`.
+
+### Verificato
+
+`npm run typecheck`, `npm run lint`, `npm run format:check` puliti; `npm test` **1322 verdi**.
+
+Con questo il giro è chiuso: **dieci schermate** parlano la stessa lingua — `tu`, `manage`, `export`,
+`backup`, `importa`, la parte secondaria di `azzera`, e le quattro del pairing. Le `Card` con un
+paragrafo dentro che restano sono quattro, e sono tutte volute: il consenso dell'invito, l'invito
+scaduto, «cosa sparisce» in `azzera`, «esci dal gruppo» in `manage`.
+
+---
+
 ## 2026-09-13 — Step 56: la schermata del gruppo, e la fine delle voci doppie
 
 Ultima delle schermate fuori stile, e con essa una duplicazione che Francesco ha visto prima di me:

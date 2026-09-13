@@ -218,6 +218,13 @@ gruppi aperti «Backup della chiave» dalle impostazioni è una domanda con due 
 emerso che quella schermata **non era tradotta affatto** (zero `t()`, undici stringhe italiane nel
 JSX): ora il suo `manage.*` esiste in tutte e due le lingue.
 
+Lo **Step 57** ha chiuso il giro col **pairing** (`pair/invite`, `pair/scan`, `pair/index`, `join`),
+che era la sezione più lunga del dizionario. Lì però la regola si rovescia: una parte di quel testo
+non è una spiegazione ma un **consenso** — è il giro in cui la chiave esce dal telefono — quindi la
+card in cima all'invito è rimasta pesante com'era, e sono scese solo le parti operative. Dieci
+schermate parlano ora la stessa lingua; le quattro `Card` con un paragrafo dentro che restano sono
+tutte volute.
+
 **1322 test verdi** (639 core + 629 app + 54 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
