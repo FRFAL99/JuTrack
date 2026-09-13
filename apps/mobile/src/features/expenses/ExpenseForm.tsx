@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   KeyboardAvoidingView,
@@ -27,15 +27,17 @@ import {
 } from '@jutrack/core';
 import { formatCents, formatMoney, numberFormat } from '@/i18n/money';
 import { initialOf } from '@/components/avatar';
+import { AvatarStack } from '@/components/AvatarStack';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Chip } from '@/components/Chip';
 import { CategoryIcon } from '@/features/categories/CategoryIcon';
 import { useCategories, useCurrencyCode, useExpenses, useMembers, useMyMemberId } from '@/state';
-import { numeric, tightTitle, useTheme } from '@/theme';
+import { numeric, useTheme } from '@/theme';
 import { AmountPad } from './AmountPad';
 import { applyKey } from './amount-pad';
-import { extraSummary, tagChoices } from './extra-fields';
+import { tagChoices } from './extra-fields';
+import { categorySummary, detailsSummary, payerSummary, type SummaryPart } from './group-summary';
 import { formatDayTitle, todayIso } from './grouping';
 import { describeGap, previewShareCents, splitModeLabel, splitPreview } from './split-text';
 
@@ -79,22 +81,51 @@ interface ExpenseFormProps {
   submitLabel: string;
 }
 
+/** I tre gruppi apribili. Uno solo aperto per volta, oppure nessuno. */
+type GroupKey = 'who' | 'category' | 'details';
+
 /**
- * Il form della spesa: **importo → chi e come → categoria → dettagli**.
+ * Le due misure dell'importo: quando è il soggetto della schermata e quando non lo è più.
  *
- * È l'ordine in cui la spesa viene detta a voce («cinquanta euro, ho pagato io, si divide,
- * spesa al supermercato»), e non quello in cui era scritto prima — importo, descrizione,
- * categoria, chi ha pagato, come si divide, con la parte sui soldi divisa in due tronconi
- * separati dal resto. Era la schermata più densa dell'app, ed è quella che si apre più
- * spesso.
+ * **Non stanno in `fontSize`** perché non sono un gradino della scala tipografica ma i due
+ * capi di una transizione: 62 vale solo finché il tastierino è a schermo, 38 solo mentre un
+ * gruppo è aperto, e l'uno non ha senso senza l'altro. Metterli nella scala li offrirebbe a
+ * schermate che non hanno né tastierino né gruppi. È lo stesso genere di valore del
+ * `minHeight: 52` di `Button`.
  *
- * **Il salva sta in fondo, non in alto.** A piena larghezza, dove arriva il pollice: in una
- * schermata che si compila dall'alto verso il basso, l'azione che la conclude è l'ultima
- * cosa, non la prima. In alto resta solo la x per uscire.
+ * La crenatura non viene da `tightTitle` (−0,6, pensato «da 28 in su»): a 62 punti quella
+ * misura non stringe abbastanza e le cifre si sfilacciano.
+ */
+const AMOUNT_ALONE = { fontSize: 62, letterSpacing: -2.2, symbol: 24, top: 26 } as const;
+const AMOUNT_BESIDE = { fontSize: 38, letterSpacing: -1.2, symbol: 19, top: 14 } as const;
+
+/**
+ * Quanto rientra il filetto fra due righe chiuse: fino a sotto la label, non sotto l'icona.
  *
- * La logica di calcolo non è cambiata: `parseAmount`, `buildSplit` e la validazione delle
- * quote sono quelle di prima, e le frasi che le spiegano sono uscite in `split-text.ts`,
- * dove hanno dei test.
+ * 16 di padding + 22 di icona + 10 di distanza. Un filetto a filo del bordo taglierebbe in
+ * due anche la colonna delle icone, che è una sola cosa.
+ */
+const ROW_INSET = 48;
+
+/**
+ * Il form della spesa: **l'importo è la schermata, il resto sono tre righe che si aprono**.
+ *
+ * La spesa si detta a voce così («ventiquattro e cinquanta») e finisce lì nove volte su
+ * dieci: chi paga, come si divide, la categoria e i dettagli hanno tutti un default, e
+ * toccarli è l'eccezione. Quindi la cifra e il salva stanno insieme a schermo — con il
+ * tastierino dello Step 49 in mezzo — e tutto il resto si riassume in tre righe.
+ *
+ * **Un gruppo aperto per volta** (decisione 7 del Piano v6): con due aperti il salva
+ * scenderebbe sotto la piega e la schermata tornerebbe quella densa di prima. Aprendone uno
+ * l'importo scende da 62 a 38 punti e il tastierino si smonta — ma **il salva non si
+ * muove**, perché non è dentro lo scorrimento: sta sotto, ancorato al fondo della schermata.
+ *
+ * **La riga chiusa porta il valore, non un segnaposto** (decisione 8): le frasi sono in
+ * `group-summary.ts`, dove hanno dei test. Nascondere campi *compilati* dietro una riga muta
+ * è il modo in cui i dati si perdono senza che nessuno se ne accorga.
+ *
+ * La logica di calcolo non è cambiata da nessuno dei due giri di redesign: `parseAmount`,
+ * `buildSplit` e la validazione delle quote sono quelle di sempre.
  */
 export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: ExpenseFormProps) {
   const { t } = useTranslation();
@@ -127,9 +158,9 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   const [store, setStore] = useState(initial?.store ?? '');
   const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
   const [tagDraft, setTagDraft] = useState('');
-  // Chiusa anche su una spesa che ha già negozio e tag: a dire che sotto c'è qualcosa è il
-  // riassunto sulla riga, non l'apertura d'ufficio della tendina.
-  const [extraOpen, setExtraOpen] = useState(false);
+  // Chiusi anche su una spesa che ha già negozio, tag o una categoria: a dire che sotto c'è
+  // qualcosa è il riassunto sulla riga, non l'apertura d'ufficio del gruppo.
+  const [openGroup, setOpenGroup] = useState<GroupKey | null>(null);
   const [categoryId, setCategoryId] = useState<string | null>(initial?.categoryId ?? null);
   // Chi paga è quasi sempre chi sta scrivendo: il proprio membro è il default, non il
   // primo della lista in ordine alfabetico.
@@ -185,7 +216,32 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
 
   const canSubmit = amountCents !== null && amountCents > 0 && paidBy !== '' && customBalances;
 
-  const hasExtras = store.trim() !== '' || tags.length > 0;
+  /** Un gruppo alla volta: toccare quello aperto lo richiude e riporta il tastierino. */
+  const toggleGroup = (key: GroupKey): void =>
+    setOpenGroup((current) => (current === key ? null : key));
+
+  const amountShape = openGroup === null ? AMOUNT_ALONE : AMOUNT_BESIDE;
+
+  const payer = members.find((m) => m.id === paidBy);
+  const category = categories.find((c) => c.id === categoryId);
+  const date = initial?.date ?? todayIso();
+
+  const whoSummary: SummaryPart[] =
+    payer === undefined
+      ? []
+      : [
+          ...payerSummary(
+            { name: payer.name, isMe: payer.id === myMemberId },
+            mode,
+            members.length,
+          ),
+          // Quote che non quadrano è l'unico stato del form che il riassunto non può
+          // limitarsi a descrivere: a gruppo chiuso il salva sarebbe spento senza che nulla
+          // a schermo dica perché.
+          ...(customBalances
+            ? []
+            : [{ text: describeGap(customGap, amountCents, symbol), tone: 'danger' as const }]),
+        ];
 
   /** Passando a quote libere si parte dalla divisione equa: è il punto di partenza più probabile. */
   const chooseMode = (next: SplitMode): void => {
@@ -214,7 +270,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
     if (!canSubmit || amountCents === null) return;
     onSubmit({
       amountCents,
-      date: initial?.date ?? todayIso(),
+      date,
       categoryId,
       note: note.trim(),
       // Il tag a metà scrittura conta come scritto: chi tocca «Salva» senza aver premuto
@@ -235,56 +291,62 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
     textTransform: 'uppercase' as const,
   };
 
+  const fieldBox = {
+    color: colors.text,
+    fontSize: fontSize.sm,
+    backgroundColor: colors.background,
+    borderRadius: radius.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    paddingVertical: spacing.md,
+    paddingHorizontal: spacing.md,
+  };
+
   return (
     <KeyboardAvoidingView
       style={styles.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
+      {/* Lo scorrimento contiene **solo** l'importo e i tre gruppi. Tastierino e salva
+          stanno fuori, ancorati al fondo: è così che «il salva non si muove» smette di
+          essere un proposito e diventa una proprietà del layout. */}
       <ScrollView
+        style={styles.flex}
         contentContainerStyle={{ paddingBottom: spacing.lg }}
         keyboardShouldPersistTaps="handled"
       >
-        {/* 1. L'importo è la card eroe, e **la cifra è il campo**: non c'è un riquadro da
-            centrare col dito, si tocca il numero. */}
-        <Card
-          variant="raised"
-          style={{
-            marginHorizontal: spacing.lg,
-            padding: 22,
-            alignItems: 'center',
-            gap: spacing.xs,
-          }}
+        {/* 1. L'importo, e **la cifra è il campo**: non c'è un riquadro da centrare col
+            dito, si tocca il numero. Niente card attorno — a farlo stare in piedi da solo
+            è la dimensione, e una superficie sopraelevata attorno gli toglierebbe aria. */}
+        <View
+          style={[styles.amount, { paddingHorizontal: spacing.lg, paddingTop: amountShape.top }]}
         >
-          <Text style={sectionTitle}>{t('expense.amount')}</Text>
           <View style={styles.amountRow}>
             <TextInput
               value={amountText}
               onChangeText={setAmountText}
               placeholder={t('expense.amountPlaceholder')}
               placeholderTextColor={colors.textFaint}
-              // La tastiera di sistema non si apre più: a scrivere è il tastierino qui
-              // sotto (decisione 4 del Piano v6). Resta un `TextInput` e non un `Text`
-              // perché un `Text` perderebbe l'annuncio di campo editabile, e con esso
-              // l'unico modo di sapere, con TalkBack, che quella cifra si può cambiare.
+              // La tastiera di sistema non si apre: a scrivere è il tastierino in fondo
+              // (Step 49). Resta un `TextInput` e non un `Text` perché un `Text` perderebbe
+              // l'annuncio di campo editabile, e con esso l'unico modo di sapere, con
+              // TalkBack, che quella cifra si può cambiare.
               showSoftInputOnFocus={false}
-              // Il cursore sta in fondo perché il tastierino scrive in fondo: senza, chi
-              // tocca in mezzo alla cifra vedrebbe il caret in un punto e le cifre
-              // comparire in un altro.
+              // Il cursore sta in fondo perché il tastierino scrive in fondo.
               selection={{ start: amountText.length, end: amountText.length }}
-              // Tenuto come rete: su un dispositivo che ignorasse
-              // `showSoftInputOnFocus` la tastiera che compare è comunque quella
-              // numerica, non quella con le lettere.
+              // Tenuto come rete: su un dispositivo che ignorasse `showSoftInputOnFocus` la
+              // tastiera che compare è comunque quella numerica.
               keyboardType="decimal-pad"
               autoFocus={initial === undefined}
               accessibilityLabel={t('expense.amountLabel')}
               style={[
                 numeric,
-                tightTitle,
                 {
-                  minWidth: 120,
+                  minWidth: 80,
                   textAlign: 'right',
                   color: colors.text,
-                  fontSize: fontSize.display,
+                  fontSize: amountShape.fontSize,
+                  letterSpacing: amountShape.letterSpacing,
                   fontWeight: fontWeight.heavy,
                   padding: 0,
                 },
@@ -293,367 +355,435 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
             <Text
               style={{
                 color: colors.textFaint,
-                fontSize: fontSize.xl,
-                fontWeight: fontWeight.heavy,
+                fontSize: amountShape.symbol,
+                fontWeight: fontWeight.bold,
               }}
             >
               {symbol}
             </Text>
           </View>
+
+          {/* La quota a testa sta **sotto la cifra** e non dentro il gruppo: è la
+              conseguenza diretta del numero che si sta scrivendo. Sparisce a gruppo aperto,
+              dove a dirla sono i riquadri delle persone, uno per uno. */}
+          {openGroup === null && mode === 'equal' && members.length > 1 && (
+            <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
+              {splitPreview(amountCents, members.length, symbol)}
+            </Text>
+          )}
           {amountError !== undefined && (
             <Text style={{ color: colors.danger, fontSize: fontSize.xs }}>{amountError}</Text>
           )}
-        </Card>
-
-        {/* Il tastierino sta sotto l'importo e sopra tutto il resto: sono la stessa cosa,
-            la cifra e il modo di scriverla. Al passo 50, coi tre gruppi apribili, la
-            schermata smetterà di scorrere e il tastierino si troverà stabilmente sopra il
-            salva; qui è ancora dentro lo scorrimento. */}
-        <View style={{ paddingTop: spacing.md }}>
-          <AmountPad onKey={(char) => setAmountText((text) => applyKey(text, char))} />
         </View>
 
-        {/* 2. Chi paga e come si divide: una domanda sola, perché la risposta all'una
-            cambia il significato dell'altra. Con una persona sola non si pone. */}
-        {members.length > 1 && (
-          <View style={{ paddingTop: spacing.lg }}>
-            <Text style={[sectionTitle, { paddingHorizontal: spacing.lg + 2 }]}>
-              {t('expense.whoAndHow')}
-            </Text>
-            <Card
-              variant="flat"
-              style={{
-                marginHorizontal: spacing.lg,
-                marginTop: spacing.sm,
-                paddingVertical: spacing.lg,
-                paddingHorizontal: 18,
-                gap: spacing.md,
-              }}
-            >
-              <View style={styles.people}>
-                {members.map((member) => (
-                  <PersonBox
-                    key={member.id}
-                    member={member}
-                    selected={member.id === paidBy}
-                    isMe={member.id === myMemberId}
-                    shareCents={previewShareCents(mode, amountCents, memberIds, member.id, paidBy)}
-                    symbol={symbol}
-                    onPress={() => setPaidBy(member.id)}
-                  />
-                ))}
-              </View>
-
-              <View style={styles.chips}>
-                {SPLIT_MODES.map((value) => (
-                  <Chip
-                    key={value}
-                    label={splitModeLabel(value, members.length)}
-                    selected={value === mode}
-                    onPress={() => chooseMode(value)}
-                  />
-                ))}
-              </View>
-
-              {mode === 'equal' && (
-                <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-                  {splitPreview(amountCents, members.length, symbol)}
-                </Text>
-              )}
-              {mode === 'single' && (
-                <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-                  {t('expense.singleHint')}
-                </Text>
-              )}
-
-              {mode === 'custom' && (
-                <View style={{ gap: spacing.sm }}>
-                  {members.map((member) => (
-                    <View key={member.id} style={styles.shareRow}>
-                      <Text style={{ flex: 1, color: colors.text, fontSize: fontSize.sm }}>
-                        {member.name}
-                      </Text>
-                      <TextInput
-                        value={customShares[member.id] ?? ''}
-                        onChangeText={(text) =>
-                          setCustomShares((current) => ({ ...current, [member.id]: text }))
-                        }
-                        placeholder={t('expense.amountPlaceholder')}
-                        placeholderTextColor={colors.textFaint}
-                        // Le quote libere restano sulla tastiera di sistema: sono più
-                        // campi, e un tastierino solo dovrebbe sapere in quale sta
-                        // scrivendo. Il tastierino serve all'importo, che è **la**
-                        // schermata; qui `decimal-pad` fa ancora da guardiano.
-                        keyboardType="decimal-pad"
-                        accessibilityLabel={t('expense.shareOf', { name: member.name })}
-                        style={[
-                          numeric,
-                          {
-                            width: 110,
-                            textAlign: 'right',
-                            color: colors.text,
-                            fontSize: fontSize.sm,
-                            backgroundColor: colors.background,
-                            borderRadius: radius.md,
-                            borderWidth: StyleSheet.hairlineWidth,
-                            borderColor: colors.border,
-                            paddingVertical: spacing.sm,
-                            paddingHorizontal: spacing.md,
-                          },
-                        ]}
+        {/* 2. I tre gruppi, in un contenitore solo: sono le tre domande che restano dopo
+            l'importo, e una card per ciascuna le farebbe sembrare tre schermate. */}
+        <Card variant="flat" style={{ marginHorizontal: spacing.lg }}>
+          {/* Con una persona sola «chi paga e come si divide» non si pone. */}
+          {members.length > 1 && (
+            <>
+              <GroupRow
+                title={t('expense.whoAndHow')}
+                summary={whoSummary}
+                open={openGroup === 'who'}
+                onPress={() => toggleGroup('who')}
+                left={<AvatarStack people={members} size={22} surface={colors.surface} />}
+              />
+              {openGroup === 'who' && (
+                <View style={{ padding: spacing.lg, gap: spacing.md }}>
+                  <View style={styles.people}>
+                    {members.map((member) => (
+                      <PersonBox
+                        key={member.id}
+                        member={member}
+                        selected={member.id === paidBy}
+                        isMe={member.id === myMemberId}
+                        shareCents={previewShareCents(
+                          mode,
+                          amountCents,
+                          memberIds,
+                          member.id,
+                          paidBy,
+                        )}
+                        symbol={symbol}
+                        onPress={() => setPaidBy(member.id)}
                       />
+                    ))}
+                  </View>
+
+                  <View style={styles.chips}>
+                    {SPLIT_MODES.map((value) => (
+                      <Chip
+                        key={value}
+                        label={splitModeLabel(value, members.length)}
+                        selected={value === mode}
+                        onPress={() => chooseMode(value)}
+                      />
+                    ))}
+                  </View>
+
+                  {/* Per `equal` non c'è niente da aggiungere: la quota a testa la dicono
+                      già i riquadri qui sopra, persona per persona. */}
+                  {mode === 'single' && (
+                    <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+                      {t('expense.singleHint')}
+                    </Text>
+                  )}
+
+                  {mode === 'custom' && (
+                    <View style={{ gap: spacing.sm }}>
+                      {members.map((member) => (
+                        <View key={member.id} style={styles.shareRow}>
+                          <Text style={{ flex: 1, color: colors.text, fontSize: fontSize.sm }}>
+                            {member.name}
+                          </Text>
+                          <TextInput
+                            value={customShares[member.id] ?? ''}
+                            onChangeText={(text) =>
+                              setCustomShares((current) => ({ ...current, [member.id]: text }))
+                            }
+                            placeholder={t('expense.amountPlaceholder')}
+                            placeholderTextColor={colors.textFaint}
+                            // Le quote libere restano sulla tastiera di sistema: sono più
+                            // campi, e un tastierino solo dovrebbe sapere in quale sta
+                            // scrivendo. Il tastierino serve all'importo, che è **la**
+                            // schermata; qui `decimal-pad` fa ancora da guardiano.
+                            keyboardType="decimal-pad"
+                            accessibilityLabel={t('expense.shareOf', { name: member.name })}
+                            style={[numeric, fieldBox, { width: 110, textAlign: 'right' }]}
+                          />
+                        </View>
+                      ))}
+                      {/* Quote che non sommano al totale produrrebbero un saldo sbagliato:
+                          VaultStore le rifiuterebbe, ma dirlo qui è più utile che scoprirlo
+                          con un errore al salvataggio. */}
+                      <Text
+                        style={{
+                          color: customGap === 0 ? colors.income : colors.danger,
+                          fontSize: fontSize.xxs,
+                        }}
+                      >
+                        {describeGap(customGap, amountCents, symbol)}
+                      </Text>
                     </View>
-                  ))}
-                  {/* Quote che non sommano al totale produrrebbero un saldo sbagliato:
-                      VaultStore le rifiuterebbe, ma dirlo qui è più utile che scoprirlo
-                      con un errore al salvataggio. */}
-                  <Text
-                    style={{
-                      color: customGap === 0 ? colors.income : colors.danger,
-                      fontSize: fontSize.xxs,
-                    }}
-                  >
-                    {describeGap(customGap, amountCents, symbol)}
-                  </Text>
+                  )}
                 </View>
               )}
-            </Card>
-          </View>
-        )}
+              <Divider inset={openGroup !== 'who'} />
+            </>
+          )}
 
-        {/* 3. Categoria: pill col pallino del colore. */}
-        <View style={{ paddingTop: spacing.lg }}>
-          <Text style={[sectionTitle, { paddingHorizontal: spacing.lg + 2 }]}>
-            {t('expense.category')}
-          </Text>
-          <Card
-            variant="flat"
-            style={{
-              marginHorizontal: spacing.lg,
-              marginTop: spacing.sm,
-              paddingVertical: spacing.lg,
-              paddingHorizontal: 18,
-            }}
-          >
-            <View style={styles.chips}>
-              {categories.map((category) => (
+          <GroupRow
+            title={t('expense.category')}
+            summary={categorySummary(category?.name ?? null)}
+            open={openGroup === 'category'}
+            onPress={() => toggleGroup('category')}
+            left={
+              category === undefined ? (
+                <Feather name="tag" size={15} color={colors.textMuted} />
+              ) : (
+                <CategoryIcon icon={category.icon} color={category.color} size={15} />
+              )
+            }
+          />
+          {openGroup === 'category' && (
+            <View style={[styles.chips, { padding: spacing.lg }]}>
+              {categories.map((item) => (
                 <Chip
-                  key={category.id}
-                  label={category.name}
-                  selected={category.id === categoryId}
-                  color={category.color}
-                  icon={<CategoryIcon icon={category.icon} color={category.color} size={14} />}
-                  onPress={() => setCategoryId(category.id === categoryId ? null : category.id)}
+                  key={item.id}
+                  label={item.name}
+                  selected={item.id === categoryId}
+                  color={item.color}
+                  icon={<CategoryIcon icon={item.icon} color={item.color} size={14} />}
+                  onPress={() => setCategoryId(item.id === categoryId ? null : item.id)}
                 />
               ))}
             </View>
-          </Card>
-        </View>
-
-        {/* 4. I dettagli, che si toccano di rado: data e nota. */}
-        <View style={{ paddingTop: spacing.lg }}>
-          <Card
-            variant="flat"
-            style={{ marginHorizontal: spacing.lg, paddingHorizontal: 18, paddingVertical: 4 }}
-          >
-            {/* La data **non è modificabile**, come non lo era prima: un selettore di date
-                vuole un modulo nativo (`@react-native-community/datetimepicker`), quindi
-                una build EAS nuova. Mostrarla resta utile — su una spesa vecchia dice di
-                quale giorno si sta parlando — e una riga che non si tocca è più onesta di
-                un campo che finge. */}
-            <View style={[styles.detailRow, { paddingVertical: spacing.md }]}>
-              <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-                {t('expense.date')}
-              </Text>
-              <Text style={[numeric, { color: colors.text, fontSize: fontSize.sm }]}>
-                {formatDayTitle(initial?.date ?? todayIso())}
-              </Text>
-            </View>
-
-            <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.divider }} />
-
-            {editingNote ? (
-              <TextInput
-                autoFocus
-                value={note}
-                onChangeText={setNote}
-                onBlur={() => setEditingNote(false)}
-                onSubmitEditing={() => setEditingNote(false)}
-                placeholder={t('expense.notePlaceholder')}
-                placeholderTextColor={colors.textFaint}
-                returnKeyType="done"
-                accessibilityLabel={t('expense.noteLabel')}
-                style={{
-                  color: colors.text,
-                  fontSize: fontSize.sm,
-                  paddingVertical: spacing.md,
-                }}
-              />
-            ) : (
-              <Pressable
-                onPress={() => setEditingNote(true)}
-                accessibilityRole="button"
-                accessibilityLabel={
-                  note === '' ? t('expense.noteAdd') : t('expense.noteRead', { note })
-                }
-                style={[styles.detailRow, { paddingVertical: spacing.md }]}
-              >
-                <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-                  {t('expense.note')}
-                </Text>
-                <Text
-                  numberOfLines={1}
-                  style={{
-                    flex: 1,
-                    textAlign: 'right',
-                    color: note === '' ? colors.textFaint : colors.text,
-                    fontSize: fontSize.sm,
-                  }}
-                >
-                  {note === '' ? t('expense.noteOptional') : note}
-                </Text>
-              </Pressable>
-            )}
-          </Card>
-        </View>
-
-        {/* 5. Le informazioni aggiuntive: chiuse, perché sono facoltative e la schermata
-            si apre decine di volte al mese. La riga chiusa **dice cosa c'è sotto**. */}
-        <View style={{ paddingTop: spacing.lg }}>
-          <Card
-            variant="flat"
-            style={{ marginHorizontal: spacing.lg, paddingHorizontal: 18, paddingVertical: 4 }}
-          >
-            <Pressable
-              onPress={() => setExtraOpen((open) => !open)}
-              accessibilityRole="button"
-              accessibilityState={{ expanded: extraOpen }}
-              accessibilityLabel={t('expense.extra.title')}
-              style={[styles.detailRow, { paddingVertical: spacing.md }]}
-            >
-              <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-                {t('expense.extra.title')}
-              </Text>
-              <View style={styles.summary}>
-                <Text
-                  numberOfLines={1}
-                  style={{
-                    color: hasExtras ? colors.text : colors.textFaint,
-                    fontSize: fontSize.sm,
-                  }}
-                >
-                  {extraSummary(store, tags)}
-                </Text>
-                <Feather
-                  name={extraOpen ? 'chevron-up' : 'chevron-down'}
-                  size={16}
-                  color={colors.textFaint}
-                />
-              </View>
-            </Pressable>
-
-            {/* Nessuna animazione: `LayoutAnimation` è a supporto parziale sulla nuova
-                architettura, e non vale il rischio per una tendina. */}
-            {extraOpen && (
-              <View style={{ paddingBottom: spacing.md, gap: spacing.md }}>
-                <View
-                  style={{ height: StyleSheet.hairlineWidth, backgroundColor: colors.divider }}
-                />
-
-                <View style={{ gap: spacing.sm }}>
-                  <Text style={sectionTitle}>{t('expense.extra.store')}</Text>
-                  <TextInput
-                    value={store}
-                    onChangeText={setStore}
-                    placeholder={t('expense.extra.storePlaceholder')}
-                    placeholderTextColor={colors.textFaint}
-                    autoCapitalize="words"
-                    accessibilityLabel={t('expense.extra.store')}
-                    style={{
-                      color: colors.text,
-                      fontSize: fontSize.sm,
-                      backgroundColor: colors.background,
-                      borderRadius: radius.md,
-                      borderWidth: StyleSheet.hairlineWidth,
-                      borderColor: colors.border,
-                      paddingVertical: spacing.md,
-                      paddingHorizontal: spacing.md,
-                    }}
-                  />
-                  {storeHints.length > 0 && (
-                    <View style={styles.chips}>
-                      {storeHints.map((hint) => {
-                        const selected = storeKey(hint) === storeKey(store);
-                        return (
-                          <Chip
-                            key={hint}
-                            label={hint}
-                            selected={selected}
-                            onPress={() => setStore(selected ? '' : hint)}
-                          />
-                        );
-                      })}
-                    </View>
-                  )}
-                </View>
-
-                <View style={{ gap: spacing.sm }}>
-                  <Text style={sectionTitle}>{t('expense.extra.tags')}</Text>
-                  {tagHints.length > 0 && (
-                    <View style={styles.chips}>
-                      {tagHints.map((tag) => (
-                        <Chip
-                          key={tagKey(tag)}
-                          label={tag}
-                          selected={tags.some((t) => tagKey(t) === tagKey(tag))}
-                          onPress={() => toggleTag(tag)}
-                        />
-                      ))}
-                    </View>
-                  )}
-                  <TextInput
-                    value={tagDraft}
-                    onChangeText={setTagDraft}
-                    onSubmitEditing={commitTagDraft}
-                    onBlur={commitTagDraft}
-                    placeholder={t('expense.extra.tagPlaceholder')}
-                    placeholderTextColor={colors.textFaint}
-                    autoCapitalize="none"
-                    returnKeyType="done"
-                    // `submit` e non il default `blurAndSubmit`: chi mette due tag di
-                    // seguito non deve ritoccare il campo dopo il primo.
-                    submitBehavior="submit"
-                    accessibilityLabel={t('expense.extra.tagPlaceholder')}
-                    style={{
-                      color: colors.text,
-                      fontSize: fontSize.sm,
-                      backgroundColor: colors.background,
-                      borderRadius: radius.md,
-                      borderWidth: StyleSheet.hairlineWidth,
-                      borderColor: colors.border,
-                      paddingVertical: spacing.md,
-                      paddingHorizontal: spacing.md,
-                    }}
-                  />
-                </View>
-              </View>
-            )}
-          </Card>
-        </View>
-
-        <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl, gap: spacing.sm }}>
-          <Button
-            label={submitLabel}
-            onPress={handleSubmit}
-            disabled={!canSubmit}
-            style={{ minHeight: 54 }}
-          />
-          {onDelete !== undefined && (
-            <Button label={t('expense.deleteAction')} variant="danger" onPress={onDelete} />
           )}
-        </View>
+          <Divider inset={openGroup !== 'category'} />
+
+          {/* 3. I dettagli: data, nota, negozio e tag. Data e nota hanno perso la card
+              propria (decisione 9) — erano l'unico blocco a non essere né soldi né
+              facoltativo, e occupavano una card intera per due righe che si toccano di
+              rado. Il riassunto chiuso continua a dire la data, quindi non si perde nulla. */}
+          <GroupRow
+            title={t('expense.group.details')}
+            summary={detailsSummary(date, note, store, tags)}
+            open={openGroup === 'details'}
+            onPress={() => toggleGroup('details')}
+            left={<Feather name="list" size={15} color={colors.textMuted} />}
+            /* «Dettagli» resta scritto anche da chiuso, col riassunto a destra: è l'unico
+               dei tre a mettere insieme quattro campi diversi, e senza un nome la riga
+               direbbe «Oggi · una nota» senza dire di cosa. */
+            keepTitle
+          />
+          {openGroup === 'details' && (
+            <View style={{ padding: spacing.lg, gap: spacing.md }}>
+              {/* La data **non è modificabile**, come non lo era prima: un selettore vuole
+                  un modulo nativo (`@react-native-community/datetimepicker`), quindi una
+                  build EAS nuova. Mostrarla resta utile — su una spesa vecchia dice di
+                  quale giorno si sta parlando — e una riga che non si tocca è più onesta di
+                  un campo che finge. */}
+              <View style={styles.detailRow}>
+                <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
+                  {t('expense.date')}
+                </Text>
+                <Text style={[numeric, { color: colors.text, fontSize: fontSize.sm }]}>
+                  {formatDayTitle(date)}
+                </Text>
+              </View>
+
+              {editingNote ? (
+                <TextInput
+                  autoFocus
+                  value={note}
+                  onChangeText={setNote}
+                  onBlur={() => setEditingNote(false)}
+                  onSubmitEditing={() => setEditingNote(false)}
+                  placeholder={t('expense.notePlaceholder')}
+                  placeholderTextColor={colors.textFaint}
+                  returnKeyType="done"
+                  accessibilityLabel={t('expense.noteLabel')}
+                  style={fieldBox}
+                />
+              ) : (
+                <Pressable
+                  onPress={() => setEditingNote(true)}
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    note === '' ? t('expense.noteAdd') : t('expense.noteRead', { note })
+                  }
+                  style={styles.detailRow}
+                >
+                  <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
+                    {t('expense.note')}
+                  </Text>
+                  <Text
+                    numberOfLines={1}
+                    style={{
+                      flex: 1,
+                      textAlign: 'right',
+                      color: note === '' ? colors.textFaint : colors.text,
+                      fontSize: fontSize.sm,
+                    }}
+                  >
+                    {note === '' ? t('expense.noteOptional') : note}
+                  </Text>
+                </Pressable>
+              )}
+
+              <View style={{ gap: spacing.sm }}>
+                <Text style={sectionTitle}>{t('expense.extra.store')}</Text>
+                <TextInput
+                  value={store}
+                  onChangeText={setStore}
+                  placeholder={t('expense.extra.storePlaceholder')}
+                  placeholderTextColor={colors.textFaint}
+                  autoCapitalize="words"
+                  accessibilityLabel={t('expense.extra.store')}
+                  style={fieldBox}
+                />
+                {storeHints.length > 0 && (
+                  <View style={styles.chips}>
+                    {storeHints.map((hint) => {
+                      const selected = storeKey(hint) === storeKey(store);
+                      return (
+                        <Chip
+                          key={hint}
+                          label={hint}
+                          selected={selected}
+                          onPress={() => setStore(selected ? '' : hint)}
+                        />
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+
+              <View style={{ gap: spacing.sm }}>
+                <Text style={sectionTitle}>{t('expense.extra.tags')}</Text>
+                {tagHints.length > 0 && (
+                  <View style={styles.chips}>
+                    {tagHints.map((tag) => (
+                      <Chip
+                        key={tagKey(tag)}
+                        label={tag}
+                        selected={tags.some((t) => tagKey(t) === tagKey(tag))}
+                        onPress={() => toggleTag(tag)}
+                      />
+                    ))}
+                  </View>
+                )}
+                <TextInput
+                  value={tagDraft}
+                  onChangeText={setTagDraft}
+                  onSubmitEditing={commitTagDraft}
+                  onBlur={commitTagDraft}
+                  placeholder={t('expense.extra.tagPlaceholder')}
+                  placeholderTextColor={colors.textFaint}
+                  autoCapitalize="none"
+                  returnKeyType="done"
+                  // `submit` e non il default `blurAndSubmit`: chi mette due tag di
+                  // seguito non deve ritoccare il campo dopo il primo.
+                  submitBehavior="submit"
+                  accessibilityLabel={t('expense.extra.tagPlaceholder')}
+                  style={fieldBox}
+                />
+              </View>
+            </View>
+          )}
+        </Card>
+
+        {/* L'eliminazione **scorre col contenuto** invece di stare nella barra in fondo:
+            è rara e distruttiva, e affiancarla all'azione che si tocca ogni volta è il modo
+            più rapido per farle premere per sbaglio. */}
+        {onDelete !== undefined && (
+          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.xl }}>
+            <Button label={t('expense.deleteAction')} variant="danger" onPress={onDelete} />
+          </View>
+        )}
       </ScrollView>
+
+      {/* Il tastierino si smonta a gruppo aperto: lo spazio serve a ciò che si sta
+          scegliendo, e l'importo in quel momento non si sta scrivendo. */}
+      {openGroup === null && (
+        <AmountPad onKey={(char) => setAmountText((text) => applyKey(text, char))} />
+      )}
+
+      <View style={{ paddingHorizontal: spacing.lg, paddingVertical: spacing.md }}>
+        <Button
+          label={submitLabel}
+          onPress={handleSubmit}
+          disabled={!canSubmit}
+          style={{ minHeight: 54 }}
+        />
+      </View>
     </KeyboardAvoidingView>
+  );
+}
+
+/**
+ * La riga chiusa di un gruppo, e la sua intestazione quando è aperto.
+ *
+ * Da chiusa **il valore prende il posto del nome**: «Paghi tu · metà e metà», «Casa». Il
+ * nome del gruppo torna solo all'apertura, quando il valore è sotto in chiaro e la riga deve
+ * dire di cosa si sta parlando. Fa eccezione «Dettagli» (`keepTitle`), che mette insieme
+ * quattro campi e senza nome non si capirebbe.
+ *
+ * **L'annuncio per TalkBack li dice sempre tutti e due**, aperta o chiusa: la scorciatoia
+ * visiva di togliere il nome funziona perché l'icona a sinistra lo compensa, e un'icona non
+ * si legge ad alta voce.
+ */
+function GroupRow({
+  title,
+  summary,
+  open,
+  onPress,
+  left,
+  keepTitle = false,
+}: {
+  title: string;
+  summary: SummaryPart[];
+  open: boolean;
+  onPress: () => void;
+  left: ReactNode;
+  keepTitle?: boolean;
+}) {
+  const { colors, spacing, fontSize, fontWeight } = useTheme();
+
+  const spoken = [title, ...summary.map((part) => part.text)].join(', ');
+  const showTitle = open || keepTitle;
+
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ expanded: open }}
+      accessibilityLabel={spoken}
+      style={({ pressed }) => ({
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.sm + 2,
+        paddingVertical: spacing.md + 2,
+        paddingHorizontal: spacing.lg,
+        backgroundColor: open || pressed ? colors.surfacePressed : 'transparent',
+      })}
+    >
+      <View style={styles.icon}>{left}</View>
+
+      {showTitle && (
+        <Text
+          numberOfLines={1}
+          style={{
+            flex: 1,
+            color: colors.text,
+            fontSize: fontSize.md,
+            fontWeight: open ? fontWeight.semibold : fontWeight.regular,
+          }}
+        >
+          {title}
+        </Text>
+      )}
+
+      {/* Da aperta il riassunto sparisce: il valore è già sotto, in chiaro e modificabile. */}
+      {!open && (
+        <Text
+          numberOfLines={1}
+          style={{
+            flex: showTitle ? 0 : 1,
+            flexShrink: 1,
+            textAlign: showTitle ? 'right' : 'left',
+            // Label a `md` e valore a `sm` è la stessa coppia di `ListRow`: quando il
+            // valore prende il posto della label ne prende anche la misura.
+            fontSize: showTitle ? fontSize.sm : fontSize.md,
+          }}
+        >
+          {summary.map((part, index) => (
+            <Text key={index} style={{ color: toneColor(part.tone, colors) }}>
+              {index === 0 ? '' : ' · '}
+              {part.text}
+            </Text>
+          ))}
+        </Text>
+      )}
+
+      <Feather
+        name={open ? 'chevron-up' : 'chevron-down'}
+        size={18}
+        color={open ? colors.textMuted : colors.textFaint}
+      />
+    </Pressable>
+  );
+}
+
+/**
+ * Il colore di un pezzo di riassunto.
+ *
+ * `faint` **solo per i segnaposto**: è la regola della decisione 8, e il posto dove non
+ * tradirla è questo — una riga scritta tutta a 2,1:1 di contrasto è una riga muta, cioè
+ * esattamente il difetto che i tre gruppi dovevano togliere.
+ */
+function toneColor(
+  tone: SummaryPart['tone'],
+  colors: ReturnType<typeof useTheme>['colors'],
+): string {
+  if (tone === 'strong') return colors.text;
+  if (tone === 'muted') return colors.textMuted;
+  if (tone === 'danger') return colors.danger;
+  return colors.textFaint;
+}
+
+/** Il filetto fra due righe. Rientrato fra due righe chiuse, a tutta larghezza sotto un gruppo aperto. */
+function Divider({ inset }: { inset: boolean }) {
+  const { colors } = useTheme();
+  return (
+    <View
+      style={{
+        height: StyleSheet.hairlineWidth,
+        backgroundColor: colors.divider,
+        marginLeft: inset ? ROW_INSET : 0,
+      }}
+    />
   );
 }
 
@@ -743,12 +873,14 @@ const SPLIT_MODES: SplitMode[] = ['equal', 'custom', 'single'];
 
 const styles = StyleSheet.create({
   flex: { flex: 1 },
-  amountRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  amount: { alignItems: 'center', gap: 6, paddingBottom: 20 },
+  amountRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   people: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
   shareRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   detailRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  // `flexShrink` sul riassunto: è lui a doversi accorciare quando il negozio è lungo, non
-  // l'etichetta fissa a sinistra.
-  summary: { flexDirection: 'row', alignItems: 'center', gap: 6, flexShrink: 1 },
+  // `minWidth` e non `width`: le tre icone sono da 22, ma al posto della prima c'è la pila
+  // degli avatar, che è più larga di quanto sono i cerchi perché si sovrappongono. Fissata a
+  // 22 la schiaccerebbe; il filetto resta comunque allineato sotto le icone singole.
+  icon: { minWidth: 22, alignItems: 'center' },
 });

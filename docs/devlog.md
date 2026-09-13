@@ -4,6 +4,86 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Step 50: i tre gruppi apribili della nuova spesa
+
+Secondo step del Piano v6, decisioni 7, 8 e 9. Il form della spesa non è più una colonna di quattro
+card da scorrere: sopra c'è l'importo, sotto tre righe che si aprono una alla volta, e in fondo — fuori
+dallo scorrimento — il tastierino dello Step 49 e il salva.
+
+### «Il salva non si muove» è diventato una proprietà del layout
+
+Nel piano era un proposito. Qui è il modo in cui l'albero è fatto: dentro la `ScrollView` ci sono
+**solo** l'importo e la card dei tre gruppi; tastierino e salva sono fratelli della `ScrollView`,
+ancorati al fondo del `KeyboardAvoidingView`. Aprendo un gruppo il tastierino si smonta e lo
+scorrimento si prende lo spazio che lascia — il salva resta esattamente dov'era. Non c'è niente da
+ricordare di rispettare: non esiste un modo di scriverlo che lo faccia muovere.
+
+### 38, non 28
+
+La decisione 7 dice che aprendo un gruppo l'importo «scende da 62 a 28». Il mockup, in tutti e due
+gli artboard a gruppo aperto, usa **38** (`letter-spacing: -1.2`). È il numero che è entrato nel
+codice: 28 è `fontSize.xl`, e a quella misura la cifra smetterebbe di essere riconoscibile come il
+soggetto della schermata proprio mentre si decidono le quote che la dividono.
+
+Le due misure — 62/−2,2 e 38/−1,2 — **non sono andate in `fontSize`**. Non sono un gradino della
+scala tipografica ma i due capi di una transizione: 62 vale solo finché il tastierino è a schermo, 38
+solo mentre un gruppo è aperto, e l'uno non ha senso senza l'altro. Metterli nella scala li offrirebbe
+a schermate che non hanno né tastierino né gruppi. Stanno in `ExpenseForm.tsx` come costanti, lo
+stesso genere di valore del `minHeight: 52` di `Button`. Nemmeno la crenatura viene da `tightTitle`
+(−0,6, pensato «da 28 in su»): a 62 punti non stringe abbastanza.
+
+### Il riassunto che porta il valore, e il buco che apriva
+
+`group-summary.ts` — accanto a `extraSummary`, come chiedeva la decisione 8 — ha le tre frasi con 17
+test: `payerSummary` («Paghi tu · metà e metà»), `categorySummary` («Casa», oppure «Categoria ·
+nessuna») e `detailsSummary` («Oggi · facoltativi», «Oggi · una nota · Coop · 1 tag»). Ognuna torna
+dei **pezzi** con un tono, non una stringa: la regola vera della decisione 8 non è _cosa_ si scrive
+ma che `textFaint` tocchi **solo** ai segnaposto, e una stringa sola non la può esprimere. Il
+commento in `tokens.ts` — «testo terziario, mai per il contenuto» — vale esattamente qui: un riassunto
+scritto tutto a 2,1:1 di contrasto _è_ la riga muta che i gruppi dovevano togliere.
+
+`detailsSummary` dice **che** c'è una nota, non quale: ricopiarla allungherebbe la riga fino a
+mangiarsi il «· 2 tag» in coda, che è proprio il pezzo che segnala che sotto c'è dell'altro. È lo
+stesso problema che `extraSummary` aveva già risolto troncando il nome del negozio, e infatti la
+riusa per negozio e tag invece di riscriverla.
+
+**Il buco.** Chiudere un gruppo può nascondere uno stato che spegne il salva: a quote libere che non
+quadrano, il riassunto avrebbe detto «Paghi tu · quote» e il bottone sarebbe stato grigio senza che
+nulla a schermo dicesse perché. Non è nel piano — è una conseguenza dell'apribilità, e si vede solo
+scrivendo il codice. Il riassunto di quel gruppo prende un quarto tono, `danger`, con la frase di
+`describeGap`, che era già tradotta e già testata.
+
+### Data e Nota dentro «Dettagli», e l'eliminazione che scorre
+
+La decisione 9 è entrata così com'era: data e nota perdono la card propria e diventano le prime due
+righe del terzo gruppo, sopra negozio e tag. La data resta **non modificabile** — un selettore vuole
+`@react-native-community/datetimepicker`, cioè una build nuova.
+
+Una cosa che il piano non copriva: `onDelete`, che esiste solo in modifica. Nella barra in fondo
+accanto al salva avrebbe fatto due bottoni nello spazio del tastierino, e avrebbe messo un'azione
+distruttiva a un pollice da quella che si tocca ogni volta. È rimasta **dentro lo scorrimento**, sotto
+la card dei gruppi.
+
+### Dove il mockup non ha vinto
+
+Le righe usano `fontSize.md` per la label e `fontSize.sm` per il valore — la stessa coppia di
+`ListRow`, che è il componente riga dell'app — invece dei 15 e 13 del mockup, che non sono gradini
+della scala. E «Dettagli» tiene il proprio nome anche da chiuso (`keepTitle`), mentre «Chi paga» e
+«Categoria» lo cedono al valore: è l'unico dei tre a mettere insieme quattro campi, e senza nome la
+riga direbbe «Oggi · una nota» senza dire di cosa. Per TalkBack la distinzione non esiste: l'annuncio
+di ogni riga è sempre nome **più** riassunto, perché la scorciatoia visiva funziona grazie all'icona
+a sinistra, e un'icona non si legge ad alta voce.
+
+### Verificato
+
+`npm run typecheck`, `npm run lint`, `npm run format:check` puliti; `npm test` **1295 verdi** (639
+core + 602 app + 54 relay), 17 in più. Niente su telefono: il form è quello che l'app apre più spesso
+e questa è la sua seconda riscrittura in due mesi, quindi le righe nuove nel giro di prova di
+`STATO.md` contano più del solito — in particolare l'allineamento `baseline` fra la cifra e il
+simbolo, che su Android è storicamente ballerino con un `TextInput`.
+
+---
+
 ## 2026-09-13 — Step 49: il tastierino in-app per l'importo
 
 Primo step del Piano v6 nel codice. L'importo della nuova spesa non apre più la tastiera di sistema:

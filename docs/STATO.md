@@ -11,8 +11,8 @@ che tiene tutto questo è installata.
 > spesa rapida e grafici componibili, da due artifact Claude Design (un mockup a più direzioni e il
 > registro delle decisioni). La direzione scelta è **Lastra** — stessi token del redesign chiuso in
 > [visualdesign.md](visualdesign.md), gerarchia rifatta — contro le due scartate, **Insegna** e
-> **Estratto**. **Il 13 settembre è entrato il primo dei quattro step — il 49, il tastierino in-app
-> per l'importo**; restano il 50, il 51 e il 52.
+> **Estratto**. **Il 13 settembre sono entrati i primi due dei quattro step — il 49 (tastierino
+> in-app per l'importo) e il 50 (i tre gruppi apribili)**; restano il 51 e il 52.
 
 > **La sessione del 12 settembre è raccontata in
 > [La verifica su telefono](#la-verifica-su-telefono-del-12-settembre-step-41)**, divisa fra ciò che
@@ -176,16 +176,16 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
 Piano v6 — [piano-v6-spesa-rapida-e-grafici-componibili.md](piano-v6-spesa-rapida-e-grafici-componibili.md),
-**deciso il 12 settembre, uno step su quattro nel codice**:
+**deciso il 12 settembre, due step su quattro nel codice**:
 
 | Step                                         | Stato | Cosa contiene                                                                     |
 | -------------------------------------------- | ----- | --------------------------------------------------------------------------------- |
 | 49 — Il tastierino in-app per l'importo      | ✅    | `TextInput` senza tastiera di sistema, `amount-pad.ts`, tasto decimale per lingua |
-| 50 — I tre gruppi apribili della nuova spesa | ⬜    | Un gruppo aperto per volta, riassunto col valore vero, Data/Nota in «Dettagli»    |
+| 50 — I tre gruppi apribili della nuova spesa | ✅    | Un gruppo aperto per volta, riassunto col valore vero, Data/Nota in «Dettagli»    |
 | 51 — I capitoli dei grafici                  | ⬜    | Sedici widget divisi in Mese (10) / Abitudini (3) / Fra di voi (3)                |
 | 52 — La composizione in loco                 | ⬜    | «Modifica» dentro i Grafici, `moveWithin`, `app/dashboard.tsx` diventa redirect   |
 
-**1278 test verdi** (639 core + 585 app + 54 relay), typecheck, lint e `format:check` puliti.
+**1295 test verdi** (639 core + 602 app + 54 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -1610,13 +1610,24 @@ l'app** (Step 28); valuta e lingua in Tu, che la chiedono anche loro (Step 29 e 
 singola che vale più di tutte le altre di questo blocco: **in inglese, aprire una spesa registrata
 prima e guardare il campo importo** — deve dire `12.30` e non `1230` (Step 39).
 
-Dal 13 settembre lo stesso blocco ha una riga nuova, ed è del genere che i test non possono coprire:
-**il tastierino in-app dello Step 49**. Toccando l'importo la tastiera di sistema **non deve
-comparire** (`showSoftInputOnFocus={false}` è l'unico pezzo che dipende dal dispositivo), le cifre
-devono uscire in fondo alla cifra e non dove capita il cursore, e il tasto del separatore deve
-scrivere «,» in italiano e «.» in inglese — si prova cambiando lingua in Tu con il form già aperto.
-Da guardare anche con TalkBack: la cifra deve annunciarsi come **campo editabile**, che è la sola
-ragione per cui è rimasta un `TextInput`.
+Dal 13 settembre **la nuova spesa è la schermata da guardare per prima di tutto il blocco**: gli
+Step 49 e 50 l'hanno riscritta da capo, ed è la seconda riscrittura in due mesi. Niente di quello che
+segue è coperto dai test, perché sono tutte cose che hanno bisogno di uno schermo:
+
+- **Il tastierino (49).** Toccando l'importo la tastiera di sistema **non deve comparire**
+  (`showSoftInputOnFocus={false}` è l'unico pezzo che dipende dal dispositivo); le cifre devono
+  uscire in fondo e non dove capita il cursore; il tasto del separatore deve scrivere «,» in italiano
+  e «.» in inglese — si prova cambiando lingua in Tu col form già aperto.
+- **Il salva che non si muove (50).** Aprire e chiudere i tre gruppi uno dopo l'altro: il bottone in
+  fondo deve restare **fermo**, e il tastierino comparire e sparire sopra di lui.
+- **L'allineamento della cifra col simbolo.** È `baseline`, e su Android è storicamente ballerino con
+  un `TextInput`: se il «€» galleggia troppo alto o troppo basso, è quello.
+- **Le tre righe chiuse.** Devono dire il proprio valore — «Paghi tu · metà e metà», «Casa», «Oggi ·
+  facoltativi» — e solo il segnaposto va nel grigio più tenue. A quote libere che non quadrano la
+  prima riga deve diventare **rossa** e dire quanto manca: è l'unico stato che spegne il salva.
+- **TalkBack**, su tutte e due: la cifra deve annunciarsi come **campo editabile** (è la sola ragione
+  per cui è rimasta un `TextInput`), e ogni riga di gruppo deve annunciare **nome e riassunto**,
+  anche quelle che il nome, a vederle, non ce l'hanno.
 
 **Blocco 2 — con `npm run peer` dall'altra parte (~20 min).** È il criterio di «fatto» che manca a
 tutti i piani. Il link mandato in chat che apre `/groups/<id>` **col fragment**, `Share.share`, la

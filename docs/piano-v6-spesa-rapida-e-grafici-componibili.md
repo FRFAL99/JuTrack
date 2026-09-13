@@ -5,7 +5,7 @@
 > ricostruzione dello stato attuale, le tre direzioni provate, le due composizioni dei Grafici) e il
 > registro delle decisioni che questo file riprende punto per punto.
 >
-> **Lo Step 49 è nel codice (13 settembre 2026); restano il 50, il 51 e il 52.** Le 15 decisioni sono
+> **Gli Step 49 e 50 sono nel codice (13 settembre 2026); restano il 51 e il 52.** Le 15 decisioni sono
 > prese, la direzione è scelta —
 > **Lastra** (turno 1a: stessi token, gerarchia rifatta) contro le due scartate, **Insegna** (1b:
 > fondo nero pieno, accento lime acido, cifre Space Grotesk) ed **Estratto** (1c: serif per le cifre,
@@ -101,11 +101,18 @@ che la cifra sbagliata si può _scrivere_.
 ### 7 · Tre gruppi, uno aperto per volta
 
 **Decisione.** «Chi paga e come si divide», «Categoria», «Dettagli» — `useState<GroupKey | null>`.
-Aprendone uno l'importo scende da 62 a 28 e il tastierino si smonta; il salva non si muove.
+Aprendone uno l'importo scende da 62 a 38 e il tastierino si smonta; il salva non si muove.
 
 **Perché.** Con due gruppi aperti il salva scende sotto la piega e la schermata torna quella densa
 di prima. L'importo non sparisce del tutto perché è il numero che si sta decidendo mentre si
 scelgono le quote.
+
+> **Correzione dello Step 50.** Questa decisione diceva «da 62 a 28». Il mockup, in tutti e due gli
+> artboard a gruppo aperto, usa **38** (`letter-spacing: −1,2`), ed è la misura entrata nel codice:
+> 28 è `fontSize.xl`, e a quella misura la cifra smetterebbe di essere il soggetto della schermata
+> proprio mentre si decidono le quote che la dividono. Nessuna delle due misure è andata in
+> `fontSize`: non sono gradini della scala ma i due capi di una transizione, e stanno in
+> `ExpenseForm.tsx` come costanti.
 
 ### 8 · La riga chiusa porta il valore, non un segnaposto
 
@@ -118,6 +125,13 @@ gruppi: nascondere campi _compilati_ dietro una riga muta è il modo in cui i da
 che nessuno se ne accorga. Il commento in `tokens.ts` — «testo terziario, mai per il contenuto» —
 vale esattamente qui: un riassunto a 2,1:1 di contrasto _è_ una riga muta.
 
+> **Aggiunta dello Step 50.** Le tre funzioni tornano dei **pezzi** con un tono, non una stringa: la
+> regola non è _cosa_ si scrive ma che `textFaint` tocchi solo ai segnaposto, e una stringa sola non
+> la può esprimere. E c'è un quarto tono che il piano non prevedeva, `danger`: chiudere un gruppo può
+> nascondere uno stato che **spegne il salva** — quote libere che non quadrano — e lì il riassunto
+> deve dirlo, con la frase di `describeGap`. È una conseguenza dell'apribilità che si vede solo
+> scrivendo il codice.
+
 ### 9 · Data e Nota entrano in «Dettagli»
 
 **Decisione.** Perdono la card propria e diventano le prime due righe del terzo gruppo, sopra
@@ -128,6 +142,11 @@ per due righe che si toccano di rado. Il riassunto chiuso continua a dire la dat
 l'informazione non si perde. La data non diventa toccabile perché un selettore vuole
 `@react-native-community/datetimepicker`, cioè una build nuova — e una riga che non finge di essere
 toccabile è più onesta di un campo che lo finge.
+
+> **Aggiunta dello Step 50.** Restava fuori dal piano `onDelete`, che esiste solo in modifica. Nella
+> barra in fondo accanto al salva avrebbe fatto due bottoni nello spazio del tastierino, e messo
+> un'azione distruttiva a un pollice da quella che si tocca ogni volta: è rimasta **dentro lo
+> scorrimento**, sotto la card dei gruppi.
 
 ## Grafici (decisioni 10–15)
 
@@ -223,13 +242,13 @@ Il layout salvato si rilegge com'è perché il capitolo è una proprietà del co
 
 ## Step
 
-Uno step su quattro è nel codice. Prosegue la numerazione globale da 49, e vale la stessa regola
+Due step su quattro sono nel codice. Prosegue la numerazione globale da 49, e vale la stessa regola
 delle altre serie: **uno step per sessione**.
 
 | Step                                         | Stato | Cosa contiene                                                                                                           |
 | -------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------- |
 | 49 — Il tastierino in-app per l'importo      | ✅    | `TextInput` senza tastiera di sistema, `amount-pad.ts` con `applyKey`, tasto decimale per lingua (decisioni 4, 5, 6)    |
-| 50 — I tre gruppi apribili della nuova spesa | ⬜    | `useState<GroupKey \| null>`, riassunto col valore vero, Data/Nota in «Dettagli» (decisioni 7, 8, 9)                    |
+| 50 — I tre gruppi apribili della nuova spesa | ✅    | `useState<GroupKey \| null>`, riassunto col valore vero, Data/Nota in «Dettagli» (decisioni 7, 8, 9)                    |
 | 51 — I capitoli dei grafici                  | ⬜    | `Record<WidgetId, Chapter>`, i sedici widget divisi in Mese/Abitudini/Fra di voi (decisione 10)                         |
 | 52 — La composizione in loco                 | ⬜    | «Modifica» nei Grafici, `moveWithin`, `pointerEvents="none"`, × `danger`, redirect di `dashboard.tsx` (decisioni 11–15) |
 
