@@ -401,11 +401,8 @@ export const it = {
       perExpense: 'A spesa',
       average: 'in media',
     },
-    monthsWholeNote: 'I mesi sono interi, anche quando il periodo scelto è più corto.',
     dailyOverlayLabel: 'Media dei {{days}} giorni precedenti',
     cumulativeReferenceLabel: 'Totale di {{period}}',
-    weekdaysNote:
-      'Sugli ultimi dodici mesi, non sul periodo scelto: su un mese solo sarebbero sette numeri a caso.',
     amountsNote:
       'L’altezza è il numero di spese, non la somma: dice se si fanno tanti scontrini piccoli o pochi grossi.',
     paidCenterLabel: 'Anticipato in {{period}}',
@@ -430,6 +427,18 @@ export const it = {
     intro:
       'Scegli cosa mostrare nel tab Grafici e in che ordine. Vale solo per questo telefono: non cambia niente per le altre persone del gruppo.',
     allOff: 'Con tutti i widget spenti il tab Grafici resta vuoto.',
+    chapters: {
+      month: 'Mese',
+      habits: 'Abitudini',
+      together: 'Fra di voi',
+    },
+    chapterNotes: {
+      habits:
+        'Questi tre non seguono il periodo scelto in alto: leggono una finestra propria, ancorata al mese che si sta guardando.',
+    },
+    chapterEmptyTitle: 'Capitolo vuoto',
+    chapterEmptyHint:
+      'In «{{chapter}}» non è acceso nessun widget. Riaccendine qualcuno da «{{action}}», in alto a destra.',
     visibleCount: {
       one: '{{count}} widget acceso su {{total}}.',
       other: '{{count}} widget accesi su {{total}}.',
@@ -487,7 +496,7 @@ export const it = {
         subtitle: 'Quanto ha messo ciascuno, sul periodo scelto',
       },
       balance: {
-        title: 'Fra di voi',
+        title: 'Chi deve a chi',
         subtitle: 'Chi deve quanto a chi, su tutta la storia del gruppo',
       },
       members: {

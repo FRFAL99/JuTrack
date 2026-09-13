@@ -51,12 +51,16 @@ import { StatTile } from '@/features/stats/charts/StatTile';
 import { topSlices, type Slice } from '@/features/stats/charts/slices';
 import { TopList } from '@/features/stats/charts/TopList';
 import { WeekdayBars } from '@/features/stats/charts/WeekdayBars';
+import { ChapterTabs } from '@/features/stats/dashboard/ChapterTabs';
 import { DashboardWidget } from '@/features/stats/dashboard/DashboardWidget';
-import { visibleWidgets } from '@/features/stats/dashboard/layout';
+import { visibleInChapter, visibleWidgets } from '@/features/stats/dashboard/layout';
 import { useDashboardLayout } from '@/features/stats/dashboard/useDashboardLayout';
 import {
+  chapterNote,
+  chapterTitle,
   unmetNeeds,
   widgetSpec,
+  type Chapter,
   type GroupFacts,
   type WidgetId,
 } from '@/features/stats/dashboard/widgets';
@@ -69,7 +73,6 @@ import {
   describeRange,
   monthPeriod,
   previousPeriod,
-  startsAtMonthStart,
   type Period,
 } from '@/features/stats/filters/period';
 import { describeChange } from '@/features/stats/format';
@@ -149,6 +152,15 @@ function StatsOfGroup() {
   const [period, setPeriod] = useState<Period>(defaultPeriod);
   const [facets, setFacets] = useState<QueryFacets>({});
   const [sheetOpen, setSheetOpen] = useState(false);
+  /**
+   * Il capitolo aperto **non si salva**.
+   *
+   * Il layout sì, perché è una composizione che si fa una volta; questo è dove si sta
+   * guardando adesso, e riaprire il tab su «Abitudini» perché l'ultima volta era lì
+   * nasconderebbe il totale del mese a chi è entrato per vedere quello. Il capitolo è una
+   * proprietà del codice, non un dato: niente da migrare, niente da rileggere.
+   */
+  const [chapter, setChapter] = useState<Chapter>('month');
   const { layout, ready } = useDashboardLayout();
   // Saldi e pareggi dipendono da quello che ha scritto l'altro telefono, non solo da noi.
   useEngineActivity();
@@ -483,20 +495,18 @@ function StatsOfGroup() {
 
     months: {
       node: (
-        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+        <View style={{ paddingHorizontal: spacing.lg }}>
           {/* Toccare una barra sceglie quel mese come periodo: è anche il modo di andare
               indietro nel tempo più di quanto facciano i preset, e ha preso il posto dello
-              stepper del mese, che diceva la stessa cosa mostrando un mese solo. */}
+              stepper del mese, che diceva la stessa cosa mostrando un mese solo.
+
+              La nota sui mesi interi non è più qui: diceva, per questo solo grafico, ciò che
+              la nota di «Abitudini» dice adesso per tutti e tre. */}
           <MonthlyBars
             months={trend}
             selected={anchor}
             onSelect={(month) => setPeriod(monthPeriod(month))}
           />
-          {!startsAtMonthStart(period) && (
-            <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-              {t('stats.monthsWholeNote')}
-            </Text>
-          )}
         </View>
       ),
     },
@@ -564,11 +574,11 @@ function StatsOfGroup() {
 
     weekdays: {
       node: (
-        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
+        // La nota — «sugli ultimi dodici mesi, non sul periodo scelto» — è salita
+        // all'intestazione di «Abitudini», dove vale per tutti e tre i grafici del capitolo
+        // invece di sembrare la scusa di questo.
+        <View style={{ paddingHorizontal: spacing.lg }}>
           <WeekdayBars totals={weekdays} />
-          <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            {t('stats.weekdaysNote')}
-          </Text>
         </View>
       ),
     },
@@ -702,10 +712,48 @@ function StatsOfGroup() {
     },
   };
 
-  const shown = visibleWidgets(layout);
+  const shown = visibleInChapter(layout, chapter);
+  const note = chapterNote(chapter);
+
+  /**
+   * Le tre pillole stanno **sopra tutti i widget**, non sotto il totale.
+   *
+   * Nel mockup il totale del periodo sta sopra le pillole; qui no, perché `total` è un
+   * widget del capitolo «Mese» come gli altri nove — è quello che dice il `Record` — e un
+   * widget disegnato sopra il selettore che decide quali widget si vedono sarebbe l'unico a
+   * non obbedirgli. Chi lo spegne se lo ritroverebbe a schermo.
+   *
+   * Fuori dalla `ScrollView`, come la barra dei filtri: cambiare capitolo dopo aver scorso
+   * in fondo non deve chiedere di risalire.
+   */
+  const chapters = (
+    <View style={{ paddingBottom: spacing.md }}>
+      <ChapterTabs value={chapter} onChange={setChapter} />
+      {note !== null && (
+        <Text
+          style={{
+            color: colors.textFaint,
+            fontSize: fontSize.xxs,
+            lineHeight: 16,
+            paddingHorizontal: spacing.lg,
+            paddingTop: spacing.sm,
+          }}
+        >
+          {note}
+        </Text>
+      )}
+    </View>
+  );
 
   return (
-    <Screen header={header}>
+    <Screen
+      header={
+        <>
+          {header}
+          {chapters}
+        </>
+      }
+    >
       <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
         {/* Finché il layout non è stato riletto non si disegna niente: partendo dal default
             si vedrebbe un lampo di schermata piena a ogni apertura del tab, a chi ne ha
@@ -729,13 +777,29 @@ function StatsOfGroup() {
             );
           })}
 
+        {/* Un capitolo vuoto non è una dashboard vuota: la prima frase manda a riaccendere
+            qualcosa **qui dentro**, la seconda dice che non c'è niente da nessuna parte. Con
+            i capitoli le due cose si possono vedere separate, e mandare a fare la cosa
+            sbagliata chi ha spento tre widget su sedici sarebbe una risposta a una domanda
+            che non ha posto. */}
         {ready && shown.length === 0 && (
           <View style={{ paddingTop: spacing.xl }}>
-            <EmptyState
-              icon={<Feather name="grid" size={26} color={colors.textFaint} />}
-              title={t('dashboard.emptyTitle')}
-              hint={t('dashboard.emptyHint', { action: t('dashboard.title') })}
-            />
+            {visibleWidgets(layout).length === 0 ? (
+              <EmptyState
+                icon={<Feather name="grid" size={26} color={colors.textFaint} />}
+                title={t('dashboard.emptyTitle')}
+                hint={t('dashboard.emptyHint', { action: t('dashboard.title') })}
+              />
+            ) : (
+              <EmptyState
+                icon={<Feather name="grid" size={26} color={colors.textFaint} />}
+                title={t('dashboard.chapterEmptyTitle')}
+                hint={t('dashboard.chapterEmptyHint', {
+                  chapter: chapterTitle(chapter),
+                  action: t('dashboard.title'),
+                })}
+              />
+            )}
           </View>
         )}
 

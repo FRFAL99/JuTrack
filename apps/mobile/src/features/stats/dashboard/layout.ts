@@ -11,7 +11,7 @@
  * spento conserva il posto che avrà quando verrà riacceso — e il selettore, che mostra
  * tutto, riordina anche ciò che è spento.
  */
-import { isWidgetId, WIDGET_IDS, type WidgetId } from './widgets';
+import { chapterOf, isWidgetId, WIDGET_IDS, type Chapter, type WidgetId } from './widgets';
 
 export interface LayoutItem {
   id: WidgetId;
@@ -91,6 +91,18 @@ export function serializeLayout(layout: DashboardLayout): string {
  */
 export function visibleWidgets(layout: DashboardLayout): WidgetId[] {
   return layout.filter((item) => item.visible).map((item) => item.id);
+}
+
+/**
+ * Gli id accesi di **un capitolo**, nell'ordine del layout.
+ *
+ * Il capitolo filtra, non riordina: due widget dello stesso capitolo restano nell'ordine in
+ * cui li ha messi chi compone, anche se nel layout hanno in mezzo widget di altri capitoli.
+ * È la ragione per cui i capitoli non hanno richiesto nessuna migrazione del formato
+ * salvato — sono una proprietà del **codice**, non un dato.
+ */
+export function visibleInChapter(layout: DashboardLayout, chapter: Chapter): WidgetId[] {
+  return visibleWidgets(layout).filter((id) => chapterOf(id) === chapter);
 }
 
 /** Accende o spegne un widget, lasciandolo dov'è. */

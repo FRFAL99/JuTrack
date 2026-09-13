@@ -5,7 +5,7 @@
 > ricostruzione dello stato attuale, le tre direzioni provate, le due composizioni dei Grafici) e il
 > registro delle decisioni che questo file riprende punto per punto.
 >
-> **Gli Step 49 e 50 sono nel codice (13 settembre 2026); restano il 51 e il 52.** Le 15 decisioni sono
+> **Gli Step 49, 50 e 51 sono nel codice (13 settembre 2026); resta il 52.** Le 15 decisioni sono
 > prese, la direzione è scelta —
 > **Lastra** (turno 1a: stessi token, gerarchia rifatta) contro le due scartate, **Insegna** (1b:
 > fondo nero pieno, accento lime acido, cifre Space Grotesk) ed **Estratto** (1c: serif per le cifre,
@@ -159,9 +159,22 @@ Il capitolo è una proprietà del widget, dichiarata come `Record<WidgetId, Chap
 leggono una finestra ancorata e non il periodo scelto — quelli che oggi si portano dietro, ciascuno,
 la stessa nota di scuse. La nota sale all'intestazione del capitolo e si scrive una volta sola.
 `Anticipato e a carico` resta in «Fra di voi» e tiene la sua, perché nel suo capitolo è l'unico
-ancorato. Il `Record` e non un campo opzionale: così TypeScript pretende una voce per ogni id, e un
-widget nuovo non compila finché non si è deciso dove vive. Con un campo opzionale finirebbe in
-silenzio in nessun capitolo, cioè invisibile.
+ancorato.
+
+> **Correzione dello Step 51.** «La stessa nota di scuse» non era la stessa: `weekdays` aveva quella
+> vera («sugli ultimi dodici mesi, non sul periodo scelto»), `months` ne aveva una **diversa e
+> condizionale** («i mesi sono interi, anche quando il periodo scelto è più corto»), e `year` non ne
+> aveva nessuna — lo diceva il sottotitolo. Il risultato è quello previsto, una nota sola sopra il
+> capitolo, ma sono spariti **due** testi e non tre copie di uno. Con loro è sparito
+> `startsAtMonthStart()` in `period.ts`, rimasto senza chiamanti.
+>
+> **Due scelte che la decisione non copriva.** Le tre pillole stanno **sopra tutti i widget**, non
+> sotto il totale come nel mockup: `total` è un widget del capitolo «Mese», e disegnarlo sopra il
+> selettore che decide quali widget si vedono lo renderebbe l'unico a non obbedirgli. E il widget del
+> saldo è stato rinominato da «Fra di voi» a **«Chi deve a chi»**: era il suo titolo _ed_ è il nome
+> del capitolo che ora lo contiene. Il `Record` e non un campo opzionale: così TypeScript pretende una voce per ogni id, e un
+> widget nuovo non compila finché non si è deciso dove vive. Con un campo opzionale finirebbe in
+> silenzio in nessun capitolo, cioè invisibile.
 
 ### 11 · Si compone dentro i Grafici, non in un'altra schermata
 
@@ -242,14 +255,14 @@ Il layout salvato si rilegge com'è perché il capitolo è una proprietà del co
 
 ## Step
 
-Due step su quattro sono nel codice. Prosegue la numerazione globale da 49, e vale la stessa regola
+Tre step su quattro sono nel codice. Prosegue la numerazione globale da 49, e vale la stessa regola
 delle altre serie: **uno step per sessione**.
 
 | Step                                         | Stato | Cosa contiene                                                                                                           |
 | -------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------- |
 | 49 — Il tastierino in-app per l'importo      | ✅    | `TextInput` senza tastiera di sistema, `amount-pad.ts` con `applyKey`, tasto decimale per lingua (decisioni 4, 5, 6)    |
 | 50 — I tre gruppi apribili della nuova spesa | ✅    | `useState<GroupKey \| null>`, riassunto col valore vero, Data/Nota in «Dettagli» (decisioni 7, 8, 9)                    |
-| 51 — I capitoli dei grafici                  | ⬜    | `Record<WidgetId, Chapter>`, i sedici widget divisi in Mese/Abitudini/Fra di voi (decisione 10)                         |
+| 51 — I capitoli dei grafici                  | ✅    | `Record<WidgetId, Chapter>`, i sedici widget divisi in Mese/Abitudini/Fra di voi (decisione 10)                         |
 | 52 — La composizione in loco                 | ⬜    | «Modifica» nei Grafici, `moveWithin`, `pointerEvents="none"`, × `danger`, redirect di `dashboard.tsx` (decisioni 11–15) |
 
 ## Resta aperto

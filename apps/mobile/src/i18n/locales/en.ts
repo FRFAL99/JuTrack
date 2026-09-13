@@ -379,11 +379,8 @@ export const en: Dictionary = {
       perExpense: 'Per expense',
       average: 'on average',
     },
-    monthsWholeNote: 'Months are shown whole, even when the chosen period is shorter.',
     dailyOverlayLabel: '{{days}}-day moving average',
     cumulativeReferenceLabel: 'Total for {{period}}',
-    weekdaysNote:
-      'Over the last twelve months, not the chosen period: a single month would be seven random numbers.',
     amountsNote:
       'The height is the number of expenses, not their sum: it shows whether you make many small purchases or a few big ones.',
     paidCenterLabel: 'Fronted in {{period}}',
@@ -408,6 +405,18 @@ export const en: Dictionary = {
     intro:
       'Choose what to show in the Charts tab and in what order. This applies to this phone only: it changes nothing for the other people in the group.',
     allOff: 'With every widget off, the Charts tab stays empty.',
+    chapters: {
+      month: 'Month',
+      habits: 'Habits',
+      together: 'Between you',
+    },
+    chapterNotes: {
+      habits:
+        'These three don’t follow the period chosen above: they read a window of their own, anchored to the month you’re looking at.',
+    },
+    chapterEmptyTitle: 'Empty chapter',
+    chapterEmptyHint:
+      'No widget is on in “{{chapter}}”. Turn some back on from “{{action}}”, top right.',
     visibleCount: {
       one: '{{count}} widget on out of {{total}}.',
       other: '{{count}} widgets on out of {{total}}.',
@@ -466,7 +475,7 @@ export const en: Dictionary = {
         subtitle: 'How much each person put in, over the chosen period',
       },
       balance: {
-        title: 'Between you',
+        title: 'Who owes whom',
         subtitle: 'Who owes what to whom, across the group’s whole history',
       },
       members: {

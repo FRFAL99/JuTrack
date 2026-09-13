@@ -1,11 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import {
+  chapterNote,
+  chapterOf,
+  chapterTitle,
   describeNeed,
   isWidgetId,
   unmetNeeds,
   widgets,
   widgetSpec,
+  CHAPTERS,
+  WIDGET_CHAPTER,
   WIDGET_IDS,
+  type Chapter,
   type WidgetNeed,
 } from './widgets';
 
@@ -78,5 +84,66 @@ describe('unmetNeeds', () => {
     expect(unmetNeeds(tags, { ...full, tags: 0 })).toEqual(['tags' as WidgetNeed]);
     expect(unmetNeeds(stores, full)).toEqual([]);
     expect(unmetNeeds(tags, full)).toEqual([]);
+  });
+});
+
+describe('i capitoli', () => {
+  it('ogni widget del registro ne ha uno', () => {
+    // Il `Record` lo pretende già a compilazione; questo copre il caso in cui l'id venisse
+    // tolto dal registro e lasciato qui, che TypeScript non vede.
+    for (const id of WIDGET_IDS) {
+      expect(CHAPTERS).toContain(WIDGET_CHAPTER[id]);
+    }
+    expect(Object.keys(WIDGET_CHAPTER).sort()).toEqual([...WIDGET_IDS].sort());
+  });
+
+  it('i sedici si dividono in dieci, tre e tre', () => {
+    const count = (chapter: Chapter): number =>
+      WIDGET_IDS.filter((id) => chapterOf(id) === chapter).length;
+    expect(count('month')).toBe(10);
+    expect(count('habits')).toBe(3);
+    expect(count('together')).toBe(3);
+    expect(count('month') + count('habits') + count('together')).toBe(WIDGET_IDS.length);
+  });
+
+  it('«Fra di voi» è esattamente chi ha bisogno di due persone', () => {
+    // Non è una coincidenza da tenere allineata a mano: è la ragione per cui il capitolo
+    // esiste. Se un domani divergessero, uno dei due è sbagliato.
+    const together = WIDGET_IDS.filter((id) => chapterOf(id) === 'together');
+    const needsMembers = widgets()
+      .filter((widget) => widget.needs.includes('members'))
+      .map((widget) => widget.id);
+    expect([...together].sort()).toEqual([...needsMembers].sort());
+  });
+
+  it('«Abitudini» sono i tre che leggono una finestra ancorata', () => {
+    // `months`, `year` e `weekdays` leggono `yearExpenses` in `stats.tsx` invece delle
+    // spese del periodo. `members` legge la stessa finestra ma sta in «Fra di voi», dove è
+    // l'unico ancorato e si tiene la propria nota.
+    expect(WIDGET_IDS.filter((id) => chapterOf(id) === 'habits')).toEqual([
+      'months',
+      'year',
+      'weekdays',
+    ]);
+  });
+
+  it('ogni capitolo ha un nome, e nessuno si chiama come un widget', () => {
+    // «Fra di voi» era anche il titolo del widget del saldo: due cose con lo stesso nome,
+    // una dentro l'altra, non si distinguono guardandole.
+    const titles = widgets().map((widget) => widget.title);
+    for (const chapter of CHAPTERS) {
+      // Il punto è la rete contro la chiave mancante: `chapterTitle` compone la chiave con
+      // un template, e i18next su una chiave che non esiste restituisce **la chiave**, che
+      // un semplice controllo di lunghezza non distinguerebbe da un nome vero.
+      expect(chapterTitle(chapter)).not.toContain('.');
+      expect(titles).not.toContain(chapterTitle(chapter));
+    }
+  });
+
+  it('la nota ce l ha solo «Abitudini»', () => {
+    expect(chapterNote('habits')).not.toBeNull();
+    expect(chapterNote('habits')).not.toContain('dashboard.');
+    expect(chapterNote('month')).toBeNull();
+    expect(chapterNote('together')).toBeNull();
   });
 });

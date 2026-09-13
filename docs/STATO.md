@@ -11,8 +11,9 @@ che tiene tutto questo è installata.
 > spesa rapida e grafici componibili, da due artifact Claude Design (un mockup a più direzioni e il
 > registro delle decisioni). La direzione scelta è **Lastra** — stessi token del redesign chiuso in
 > [visualdesign.md](visualdesign.md), gerarchia rifatta — contro le due scartate, **Insegna** e
-> **Estratto**. **Il 13 settembre sono entrati i primi due dei quattro step — il 49 (tastierino
-> in-app per l'importo) e il 50 (i tre gruppi apribili)**; restano il 51 e il 52.
+> **Estratto**. **Il 13 settembre sono entrati tre dei quattro step — il 49 (tastierino in-app per
+> l'importo), il 50 (i tre gruppi apribili) e il 51 (i capitoli dei grafici)**; resta il 52, la
+> composizione in loco.
 
 > **La sessione del 12 settembre è raccontata in
 > [La verifica su telefono](#la-verifica-su-telefono-del-12-settembre-step-41)**, divisa fra ciò che
@@ -176,16 +177,16 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
 Piano v6 — [piano-v6-spesa-rapida-e-grafici-componibili.md](piano-v6-spesa-rapida-e-grafici-componibili.md),
-**deciso il 12 settembre, due step su quattro nel codice**:
+**deciso il 12 settembre, tre step su quattro nel codice**:
 
 | Step                                         | Stato | Cosa contiene                                                                     |
 | -------------------------------------------- | ----- | --------------------------------------------------------------------------------- |
 | 49 — Il tastierino in-app per l'importo      | ✅    | `TextInput` senza tastiera di sistema, `amount-pad.ts`, tasto decimale per lingua |
 | 50 — I tre gruppi apribili della nuova spesa | ✅    | Un gruppo aperto per volta, riassunto col valore vero, Data/Nota in «Dettagli»    |
-| 51 — I capitoli dei grafici                  | ⬜    | Sedici widget divisi in Mese (10) / Abitudini (3) / Fra di voi (3)                |
+| 51 — I capitoli dei grafici                  | ✅    | Sedici widget divisi in Mese (10) / Abitudini (3) / Fra di voi (3)                |
 | 52 — La composizione in loco                 | ⬜    | «Modifica» dentro i Grafici, `moveWithin`, `app/dashboard.tsx` diventa redirect   |
 
-**1295 test verdi** (639 core + 602 app + 54 relay), typecheck, lint e `format:check` puliti.
+**1303 test verdi** (639 core + 610 app + 54 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -1628,6 +1629,13 @@ segue è coperto dai test, perché sono tutte cose che hanno bisogno di uno sche
 - **TalkBack**, su tutte e due: la cifra deve annunciarsi come **campo editabile** (è la sola ragione
   per cui è rimasta un `TextInput`), e ogni riga di gruppo deve annunciare **nome e riassunto**,
   anche quelle che il nome, a vederle, non ce l'hanno.
+
+Lo **Step 51** aggiunge tre cose da guardare nei **Grafici**: le tre pillole in cima — Mese,
+Abitudini, Fra di voi — devono aprire un capitolo per volta restando ferme mentre i grafici scorrono;
+sotto «Abitudini» deve comparire una nota sola al posto di quelle che stavano sotto i singoli
+grafici; e con tutti i widget di un capitolo spenti la schermata deve dire che è vuoto **quel
+capitolo**, non la dashboard. Attenzione anche al selettore `/dashboard`, che per un solo step resta
+un elenco piatto senza capitoli: lo Step 52 lo cancella.
 
 **Blocco 2 — con `npm run peer` dall'altra parte (~20 min).** È il criterio di «fatto» che manca a
 tutti i piani. Il link mandato in chat che apre `/groups/<id>` **col fragment**, `Share.share`, la

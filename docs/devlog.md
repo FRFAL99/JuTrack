@@ -4,6 +4,82 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Step 51: i capitoli dei grafici
+
+Terzo step del Piano v6, decisione 10. I sedici widget non sono più una colonna sola: si dividono in
+**Mese** (10), **Abitudini** (3) e **Fra di voi** (3), e in cima ai Grafici ci sono tre pillole a
+larghezza uguale che ne aprono uno per volta.
+
+### I tre capitoli erano già nel codice, non sono stati inventati
+
+Questa è la parte che rende la divisione tenibile, e si è potuta verificare leggendo `stats.tsx`
+invece di deciderla:
+
+- **«Fra di voi»** è _esattamente_ l'insieme dei widget che dichiarano `needs: ['members']` —
+  `paid`, `balance`, `members`. Tre.
+- **«Abitudini»** è _esattamente_ l'insieme dei widget che leggono `yearExpenses`, cioè una finestra
+  ancorata al mese che si sta guardando, invece delle spese del periodo: `months` (sei mesi), `year`
+  (dodici), `weekdays` (dodici). Anche `members` legge quella finestra, ma sta in «Fra di voi», dove
+  è l'unico ancorato e si tiene la propria nota — è quello che il piano prevedeva.
+- **«Mese»** sono i dieci che restano, cioè quelli che ritagliano il periodo scelto com'è.
+
+10 + 3 + 3 = 16. Che i tre insiemi coincidano con tre proprietà già vere è il motivo per cui nessuno
+dovrà ricordarsi una regola in più per collocare il widget che verrà. Ci sono tre test che lo
+sorvegliano: se un domani «Fra di voi» e `needs: ['members']` divergessero, uno dei due è sbagliato.
+
+### `Record<WidgetId, Chapter>` e non un campo opzionale
+
+Come chiedeva la decisione: così TypeScript pretende una voce per ogni id, e un widget nuovo **non
+compila** finché non si è deciso dove vive. Con un campo opzionale finirebbe in silenzio in nessun
+capitolo, cioè invisibile — e il sintomo sarebbe un widget acceso che non si trova da nessuna parte.
+`widgets()` continua a restituire `WidgetSpec`, con `chapter` **derivato** dal `Record`: la
+dichiarazione sta in un posto solo, ma chi ha una spec ce l'ha sotto mano.
+
+Il capitolo **filtra e non riordina** (`visibleInChapter`): due widget dello stesso capitolo restano
+nell'ordine in cui li ha messi chi compone, anche con widget di altri capitoli in mezzo. È per questo
+che non è servita nessuna migrazione del formato salvato — il capitolo è una proprietà del codice,
+non un dato.
+
+### La terza correzione al piano: la «stessa nota di scuse» non era la stessa
+
+La decisione 10 dice che i tre di «Abitudini» «si portano dietro, ciascuno, la stessa nota di scuse».
+Verificato: non è così. `weekdays` aveva la nota vera — «sugli ultimi dodici mesi, non sul periodo
+scelto» — `months` ne aveva una **diversa e condizionale** («i mesi sono interi, anche quando il
+periodo scelto è più corto», solo se il periodo non comincia il primo), e `year` non ne aveva nessuna:
+lo diceva il sottotitolo.
+
+La decisione resta e il risultato è quello previsto — una nota sola sopra il capitolo — ma per
+arrivarci sono spariti **due** testi, non tre copie di uno. Con loro è sparito
+`startsAtMonthStart()` in `period.ts`, che dopo non aveva più chiamanti: lasciarlo sarebbe stato
+codice che il prossimo lettore deve capire per scoprire che non serve, ed è esattamente ciò di cui si
+lamenta il commento su `onTitlePress` in `Screen.tsx`. Vanno via anche i suoi due test — è la ragione
+per cui i test dell'app crescono di otto e non di dieci.
+
+### Due scelte che il piano non copriva
+
+**Le pillole stanno sopra tutti i widget, non sotto il totale.** Nel mockup il totale del periodo sta
+_sopra_ le pillole. Qui no: `total` è un widget del capitolo «Mese» come gli altri nove — è quello
+che dice il `Record` — e un widget disegnato sopra il selettore che decide quali widget si vedono
+sarebbe l'unico a non obbedirgli. Chi lo spegne se lo ritroverebbe a schermo.
+
+**Il widget del saldo non si chiama più «Fra di voi».** Era il suo titolo, ed è il nome del capitolo
+che ora lo contiene: una pillola «Fra di voi» con dentro una sezione «FRA DI VOI» si legge come un
+difetto. Si chiama **«Chi deve a chi»**, che è anche più preciso — il sottotitolo diceva già «chi deve
+quanto a chi». C'è un test che impedisce a un capitolo di chiamarsi come un widget.
+
+### Cosa resta storto per un solo step
+
+`app/dashboard.tsx` — il selettore — mostra ancora i sedici in fila senza capitoli. Chi riaccende un
+widget lì dentro non vede in quale capitolo finirà. È la ragione per cui la decisione 11 lo cancella:
+lo **Step 52** sposta la composizione dentro i Grafici, e quella schermata sparisce.
+
+### Verificato
+
+`npm run typecheck`, `npm run lint`, `npm run format:check` puliti; `npm test` **1303 verdi** (639
+core + 610 app + 54 relay). Niente su telefono.
+
+---
+
 ## 2026-09-13 — Step 50: i tre gruppi apribili della nuova spesa
 
 Secondo step del Piano v6, decisioni 7, 8 e 9. Il form della spesa non è più una colonna di quattro

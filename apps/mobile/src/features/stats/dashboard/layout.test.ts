@@ -5,6 +5,7 @@ import {
   parseLayout,
   serializeLayout,
   toggleWidget,
+  visibleInChapter,
   visibleWidgets,
   type DashboardLayout,
 } from './layout';
@@ -146,5 +147,46 @@ describe('moveWidget', () => {
   it('non tocca l’elenco ricevuto', () => {
     moveWidget(LAYOUT, 'budget', -1);
     expect(LAYOUT.map((item) => item.id)).toEqual(['total', 'daily', 'budget']);
+  });
+});
+
+describe('visibleInChapter', () => {
+  it('tiene solo gli accesi del capitolo chiesto', () => {
+    const layout: DashboardLayout = [
+      { id: 'total', visible: true }, // Mese
+      { id: 'year', visible: true }, // Abitudini
+      { id: 'paid', visible: true }, // Fra di voi
+      { id: 'weekdays', visible: false }, // Abitudini, spento
+    ];
+    expect(visibleInChapter(layout, 'month')).toEqual(['total']);
+    expect(visibleInChapter(layout, 'habits')).toEqual(['year']);
+    expect(visibleInChapter(layout, 'together')).toEqual(['paid']);
+  });
+
+  it('conserva l ordine del layout anche coi widget di altri capitoli in mezzo', () => {
+    // Il capitolo **filtra e non riordina**: è la ragione per cui i capitoli non hanno
+    // richiesto nessuna migrazione del formato salvato.
+    const layout: DashboardLayout = [
+      { id: 'weekdays', visible: true },
+      { id: 'total', visible: true },
+      { id: 'months', visible: true },
+    ];
+    expect(visibleInChapter(layout, 'habits')).toEqual(['weekdays', 'months']);
+  });
+
+  it('i tre capitoli insieme danno esattamente i widget accesi', () => {
+    // Nessun widget acceso può restare fuori da tutti e tre: sarebbe invisibile senza che
+    // niente lo dica.
+    const shown = visibleWidgets(DEFAULT_LAYOUT);
+    const byChapter = [
+      ...visibleInChapter(DEFAULT_LAYOUT, 'month'),
+      ...visibleInChapter(DEFAULT_LAYOUT, 'habits'),
+      ...visibleInChapter(DEFAULT_LAYOUT, 'together'),
+    ];
+    expect([...byChapter].sort()).toEqual([...shown].sort());
+  });
+
+  it('un capitolo con tutto spento è vuoto, non è un errore', () => {
+    expect(visibleInChapter([{ id: 'total', visible: false }], 'month')).toEqual([]);
   });
 });

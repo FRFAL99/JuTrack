@@ -8,7 +8,6 @@ import {
   periodLabel,
   presetPeriod,
   previousPeriod,
-  startsAtMonthStart,
 } from './period';
 
 /** Un mercoledì di metà mese: né il primo né l'ultimo giorno, così i confini si vedono. */
@@ -228,19 +227,5 @@ describe('periodLabel', () => {
 
   it('un mese scelto dalla barra comincia con la maiuscola, perché apre un chip', () => {
     expect(periodLabel(monthPeriod('2026-03', TODAY), NOW)).toBe('Marzo');
-  });
-});
-
-describe('startsAtMonthStart', () => {
-  it('è vero per un mese in corso e per un mese intero', () => {
-    expect(startsAtMonthStart(presetPeriod('thisMonth', TODAY))).toBe(true);
-    expect(startsAtMonthStart(monthPeriod('2026-03', TODAY))).toBe(true);
-  });
-
-  it('è falso quando il periodo comincia altrove', () => {
-    // È la condizione che fa comparire la nota sotto le barre mensili: i mesi sono interi
-    // anche quando il periodo scelto è più corto.
-    expect(startsAtMonthStart(presetPeriod('last7', TODAY))).toBe(false);
-    expect(startsAtMonthStart(presetPeriod('last12Months', TODAY))).toBe(false);
   });
 });

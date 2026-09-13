@@ -205,11 +205,6 @@ export function defaultPeriod(today: IsoDate = todayIso()): Period {
   return presetPeriod('thisMonth', today);
 }
 
-/** Vero se il periodo comincia il primo del mese in cui finisce: i mesi interi ci passano. */
-export function startsAtMonthStart(period: Period): boolean {
-  return period.from === `${anchorMonth(period)}-01`;
-}
-
 function capitalize(value: string): string {
   const first = value[0];
   return first === undefined ? value : first.toUpperCase() + value.slice(1);
