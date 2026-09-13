@@ -28,6 +28,16 @@ che tiene tutto questo è installata.
 > e il 52 (la composizione in loco, con `app/dashboard.tsx` ridotto a un redirect da cancellare al
 > ciclo dopo).
 
+> **Lo stesso 13 settembre, chiuso il v6, è stato scritto il
+> [Piano v7](piano-v7-data-e-vocabolario-del-gruppo.md): la data della spesa che si sceglie, e tag e
+> negozi che diventano un elenco del gruppo.** Non viene da un mockup ma dall'app in mano, come gli
+> Step 54–57, e porta tre step — **58, 59 e 60, nessuno ancora nel codice**. **Nessuno dei tre chiede
+> una build EAS**: la griglia di giorni che serve al 58 esiste già dallo Step 27 (`DayGridPicker`), e
+> il commento in `ExpenseForm.tsx` che motivava la data non modificabile con un modulo nativo è
+> **superato dal codice stesso**. Il 60 raccoglie un check del repo fatto a freddo: il difetto
+> peggiore è che i due dialoghi più pericolosi dell'app — uscire da un gruppo e rigenerarlo — sono in
+> **italiano fisso**, `'Annulla'` compreso.
+
 > **La sessione del 12 settembre è raccontata in
 > [La verifica su telefono](#la-verifica-su-telefono-del-12-settembre-step-41)**, divisa fra ciò che
 > ha una prova rileggibile e ciò che è riferito da chi aveva il telefono in mano. Il solo difetto
@@ -238,6 +248,21 @@ schermate parlano ora la stessa lingua; le quattro `Card` con un paragrafo dentr
 tutte volute.
 
 **1322 test verdi** (639 core + 629 app + 54 relay), typecheck, lint e `format:check` puliti.
+
+Piano v7 — [piano-v7-data-e-vocabolario-del-gruppo.md](piano-v7-data-e-vocabolario-del-gruppo.md),
+**scritto il 13 settembre, nessuno step ancora nel codice**:
+
+| Step                                    | Stato | Cosa contiene                                                                    |
+| --------------------------------------- | ----- | -------------------------------------------------------------------------------- |
+| 58 — La data della spesa si sceglie     | ⬜    | `MonthGrid` condiviso coi filtri, «Oggi»/«Ieri», `assertIsoDate` in scrittura    |
+| 59 — Il vocabolario del gruppo          | ⬜    | Catalogo `tag`/`store` nel vault, chiave derivata dal nome, due schermate        |
+| 60 — Le correzioni dal check del codice | ⬜    | Italiano fisso negli `Alert`, `isKnownCurrency` mai collegata, `peak` divergente |
+
+**Il 58 e il 59 toccano la stessa schermata** («Nuova spesa» → «Dettagli»), e il **59 è l'unico dei
+tre con un rischio vero**: tocca modello, export (formato a **v3**) e form insieme. Il trabocchetto
+scritto nel piano e da non perdere: `app/(gruppo)/expense/[id].tsx` **omette `date` dalla patch**,
+quindi senza toccarlo la data sarebbe scegliabile su una spesa nuova e scartata in silenzio su una in
+modifica — cioè sembrerebbe funzionare.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
