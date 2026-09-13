@@ -4,6 +4,80 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Il primo aggiornamento via etere, e due impronte rotte per sbaglio
+
+Non uno step: la giornata del _build system_, che è cominciata con l'app che non partiva ed è finita
+col primo `eas update` della storia del progetto. Commit `b9b9593`, `6dfbbeb`, `c11e616`.
+
+### La development build era sparita, e l'aveva mangiata la preview
+
+Provando gli Step 49–53 sul telefono, JuTrack non si agganciava a Metro. Il ripiego — Expo Go — non
+parte affatto: dalla SDK 53 non ha il lato nativo di `expo-notifications`. **Quegli errori non
+dicevano niente sul codice dell'app**, ed è una cosa da ricordare, perché Expo Go è il ripiego
+istintivo quando il dev client non risponde.
+
+La causa: `development` e `preview` costruivano lo **stesso package** `com.frfal.jutrack`. La build
+`preview` del 12 settembre era stata installata _sopra_ il dev client — Android l'ha trattata come un
+aggiornamento, che è la ragione per cui allora i dati erano sopravvissuti, annotata come un successo.
+La `preview` ha `developmentClient: false`: non sa agganciarsi a Metro.
+
+`apps/mobile/app.config.ts` dà alla variante di sviluppo il package `com.frfal.jutrack.dev` e il nome
+«JuTrack dev». Lo `scheme` resta `jutrack` per entrambe, di proposito: un invito è un
+`jutrack://join#…` e deve poter aprire quella che si sta provando.
+
+### Poi ho rotto gli aggiornamenti, e non me ne sarei accorto
+
+Per passare `APP_VARIANT` al profilo di sviluppo avevo aggiunto tre righe di `env` a `eas.json`.
+`@expo/fingerprint` hasha quel file **come file intero**: l'impronta è passata da `d862b56d` a
+`832a0a87` e la **1.0.0 caricata sul Play Store il 12 settembre**, in test chiuso con una seconda
+persona, ha smesso di poter ricevere qualunque `eas update`. In silenzio — un aggiornamento con
+l'impronta sbagliata non fallisce, semplicemente non arriva.
+
+Era la cosa che lo Step 47 esisteva per rendere possibile, disattivata da tre righe che riguardavano
+un altro profilo.
+
+`APP_VARIANT` è ora una variabile d'ambiente del progetto su EAS (`eas env:list development`) e
+`eas.json` è tornato identico byte per byte a `777b958`. Impronta riverificata: `main` e la build in
+test combaciano di nuovo.
+
+**E il commento che spiegava la trappola, scritto dentro `eas.json`, l'ha spostata una seconda
+volta.** La spiegazione sta in `app.config.ts`, che fra le sorgenti dell'impronta non compare.
+
+### La regola che nessuno deduce
+
+`version` sta **dentro** l'impronta: `0.1.0` → `da213b95`, `1.0.0` → `d862b56d`. Da cui
+
+> un `eas update` si pubblica con **`version` invariata**.
+
+Alzarla «per segnare che è cambiato qualcosa» è esattamente il gesto che impedisce
+all'aggiornamento di arrivare. Tutto in [versioni-e-aggiornamenti.md](versioni-e-aggiornamenti.md),
+insieme alla tabella «build o update?» e al modo di verificare le due impronte prima di pubblicare.
+
+### Un numero falso in fondo a «Tu»
+
+La versione mostrata era la stringa `'0.1.0'` **scritta a mano** nel componente, mentre il Play Store
+pubblicava 1.0.0: l'unico numero che un tester potesse riferire era falso. Adesso arriva da
+`Constants.expoConfig`.
+
+### Pubblicato
+
+```
+canale     production
+impronta   d862b56d…      (la stessa della 1.0.0 in test chiuso)
+gruppo     dcf68b3d-30a1-4214-b85d-e91f76024c2d
+commit     6dfbbeb
+```
+
+Porta gli Step 49–57 sul telefono del tester senza consumare una build né passare dalla revisione.
+Sicuro perché fra `777b958` e HEAD **non è cambiata nessuna dipendenza**: il bundle non può riferirsi
+a moduli che quel binario non ha. Si disfa con `update:rollback`.
+
+**Il binario sul Play Store resta quello del 12 settembre**, nove step indietro: chi installa da zero
+prende il vecchio e scarica l'aggiornamento al primo avvio. Prima della produzione aperta va fatta
+una build nuova per riallineare la base.
+
+---
+
 ## 2026-09-13 — Step 57: il pairing, e la sola card che non doveva scendere
 
 Ultimo pezzo fuori stile: le quattro schermate che collegano un secondo telefono a un gruppo —
