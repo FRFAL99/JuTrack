@@ -239,7 +239,26 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
 - **Il foglio di condivisione dell'export**, che fino all'11 agosto era impossibile da provare: la
   build che lo conteneva non esisteva, e l'export ripiegava sugli appunti dichiarandolo
   nell'interfaccia. La build dello Step 30 porta `expo-file-system` ed `expo-sharing`, quindi adesso
-  la prova si può fare: esportare un CSV e vedere se compare il foglio di sistema invece del ripiego
+  la prova si può fare: esportare il foglio di calcolo e vedere se compare il foglio di sistema
+  invece del ripiego
+
+- **Il `.xlsx` dello Step 61, che è la prova che i test non possono dare.** Il generatore è scritto a
+  mano, e in Node il file è già stato aperto con LibreOffice e passato da un verificatore OPC — ma i
+  due lettori che contano sono **Excel** e **Fogli Google**, e nessuno dei due si automatizza.
+  Preparare prima una spesa con una **nota che comincia per `=`** e un **tag con un'accentata**, poi:
+  Gruppi → il gruppo → Gestisci → Esporta i dati → «Foglio di calcolo (.xlsx)» → salvare su Drive →
+  aprirlo. Cinque cose, nell'ordine in cui si rompono:
+  1. **si apre senza chiedere di riparare il file** — è l'esito che nessun test copre, e il sospetto
+     numero uno è `styles.xml`;
+  2. ci sono **due fogli**, «Spese» e «Pareggi», e la riga 1 resta ferma scorrendo;
+  3. la colonna **`data`** si ordina come data, non come testo (in Excel è allineata a destra);
+  4. selezionando **`importo`** la somma automatica dà un numero, e coincide col totale che l'app
+     mostra per lo stesso periodo;
+  5. la nota mostra **`=SOMMA(…)` senza apice davanti** e non viene valutata, e l'accentata è giusta.
+
+  Se manca il foglio di condivisione il bottone del `.xlsx` è **spento**: è voluto, un file binario
+  non può ripiegare sugli appunti. Il JSON accanto invece deve continuare a ripiegarci.
+
 - **Lo Step 31, di cui sul telefono si vede quasi tutto subito — tranne la notifica.** Accendere
   «Promemoria spese» deve far comparire il dialogo di Android, e da lì il passaggio 15 della
   diagnostica deve passare a «permesso concesso»; l'interruttore deve sopravvivere a un riavvio, e

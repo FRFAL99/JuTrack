@@ -862,16 +862,15 @@ export const it = {
       title: 'Condivisione non disponibile',
       body: 'Questo dispositivo non offre il foglio di condivisione.',
     },
-    csvTitle: 'Per leggerli altrove',
-    csvBody:
-      'Una riga per spesa, una colonna per la quota di ciascuno. Si apre in Excel, Fogli Google e simili.',
-    expensesCsvButton: 'Spese (CSV)',
-    settlementsCsvButton: 'Pareggi (CSV)',
-    csvSplitHint:
-      'I pareggi sono in un file a parte: non sono spese, e sommarli darebbe un totale che non vuol dire niente.',
+    sheetTitle: 'Per leggerli altrove',
+    sheetBody:
+      'Una riga per spesa, una colonna per la quota di ciascuno. Date e importi sono già numeri: si ordinano e si sommano senza sistemare niente.',
+    sheetButton: 'Foglio di calcolo (.xlsx)',
+    sheetSplitHint:
+      'I pareggi sono in un foglio a parte: non sono spese, e sommarli darebbe un totale che non vuol dire niente.',
     jsonTitle: 'Per conservarli',
     jsonBody:
-      'Copia integrale: spese, categorie, persone, budget e pareggi. È il formato da tenere da parte, perché il CSV perde pezzi.',
+      'Copia integrale: spese, categorie, persone, budget e pareggi, comprese quelle cancellate. È il formato da tenere da parte, ed è l’unico che si può reimportare.',
     jsonButton: 'Tutto il vault (JSON)',
     unencryptedTitle: 'Questi file non sono cifrati',
     unencryptedBody1:
@@ -879,7 +878,7 @@ export const it = {
     unencryptedBody2:
       'La chiave del vault non è dentro nessuno di questi file. Per quella c’è «{{label}}», ed è protetta da una passphrase.',
     noSharingNote:
-      'Su questa build manca il modulo per condividere file: gli export finiranno negli appunti.',
+      'Su questa build manca il modulo per condividere file. Il JSON finirà negli appunti; il foglio di calcolo no, perché non è testo — per averlo serve un’app aggiornata.',
   },
   budget: {
     title: 'Budget',

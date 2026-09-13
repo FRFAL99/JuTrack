@@ -13,6 +13,109 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Step 61: il foglio di calcolo prende il posto dei due CSV
+
+L'export tabellare esisteva per «leggere i dati altrove», e in un Excel con locale italiano finiva
+**tutto in una colonna sola**. Non è una scoperta: l'[ADR 0003](adr/0003-formati-di-export.md) lo
+aveva messo per iscritto fra le conseguenze negative — «è il prezzo esplicito della portabilità» — e
+aveva lasciato come rimedio una variante «CSV per Excel italiano», da fare se il fastidio fosse
+diventato ricorrente. Il fastidio è arrivato, ma quella variante lo **sposta** soltanto: con `;` e la
+virgola decimale si rompono Fogli Google e `pandas`, cioè esattamente ciò che la 0003 proteggeva. Un
+CSV costringe a scegliere un lato perché non sa dire di che **tipo** è una cella.
+
+Quindi il CSV esce dal repo — `csv.ts` e `csv.test.ts` cancellati — e al suo posto c'è un `.xlsx`.
+La decisione è nell'[ADR 0004](adr/0004-l-xlsx-al-posto-del-csv.md), che supera la 0003 nella sola
+parte tabellare: **due formati, due scopi, e la schermata lo dice** resta in piedi, e il JSON non si
+tocca.
+
+**Tre difese del CSV cadono insieme, e una sarebbe stata dannosa tenerla.** Il BOM UTF-8 serviva a
+convincere Excel su Windows della codifica, che ora è dichiarata dentro l'XML. La colonna
+`importo_centesimi` era la copia intera dell'importo da usare se il decimale fosse stato frainteso, e
+non c'è più niente da fraintendere. La terza è `neutralizeFormula`, e merita il paragrafo che segue.
+
+**Nel `.xlsx` le formule non si disinnescano, ed è deliberato.** Una cella `t="inlineStr"` non è mai
+una formula per Excel: lo è solo un `<f>`, e il generatore non ne scrive nessuno. Portarsi dietro
+l'abitudine del CSV avrebbe voluto dire anteporre un apice a un testo che una persona ha scritto
+davvero — **corrompere il dato** per difendersi da un rischio che il formato ha già chiuso. C'è un
+test che afferma che una nota `=SOMMA(A1:A9)` esce intatta, e un secondo che verifica che l'apice non
+compaia nei byte del file. Nel file di prova aperto con LibreOffice, quella nota compare come testo.
+
+**Scritto a mano, a zero dipendenze.** Un `.xlsx` è uno ZIP di XML, e scegliendo il metodo **STORE**
+— compressione 0 — non serve nessun deflate. Sono tre file puri in `packages/core/src/export/xlsx/`:
+`zip.ts` (CRC-32 e le tre intestazioni), `parts.ts` (le sei parti OOXML e le celle tipate),
+`workbook.ts` (l'assemblaggio). Le alternative costavano di più: SheetJS su npm è fermo alla 0.18.5
+con una CVE nota, ed `exceljs` tira dentro stream e `zlib` di Node — la stessa famiglia della
+trappola `lib0`→`isomorphic-webcrypto` dello Step 9, che solo `expo export` intercetta. E `core` ha
+tre dipendenze in tutto: valeva la pena non aggiungerne una quarta per un formato di file.
+
+**Tutto il generatore è deterministico**, `Date.now()` compreso — che infatti non c'è: la data di
+modifica di ogni voce ZIP è fissa al 1980-01-01. Non è un vezzo, è ciò che permette ai test di
+confrontare i **byte** invece di limitarsi a «non ha lanciato». Lo zero puro non andava bene: in DOS
+mese e giorno partono da 1, e un `0x0000` significa «mese 0, giorno 0», che alcuni lettori segnalano
+come archivio corrotto.
+
+**Una data è una data, un timestamp resta testo.** Il seriale Excel si calcola con aritmetica intera
+sui tre campi di `YYYY-MM-DD`, senza mai costruire un `Date` — che essendo UTC sposterebbe il giorno
+la notte del cambio d'ora, e c'è un test che passa per il 29 marzo e il 25 ottobre. `createdAt`,
+`updatedAt` e `deletedAt` sono invece `IsoTimestamp`, cioè UTC con l'ora: Excel non ha il concetto di
+fuso, e convertirli sposterebbe **in silenzio** il giorno di una spesa creata dopo le 22:00. Meglio
+un testo esatto che un numero plausibile.
+
+**Gli importi non diventano mai float.** `centsToDecimal` si è spostata da `csv.ts` senza cambiare
+una riga: divide e prende il resto, non divide per cento. La stringa che produce finisce dritta
+dentro il `<v>` della cella, quindi la regola ferrea di `model/money.ts` regge anche qui, dove
+sarebbe stato comodo violarla. Per lo stesso motivo il tipo `Cell` di `parts.ts` porta **stringhe**
+e non numeri: accettare un `number` vorrebbe dire che qualcuno, da qualche parte, ha già diviso.
+
+**Un file solo invece di due, e i bottoni passano da tre a due.** I pareggi erano un file separato
+perché un CSV è una tabella sola. Un `.xlsx` ha i fogli: restano distinti dalle spese — la ragione
+della 0003 è ancora valida, sommarli darebbe un numero senza senso — ma senza un secondo allegato da
+non perdere.
+
+**La misura che il piano aveva sbagliato.** Il piano v8 stimava 500-700 byte a riga; la misura vera è
+**~980**, cioè 0,9 MB per mille spese, 4,6 MB per cinquemila, 18,7 MB per ventimila (e 0,4 s per
+generarle). La stima era a occhio, ed è esattamente il genere di numero che il piano v6 aveva
+insegnato a non dedurre. Il piano è stato corretto con il numero misurato. Per ora resta STORE: la
+compressione è additiva — due campi nell'intestazione di ogni voce — e il segnale per aggiungerla
+adesso è una soglia e non un'impressione.
+
+**Il ripiego sugli appunti vale solo per il testo.** `shareTextFile` e `shareBinaryFile` condividono
+la stessa funzione interna, perché `File.write()` accetta `string | Uint8Array` e non serve nessun
+passaggio da base64. Ma un `.xlsx` è uno ZIP: incollarlo negli appunti produrrebbe spazzatura che
+_sembra_ un export. Senza foglio di condivisione il bottone si spegne, e la nota in fondo alla
+schermata dice perché — distinguendo i due formati invece di promettere per entrambi.
+
+### Le prove che i test non potevano dare
+
+Un test di byte verifica che il codice faccia quel che fa; non che Excel sia contento. Quindi:
+
+- Un file di prova generato da Node e aperto con **LibreOffice**, che lo riconverte senza lamentarsi:
+  la data esce come data (`07/04/2026`, resa nel locale del lettore), gli importi come numeri,
+  accentate ed emoji intatte, l'a capo dentro una nota conservato, e `=SOMMA(A1:A9)` come testo.
+- Un **verificatore OPC** scritto per l'occasione: ogni relazione punta a una parte che esiste, ogni
+  parte ha un content type, i fogli dichiarati nel workbook hanno tutti un `rId`, e
+  `[Content_Types].xml` è la **prima** voce dell'archivio. È la classe di errore che LibreOffice
+  perdona ed Excel no.
+- Le sei parti XML passate una per una da un parser: tutte ben formate.
+
+**Resta da fare con le mani:** aprirlo in **Excel** e in **Fogli Google**. Sono i due lettori che
+contano e nessuno dei due si può automatizzare qui. Il criterio di «fatto» è in
+[verifica-sul-telefono.md](verifica-sul-telefono.md).
+
+### Verifica
+
+**1395 test verdi** (701 core + 640 app + 54 relay), `typecheck`, `lint` e `format:check` puliti,
+`expo export --platform android` completato (bundle 4,5 MB).
+
+Il conteggio del core **sale** di 36 pur avendo cancellato i 46 test del CSV: i nuovi sono 82 fra
+`zip`, `parts` e `vault-xlsx`. Le prove di `centsToDecimal` e `shareColumnLabels` si sono spostate
+con le funzioni, senza cambiare.
+
+**Nessuna build EAS.** Il generatore è JavaScript puro nel core e `expo-file-system` era già nel
+grafo: lo step viaggia via etere, e `version` in `app.json` resta invariata.
+
+---
+
 ## 2026-09-13 — Step 60: le correzioni dal check, e una guardia che non si poteva mettere
 
 Il Piano v7 si chiude con lo step che non aggiunge niente. Otto voci uscite da una lettura del

@@ -799,16 +799,15 @@ export const en: Dictionary = {
       title: 'Sharing not available',
       body: 'This device does not offer the share sheet.',
     },
-    csvTitle: 'To read them elsewhere',
-    csvBody:
-      'One row per expense, one column for each person’s share. Opens in Excel, Google Sheets and the like.',
-    expensesCsvButton: 'Expenses (CSV)',
-    settlementsCsvButton: 'Settlements (CSV)',
-    csvSplitHint:
-      'Settlements are in a separate file: they are not expenses, and adding them would give a total that means nothing.',
+    sheetTitle: 'To read them elsewhere',
+    sheetBody:
+      'One row per expense, one column for each person’s share. Dates and amounts are already numbers: sort and sum them without fixing anything first.',
+    sheetButton: 'Spreadsheet (.xlsx)',
+    sheetSplitHint:
+      'Settlements are in a separate sheet: they are not expenses, and adding them would give a total that means nothing.',
     jsonTitle: 'To keep them',
     jsonBody:
-      'A full copy: expenses, categories, people, budgets and settlements. It is the format to keep on hand, because the CSV loses pieces.',
+      'A full copy: expenses, categories, people, budgets and settlements, deleted ones included. It is the format to keep on hand, and the only one that can be imported back.',
     jsonButton: 'The whole vault (JSON)',
     unencryptedTitle: 'These files are not encrypted',
     unencryptedBody1:
@@ -816,7 +815,7 @@ export const en: Dictionary = {
     unencryptedBody2:
       'The vault’s key is not inside any of these files. For that there is “{{label}}”, protected by a passphrase.',
     noSharingNote:
-      'This build is missing the module for sharing files: exports will go to the clipboard.',
+      'This build is missing the module for sharing files. The JSON will go to the clipboard; the spreadsheet will not, because it is not text — for that you need an updated app.',
   },
   budget: {
     title: 'Budget',

@@ -54,23 +54,33 @@ pena verificare, e un totale sbagliato non si nota guardando un grafico.
   gratis.
 - Nessuna libreria di charting: le barre sono `View`, il QR è l'unico uso di `react-native-svg`.
 
-## Export e backup (Step 9)
+## Export e backup (Step 9, formato tabellare rifatto allo Step 61)
 
 Due schermate distinte, raggiungibili dalle impostazioni, che fanno cose diverse e non vanno
 confuse:
 
-| Schermata               | Cosa produce                                     | Cifrato?                     |
-| ----------------------- | ------------------------------------------------ | ---------------------------- |
-| **Esporta i dati**      | CSV delle spese, CSV dei pareggi, JSON integrale | **No.** Escono in chiaro     |
-| **Backup della chiave** | Un blob `JTBK1.…` con dentro solo la chiave      | Sì, con la passphrase scelta |
+| Schermata               | Cosa produce                                | Cifrato?                     |
+| ----------------------- | ------------------------------------------- | ---------------------------- |
+| **Esporta i dati**      | Un `.xlsx` a più fogli, un JSON integrale   | **No.** Escono in chiaro     |
+| **Backup della chiave** | Un blob `JTBK1.…` con dentro solo la chiave | Sì, con la passphrase scelta |
 
-- **Il CSV si legge, il JSON si conserva.** Il CSV perde struttura (le quote diventano colonne, i
-  budget non ci sono) e non è reimportabile; il JSON è integrale, tombstone compresi.
-- **CSV in RFC 4180 puro** (`,` separatore, `.` decimale) più una colonna `importo_centesimi`
-  intera: è quella l'autorevole, e nessun locale può fraintenderla. In testa c'è il BOM UTF-8, senza
-  il quale Excel su Windows sbaglia le accentate.
-- **Le note sono disinnescate contro la CSV injection**: un `=` iniziale verrebbe valutato come
-  formula da Excel e da Fogli Google.
+- **Il foglio di calcolo si legge, il JSON si conserva.** Il `.xlsx` perde struttura (le quote
+  diventano colonne) e non è reimportabile; il JSON è integrale, tombstone compresi.
+- **Il `.xlsx` è scritto a mano, a zero dipendenze** (`packages/core/src/export/xlsx/`): è uno ZIP
+  di XML con le voci **non compresse**, il che evita di dover impacchettare un deflate. Pesa circa
+  **980 byte a riga** — misurato, non stimato.
+- **Le celle sono tipate**, ed è tutto il punto: le date sono seriali Excel, gli importi numeri col
+  formato `#,##0.00`. Non c'è nessuna convenzione di locale da indovinare, quindi sono sparite le
+  tre difese che il CSV richiedeva: il BOM UTF-8, la colonna `importo_centesimi` di scorta e il
+  disinnesco delle formule. Il perché è nell'[ADR 0004](../adr/0004-l-xlsx-al-posto-del-csv.md), che
+  supera la [0003](../adr/0003-formati-di-export.md).
+- **Le formule NON si disinnescano, ed è deliberato.** Una cella `t="inlineStr"` non è mai una
+  formula per Excel: anteporle un apice, come faceva il CSV, corromperebbe un testo che una persona
+  ha scritto. C'è un test che afferma che una nota `=SOMMA(A1:A9)` esce intatta.
+- **Le spese cancellate restano fuori** dal `.xlsx`, così selezionare la colonna «importo» dà una
+  somma che corrisponde a ciò che l'app mostra. Nel JSON invece ci sono tutte.
+- **I timestamp restano testo, le date no.** `createdAt` e compagni sono UTC ed Excel non ha fuso:
+  convertirli sposterebbe in silenzio il giorno di una spesa creata dopo le 22:00.
 - **Nessun file di export contiene la chiave del vault** — c'è un test che lo verifica.
 - **La passphrase del backup è l'unico punto del progetto in cui la sicurezza dipende da una scelta
   umana.** Il campo dà un giudizio (minimo 12 caratteri, si consigliano quattro parole slegate), ma

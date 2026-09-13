@@ -59,6 +59,20 @@ export interface TextFile {
   dialogTitle: string;
 }
 
+/**
+ * Un file di byte: il `.xlsx`, che è uno ZIP.
+ *
+ * Uguale a `TextFile` tranne il contenuto, e **non c'è nessuna conversione in base64** di
+ * mezzo: `File.write()` accetta `string | Uint8Array`, quindi i byte vanno dove devono
+ * andare così come sono.
+ */
+export interface BinaryFile {
+  name: string;
+  content: Uint8Array;
+  mimeType: string;
+  dialogTitle: string;
+}
+
 export type ShareOutcome =
   /** Il foglio di condivisione è stato aperto. Se l'utente poi annulli, non lo sappiamo. */
   | { status: 'shared' }
@@ -75,6 +89,26 @@ export type ShareOutcome =
  * cancella — e sono dati in chiaro.
  */
 export async function shareTextFile(file: TextFile): Promise<ShareOutcome> {
+  return shareFile(file.name, file.content, file.mimeType, file.dialogTitle);
+}
+
+/**
+ * Come `shareTextFile`, ma per i byte di un `.xlsx`.
+ *
+ * **Non ha il ripiego sugli appunti**, e non è una dimenticanza: gli appunti sono di testo,
+ * e un file binario incollato da qualche parte sarebbe spazzatura che *sembra* un export.
+ * Chi chiama deve dire che non si può fare, non fingere che si sia fatto.
+ */
+export async function shareBinaryFile(file: BinaryFile): Promise<ShareOutcome> {
+  return shareFile(file.name, file.content, file.mimeType, file.dialogTitle);
+}
+
+async function shareFile(
+  name: string,
+  content: string | Uint8Array,
+  mimeType: string,
+  dialogTitle: string,
+): Promise<ShareOutcome> {
   const fs = loadFileSystemModule();
   const sharing = loadSharingModule();
   if (fs === null || sharing === null) return { status: 'unavailable' };
@@ -82,18 +116,15 @@ export async function shareTextFile(file: TextFile): Promise<ShareOutcome> {
   try {
     if (!(await sharing.isAvailableAsync())) return { status: 'unavailable' };
 
-    const target = new fs.File(fs.Paths.cache, file.name);
+    const target = new fs.File(fs.Paths.cache, name);
     // `overwrite`: un export dello stesso giorno rimpiazza il precedente invece di fallire.
     target.create({ overwrite: true, intermediates: true });
-    target.write(file.content);
+    target.write(content);
 
-    await sharing.shareAsync(target.uri, {
-      mimeType: file.mimeType,
-      dialogTitle: file.dialogTitle,
-    });
+    await sharing.shareAsync(target.uri, { mimeType, dialogTitle });
     return { status: 'shared' };
   } catch (error) {
-    markError(`condivisione di ${file.name}`, error);
+    markError(`condivisione di ${name}`, error);
     return { status: 'failed', error };
   }
 }

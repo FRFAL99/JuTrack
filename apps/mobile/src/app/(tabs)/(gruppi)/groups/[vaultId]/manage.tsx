@@ -252,7 +252,7 @@ function ManageGroup({ current }: { current: GroupRecord }) {
         <Rule inset={spacing.lg} color={colors.divider} />
         <ListRow
           label={t('manage.group.export')}
-          value="CSV · JSON"
+          value="Excel · JSON"
           onPress={() => router.push('/export')}
         />
 

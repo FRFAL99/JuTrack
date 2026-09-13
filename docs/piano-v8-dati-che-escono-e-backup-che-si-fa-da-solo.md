@@ -226,9 +226,11 @@ denaro (un `numFmt` custom `#,##0.00`) e intestazione in grassetto. Riga 1 conge
 ### Il punto che non va dimenticato
 
 **Il file esce grande, e nessuna schermata lo dirà.** Senza compressione una riga di spesa in XML
-`inlineStr` pesa circa 500-700 byte contro i ~150 della stessa riga in CSV: qualche migliaio di spese
-fa qualche megabyte. Si condivide lo stesso, ed è reversibile senza cambiare il formato del file —
+`inlineStr` pesa molto più dei ~150 byte della stessa riga in CSV: qualche migliaio di spese fa
+qualche megabyte. Si condivide lo stesso, ed è reversibile senza cambiare il formato del file —
 basta far passare le voci da STORE a DEFLATE — ma **va misurato in questo step**, non scoperto dopo.
+_(Misurato: **~980 byte a riga**, cioè 0,9 MB per mille spese e 4,6 MB per cinquemila. La stima a
+occhio di questo piano diceva 500-700 e sbagliava di metà.)_
 E va detto in che senso non c'entra il relay: `MAX_BLOB_BYTES` è 1 MiB (`services/relay/src/protocol.ts`),
 ma il `.xlsx` non passa mai di lì. I due numeri sono vicini abbastanza da confondere chi rileggerà.
 

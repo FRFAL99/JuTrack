@@ -20,6 +20,7 @@ import {
   importBackup,
   open,
   seal,
+  toXlsxExport,
   VaultStore,
   type ScryptParams,
 } from './index';
@@ -97,6 +98,28 @@ describe('senza i global assenti su Hermes', () => {
     const vaultKey = generateVaultKey(random);
     const backup = await exportBackup(vaultKey, 'passphrase con accenti: perché', random, fast);
     expect(await importBackup(backup, 'passphrase con accenti: perché')).toEqual(vaultKey);
+  });
+
+  it('produce un file .xlsx', () => {
+    // Il generatore di `.xlsx` codifica in UTF-8 ogni parte XML prima di impacchettarla:
+    // è esattamente il percorso in cui `TextEncoder` manderebbe l'app in crash, ed è il
+    // motivo per cui passa da `utf8ToBytes`. Con emoji e accenti, perché le coppie
+    // surrogate sono il caso in cui una codifica scritta a mano sbaglia per prima.
+    const store = new VaultStore(new Y.Doc(), { random });
+    const me = 'membro-a';
+    store.addExpense({
+      amountCents: 1230,
+      date: '2026-08-01',
+      note: 'caffè ☕ e un po’ di pane',
+      store: 'Caffè 🛒',
+      paidBy: me,
+      split: buildSplit('single', 1230, [me]),
+    });
+
+    const file = toXlsxExport(store.snapshot());
+    expect(file[0]).toBe(0x50); // 'P'
+    expect(file[1]).toBe(0x4b); // 'K'
+    expect(file.length).toBeGreaterThan(500);
   });
 
   it('due documenti convergono', () => {

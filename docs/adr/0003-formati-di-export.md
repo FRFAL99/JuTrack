@@ -1,7 +1,11 @@
 # ADR 0003 — Due formati di export, e un CSV che non segue la convenzione italiana
 
 - **Data:** 2026-08-01
-- **Stato:** Accettata
+- **Stato:** **Superata da [0004](0004-l-xlsx-al-posto-del-csv.md)** il 13 settembre 2026, nella
+  parte sul formato tabellare. Il CSV è uscito dal repo e al suo posto c'è un `.xlsx`; la struttura
+  decisa qui — **due formati, due scopi, e la schermata lo dice** — resta in vigore, e così tutto
+  ciò che riguarda il JSON. Questo documento non si modifica: racconta perché il CSV era fatto così,
+  ed è il contesto senza il quale la 0004 non si capisce.
 
 ## Contesto
 

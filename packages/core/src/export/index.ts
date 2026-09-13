@@ -1,13 +1,13 @@
 export {
   centsToDecimal,
-  escapeCsvField,
-  expensesToCsv,
-  neutralizeFormula,
-  settlementsToCsv,
   shareColumnLabels,
-  UTF8_BOM,
-  type CsvOptions,
-} from './csv';
+  toXlsxExport,
+  vaultSheets,
+  type XlsxOptions,
+} from './vault-xlsx';
+
+export { buildWorkbook } from './xlsx/workbook';
+export { type Cell, type Sheet } from './xlsx/parts';
 
 export {
   buildVaultExport,
