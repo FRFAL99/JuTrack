@@ -28,6 +28,7 @@ npm run prova                                          # la checklist end-to-end
 npm run peer -- crea "Prova"                           # un secondo dispositivo, interattivo
 npm run icone                                          # rigenera i sette PNG dal vettoriale
 npm run icone -- --verifica                            # …o controlla soltanto che combacino
+npm run doc:verifica                                   # link e ancore dei documenti
 ```
 
 Sono esattamente i passaggi della CI, nello stesso ordine: `.github/workflows/ci.yml` gira a ogni
@@ -72,7 +73,8 @@ I sette «passi» di `docs/visualdesign.md` hanno numerazione propria e non entr
 5. `docs/STATO.md`: **solo se cambia dove siamo**. Ciò che è diventato fatto **si cancella** da
    «cosa manca» — la cronaca è già nel devlog. STATO resta sotto le 200 righe.
 6. Una trappola nuova → `docs/conoscenza/trappole.md`, non nel devlog soltanto
-7. Commit `Step N: <frase italiana in minuscolo>`, e push
+7. `npm run doc:verifica`, se hai spostato o rinominato un documento
+8. Commit `Step N: <frase italiana in minuscolo>`, e push
 
 ## Dove si scrive cosa
 

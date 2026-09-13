@@ -13,12 +13,13 @@
     "node": ">=20"
   },
   "scripts": {
-    "typecheck": "npm run typecheck --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present && tsc -p scripts --noEmit",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "test": "npm run test --workspaces --if-present",
+    "doc:verifica": "tsx scripts/verifica-doc.mts",
     "peer": "npm run peer --workspace @jutrack/mobile --",
     "prova": "npm run prova --workspace @jutrack/mobile",
     "icone": "npm run icone --workspace @jutrack/mobile --"

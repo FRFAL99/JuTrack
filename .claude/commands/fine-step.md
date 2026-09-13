@@ -47,7 +47,16 @@ devlog. STATO resta sotto le 200 righe; se le supera, qualcosa andava cancellato
 Se lo step ha fatto perdere tempo per una ragione che si può riscoprire, la riga va in
 `docs/conoscenza/trappole.md`, non solo nel devlog.
 
-## 7. Formattazione e commit
+## 7. I link, se hai mosso un documento
+
+```bash
+npm run doc:verifica
+```
+
+Un'ancora rotta in markdown non fa rumore: non rompe la CI e non dà un 404, porta solo in cima alla
+pagina sbagliata.
+
+## 8. Formattazione e commit
 
 ```bash
 npm run format && npm run format:check

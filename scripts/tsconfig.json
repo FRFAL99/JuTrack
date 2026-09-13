@@ -1,0 +1,13 @@
+{
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    // Script eseguiti da `tsx`, non compilati: niente emissione, e i global di Node
+    // servono tutti (fs, path, child_process, process).
+    "noEmit": true,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "types": ["node"]
+  },
+  "include": ["**/*.mts"]
+}
