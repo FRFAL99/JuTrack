@@ -70,7 +70,7 @@ Conseguenze operative:
 ```bash
 cd apps/mobile
 npx expo-updates fingerprint:generate --platform android | python3 -c "import json,sys; print(json.load(sys.stdin)['hash'])"
-npx eas-cli build:view <id-della-build-installata> | grep Fingerprint
+npx eas-cli build:list --platform android --limit 4   # Fingerprint e Commit di ognuna
 ```
 
 ## Cosa si può mandare via etere, e cosa no
@@ -90,10 +90,26 @@ Vuoto = il bundle non può riferirsi a niente che non ci sia già.
 | Data       | Canale       | Impronta    | Cosa portava                                                                                                            |
 | ---------- | ------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------- |
 | 2026-09-13 | `production` | `d862b56d…` | Step 49–57, dal commit `6dfbbeb`. Il **primo** della storia del progetto: gruppo `dcf68b3d-30a1-4214-b85d-e91f76024c2d` |
+| 2026-09-13 | `production` | `d862b56d…` | Step 58–60 (Piano v7 intero), dal commit `26fb052`: gruppo `bd3db527-395b-4522-94c1-e8c67ccd067a`                       |
 
 Si rilegge con `npx eas-cli channel:view production` e `npx eas-cli update:list`. Per tornare
 indietro: `npx eas-cli update:rollback`, oppure ripubblicare dal commit precedente — un aggiornamento
 via etere si disfa in un minuto, ed è la ragione per cui è meno rischioso di una build.
+
+**Due cose imparate pubblicando il secondo.** `eas update` in `--non-interactive` pretende anche
+`--environment`, che il primo giro — fatto in interattivo — non aveva chiesto:
+
+```bash
+cd apps/mobile
+npx eas-cli update --channel production --platform android --environment production \
+  --message "…" --non-interactive
+```
+
+E **`eas build:view` vuole lo UUID intero**, non le otto cifre con cui una build si nomina a voce:
+`807161bd` viene rifiutato con «Invalid UUID buildId». Per leggere l'impronta di una build installata
+conviene `npx eas-cli build:list --platform android --limit 4`, che le stampa tutte con `Fingerprint`
+e `Commit` accanto — ed è anche il modo di verificare l'impronta **contro la fonte vera** invece che
+contro il numero scritto in un documento.
 
 ## Il numero che si legge in fondo a «Tu»
 
