@@ -20,7 +20,6 @@ export {
 
 export {
   parseVaultExport,
-  totalKept,
   type ImportCounts,
   type ImportKind,
   type ImportReport,

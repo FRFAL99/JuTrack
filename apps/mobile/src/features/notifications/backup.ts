@@ -33,6 +33,7 @@
  * «non hai mai salvato», che sarebbe falso in uno dei due. L'errore va in questa direzione
  * di proposito: un avviso di troppo fa controllare, uno mancante fa perdere dei dati.
  */
+import { plural, t } from '@/i18n/translate';
 import type { KeyValueStore } from '@/platform/app-meta';
 import type { AlertContent } from './content';
 
@@ -233,9 +234,12 @@ function settle(before: BackupMarks, after: BackupMarks, alert: BackupAlert | nu
  */
 export function backupContent(alert: BackupAlert, groupName: string): AlertContent {
   return {
-    title: 'Chiave non salvata',
-    body:
-      `«${groupName}» ha ${alert.expenseCount} spese e su questo telefono non risulta un ` +
-      'backup della sua chiave. Senza, se perdi il telefono non tornano: nessuno può recuperarle.',
+    title: t('notifications.backup.title'),
+    body: t('notifications.backup.body', {
+      name: groupName,
+      // Il conteggio arriva già tradotto: `expenseCount` è la stessa chiave che scrive
+      // «3 spese» in mezza app, e passa da `plural` come tutti gli altri conteggi.
+      count: plural('groups.expenseCount', alert.expenseCount),
+    }),
   };
 }

@@ -4,7 +4,6 @@ import {
   authToken,
   deriveVaultKeys,
   generateVaultKey,
-  secretsMatch,
   VAULT_KEY_BYTES,
 } from './keys';
 import { fixedRandom, shortRandom, testRandom } from './testing';
@@ -73,29 +72,6 @@ describe('authToken', () => {
     const token = authToken(keys);
     const contentHex = Buffer.from(keys.contentKey).toString('hex');
     expect(token).not.toContain(contentHex);
-  });
-});
-
-describe('secretsMatch', () => {
-  it('riconosce due sequenze identiche', () => {
-    expect(secretsMatch(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2, 3]))).toBe(true);
-  });
-
-  it('rifiuta sequenze diverse', () => {
-    expect(secretsMatch(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2, 4]))).toBe(false);
-  });
-
-  it('rifiuta sequenze di lunghezza diversa', () => {
-    expect(secretsMatch(new Uint8Array([1, 2]), new Uint8Array([1, 2, 3]))).toBe(false);
-  });
-
-  it('rifiuta anche quando differisce solo l ultimo byte', () => {
-    // Un confronto con uscita anticipata rivelerebbe via timing quanti byte
-    // iniziali sono corretti, permettendo di ricostruire il token un byte alla volta.
-    const a = new Uint8Array(32).fill(9);
-    const b = new Uint8Array(32).fill(9);
-    b[31] = 8;
-    expect(secretsMatch(a, b)).toBe(false);
   });
 });
 

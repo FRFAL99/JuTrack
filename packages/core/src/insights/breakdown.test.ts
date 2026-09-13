@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { averagePerMonth, totalCents, totalsByCategory, totalsByMonth } from './breakdown';
+import { totalCents, totalsByCategory, totalsByMonth } from './breakdown';
 import type { Expense } from '../model/types';
 
 function expense(
@@ -106,23 +106,5 @@ describe('totalsByMonth', () => {
 
   it('restituisce vuoto senza spese e senza intervallo', () => {
     expect(totalsByMonth([])).toEqual([]);
-  });
-});
-
-describe('averagePerMonth', () => {
-  it('divide sul numero di mesi osservati, vuoti inclusi', () => {
-    expect(averagePerMonth(totalsByMonth(expenses))).toBe(1833);
-  });
-
-  it('resta un intero di centesimi', () => {
-    const media = averagePerMonth([
-      { month: '2026-01', totalCents: 1000, count: 1 },
-      { month: '2026-02', totalCents: 1001, count: 1 },
-    ]);
-    expect(Number.isInteger(media)).toBe(true);
-  });
-
-  it('vale zero senza mesi', () => {
-    expect(averagePerMonth([])).toBe(0);
   });
 });

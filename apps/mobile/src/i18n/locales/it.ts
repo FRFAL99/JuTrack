@@ -30,8 +30,22 @@ export const it = {
   common: {
     close: 'Chiudi',
     cancel: 'Annulla',
+    /** Torna indietro dentro uno stack, dove «Chiudi» direbbe la cosa sbagliata. */
+    back: '‹ Indietro',
     /** Il nome di un membro che il documento non conosce: non dovrebbe capitare, ma capita. */
     someone: 'qualcuno',
+  },
+  /**
+   * I guasti che fermano l'app prima che esista una schermata.
+   *
+   * Erano le uniche tre frasi di `_layout.tsx` scritte in italiano fisso: chi usa l'app in
+   * inglese le incontrava **al posto peggiore**, cioè quando qualcosa era già andato storto
+   * e la scritta era l'unica cosa rimasta a schermo.
+   */
+  fatal: {
+    appData: 'Impossibile aprire i dati locali',
+    groups: 'Impossibile aprire i gruppi',
+    vault: 'Impossibile aprire questo gruppo',
   },
   date: {
     today: 'Oggi',
@@ -334,6 +348,63 @@ export const it = {
     previousMonth: 'Mese precedente',
     nextMonth: 'Mese successivo',
   },
+  /**
+   * Quello che c'è scritto nella tendina delle notifiche, e i nomi dei canali Android.
+   *
+   * Erano l'ultimo blocco di italiano fisso rimasto (Step 60), ed è il posto in cui pesava
+   * di più: una notifica si legge **fuori** dall'app, ore dopo, e chi ha il telefono in
+   * inglese non ha nessun contesto attorno che spieghi perché quella frase è in un'altra
+   * lingua. I nomi dei canali per giunta finiscono nelle impostazioni di sistema, dove
+   * restano anche quando l'app è chiusa.
+   */
+  notifications: {
+    channels: {
+      reminder: 'Promemoria spese',
+      budget: 'Budget del mese',
+      sync: 'Sincronizzazione',
+      backup: 'Backup della chiave',
+    },
+    reminder: {
+      firstTitle: 'La prima spesa',
+      firstBody:
+        'Hai acceso il promemoria ma non hai ancora registrato niente. Bastano dieci secondi.',
+      title: 'Spese da registrare?',
+      body: 'Non registri una spesa da {{days}} giorni. Se ne hai fatte, è il momento buono.',
+    },
+    budget: {
+      manyOver: '{{count}} budget superati',
+      manyNear: '{{count}} budget da guardare',
+      manyBody: '{{names}}. Li trovi nei Grafici.',
+      /** «Casa, Spesa e Svago»: la congiunzione finale di un elenco breve. */
+      joinLast: '{{head}} e {{last}}',
+      /** Da quattro in su l'elenco si accorcia: «Casa, Spesa e altre 2». */
+      joinMore: '{{head}} e altre {{count}}',
+      /** Non capita: chi chiama non notifica su un elenco vuoto. Ma il testo non può mancare. */
+      noneTitle: 'Budget',
+      noneBody: 'Niente da segnalare.',
+      overTitle: 'Budget superato',
+      overBody: '{{name}}: {{spent}} su {{limit}} questo mese, {{extra}} in più.',
+      nearTitle: 'Budget quasi finito',
+      nearBody: '{{name}}: {{spent}} su {{limit}} questo mese. Restano {{left}}.',
+    },
+    backup: {
+      title: 'Chiave non salvata',
+      body: '«{{name}}» ha {{count}} e su questo telefono non risulta un backup della sua chiave. Senza, se perdi il telefono non tornano: nessuno può recuperarle.',
+    },
+    sync: {
+      blockedTitle: 'Sincronizzazione fermata',
+      blockedBody:
+        'Il relay rifiuta la chiave di «{{name}}»: le spese non partono più. Di solito vuol dire che il gruppo è stato rigenerato, e serve un invito nuovo.',
+      title: 'Spese non sincronizzate',
+      offlineBody:
+        'Nessuna connessione {{lasting}}: quello che registri in «{{name}}» resta su questo telefono.',
+      unreachableBody:
+        'Il relay non risponde {{lasting}}: «{{name}}» non è allineato con gli altri telefoni.',
+      /** Solo giorni: l'avviso esce a ventiquattr'ore compiute, e «ore» non capita mai. */
+      lastingDay: 'da un giorno',
+      lastingDays: 'da {{count}} giorni',
+    },
+  },
   stats: {
     filters: {
       periodA11y: 'Periodo: {{label}}. Tocca per cambiare i filtri',
@@ -412,6 +483,18 @@ export const it = {
     pointA11y: '{{label}}: {{amount}}',
     treemapTapHint: 'Tocca un riquadro per leggerne nome e importo.',
     topListA11y: '{{name}}: {{amount}}, {{count}}',
+    /**
+     * La coda della ciambella, raccolta in una fetta sola.
+     *
+     * Dice **quante** voci contiene e non solo «Altro»: la differenza fra una coda lunga e
+     * una corta è essa stessa un'informazione. Da due in su per costruzione — `topSlices`
+     * raccoglie solo quando avanza più di una voce — ma il plurale passa comunque da
+     * `plural`, che è la regola del progetto.
+     */
+    restSlice: { one: 'Altra {{count}} voce', other: 'Altre {{count}} voci' },
+    /** La ciambella letta ad alta voce: cosa rappresenta, quanto vale, in quante parti. */
+    donutA11y: '{{label}}: {{amount}}, ripartito in {{count}}',
+    donutSliceCount: { one: '{{count}} voce', other: '{{count}} voci' },
     heatmap: {
       dayA11y: '{{day}}: {{amount}}',
       noExpense: 'nessuna spesa',
@@ -495,6 +578,11 @@ export const it = {
       note: 'Non si può togliere la chiave a chi ce l’ha: rigenerare il gruppo la cambia per tutti. Spese e saldi vengono con te, e chi vuoi tenere lo reinviti subito dopo.',
       action: 'Rigenera con una chiave nuova',
       busy: 'Rigenerazione…',
+      confirmTitle: 'Rigenerare «{{name}}»?',
+      confirmBody:
+        'Il gruppo riparte con una chiave nuova, portandosi dietro spese, categorie e saldi. Da questo telefono sparisce quello vecchio, e chi vuoi tenere va reinvitato: finché non accetta, resta fuori. Chi era nel gruppo continua a vedere ciò che aveva già; quello che smette è il flusso di aggiornamenti.',
+      confirm: 'Rigenera',
+      failed: 'Rigenerazione fallita',
     },
     leave: {
       title: 'Esci dal gruppo',
@@ -504,6 +592,23 @@ export const it = {
       wipeRelayOff: 'Lasciandola, scade da sola dopo trenta giorni.',
       action: 'Esci dal gruppo',
       busy: 'Uscita…',
+      /**
+       * Il corpo dell'avviso è composto di tre pezzi, non di una frase sola: due dipendono
+       * da com'è messo il telefono in quel momento — è il tuo unico gruppo? la copia sul
+       * relay la cancelli? — e una frase unica costringerebbe a scriverne quattro varianti
+       * complete, che è il modo in cui una di loro resta indietro a ogni ritocco.
+       */
+      confirmTitle: 'Uscire da «{{name}}»?',
+      confirmBody:
+        'Le spese di questo gruppo spariscono da questo telefono. Senza un backup della chiave non tornano più: non esiste un reset lato server.',
+      confirmOnly:
+        'È il tuo unico gruppo: resterai senza, e potrai crearne uno o entrare con un invito.',
+      confirmOthers: 'Chi altro ne fa parte non se ne accorge e continua a usarlo.',
+      confirmWipe:
+        'La copia sul relay verrà cancellata: chi resta non riceverà più aggiornamenti, ma tiene ciò che ha già scaricato.',
+      confirmKeep: 'La copia sul relay resta e scade da sola dopo trenta giorni.',
+      confirm: 'Esci',
+      failed: 'Uscita fallita',
     },
   },
   dashboard: {

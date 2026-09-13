@@ -29,6 +29,7 @@ import {
   normalizeVocabulary,
   vocabularyKeyOf,
 } from '../insights/naming';
+import { assertKnownCurrency } from './currency';
 import { assertIsoDate } from './dates';
 import { newId, vocabularyKey } from './ids';
 import { assertCents, splitByWeights, splitEvenly, type Cents } from './money';
@@ -199,6 +200,10 @@ export class VaultStore {
     // una data malformata non si manifesta qui, sparisce dai totali mensili molto più tardi.
     assertIsoDate(input.date);
     assertSplitBalances(input.split, input.amountCents);
+    // La valuta arriva dal profilo, che è un valore riletto da disco: se un giorno ci
+    // finisse dentro un codice che nessun selettore propone, la spesa diventerebbe
+    // inguaribile — nessuna schermata saprebbe più riportarla su una valuta nota.
+    if (input.currency !== undefined) assertKnownCurrency(input.currency);
 
     const id = newId(this.random);
     const ts = this.timestamp();
@@ -242,7 +247,10 @@ export class VaultStore {
 
     const fields: Record<string, unknown> = { updatedAt: this.timestamp() };
     if (patch.amountCents !== undefined) fields.amountCents = patch.amountCents;
-    if (patch.currency !== undefined) fields.currency = patch.currency;
+    if (patch.currency !== undefined) {
+      assertKnownCurrency(patch.currency);
+      fields.currency = patch.currency;
+    }
     if (patch.date !== undefined) {
       assertIsoDate(patch.date);
       fields.date = patch.date;

@@ -121,6 +121,7 @@ export async function refreshWidgetsInBackground(): Promise<RefreshOutcome> {
     const doc = new Y.Doc();
     persistence = new SqliteYPersistence(db, doc, {
       tableName: updatesTableName(group.vaultId),
+      onError: (error) => markError('persistenza durante il refresh dei widget', error),
     });
     await persistence.load();
 

@@ -68,3 +68,18 @@ export function currencySymbol(code: string): string {
 export function isKnownCurrency(code: string): boolean {
   return CURRENCIES.some((currency) => currency.code === code);
 }
+
+/**
+ * La stessa domanda, in scrittura: una valuta ignota non entra nel documento.
+ *
+ * `isKnownCurrency` è rimasta per un ciclo una guardia **scritta e mai collegata** —
+ * esportata dal barrel e chiamata solo dal proprio test. La differenza fra le due è il
+ * momento: in lettura un codice sconosciuto si mostra com'è, perché il dato c'è già ed
+ * è di qualcun altro; in scrittura è un errore di programmazione, e lasciarlo passare
+ * mette in un gruppo una spesa che nessun selettore potrà più far tornare a posto.
+ */
+export function assertKnownCurrency(code: string): void {
+  if (!isKnownCurrency(code)) {
+    throw new Error(`valuta sconosciuta: ${code}`);
+  }
+}

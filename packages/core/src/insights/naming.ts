@@ -11,8 +11,17 @@
  */
 import type { Expense, VocabularyKind } from '../model/types';
 
-/** Spazi ai margini tolti, spazi interni collassati. È la grafia che si salva. */
-function tidy(value: string): string {
+/**
+ * Spazi ai margini tolti, spazi interni collassati. È la grafia che si salva.
+ *
+ * **Esportata per la stessa ragione di `mostUsedSpelling`** (vedi il commento più sotto):
+ * questa riga era riscritta a mano in quattro punti — qui, in `insights/stores.ts`, e nei
+ * due `normalize*Name` del registro dell'app. Quattro copie di una regola che decide quando
+ * due parole sono la stessa parola sono quattro occasioni di farla divergere in silenzio: il
+ * giorno in cui una delle copie imparasse a togliere anche gli spazi unificatori, le altre
+ * tre continuerebbero a contare due negozi dove ce n'è uno.
+ */
+export function tidy(value: string): string {
   return value.trim().replace(/\s+/g, ' ');
 }
 

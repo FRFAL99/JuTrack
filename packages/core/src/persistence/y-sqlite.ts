@@ -27,6 +27,20 @@ export interface PersistenceOptions {
   compactAfter?: number;
   /** Nome della tabella. Consente più documenti nello stesso database. */
   tableName?: string;
+  /**
+   * Dove finisce una scrittura fallita.
+   *
+   * Qui c'era un `console.error`, ed era l'unico punto in cui il core andava a cercare un
+   * raccoglitore globale invece di riceverlo — contro la premessa dichiarata di questo
+   * pacchetto, che non sa su cosa sta girando. La conseguenza non era di stile: **una
+   * scrittura di persistenza fallita non emergeva da nessuna parte nell'app**, perché in una
+   * build release il `console` di Hermes non lo legge nessuno.
+   *
+   * Resta facoltativo. Senza, l'errore viene inghiottito come prima: la catena delle
+   * scritture non si deve fermare per un guasto transitorio, e chi non passa un `onError`
+   * ha scelto di non guardare, non di far cadere l'app.
+   */
+  onError?: (error: unknown) => void;
 }
 
 export class SqliteYPersistence {
@@ -34,6 +48,7 @@ export class SqliteYPersistence {
   private readonly doc: Y.Doc;
   private readonly table: string;
   private readonly compactAfter: number;
+  private readonly onError: (error: unknown) => void;
 
   private pendingUpdates = 0;
   private destroyed = false;
@@ -58,6 +73,7 @@ export class SqliteYPersistence {
     this.doc = doc;
     this.table = options.tableName ?? 'y_updates';
     this.compactAfter = options.compactAfter ?? 200;
+    this.onError = options.onError ?? (() => {});
   }
 
   /**
@@ -151,8 +167,9 @@ export class SqliteYPersistence {
     this.writeQueue = this.writeQueue.then(task).catch((error: unknown) => {
       // Una scrittura fallita non deve interrompere la catena: le successive devono
       // comunque essere tentate, altrimenti un errore transitorio bloccherebbe per
-      // sempre la persistenza.
-      console.error('[SqliteYPersistence] scrittura fallita:', error);
+      // sempre la persistenza. Chi ha passato un `onError` lo viene a sapere; chi no,
+      // ha il comportamento di prima.
+      this.onError(error);
     });
   }
 

@@ -1,13 +1,6 @@
-export {
-  computeBalances,
-  netFor,
-  simplifyDebts,
-  type MemberBalance,
-  type Transfer,
-} from './balance';
+export { computeBalances, simplifyDebts, type MemberBalance, type Transfer } from './balance';
 
 export {
-  averagePerMonth,
   totalCents,
   totalsByCategory,
   totalsByMonth,
@@ -31,12 +24,13 @@ export {
   normalizeVocabulary,
   storeKey,
   tagKey,
+  tidy,
   vocabularyKeyOf,
 } from './naming';
 
 export { daysInMonth, monthBounds, monthOf, monthsBetween, shiftMonth } from './period';
 
-export { addDays, dayOfWeek, daysBetween, daysOfMonth, weekStart } from './calendar';
+export { addDays, dayOfWeek, daysBetween, daysOfMonth } from './calendar';
 
 export {
   amountFor,

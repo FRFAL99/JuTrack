@@ -104,6 +104,36 @@ describe('VaultStore — spese', () => {
     ).toThrow(/non può essere negativo/);
   });
 
+  // `isKnownCurrency` è stata per un ciclo una guardia scritta e mai collegata: esportata
+  // dal barrel, chiamata solo dal proprio test. Questo è il test che la tiene attaccata.
+  it('rifiuta una valuta che nessun selettore propone', () => {
+    const { store, a } = makeCouple();
+    expect(() =>
+      store.addExpense({
+        amountCents: 1000,
+        date: '2026-08-01',
+        currency: 'XYZ',
+        paidBy: a,
+        split: { mode: 'single', shares: { [a]: 1000 } },
+      }),
+    ).toThrow(/valuta sconosciuta/);
+  });
+
+  it('rifiuta una valuta sconosciuta anche in modifica', () => {
+    const { store, a } = makeCouple();
+    const created = store.addExpense({
+      amountCents: 1000,
+      date: '2026-08-01',
+      paidBy: a,
+      split: { mode: 'single', shares: { [a]: 1000 } },
+    });
+    expect(() => store.updateExpense(created.id, { currency: 'XYZ' })).toThrow(
+      /valuta sconosciuta/,
+    );
+    // La spesa resta con quella che aveva: una patch rifiutata non deve lasciare a metà.
+    expect(store.getExpense(created.id)?.currency).toBe('EUR');
+  });
+
   it('rifiuta una data malformata', () => {
     const { store, a } = makeCouple();
     expect(() =>

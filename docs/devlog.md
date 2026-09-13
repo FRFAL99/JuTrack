@@ -2,6 +2,155 @@
 
 Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più recente in alto).
 
+> **Buco noto:** gli Step 58 e 59 non hanno una voce qui. Sono entrati il 13 settembre (commit
+> `07df3f9` e `e749749`) e sono raccontati per esteso in [STATO.md](STATO.md); il devlog è stato
+> saltato in quelle due sessioni. Non ricostruiti a posteriori di proposito: una voce di devlog
+> scritta rileggendo il diff dice quello che il codice fa, non quello che si stava pensando mentre
+> lo si scriveva, ed è la seconda cosa che questo file esiste per conservare.
+
+---
+
+## 2026-09-13 — Step 60: le correzioni dal check, e una guardia che non si poteva mettere
+
+Il Piano v7 si chiude con lo step che non aggiunge niente. Otto voci uscite da una lettura del
+codice, in ordine di danno. Sette entrate, una no — ed è quella che ha insegnato di più.
+
+### 1 · L'italiano era rimasto dove pesava di più
+
+Chi usa l'app in inglese trovava l'italiano **sui due dialoghi più pericolosi che esistano**: «esci
+dal gruppo» e «rigenera», `'Annulla'` compreso. Lo Step 56 aveva tradotto quella schermata — è lì che
+è nato `manage.*` — e aveva saltato gli `Alert`, che stanno in una funzione e non nel JSX.
+
+Insieme a loro: i tre titoli di guasto fatale di `_layout.tsx`, la coda della ciambella («Altre 7
+voci»), l'etichetta della ciambella letta ad alta voce, **tutti i testi delle notifiche** e i nomi
+dei canali Android.
+
+Le notifiche erano il posto peggiore in cui lasciarlo, ed è il motivo per cui sono state prese
+tutte e non solo le righe elencate nel piano: una notifica si legge **fuori** dall'app, ore dopo,
+senza niente attorno che spieghi perché quella frase è in un'altra lingua. I nomi dei canali per
+giunta finiscono nelle impostazioni di sistema, dove restano anche a app chiusa.
+
+Tre cose nate scrivendo:
+
+1. **Il corpo dell'avviso di «esci» si compone di tre pezzi**, non è una frase sola. Due dipendono
+   da com'è messo il telefono in quel momento — è il tuo unico gruppo? la copia sul relay la
+   cancelli? — e una frase unica avrebbe voluto dire scriverne **quattro** varianti complete, in due
+   lingue, da tenere allineate a ogni ritocco. È il modo in cui una delle quattro resta indietro.
+2. **`Broken` riceve la chiave e non il titolo.** I tre gate non avevano stringhe proprie e non
+   chiamavano `useTranslation`: tradurre dentro il componente che l'hook ce l'ha è anche l'unico
+   modo perché un cambio di lingua raggiunga quella scritta — è la regola dichiarata in
+   `translate.ts`, e vale anche per `DonutChart`, che ora chiama `useTranslation()` pur non avendo
+   una stringa nel JSX.
+3. **`lasting()` non passa da `plural`.** «da un giorno» il numero non lo scrive affatto: una chiave
+   `.one` che ignora il proprio `{{count}}` farebbe cadere la guardia sui segnaposto dei dizionari,
+   che è esattamente la guardia che si vuole tenere severa.
+
+Dichiarata un'eccezione sola in `dictionaries.test.ts`: `notifications.budget.noneTitle` è «Budget»
+in tutte e due le lingue, come `budget.title` che c'era già.
+
+**Non tradotti, e non è una dimenticanza:** i nomi delle otto categorie di partenza e
+`FIRST_GROUP_NAME`. Sono **dati** scritti dentro il vault e rinominabili, non etichette dell'app:
+tradurli vorrebbe dire che due telefoni con lingue diverse scrivono due categorie diverse nello
+stesso documento condiviso.
+
+### 2 · `isKnownCurrency` era una guardia scritta e mai collegata — e `paidBy` non si poteva fare
+
+`isKnownCurrency` era esportata dal barrel e chiamata **solo dal proprio test**. Adesso esiste
+`assertKnownCurrency` accanto, e la chiamano `addExpense` e `updateExpense`. La differenza fra le due
+è il momento: in lettura un codice sconosciuto si mostra com'è, perché il dato c'è già ed è di
+qualcun altro; in scrittura è un errore, e lasciarlo passare mette nel gruppo una spesa che nessun
+selettore potrà più riportare su una valuta nota.
+
+**L'altra metà del punto 2 — `paidBy` contro l'elenco dei membri — è stata tentata e ritirata.**
+Vale la pena scrivere perché, perché la conclusione non è ovvia e la prossima persona che legge il
+piano la ritenterebbe.
+
+La guardia è di una riga e sembra gratis. Messa in `addExpense`, fa cadere **46 test** in quattro
+file. Non per fragilità delle fixture: i test del motore di sync e della persistenza misurano gli
+update Yjs **uno a uno** — «una spesa = un update in coda» — e in un documento i membri sono
+contenuto quanto le spese. Seminarli aggiunge un update prima di ogni scenario, e quelle asserzioni
+diventano numeri che non dicono più niente. Non si può nemmeno aggirare fingendo che i membri siano
+«già sincronizzati»: Yjs tiene in sospeso gli update di un client finché non ha tutti quelli che li
+precedono, quindi se i membri non viaggiano, le spese che li nominano non arrivano affatto.
+
+E la premessa del piano era imprecisa: «i pareggi rifiutano un membro sconosciuto» non descrive
+`addSettlement`, che quel controllo non ce l'ha — descrive `readSettlements` dell'**import**, cioè il
+confine da cui entrano dati stranieri. E lì la simmetria c'è già: `readExpenses` valida `paidBy`
+contro `memberIds` da sempre. Il buco vero, quindi, è solo la scrittura locale, dove `paidBy` arriva
+da un selettore di membri esistenti e non esiste un modo di togliere un membro.
+
+Costo alto e certo, beneficio su un caso che oggi non si dà. Non fatto, scritto qui.
+
+### 3 · La nota della spesa non aveva un tetto
+
+Nome del gruppo, nome del profilo, nome nell'invito e voci del vocabolario ce l'hanno tutti. La nota
+era l'ultimo campo senza: un testo incollato da chissà dove finiva nel vault, nell'export e in ogni
+update verso il relay. `MAX_EXPENSE_NOTE = 140`, e **140 e non 24 come il profilo**: questa è una
+frase, non un'etichetta, e il limite serve a fermare un incollaggio, non a costringere a essere
+brevi.
+
+Il negozio invece un tetto ce l'ha dallo Step 59, da quando si sceglie dal catalogo:
+`MAX_ENTRY_NAME`, che era però scritto **due volte** — un `const` in `VocabularyScreen` e un altro in
+`VocabularyPicker`. Spostato in `choices.ts`: due schermate che accettano nomi di lunghezza diversa
+per lo stesso elenco sono un modo lento di scoprire che il limite non era un limite.
+
+### 4 · Due classifiche gemelle che scalavano le barre in due modi
+
+`CategoryBars` calcolava `peak` su `totals`, `TopList` su `shown` — l'elenco già troncato. Allineate
+sul primo.
+
+**Il piano dava questo per un difetto visibile, e non lo è**: `totals` arriva ordinato per importo
+decrescente, quindi la voce più alta è sempre dentro le prime `max` e i due calcoli danno lo stesso
+numero. Corretto lo stesso, e il commento dice la cosa vera: quell'ordine è una proprietà di chi
+chiama che qui non è dichiarata da niente, e il giorno in cui una classifica arrivasse ordinata per
+nome la prima barra sarebbe piena e le altre sballate, senza che nulla lo segnali.
+
+### 5 · `tidy()` riscritto a mano in quattro punti
+
+`naming.ts` non la esportava, e la stessa riga — `trim()` più `replace(/\s+/g, ' ')` — ricompariva in
+`insights/stores.ts` e nei due `normalize*Name` del registro dell'app. Quattro copie di una regola
+che decide **quando due parole sono la stessa parola**. Esportata, come era già stato fatto per
+`mostUsedSpelling` e per la stessa ragione, scritta nel suo commento.
+
+### 6 · Il core andava a cercare un raccoglitore globale
+
+`persistence/y-sqlite.ts` aveva l'unico `console.error` di `packages/core`, contro la premessa
+dichiarata del pacchetto. La conseguenza non era di stile: **una scrittura di persistenza fallita non
+emergeva da nessuna parte nell'app**, perché in una build release il `console` di Hermes non lo legge
+nessuno. Ora è un `onError` facoltativo fra le opzioni, collegato a `markError` nei tre punti che
+costruiscono una persistenza — il vault aperto, la semina di un gruppo, il refresh dei widget.
+
+Resta facoltativo di proposito: la catena delle scritture non si deve fermare per un guasto
+transitorio, e chi non passa un `onError` ha scelto di non guardare, non di far cadere l'app.
+
+### 7 · Codice morto
+
+`averagePerMonth`, `netFor`, `weekStart`, `totalKept`, `secretsMatch`: invisibili a ESLint perché
+`core/src/index.ts` riesporta con `export *`, e chiamate **solo dai propri test**. Tolte, con i loro
+test — tranne `netFor`, che nei test di `balance` era un aiutante di lettura e non il soggetto: è
+diventata una funzione locale a quel file, che è ciò che era davvero. `totalKept` idem, sostituita da
+una somma sui valori di `ImportCounts` scritta sul posto, che non va nemmeno estesa quando nasce una
+famiglia nuova.
+
+E **`app/dashboard.tsx`**, il redirect che lo Step 52 aveva lasciato «per un ciclo». Questo era il
+ciclo dopo.
+
+### 8 · `parseHex` accettava `#00FF00zz`
+
+La regex esadecimale era verificata su `full.slice(0, 6)` e poi la lunghezza 8 era ammessa: gli
+ultimi due caratteri non li guardava nessuno. Ora la regex copre tutta la stringa. Un verde
+chiarissimo con due caratteri di spazzatura in coda prendeva l'inchiostro chiaro invece di quello
+scuro, cioè il nome sopra il riquadro del treemap spariva.
+
+### Verifica
+
+**1359 test verdi** (665 core + 640 app + 54 relay), `typecheck`, `lint` e `format:check` puliti, e
+il bundle Android esporta. Il totale scende da 1363 perché i dieci test del codice morto sono usciti
+con lui, e ne sono entrati sei nuovi: tre su `assertKnownCurrency`, due sulla valuta rifiutata in
+`addExpense`/`updateExpense`, uno sulla coda esadecimale di `parseHex`.
+
+**Nessuna build EAS**: è tutto JavaScript, va via con un `eas update`.
+
 ---
 
 ## 2026-09-13 — Il primo aggiornamento via etere, e due impronte rotte per sbaglio

@@ -87,53 +87,47 @@ function ManageGroup({ current }: { current: GroupRecord }) {
 
   const handleLeave = (): void => {
     const last = groups.length === 1;
-    Alert.alert(
-      `Uscire da «${current.name}»?`,
-      'Le spese di questo gruppo spariscono da questo telefono. Senza un backup della chiave ' +
-        'non tornano più: non esiste un reset lato server. ' +
-        (last
-          ? 'È il tuo unico gruppo: resterai senza, e potrai crearne uno o entrare con un invito. '
-          : 'Chi altro ne fa parte non se ne accorge e continua a usarlo. ') +
-        (wipeRelay
-          ? 'La copia sul relay verrà cancellata: chi resta non riceverà più aggiornamenti, ' +
-            'ma tiene ciò che ha già scaricato.'
-          : 'La copia sul relay resta e scade da sola dopo trenta giorni.'),
-      [
-        { text: 'Annulla', style: 'cancel' },
-        {
-          text: 'Esci',
-          style: 'destructive',
-          onPress: () => {
-            setLeaving(true);
-            void leave(current.vaultId, { wipeRelay })
-              // All'elenco dei gruppi, che è la radice di questo stack: il gruppo di
-              // questa rotta non esiste più, e restarci mostrerebbe lo spinner della
-              // guardia per sempre.
-              .then(() => router.replace('/'))
-              .catch((cause: unknown) => {
-                Alert.alert(
-                  'Uscita fallita',
-                  cause instanceof Error ? cause.message : String(cause),
-                );
-                setLeaving(false);
-              });
-          },
+    // Tre pezzi montati qui e non una frase sola nel dizionario: due dipendono da com'è
+    // messo il telefono adesso, e scriverne le quattro combinazioni per intero vorrebbe
+    // dire tenerne allineate quattro a ogni ritocco, in due lingue.
+    const body = [
+      t('manage.leave.confirmBody'),
+      last ? t('manage.leave.confirmOnly') : t('manage.leave.confirmOthers'),
+      wipeRelay ? t('manage.leave.confirmWipe') : t('manage.leave.confirmKeep'),
+    ].join(' ');
+
+    Alert.alert(t('manage.leave.confirmTitle', { name: current.name }), body, [
+      { text: t('common.cancel'), style: 'cancel' },
+      {
+        text: t('manage.leave.confirm'),
+        style: 'destructive',
+        onPress: () => {
+          setLeaving(true);
+          void leave(current.vaultId, { wipeRelay })
+            // All'elenco dei gruppi, che è la radice di questo stack: il gruppo di
+            // questa rotta non esiste più, e restarci mostrerebbe lo spinner della
+            // guardia per sempre.
+            .then(() => router.replace('/'))
+            .catch((cause: unknown) => {
+              Alert.alert(
+                t('manage.leave.failed'),
+                cause instanceof Error ? cause.message : String(cause),
+              );
+              setLeaving(false);
+            });
         },
-      ],
-    );
+      },
+    ]);
   };
 
   const handleRegenerate = (): void => {
     Alert.alert(
-      `Rigenerare «${current.name}»?`,
-      'Il gruppo riparte con una chiave nuova, portandosi dietro spese, categorie e saldi. ' +
-        'Da questo telefono sparisce quello vecchio, e chi vuoi tenere va reinvitato: ' +
-        'finché non accetta, resta fuori. Chi era nel gruppo continua a vedere ciò che ' +
-        'aveva già; quello che smette è il flusso di aggiornamenti.',
+      t('manage.regenerate.confirmTitle', { name: current.name }),
+      t('manage.regenerate.confirmBody'),
       [
-        { text: 'Annulla', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Rigenera',
+          text: t('manage.regenerate.confirm'),
           style: 'destructive',
           onPress: () => {
             setRegenerating(true);
@@ -144,7 +138,7 @@ function ManageGroup({ current }: { current: GroupRecord }) {
               .then(() => router.replace('/pair/invite'))
               .catch((cause: unknown) => {
                 Alert.alert(
-                  'Rigenerazione fallita',
+                  t('manage.regenerate.failed'),
                   cause instanceof Error ? cause.message : String(cause),
                 );
                 setRegenerating(false);
@@ -158,7 +152,7 @@ function ManageGroup({ current }: { current: GroupRecord }) {
   const busy = leaving || regenerating;
 
   return (
-    <ModalScreen title={current.name} closeLabel="‹ Indietro">
+    <ModalScreen title={current.name} closeLabel={t('common.back')}>
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: spacing.xl }}

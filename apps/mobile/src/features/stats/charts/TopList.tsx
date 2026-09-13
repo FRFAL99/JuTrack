@@ -34,7 +34,16 @@ export function TopList({ totals, max = 5, note }: TopListProps) {
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const symbol = useCurrencySymbol();
   const shown = totals.slice(0, max);
-  const peak = shown.reduce((highest, total) => Math.max(highest, total.totalCents), 0);
+  // **Sull'elenco intero, non su `shown`**: è la stessa riga di `CategoryBars`, e le due
+  // classifiche stanno nella stessa schermata.
+  //
+  // Oggi i due calcoli danno lo stesso numero, perché `totals` arriva ordinato per importo
+  // decrescente e la voce più alta è quindi sempre dentro le prime `max`. Ma quell'ordine è
+  // una proprietà di chi chiama che qui non è dichiarata da niente: il giorno in cui una
+  // classifica arrivasse ordinata per nome, la prima barra sarebbe piena e le altre
+  // sballate, senza che nulla lo segnali. Scalare sull'elenco intero toglie il vincolo
+  // invece di fidarsene.
+  const peak = totals.reduce((highest, total) => Math.max(highest, total.totalCents), 0);
 
   return (
     <View style={{ gap: spacing.md }}>

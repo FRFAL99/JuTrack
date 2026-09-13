@@ -34,6 +34,7 @@
  * fondo.
  */
 import type { SyncState } from '@jutrack/core';
+import { t } from '@/i18n/translate';
 import type { AlertContent } from './content';
 
 /** La chiave in `app_meta`. Una sola per tutti i gruppi. */
@@ -252,7 +253,12 @@ function settle(before: SyncMarks, after: SyncMarks, alert: SyncAlert | null): S
  */
 function lasting(forMs: number): string {
   const days = Math.floor(forMs / DAY_MS);
-  return days <= 1 ? 'da un giorno' : `da ${days} giorni`;
+  // Non passa da `plural`: le due forme non sono singolare e plurale dello stesso conteggio
+  // — «da un giorno» il numero non lo scrive affatto — e una chiave `.one` che ignora il
+  // proprio `{{count}}` farebbe cadere la guardia sui segnaposto dei dizionari.
+  return days <= 1
+    ? t('notifications.sync.lastingDay')
+    : t('notifications.sync.lastingDays', { count: days });
 }
 
 /**
@@ -271,22 +277,26 @@ export function syncContent(alert: SyncAlert, groupName: string): AlertContent {
     return {
       // La stessa frase del pallino in Tu e in `describe.ts`: chi l'ha già vista lì deve
       // riconoscerla, non chiedersi se sono due guasti diversi.
-      title: 'Sincronizzazione fermata',
-      body:
-        `Il relay rifiuta la chiave di «${groupName}»: le spese non partono più. ` +
-        'Di solito vuol dire che il gruppo è stato rigenerato, e serve un invito nuovo.',
+      title: t('notifications.sync.blockedTitle'),
+      body: t('notifications.sync.blockedBody', { name: groupName }),
     };
   }
 
   if (alert.phase === 'offline') {
     return {
-      title: 'Spese non sincronizzate',
-      body: `Nessuna connessione ${lasting(alert.forMs)}: quello che registri in «${groupName}» resta su questo telefono.`,
+      title: t('notifications.sync.title'),
+      body: t('notifications.sync.offlineBody', {
+        lasting: lasting(alert.forMs),
+        name: groupName,
+      }),
     };
   }
 
   return {
-    title: 'Spese non sincronizzate',
-    body: `Il relay non risponde ${lasting(alert.forMs)}: «${groupName}» non è allineato con gli altri telefoni.`,
+    title: t('notifications.sync.title'),
+    body: t('notifications.sync.unreachableBody', {
+      lasting: lasting(alert.forMs),
+      name: groupName,
+    }),
   };
 }

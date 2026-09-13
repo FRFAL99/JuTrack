@@ -1,5 +1,6 @@
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useTranslation } from 'react-i18next';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 // Import per **effetto**, non per valore: inizializza `i18next` prima che qualunque
@@ -35,8 +36,17 @@ function Waiting() {
   );
 }
 
-function Broken({ title, message }: { title: string; message: string }) {
+/**
+ * Riceve la **chiave** del titolo, non il titolo.
+ *
+ * I tre gate qui sotto non hanno stringhe proprie e non chiamavano `useTranslation`: il
+ * titolo lo passavano scritto in italiano. Tradurlo qui dentro, dove l'hook c'è, è anche
+ * l'unico modo perché un cambio di lingua lo raggiunga — vedi la regola in `translate.ts`.
+ */
+function Broken({ titleKey, message }: { titleKey: string; message: string }) {
+  const { t } = useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const title = t(titleKey);
   return (
     <View
       style={{
@@ -74,7 +84,7 @@ function ProfileGate({ children }: { children: React.ReactNode }) {
 
   if (status.phase === 'loading') return <Waiting />;
   if (status.phase === 'error') {
-    return <Broken title="Impossibile aprire i dati locali" message={status.message} />;
+    return <Broken titleKey="fatal.appData" message={status.message} />;
   }
   if (status.data.profile === null) return <ProfileOnboarding />;
 
@@ -94,7 +104,7 @@ function GroupsGate({ children }: { children: React.ReactNode }) {
 
   if (status.phase === 'loading') return <Waiting />;
   if (status.phase === 'error') {
-    return <Broken title="Impossibile aprire i gruppi" message={status.message} />;
+    return <Broken titleKey="fatal.groups" message={status.message} />;
   }
 
   return <>{children}</>;
@@ -122,7 +132,7 @@ function VaultGate({ children }: { children: React.ReactNode }) {
 
   if (status.phase === 'loading') return <Waiting />;
   if (status.phase === 'error') {
-    return <Broken title="Impossibile aprire questo gruppo" message={status.message} />;
+    return <Broken titleKey="fatal.vault" message={status.message} />;
   }
   // Chi è appena entrato in un gruppo altrui risponde prima a una domanda: nuovo, o già
   // dentro con un altro telefono? Finché non risponde non viene scritto alcun membro.

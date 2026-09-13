@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addDays, dayOfWeek, daysBetween, daysOfMonth, weekStart } from './calendar';
+import { addDays, dayOfWeek, daysBetween, daysOfMonth } from './calendar';
 
 describe('dayOfWeek', () => {
   it('conta da lunedì', () => {
@@ -64,22 +64,6 @@ describe('daysBetween', () => {
   it('copre un anno intero senza buchi', () => {
     expect(daysBetween('2026-01-01', '2026-12-31')).toHaveLength(365);
     expect(daysBetween('2028-01-01', '2028-12-31')).toHaveLength(366);
-  });
-});
-
-describe('weekStart', () => {
-  it('un lunedì è già l inizio della sua settimana', () => {
-    expect(weekStart('2026-08-10')).toBe('2026-08-10');
-  });
-
-  it('la domenica appartiene alla settimana che comincia il lunedì prima', () => {
-    // Il rischio di una settimana che comincia di domenica: l'ultimo giorno finirebbe
-    // nella settimana successiva, e il totale settimanale sarebbe sfasato di un giorno.
-    expect(weekStart('2026-08-16')).toBe('2026-08-10');
-  });
-
-  it('scavalca il mese all indietro', () => {
-    expect(weekStart('2026-09-01')).toBe('2026-08-31');
   });
 });
 

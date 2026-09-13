@@ -9,7 +9,7 @@ import { Note } from '@/components/Note';
 import { SectionLabel } from '@/components/SectionLabel';
 import { useExpenses, useVaultStore, useVocabulary } from '@/state';
 import { useTheme } from '@/theme';
-import { missingFromCatalog, suggestedNames } from './choices';
+import { MAX_ENTRY_NAME, missingFromCatalog, suggestedNames } from './choices';
 
 /**
  * L'elenco di una famiglia del vocabolario: tag o negozi.
@@ -184,15 +184,6 @@ export function VocabularyScreen({ kind }: { kind: VocabularyKind }) {
     </ModalScreen>
   );
 }
-
-/**
- * Quanto può essere lungo il nome di una voce.
- *
- * Della stessa famiglia di `MAX_GROUP_NAME` e `MAX_PROFILE_NAME`: senza, una voce incollata
- * da chissà dove diventa una pillola larga quanto tre schermi, e il campo `store` di ogni
- * spesa che la usa se la porta dietro nell'export e nei grafici.
- */
-const MAX_ENTRY_NAME = 40;
 
 const styles = StyleSheet.create({
   addRow: { flexDirection: 'row' },

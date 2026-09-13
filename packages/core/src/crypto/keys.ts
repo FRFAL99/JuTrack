@@ -6,7 +6,6 @@
  */
 import { hkdf } from '@noble/hashes/hkdf.js';
 import { sha256 } from '@noble/hashes/sha2.js';
-import { equalBytes } from '@noble/ciphers/utils.js';
 import { bytesToHex, utf8ToBytes } from './encoding';
 import type { RandomSource } from './types';
 
@@ -76,17 +75,6 @@ export function deriveVaultKeys(vaultKey: Uint8Array): VaultKeys {
  */
 export function authToken(keys: VaultKeys): string {
   return bytesToHex(keys.authKey);
-}
-
-/**
- * Confronto a tempo costante fra due segreti.
- *
- * Un `===` fra stringhe esce al primo carattere diverso, e il tempo di risposta rivela
- * quanti caratteri iniziali erano corretti — abbastanza per ricostruire un token a forza
- * bruta un carattere alla volta.
- */
-export function secretsMatch(a: Uint8Array, b: Uint8Array): boolean {
-  return equalBytes(a, b);
 }
 
 /** Verifica che una chiave abbia la lunghezza attesa, con messaggio diagnostico chiaro. */

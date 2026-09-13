@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { CURRENCIES, currencySymbol, DEFAULT_CURRENCY, isKnownCurrency } from './currency';
+import {
+  assertKnownCurrency,
+  CURRENCIES,
+  currencySymbol,
+  DEFAULT_CURRENCY,
+  isKnownCurrency,
+} from './currency';
 import { formatMoney } from './money';
 
 describe('currencySymbol', () => {
@@ -36,6 +42,22 @@ describe('elenco delle valute', () => {
 
   it('contiene solo codici ISO di tre lettere maiuscole', () => {
     for (const { code } of CURRENCIES) expect(code).toMatch(/^[A-Z]{3}$/);
+  });
+});
+
+describe('assertKnownCurrency', () => {
+  it('lascia passare ogni codice dell elenco', () => {
+    for (const { code } of CURRENCIES) expect(() => assertKnownCurrency(code)).not.toThrow();
+  });
+
+  it('rifiuta un codice che nessun selettore propone', () => {
+    expect(() => assertKnownCurrency('XYZ')).toThrow(/valuta sconosciuta/);
+  });
+
+  it('rifiuta anche il codice giusto scritto male', () => {
+    // Il caso vero: un valore riletto da disco o scritto a mano in un file di export.
+    expect(() => assertKnownCurrency('eur')).toThrow(/valuta sconosciuta/);
+    expect(() => assertKnownCurrency('')).toThrow(/valuta sconosciuta/);
   });
 });
 

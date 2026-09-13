@@ -5,7 +5,6 @@ export {
   generateVaultKey,
   deriveVaultKeys,
   authToken,
-  secretsMatch,
   assertVaultKey,
   type VaultKeys,
 } from './keys';

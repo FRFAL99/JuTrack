@@ -17,6 +17,7 @@ export type {
 export { VOCABULARY_KINDS } from './types';
 
 export {
+  assertKnownCurrency,
   CURRENCIES,
   currencySymbol,
   isKnownCurrency,

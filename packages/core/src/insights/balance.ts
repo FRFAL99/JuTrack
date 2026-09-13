@@ -138,13 +138,3 @@ export function simplifyDebts(balances: MemberBalance[]): Transfer[] {
 
   return transfers;
 }
-
-/**
- * Saldo di un singolo membro verso tutti gli altri.
- *
- * Scorciatoia per la domanda che l'app fa più spesso: «io, in questo momento, sono in
- * credito o in debito?».
- */
-export function netFor(balances: MemberBalance[], memberId: string): Cents {
-  return balances.find((b) => b.memberId === memberId)?.netCents ?? 0;
-}

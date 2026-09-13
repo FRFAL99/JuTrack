@@ -19,6 +19,7 @@
  */
 import { type BudgetState, type BudgetStatus, type IsoMonth } from '@jutrack/core';
 import { formatMoney } from '@/i18n/money';
+import { t } from '@/i18n/translate';
 import type { AlertContent } from './content';
 
 /** La chiave in `app_meta`. Una sola per tutti i gruppi e tutti i mesi. */
@@ -234,9 +235,16 @@ function joinNames(names: string[]): string {
   if (names.length <= 3) {
     const head = names.slice(0, -1);
     const last = names[names.length - 1] ?? '';
-    return head.length === 0 ? last : `${head.join(', ')} e ${last}`;
+    // La virgola resta nel codice: è punteggiatura, e si scrive uguale nelle due lingue.
+    // Cambia solo la congiunzione finale, ed è quella che sta nel dizionario.
+    return head.length === 0
+      ? last
+      : t('notifications.budget.joinLast', { head: head.join(', '), last });
   }
-  return `${names.slice(0, 2).join(', ')} e altre ${names.length - 2}`;
+  return t('notifications.budget.joinMore', {
+    head: names.slice(0, 2).join(', '),
+    count: names.length - 2,
+  });
 }
 
 /**
@@ -261,8 +269,10 @@ export function budgetContent(
   if (alerts.length > 1) {
     const allOver = alerts.every((alert) => alert.level === 'over');
     return {
-      title: allOver ? `${alerts.length} budget superati` : `${alerts.length} budget da guardare`,
-      body: `${joinNames(names)}. Li trovi nei Grafici.`,
+      title: t(allOver ? 'notifications.budget.manyOver' : 'notifications.budget.manyNear', {
+        count: alerts.length,
+      }),
+      body: t('notifications.budget.manyBody', { names: joinNames(names) }),
     };
   }
 
@@ -270,7 +280,10 @@ export function budgetContent(
   if (alert === undefined) {
     // Non capita: chi chiama non notifica su un elenco vuoto. Ma una funzione che
     // costruisce testo non deve poter produrre `undefined` dentro una frase.
-    return { title: 'Budget', body: 'Niente da segnalare.' };
+    return {
+      title: t('notifications.budget.noneTitle'),
+      body: t('notifications.budget.noneBody'),
+    };
   }
 
   const name = names[0] ?? '';
@@ -279,12 +292,22 @@ export function budgetContent(
 
   if (alert.level === 'over') {
     return {
-      title: 'Budget superato',
-      body: `${name}: ${spent} su ${limit} questo mese, ${formatMoney(-alert.remainingCents, symbol)} in più.`,
+      title: t('notifications.budget.overTitle'),
+      body: t('notifications.budget.overBody', {
+        name,
+        spent,
+        limit,
+        extra: formatMoney(-alert.remainingCents, symbol),
+      }),
     };
   }
   return {
-    title: 'Budget quasi finito',
-    body: `${name}: ${spent} su ${limit} questo mese. Restano ${formatMoney(alert.remainingCents, symbol)}.`,
+    title: t('notifications.budget.nearTitle'),
+    body: t('notifications.budget.nearBody', {
+      name,
+      spent,
+      limit,
+      left: formatMoney(alert.remainingCents, symbol),
+    }),
   };
 }

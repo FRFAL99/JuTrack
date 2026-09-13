@@ -116,6 +116,8 @@ describe('dizionari', () => {
       // entrambe le lingue, come «vault».
       'dashboard.widgets.budget.title',
       'budget.title',
+      // Stessa parola, come titolo della notifica che non dovrebbe mai uscire.
+      'notifications.budget.noneTitle',
       // Il prefisso del formato di backup, non una frase: si legge uguale in ogni lingua.
       'backup.blobPlaceholder',
       // «Passphrase» è già un prestito inglese nell'italiano di questa schermata: non

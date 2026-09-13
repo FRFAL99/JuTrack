@@ -1,4 +1,5 @@
 import { markError } from '@/diagnostics';
+import { t } from '@/i18n/translate';
 import type { AlertContent } from './content';
 import { loadNotificationsModule } from './module';
 import { nextReminderAt, reminderContent } from './reminder';
@@ -125,7 +126,7 @@ export async function rescheduleReminder(
     // l'eccesso opposto — resterebbe ripiegato in fondo alla tendina, cioè invisibile
     // proprio a chi ha acceso l'interruttore per vederlo.
     await module.setNotificationChannelAsync(REMINDER_CHANNEL, {
-      name: 'Promemoria spese',
+      name: t('notifications.channels.reminder'),
       importance: module.AndroidImportance.LOW,
     });
 
@@ -198,7 +199,7 @@ async function notifyNow(
 export async function notifyBudget(content: AlertContent): Promise<boolean> {
   return notifyNow(
     BUDGET_KIND,
-    { id: BUDGET_CHANNEL, name: 'Budget del mese' },
+    { id: BUDGET_CHANNEL, name: t('notifications.channels.budget') },
     content,
     'invio dell’avviso di budget',
   );
@@ -208,7 +209,7 @@ export async function notifyBudget(content: AlertContent): Promise<boolean> {
 export async function notifySync(content: AlertContent): Promise<boolean> {
   return notifyNow(
     SYNC_KIND,
-    { id: SYNC_CHANNEL, name: 'Sincronizzazione' },
+    { id: SYNC_CHANNEL, name: t('notifications.channels.sync') },
     content,
     'invio dell’avviso di sincronizzazione',
   );
@@ -218,7 +219,7 @@ export async function notifySync(content: AlertContent): Promise<boolean> {
 export async function notifyBackup(content: AlertContent): Promise<boolean> {
   return notifyNow(
     BACKUP_KIND,
-    { id: BACKUP_CHANNEL, name: 'Backup della chiave' },
+    { id: BACKUP_CHANNEL, name: t('notifications.channels.backup') },
     content,
     'invio dell’avviso di backup',
   );

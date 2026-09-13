@@ -54,11 +54,6 @@ export function daysBetween(from: IsoDate, to: IsoDate): IsoDate[] {
   return out;
 }
 
-/** Il lunedì della settimana in cui cade la data. */
-export function weekStart(date: IsoDate): IsoDate {
-  return addDays(date, -dayOfWeek(date));
-}
-
 /** Tutti i giorni di un mese, dal primo all'ultimo. */
 export function daysOfMonth(month: IsoMonth): IsoDate[] {
   const count = daysInMonth(month);

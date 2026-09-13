@@ -1,7 +1,9 @@
+import { useTranslation } from 'react-i18next';
 import { Text, View } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 import { arcPath } from '@jutrack/core';
 import { formatMoney } from '@/i18n/money';
+import { plural, t } from '@/i18n/translate';
 import { useCurrencySymbol } from '@/state';
 import { useTheme } from '@/theme';
 import { formatShare } from '../format';
@@ -33,6 +35,10 @@ const THICKNESS = 0.34;
  * sola è un colore — la regola dello Step 8, che qui vale più che altrove.
  */
 export function DonutChart({ slices, centerLabel, size }: DonutChartProps) {
+  // Non ha stringhe proprie nel JSX, ma le due frasi qui sotto passano da `t` e `plural`,
+  // che leggono la lingua nel momento in cui girano: senza questo hook, al cambio di lingua
+  // l'etichetta letta ad alta voce resterebbe quella di prima. È la regola di `translate.ts`.
+  useTranslation();
   const { colors, spacing, fontSize, fontWeight } = useTheme();
   const symbol = useCurrencySymbol();
   const { width, onLayout } = useChartWidth();
@@ -59,7 +65,11 @@ export function DonutChart({ slices, centerLabel, size }: DonutChartProps) {
             <View
               accessible
               accessibilityRole="image"
-              accessibilityLabel={`${centerLabel}: ${formatMoney(total, symbol)}, ripartito in ${slices.length} voci`}
+              accessibilityLabel={t('stats.donutA11y', {
+                label: centerLabel,
+                amount: formatMoney(total, symbol),
+                count: plural('stats.donutSliceCount', slices.length),
+              })}
             >
               <Svg width={diameter} height={diameter}>
                 {arcs.map(({ slice, from, to }) => (

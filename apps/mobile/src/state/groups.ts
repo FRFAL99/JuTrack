@@ -7,6 +7,7 @@ import {
   hexToBytes,
   RelayClient,
   SqliteYPersistence,
+  tidy,
   type HttpClient,
   type RandomSource,
   type SecureKeyStore,
@@ -16,6 +17,7 @@ import {
 // Import puntuali e non dal barrel `@/platform`: quello espone anche il keystore e il
 // database, che importano moduli nativi. Il registro è logica pura, e deve poter girare
 // nei test senza trascinarsi dietro React Native.
+import { markError } from '@/diagnostics';
 import { groupKeyStorageKey } from '@/platform/key-names';
 import { SqliteSyncStore } from '@/platform/sync-store';
 import type { VaultOrigin } from './profile';
@@ -111,7 +113,7 @@ export const FIRST_GROUP_NAME = 'Le mie spese';
 
 /** Toglie gli spazi di troppo e taglia; `null` se non resta nulla di utile. */
 export function normalizeGroupName(raw: string): string | null {
-  const collapsed = raw.trim().replace(/\s+/g, ' ');
+  const collapsed = tidy(raw);
   if (collapsed === '') return null;
   return collapsed.slice(0, MAX_GROUP_NAME);
 }
@@ -343,6 +345,7 @@ export class GroupRegistry {
     const doc = new Y.Doc();
     const persistence = new SqliteYPersistence(this.db, doc, {
       tableName: updatesTableName(vaultId),
+      onError: (error) => markError('semina del documento di un gruppo', error),
     });
     await persistence.load();
     Y.applyUpdate(doc, state);

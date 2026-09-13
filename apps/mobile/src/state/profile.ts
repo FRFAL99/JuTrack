@@ -1,4 +1,4 @@
-import { newId, type RandomSource } from '@jutrack/core';
+import { newId, tidy, type RandomSource } from '@jutrack/core';
 import type { KeyValueStore } from '@/platform/app-meta';
 
 /**
@@ -95,7 +95,7 @@ export type VaultOrigin = 'created' | 'joined';
 
 /** Toglie gli spazi di troppo e taglia; `null` se non resta nulla di utile. */
 export function normalizeProfileName(raw: string): string | null {
-  const collapsed = raw.trim().replace(/\s+/g, ' ');
+  const collapsed = tidy(raw);
   if (collapsed === '') return null;
   return collapsed.slice(0, MAX_PROFILE_NAME);
 }

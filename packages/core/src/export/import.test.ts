@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseVaultExport, totalKept, type ImportResult } from './import';
+import { parseVaultExport, type ImportCounts, type ImportResult } from './import';
 import { toJsonExport } from './json';
 import type { VaultSnapshot } from '../model/types';
 
@@ -78,6 +78,11 @@ function expectOk(result: ImportResult): Extract<ImportResult, { ok: true }> {
   return result;
 }
 
+/** Quanti record sono entrati in tutto. Somma di ogni famiglia, senza nominarle a una a una. */
+function kept(counts: ImportCounts): number {
+  return Object.values(counts).reduce((sum, count) => sum + count, 0);
+}
+
 describe('parseVaultExport — il giro completo', () => {
   it('rilegge identico ciò che toJsonExport ha scritto', () => {
     const { snapshot: read } = expectOk(parseVaultExport(goodFile));
@@ -87,7 +92,7 @@ describe('parseVaultExport — il giro completo', () => {
   it('non scarta niente da un file non toccato', () => {
     const { report } = expectOk(parseVaultExport(goodFile));
     expect(report.skipped).toEqual([]);
-    expect(totalKept(report.kept)).toBe(10);
+    expect(kept(report.kept)).toBe(10);
   });
 
   it('conserva i tombstone: un import che li perde resuscita le spese cancellate', () => {
@@ -339,7 +344,7 @@ describe('parseVaultExport — record malformati', () => {
     });
 
     const { report } = expectOk(parseVaultExport(empty));
-    expect(totalKept(report.kept)).toBe(0);
+    expect(kept(report.kept)).toBe(0);
   });
 });
 

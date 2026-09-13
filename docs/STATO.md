@@ -15,7 +15,7 @@ che tiene tutto questo è installata.
 > Da qui in avanti vale [versioni-e-aggiornamenti.md](versioni-e-aggiornamenti.md), e la regola
 > controintuitiva è una: **un `eas update` si pubblica con `version` invariata**, perché `version`
 > entra nell'impronta della `runtimeVersion` e alzarla impedisce all'aggiornamento di arrivare. Il
-> binario in test ha impronta `d862b56d…`, **la stessa di `main` oggi**: gli Step 49–57 sono tutti
+> binario in test ha impronta `d862b56d…`, **la stessa di `main` oggi**: gli Step 49–60 sono tutti
 > JavaScript e possono andare via etere, senza consumare una build.
 
 > **Lo stesso 12 settembre, dopo la verifica su telefono, sono state prese le 15 decisioni del
@@ -31,12 +31,12 @@ che tiene tutto questo è installata.
 > **Lo stesso 13 settembre, chiuso il v6, è stato scritto il
 > [Piano v7](piano-v7-data-e-vocabolario-del-gruppo.md): la data della spesa che si sceglie, e tag e
 > negozi che diventano un elenco del gruppo.** Non viene da un mockup ma dall'app in mano, come gli
-> Step 54–57, e porta tre step — **58, 59 e 60, nessuno ancora nel codice**. **Nessuno dei tre chiede
-> una build EAS**: la griglia di giorni che serve al 58 esiste già dallo Step 27 (`DayGridPicker`), e
-> il commento in `ExpenseForm.tsx` che motivava la data non modificabile con un modulo nativo è
-> **superato dal codice stesso**. Il 60 raccoglie un check del repo fatto a freddo: il difetto
-> peggiore è che i due dialoghi più pericolosi dell'app — uscire da un gruppo e rigenerarlo — sono in
-> **italiano fisso**, `'Annulla'` compreso.
+> Step 54–57, e portava tre step — **58, 59 e 60, tutti e tre entrati lo stesso 13 settembre**.
+> **Nessuno dei tre ha chiesto una build EAS**: la griglia di giorni che serviva al 58 esisteva già
+> dallo Step 27 (`DayGridPicker`), e il commento in `ExpenseForm.tsx` che motivava la data non
+> modificabile con un modulo nativo era **superato dal codice stesso**. Il 60 raccoglieva un check
+> del repo fatto a freddo, e ne ha chiuse sette voci su otto: l'ottava — la guardia su `paidBy` — è
+> stata tentata e ritirata, per una ragione che vale la pena rileggere prima di ritentarla.
 
 > **La sessione del 12 settembre è raccontata in
 > [La verifica su telefono](#la-verifica-su-telefono-del-12-settembre-step-41)**, divisa fra ciò che
@@ -250,13 +250,13 @@ tutte volute.
 **1322 test verdi** (639 core + 629 app + 54 relay), typecheck, lint e `format:check` puliti.
 
 Piano v7 — [piano-v7-data-e-vocabolario-del-gruppo.md](piano-v7-data-e-vocabolario-del-gruppo.md),
-**scritto il 13 settembre, nessuno step ancora nel codice**:
+**scritto e chiuso il 13 settembre, tre step su tre**:
 
-| Step                                    | Stato | Cosa contiene                                                                    |
-| --------------------------------------- | ----- | -------------------------------------------------------------------------------- |
-| 58 — La data della spesa si sceglie     | ✅    | `MonthGrid` condiviso coi filtri, «Oggi»/«Ieri», `assertIsoDate` in scrittura    |
-| 59 — Il vocabolario del gruppo          | ✅    | Catalogo `tag`/`store` nel vault, chiave derivata dal nome, due schermate        |
-| 60 — Le correzioni dal check del codice | ⬜    | Italiano fisso negli `Alert`, `isKnownCurrency` mai collegata, `peak` divergente |
+| Step                                    | Stato | Cosa contiene                                                                 |
+| --------------------------------------- | ----- | ----------------------------------------------------------------------------- |
+| 58 — La data della spesa si sceglie     | ✅    | `MonthGrid` condiviso coi filtri, «Oggi»/«Ieri», `assertIsoDate` in scrittura |
+| 59 — Il vocabolario del gruppo          | ✅    | Catalogo `tag`/`store` nel vault, chiave derivata dal nome, due schermate     |
+| 60 — Le correzioni dal check del codice | ✅    | Sette voci su otto: la guardia su `paidBy` è stata tentata e ritirata         |
 
 **Lo Step 58 è entrato il 13 settembre.** La data di una spesa si sceglie: la riga di
 «Dettagli» che era di sola lettura apre due pillole — «Oggi» e «Ieri», che sono la risposta
@@ -334,8 +334,55 @@ cui la tendina sostituisce il testo libero.
 **1363 test verdi** (670 core + 639 app + 54 relay), typecheck, lint e `format:check` puliti,
 e il bundle Android esporta.
 
-**Resta il 60**: le correzioni dal check del codice, di cui il pezzo più concreto sono i due
-`Alert` di «esci dal gruppo» e «rigenera» ancora in italiano fisso.
+**Lo Step 60 è entrato il 13 settembre, e con lui il Piano v7 è chiuso: tre step su tre.** Otto voci
+uscite da una lettura del codice, sette entrate e una no.
+
+**L'italiano fisso è finito**, e stava dove pesava di più: i due `Alert` di «esci dal gruppo» e
+«rigenera» (`'Annulla'` compreso), i tre titoli di guasto fatale di `_layout.tsx`, la coda della
+ciambella, e **tutti i testi delle notifiche più i nomi dei canali Android**. Le notifiche sono state
+prese per intero e non solo alle righe elencate nel piano: una notifica si legge **fuori** dall'app,
+ore dopo, senza niente attorno che spieghi perché è in un'altra lingua, e i nomi dei canali restano
+nelle impostazioni di sistema anche a app chiusa.
+
+**Non tradotti di proposito:** i nomi delle otto categorie di partenza e `FIRST_GROUP_NAME`. Sono
+**dati** dentro il vault, rinominabili, non etichette: tradurli vorrebbe dire che due telefoni con
+lingue diverse scrivono due categorie diverse nello stesso documento condiviso.
+
+**La guardia su `paidBy` è stata tentata e ritirata, ed è la cosa da non ritentare senza rileggere
+questo.** Messa in `addExpense` fa cadere **46 test** in quattro file, e non per fragilità delle
+fixture: i test del motore di sync e della persistenza misurano gli update Yjs **uno a uno**, e in un
+documento i membri sono contenuto quanto le spese. Non si aggira fingendo che i membri siano già
+sincronizzati — Yjs tiene in sospeso gli update di un client finché non ha tutti quelli che li
+precedono, quindi se i membri non viaggiano le spese che li nominano non arrivano affatto. E la
+premessa del piano era imprecisa: «i pareggi rifiutano un membro sconosciuto» non descrive
+`addSettlement`, che quel controllo non ce l'ha, ma `readSettlements` dell'**import** — dove la
+simmetria esiste già, perché `readExpenses` valida `paidBy` contro `memberIds` da sempre. Il buco
+resta solo sulla scrittura locale, dove `paidBy` arriva da un selettore di membri esistenti e togliere
+un membro non si può.
+
+L'altra metà del punto 2 invece è entrata: `assertKnownCurrency` sta accanto a `isKnownCurrency` — che
+era una guardia scritta e mai collegata — e la chiamano `addExpense` e `updateExpense`.
+
+Le altre sei: `MAX_EXPENSE_NOTE = 140` sulla nota (e `MAX_ENTRY_NAME`, che era scritto due volte,
+spostato in `choices.ts`); `peak` di `TopList` allineato a `CategoryBars` — **che il piano dava per un
+difetto visibile e non lo è**, perché `totals` arriva ordinato e i due calcoli coincidono, ma
+l'ordinamento qui non è dichiarato da niente; `tidy()` esportata da `naming.ts` invece di essere
+riscritta in quattro punti; il `console.error` del core diventato un `onError` facoltativo, collegato
+a `markError` nei tre punti che costruiscono una persistenza — **prima una scrittura fallita non
+emergeva da nessuna parte nell'app**; cinque funzioni morte tolte con i loro test, più
+`app/dashboard.tsx`, il redirect che lo Step 52 aveva lasciato «per un ciclo»; e `parseHex`, che
+accettava `#00FF00zz` perché la regex guardava solo i primi sei caratteri.
+
+**1359 test verdi** (665 core + 640 app + 54 relay), typecheck, lint e `format:check` puliti, e il
+bundle Android esporta. Il totale scende da 1363 perché i dieci test del codice morto sono usciti con
+lui, e ne sono entrati sei nuovi.
+
+**Resta da guardare sul telefono**, come per il 58 e il 59: i due `Alert` tradotti, la nota che si
+ferma a 140, e le notifiche in inglese con la lingua di sistema cambiata.
+
+**Il devlog non ha le voci degli Step 58 e 59**: sono state saltate in quelle due sessioni e sono
+raccontate solo qui. Non ricostruite a posteriori di proposito — una voce di devlog scritta
+rileggendo il diff dice quello che il codice fa, non quello che si stava pensando scrivendolo.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani

@@ -39,4 +39,14 @@ describe('inkOn', () => {
     expect(inkOn('rosso')).toBe(LIGHT);
     expect(inkOn('#12')).toBe(LIGHT);
   });
+
+  it('la coda di otto cifre è esadecimale anche negli ultimi due caratteri', () => {
+    // `#00FF00zz` passava: la regex guardava solo i primi sei caratteri e la lunghezza 8
+    // era ammessa senza che nessuno controllasse l'alfa. Un verde chiarissimo prendeva
+    // così l'inchiostro chiaro invece di quello scuro.
+    expect(inkOn('#00FF00zz')).toBe(LIGHT);
+    expect(inkOn('#00FF00')).toBe(DARK);
+    // L'alfa scritto bene continua a entrare, e a non contare.
+    expect(inkOn('#00FF0080')).toBe(DARK);
+  });
 });

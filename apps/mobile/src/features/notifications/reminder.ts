@@ -12,6 +12,7 @@
  * Ne segue che il testo dell'avviso è **vero per costruzione**: se una spesa fosse stata
  * registrata nel frattempo, quella notifica sarebbe stata cancellata e rifatta.
  */
+import { t } from '@/i18n/translate';
 
 /** Dopo quanti giorni senza registrare nulla arriva il promemoria. */
 export const REMINDER_DAYS = 3;
@@ -75,12 +76,12 @@ export interface ReminderContent {
 export function reminderContent(lastActivityMs: number | null): ReminderContent {
   if (lastActivityMs === null) {
     return {
-      title: 'La prima spesa',
-      body: 'Hai acceso il promemoria ma non hai ancora registrato niente. Bastano dieci secondi.',
+      title: t('notifications.reminder.firstTitle'),
+      body: t('notifications.reminder.firstBody'),
     };
   }
   return {
-    title: 'Spese da registrare?',
-    body: `Non registri una spesa da ${REMINDER_DAYS} giorni. Se ne hai fatte, è il momento buono.`,
+    title: t('notifications.reminder.title'),
+    body: t('notifications.reminder.body', { days: REMINDER_DAYS }),
   };
 }

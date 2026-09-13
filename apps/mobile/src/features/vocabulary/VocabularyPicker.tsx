@@ -6,7 +6,7 @@ import { vocabularyKeyOf, type VocabularyKind } from '@jutrack/core';
 import { Chip } from '@/components/Chip';
 import { useExpenses, useVocabulary } from '@/state';
 import { useTheme } from '@/theme';
-import { vocabularyChoices } from './choices';
+import { MAX_ENTRY_NAME, vocabularyChoices } from './choices';
 
 interface VocabularyPickerProps {
   kind: VocabularyKind;
@@ -133,9 +133,6 @@ export function VocabularyPicker({
     </View>
   );
 }
-
-/** Come in `VocabularyScreen`: della famiglia di `MAX_GROUP_NAME`. */
-const MAX_ENTRY_NAME = 40;
 
 const styles = StyleSheet.create({
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },

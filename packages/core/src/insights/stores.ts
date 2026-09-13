@@ -6,7 +6,7 @@
  */
 import type { Cents } from '../model/money';
 import type { Expense } from '../model/types';
-import { mostUsedSpelling, storeKey, tagKey } from './naming';
+import { mostUsedSpelling, storeKey, tagKey, tidy } from './naming';
 import { amountFor, type ExpenseQuery } from './query';
 
 export interface NamedTotal {
@@ -74,7 +74,7 @@ function rank(
       };
       group.totalCents += amount;
       group.count++;
-      const spelling = raw.trim().replace(/\s+/g, ' ');
+      const spelling = tidy(raw);
       group.spellings.set(spelling, (group.spellings.get(spelling) ?? 0) + 1);
       groups.set(key, group);
     }

@@ -7,6 +7,7 @@
  * differenza fra una coda lunga e una corta è essa stessa un'informazione.
  */
 import type { Cents } from '@jutrack/core';
+import { plural } from '@/i18n/translate';
 
 export interface Slice {
   /** Chiave stabile per le liste. */
@@ -38,6 +39,11 @@ export function topSlices(slices: Slice[], max: number, restColor: string): Slic
 
   return [
     ...kept,
-    { key: REST_KEY, label: `Altre ${rest.length} voci`, valueCents: restCents, color: restColor },
+    {
+      key: REST_KEY,
+      label: plural('stats.restSlice', rest.length),
+      valueCents: restCents,
+      color: restColor,
+    },
   ];
 }

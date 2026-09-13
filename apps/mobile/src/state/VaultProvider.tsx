@@ -11,6 +11,7 @@ import {
   type VaultKeys,
 } from '@jutrack/core';
 import { RELAY_URL } from '@/config';
+import { markError } from '@/diagnostics';
 import { expoHttp, expoRandom, SqliteSyncStore } from '@/platform';
 import { useGroups } from './GroupsProvider';
 import { updatesTableName } from './groups';
@@ -171,7 +172,14 @@ export function VaultProvider({ children }: { children: ReactNode }) {
         doc = new Y.Doc();
         // Una tabella per gruppo: `SqliteYPersistence` accetta `tableName` proprio per
         // tenere più documenti nello stesso database.
-        persistence = new SqliteYPersistence(db, doc, { tableName: updatesTableName(openVaultId) });
+        //
+        // `onError` e non il silenzio: una scrittura fallita qui è una spesa che l'utente
+        // vede a schermo e che al riavvio non c'è più. Non si può fermare la catena delle
+        // scritture per un guasto transitorio, ma si può almeno lasciarne traccia.
+        persistence = new SqliteYPersistence(db, doc, {
+          tableName: updatesTableName(openVaultId),
+          onError: (error) => markError('scrittura della persistenza del vault', error),
+        });
         await persistence.load();
         if (cancelled) return;
 

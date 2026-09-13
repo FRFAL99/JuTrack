@@ -26,7 +26,13 @@ export const en: Dictionary = {
   common: {
     close: 'Close',
     cancel: 'Cancel',
+    back: '‹ Back',
     someone: 'someone',
+  },
+  fatal: {
+    appData: 'Cannot open the local data',
+    groups: 'Cannot open your groups',
+    vault: 'Cannot open this group',
   },
   date: {
     today: 'Today',
@@ -309,6 +315,50 @@ export const en: Dictionary = {
     previousMonth: 'Previous month',
     nextMonth: 'Next month',
   },
+  notifications: {
+    channels: {
+      reminder: 'Expense reminders',
+      budget: 'Monthly budgets',
+      sync: 'Syncing',
+      backup: 'Key backup',
+    },
+    reminder: {
+      firstTitle: 'Your first expense',
+      firstBody:
+        'You turned the reminder on but have not recorded anything yet. It takes ten seconds.',
+      title: 'Anything to record?',
+      body: 'You have not recorded an expense in {{days}} days. If you made any, now is a good time.',
+    },
+    budget: {
+      manyOver: '{{count}} budgets over',
+      manyNear: '{{count}} budgets to watch',
+      manyBody: '{{names}}. You will find them in Charts.',
+      joinLast: '{{head}} and {{last}}',
+      joinMore: '{{head}} and {{count}} more',
+      noneTitle: 'Budget',
+      noneBody: 'Nothing to report.',
+      overTitle: 'Budget exceeded',
+      overBody: '{{name}}: {{spent}} of {{limit}} this month, {{extra}} over.',
+      nearTitle: 'Budget almost gone',
+      nearBody: '{{name}}: {{spent}} of {{limit}} this month. {{left}} left.',
+    },
+    backup: {
+      title: 'Key not backed up',
+      body: '“{{name}}” has {{count}} and this phone has no record of a backup of its key. Without one, if you lose the phone they are gone: nobody can recover them.',
+    },
+    sync: {
+      blockedTitle: 'Syncing stopped',
+      blockedBody:
+        'The relay is refusing the key for “{{name}}”: expenses no longer leave this phone. It usually means the group was regenerated, and you need a new invite.',
+      title: 'Expenses not synced',
+      offlineBody:
+        'No connection {{lasting}}: whatever you record in “{{name}}” stays on this phone.',
+      unreachableBody:
+        'The relay has not answered {{lasting}}: “{{name}}” is out of step with the other phones.',
+      lastingDay: 'for a day',
+      lastingDays: 'for {{count}} days',
+    },
+  },
   stats: {
     filters: {
       periodA11y: 'Period: {{label}}. Tap to change the filters',
@@ -384,6 +434,9 @@ export const en: Dictionary = {
     pointA11y: '{{label}}: {{amount}}',
     treemapTapHint: 'Tap a tile to read its name and amount.',
     topListA11y: '{{name}}: {{amount}}, {{count}}',
+    restSlice: { one: '{{count}} more entry', other: '{{count}} more entries' },
+    donutA11y: '{{label}}: {{amount}}, split across {{count}}',
+    donutSliceCount: { one: '{{count}} entry', other: '{{count}} entries' },
     heatmap: {
       dayA11y: '{{day}}: {{amount}}',
       noExpense: 'no expenses',
@@ -467,6 +520,11 @@ export const en: Dictionary = {
       note: 'There is no way to take the key back from someone who has it: regenerating the group changes it for everyone. Expenses and balances come with you, and you re-invite whoever you want to keep.',
       action: 'Regenerate with a new key',
       busy: 'Regenerating…',
+      confirmTitle: 'Regenerate “{{name}}”?',
+      confirmBody:
+        'The group restarts with a new key, bringing expenses, categories and balances along. The old one disappears from this phone, and whoever you want to keep has to be invited again: until they accept, they are out. Those who were in the group keep seeing what they already had; what stops is the flow of updates.',
+      confirm: 'Regenerate',
+      failed: 'Could not regenerate',
     },
     leave: {
       title: 'Leave the group',
@@ -476,6 +534,17 @@ export const en: Dictionary = {
       wipeRelayOff: 'Left alone, it expires by itself after thirty days.',
       action: 'Leave the group',
       busy: 'Leaving…',
+      confirmTitle: 'Leave “{{name}}”?',
+      confirmBody:
+        'This group’s expenses disappear from this phone. Without a backup of the key they do not come back: there is no server-side reset.',
+      confirmOnly:
+        'It is your only group: you will be left without one, and you can create a new one or join with an invite.',
+      confirmOthers: 'Whoever else is in it will not notice and keeps using it.',
+      confirmWipe:
+        'The relay copy will be deleted: those who stay will receive no more updates, but keep what they already downloaded.',
+      confirmKeep: 'The relay copy stays and expires by itself after thirty days.',
+      confirm: 'Leave',
+      failed: 'Could not leave',
     },
   },
   dashboard: {

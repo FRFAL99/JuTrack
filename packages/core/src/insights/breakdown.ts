@@ -103,15 +103,6 @@ export function totalsByMonth(
   }));
 }
 
-/** Media mensile sul periodo osservato, mesi vuoti inclusi. */
-export function averagePerMonth(months: MonthTotal[]): Cents {
-  if (months.length === 0) return 0;
-  const sum = months.reduce((acc, m) => acc + m.totalCents, 0);
-  // Arrotondata a un intero: restare in centesimi interi è la regola del progetto, e una
-  // media con la virgola si propagherebbe nei confronti come un float.
-  return Math.round(sum / months.length);
-}
-
 /** `null` (senza categoria) va in fondo a parità di importo: è un contenitore, non una voce. */
 function compareCategoryId(a: string | null, b: string | null): number {
   if (a === b) return 0;

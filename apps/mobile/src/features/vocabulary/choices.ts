@@ -15,6 +15,19 @@ import { t } from '@/i18n/translate';
  * sbagliate, e i test dell'app non caricano `react-native`.
  */
 
+/**
+ * Quanto può essere lunga una voce del vocabolario.
+ *
+ * Della stessa famiglia di `MAX_GROUP_NAME` e `MAX_PROFILE_NAME`: senza, una voce incollata
+ * da chissà dove diventa una pillola larga quanto tre schermi, e il campo `store` di ogni
+ * spesa che la usa se la porta dietro nell'export e nei grafici.
+ *
+ * **Qui e non nei due componenti**: la scrivevano tutti e due, ognuno col suo `const`, e due
+ * schermate che accettano nomi di lunghezza diversa per lo stesso elenco sono un modo lento
+ * di scoprire che il limite non era un limite.
+ */
+export const MAX_ENTRY_NAME = 40;
+
 /** Una voce proponibile a schermo. */
 export interface Choice {
   /** La grafia da scrivere sulla pillola. */

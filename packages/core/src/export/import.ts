@@ -558,7 +558,6 @@ function readSettlements(
   return out;
 }
 
-/** Quanti record entrerebbero in tutto: serve a dire «non c'è niente da importare». */
 /**
  * Il vocabolario del gruppo.
  *
@@ -612,15 +611,4 @@ function readVocabulary(rows: Record<string, unknown>[], skipped: ImportSkip[]):
 
 function isVocabularyKind(value: unknown): value is VocabularyKind {
   return typeof value === 'string' && VOCABULARY_KINDS.includes(value as VocabularyKind);
-}
-
-export function totalKept(counts: ImportCounts): number {
-  return (
-    counts.expenses +
-    counts.categories +
-    counts.members +
-    counts.budgets +
-    counts.settlements +
-    counts.vocabulary
-  );
 }

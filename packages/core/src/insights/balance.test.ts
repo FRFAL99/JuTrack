@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { computeBalances, netFor, simplifyDebts } from './balance';
+import { computeBalances, simplifyDebts, type MemberBalance } from './balance';
 import { buildSplit } from '../model/store';
+import type { Cents } from '../model/money';
 import type { Expense, Settlement } from '../model/types';
 
 /** Spesa minima con quote esplicite, per non dipendere dallo store nei test di calcolo. */
@@ -38,6 +39,17 @@ function settlement(id: string, from: string, to: string, amountCents: number): 
     createdAt: '2026-08-02T10:00:00.000Z',
     deletedAt: null,
   };
+}
+
+/**
+ * Il saldo di un membro, per leggere le attese senza frugare nell'elenco.
+ *
+ * Stava in `balance.ts` ed era esportato, ma a chiamarlo c'era solo questo file: una
+ * comodità del test travestita da funzione di dominio. L'app il saldo se lo prende
+ * scorrendo l'elenco, che è quello che disegna.
+ */
+function netFor(balances: MemberBalance[], memberId: string): Cents {
+  return balances.find((b) => b.memberId === memberId)?.netCents ?? 0;
 }
 
 describe('computeBalances', () => {

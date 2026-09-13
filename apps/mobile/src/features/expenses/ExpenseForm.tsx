@@ -37,6 +37,7 @@ import { useCategories, useCurrencyCode, useMembers, useMyMemberId, useVaultStor
 import { numeric, useTheme } from '@/theme';
 import { AmountPad } from './AmountPad';
 import { applyKey } from './amount-pad';
+import { MAX_EXPENSE_NOTE } from './extra-fields';
 import { categorySummary, detailsSummary, payerSummary, type SummaryPart } from './group-summary';
 import { formatDayTitle, todayIso } from './grouping';
 import { describeGap, previewShareCents, splitModeLabel, splitPreview } from './split-text';
@@ -437,6 +438,7 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
               onChangeText={setNote}
               onFocus={() => setWritingNote(true)}
               onBlur={() => setWritingNote(false)}
+              maxLength={MAX_EXPENSE_NOTE}
               placeholder={t('expense.notePrompt')}
               placeholderTextColor={colors.textFaint}
               returnKeyType="done"

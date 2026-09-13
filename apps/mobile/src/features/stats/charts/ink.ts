@@ -66,7 +66,10 @@ function parseHex(color: string): [number, number, number] | null {
           .join('')
       : hex;
 
-  if (!/^[0-9a-fA-F]{6}$/.test(full.slice(0, 6)) || (full.length !== 6 && full.length !== 8)) {
+  // La regex copre **tutta** la stringa, non i primi sei caratteri: verificando solo quelli,
+  // `#00FF00zz` passava per un colore valido con l'alfa ignorato, e due caratteri qualunque
+  // in coda facevano scrivere il nome su una tinta che nessuno aveva chiesto.
+  if (!/^[0-9a-fA-F]+$/.test(full) || (full.length !== 6 && full.length !== 8)) {
     return null;
   }
 
