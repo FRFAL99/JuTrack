@@ -114,100 +114,9 @@ passaggio c'è [devlog.md](devlog.md), ma **questo file basta per riprendere il 
 
 ## Avanzamento
 
-| Step                                | Stato | Cosa contiene                                                |
-| ----------------------------------- | ----- | ------------------------------------------------------------ |
-| 0 — Repo e documentazione           | ✅    | Monorepo npm workspaces, toolchain, ADR, threat model        |
-| 1 — Scheletro Expo                  | ✅    | SDK 57, expo-router, tema chiaro/scuro, componenti base      |
-| 2 — Crypto                          | ✅    | HKDF, XChaCha20-Poly1305, backup con passphrase              |
-| 3 — Modello Yjs e persistenza       | ✅    | VaultStore, SQLite, convergenza CRDT verificata              |
-| 4 — UI spese e categorie            | ✅    | Lista, form, categorie, persone — funzionante offline        |
-| 5 — Relay Cloudflare                | ✅    | **In produzione**, verificato end-to-end                     |
-| 6 — Motore di sincronizzazione      | ✅    | Push/pull cifrato, coda offline, recupero via snapshot       |
-| 7 — Pairing via QR                  | ✅    | QR, scanner, incolla manuale, deep link `jutrack://pair`     |
-| 8 — Split, saldo, budget, grafici   | ✅    | Saldo, pareggi, budget mensili, barre per categoria e mese   |
-| 9 — CI, export, backup della chiave | ✅    | GitHub Actions, export CSV/JSON, backup cifrato della chiave |
-| 10 — Sync: correttezza e velocità   | ✅    | Catch-up al boot, push immediato, poll adattivo, `AppState`  |
-| 11 — Profili                        | ✅    | Un profilo per persona, il membro nasce da lì                |
-| 12 — Più gruppi per telefono        | ✅    | Registro gruppi, tabelle per vault, runtime rimontabile      |
-| 13 — Inviti via link                | ✅    | Link condivisibile, pagina `/j` sul Worker                   |
-| 14 — Uscire da un gruppo            | ✅    | Cancellazione dal relay, rigenerazione con chiave nuova      |
-| 15 — Piano v3 scritto               | ✅    | Quattro tab, gruppo come luogo, azzeramento, sync tarato     |
-| 16 — Poll a scala, `markActive`     | ✅    | Scala 2→5→15→60 s invece del gradino 3 s/30 s                |
-| 17 — Offline ≠ errore del relay     | ✅    | `offlineRetryMs`, state vector scritto solo se cambia        |
-| 18 — Tab Gruppi: elenco → gruppo    | ✅    | Le spese diventano il dettaglio del gruppo, URL invariati    |
-| 19 — Tutto il gruppo nel gruppo     | ✅    | Categorie, budget, pareggi, export dietro un'unica guardia   |
-| 20 — Quattro tab                    | ✅    | Gruppi, Grafici, Impostazioni, Profilo                       |
-| 21 — Nessun gruppo al primo avvio   | ✅    | Fase `absent`, l'utente crea o entra con un invito           |
-| 22 — Azzera questo telefono         | ✅    | Wipe totale e ritorno all'onboarding, senza riavvio          |
-
-Piano v4 — [piano-v4-grafici-e-dashboard.md](piano-v4-grafici-e-dashboard.md), **chiuso**:
-
-| Step                           | Stato | Cosa contiene                                                 |
-| ------------------------------ | ----- | ------------------------------------------------------------- |
-| 23 — Negozio e tag nel modello | ✅    | Due campi additivi su `Expense`, normalizzazione, export a v2 |
-| 24 — «Informazioni aggiuntive» | ✅    | Tendina chiusa nel form, suggerimenti, `Chip` condiviso       |
-| 25 — La geometria dei grafici  | ✅    | `packages/core/src/chart/` e sette aggregazioni nuove         |
-| 26 — I grafici nuovi, in SVG   | ✅    | Linee, aree, heatmap, istogramma, treemap, ciambella          |
-| 27 — I sei filtri              | ✅    | `ExpenseQuery`, barra a chip, foglio, selettore di periodo    |
-| 28 — La dashboard componibile  | ✅    | Registro dei widget, layout in `app_meta`, `/dashboard`       |
-
-Piano v5 — [piano-v5-notifiche-widget-profilo.md](piano-v5-notifiche-widget-profilo.md), **dodici
-step su dodici nel codice**:
-
-| Step                               | Stato | Cosa contiene                                                          |
-| ---------------------------------- | ----- | ---------------------------------------------------------------------- |
-| 29 — Valuta di default nel profilo | ✅    | Campo `currency` sul `Profile`, selettore in `tu.tsx`, simbolo ovunque |
-| 30 — Infrastruttura nativa         | ✅    | Plugin, permesso, build EAS installata, diagnostica 16/16              |
-| 31 — Promemoria spesa              | ✅    | Interruttore in Tu, scadenza riarmata a ogni apertura                  |
-| 32 — Avviso di budget              | ✅    | Watcher sul documento, segni in `app_meta`, gestore di primo piano     |
-| 33 — Sincronizzazione ferma        | ✅    | Terzo interruttore, watcher sulla fase, scadenza di 24 h su disco      |
-| 34 — Widget «Saldo»                | ✅    | Foglietto in `app_meta`, task headless, `index.js` come entry          |
-| 35 — Widget «Speso questo mese»    | ✅    | Stesso foglietto e stesso rettangolo, didascalia che nomina il mese    |
-| 36 — Refresh in background         | ✅    | Sync ogni 30 min dal task headless. Build del 5 settembre installata   |
-| 37 — Infrastruttura i18n           | ✅    | `i18next`, campo `language`, selettore in `tu.tsx`, Tu tradotta tutta  |
-| 38 — Traduzione EN, tre schermate  | ✅    | Spese, nuova spesa, gruppi, e i sei moduli condivisi sotto             |
-| 39 — Formato dei numeri per lingua | ✅    | `NumberFormat` nel core, `@/i18n/money` nell app, guardia ESLint       |
-| 40 — Traduzione EN, il resto       | ✅    | Grafici, dashboard, onboarding, pairing, backup/export/import, azzera  |
-| 41 — Verifica end-to-end           | 🟡    | Grosso modo fatto il 12 settembre; resta ciò che chiede giorni         |
-
-Robustezza dei dati — nati fuori dai piani, dalla rilettura del 17 agosto:
-
-| Step                             | Stato | Cosa contiene                                                        |
-| -------------------------------- | ----- | -------------------------------------------------------------------- |
-| 42 — Reimport dell'export JSON   | ✅    | `parseVaultExport`, `importSnapshot`, `/importa`, in un gruppo nuovo |
-| 43 — Avviso «chiave non salvata» | ✅    | Quarto interruttore, `BackupWatcher`, soglia a cinque spese          |
-
-Verso la pubblicazione — anch'essi fuori dai piani, dalla rilettura del 5 settembre:
-
-| Passo                    | Stato | Cosa contiene                                                     |
-| ------------------------ | ----- | ----------------------------------------------------------------- |
-| 44 — Informativa privacy | ✅    | `GET /privacy` sul relay, IT + EN, otto test, **in produzione**   |
-| 45 — Icona definitiva    | ✅    | `icon-source.svg` come unica sorgente (lo script arriva col 46)   |
-| 46 — Splash e pipeline   | ✅    | `npm run icone`, sette PNG dal vettoriale, splash vero            |
-| 47 — `expo-updates`      | ✅    | Correzioni JS senza Play Store, con `runtimeVersion` a impronta   |
-| 48 — Crash reporting     | ⬜    | **Ritirato**: per ora bastano gli Android Vitals del Play Console |
-
-Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette passi:
-
-| Passo                      | Stato | Cosa contiene                                                   |
-| -------------------------- | ----- | --------------------------------------------------------------- |
-| 1 — Token                  | ✅    | Grigi scuri più profondi, `surfaceRaised`/`divider`/`textFaint` |
-| 2 — Icone                  | ✅    | Feather al posto delle emoji, mappa emoji→icona in `seed.ts`    |
-| 3 — Componenti nuovi       | ✅    | `SectionLabel`, `ListRow`, `AvatarStack`, `Card` a varianti     |
-| 4 — Tu                     | ✅    | Fusione profilo + impostazioni, da quattro tab a tre            |
-| 5 — Grafici                | ✅    | Riscrittura in forma registro, barre ritoccate                  |
-| 6 — Spese home + selettore | ✅    | Nuova radice del tab, card eroe, selettore gruppi in un foglio  |
-| 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
-
-Piano v6 — [piano-v6-spesa-rapida-e-grafici-componibili.md](piano-v6-spesa-rapida-e-grafici-componibili.md),
-**deciso il 12 settembre, chiuso il 13: quattro step su quattro nel codice**:
-
-| Step                                         | Stato | Cosa contiene                                                                     |
-| -------------------------------------------- | ----- | --------------------------------------------------------------------------------- |
-| 49 — Il tastierino in-app per l'importo      | ✅    | `TextInput` senza tastiera di sistema, `amount-pad.ts`, tasto decimale per lingua |
-| 50 — I tre gruppi apribili della nuova spesa | ✅    | Un gruppo aperto per volta, riassunto col valore vero, Data/Nota in «Dettagli»    |
-| 51 — I capitoli dei grafici                  | ✅    | Sedici widget divisi in Mese (10) / Abitudini (3) / Fra di voi (3)                |
-| 52 — La composizione in loco                 | ✅    | «Modifica» dentro i Grafici, `moveWithin`, `app/dashboard.tsx` diventa redirect   |
+L'elenco completo degli step — numero, titolo, piano di appartenenza, stato e data del devlog —
+sta in **[registro.md](registro.md)**, che è anche il posto in cui si legge quale sia il
+prossimo numero libero. Qui sotto resta soltanto ciò che una tabella non sa dire.
 
 **Fuori dai piani, lo stesso 13 settembre: lo Step 53** ha ridotto «Tu» a righe che dicono il proprio
 valore. Lingua, Valuta, Colore e Avvisi non stanno più tutti aperti — erano tre selettori e quattro
@@ -250,13 +159,7 @@ tutte volute.
 **1322 test verdi** (639 core + 629 app + 54 relay), typecheck, lint e `format:check` puliti.
 
 Piano v7 — [piano-v7-data-e-vocabolario-del-gruppo.md](piano-v7-data-e-vocabolario-del-gruppo.md),
-**scritto e chiuso il 13 settembre, tre step su tre**:
-
-| Step                                    | Stato | Cosa contiene                                                                 |
-| --------------------------------------- | ----- | ----------------------------------------------------------------------------- |
-| 58 — La data della spesa si sceglie     | ✅    | `MonthGrid` condiviso coi filtri, «Oggi»/«Ieri», `assertIsoDate` in scrittura |
-| 59 — Il vocabolario del gruppo          | ✅    | Catalogo `tag`/`store` nel vault, chiave derivata dal nome, due schermate     |
-| 60 — Le correzioni dal check del codice | ✅    | Sette voci su otto: la guardia su `paidBy` è stata tentata e ritirata         |
+**scritto e chiuso il 13 settembre, tre step su tre.**
 
 **Lo Step 58 è entrato il 13 settembre.** La data di una spesa si sceglie: la riga di
 «Dettagli» che era di sola lettura apre due pillole — «Oggi» e «Ieri», che sono la risposta
