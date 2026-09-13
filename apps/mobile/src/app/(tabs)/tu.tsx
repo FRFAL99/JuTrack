@@ -16,6 +16,7 @@ import {
 import { ColorChoice } from '@/features/profile/ColorChoice';
 import { CurrencyPicker } from '@/features/profile/CurrencyPicker';
 import { LanguagePicker } from '@/features/profile/LanguagePicker';
+import { BackupSettings } from '@/features/backup/BackupSettings';
 import { AlertSwitches } from '@/features/profile/AlertSwitches';
 import { SettingSheet } from '@/features/profile/SettingSheet';
 import { alertsSummary, alertsTone, currencyLabel, languageName } from '@/features/profile/summary';
@@ -53,7 +54,7 @@ import { useTheme } from '@/theme';
  * che stanno nel documento condiviso e non sono testo dell'app.
  */
 /** Le quattro impostazioni che si aprono in un foglio. */
-type SettingKey = 'color' | 'language' | 'currency' | 'alerts';
+type SettingKey = 'color' | 'language' | 'currency' | 'alerts' | 'backup';
 
 export default function TuScreen() {
   const { t, i18n } = useTranslation();
@@ -354,6 +355,13 @@ export default function TuScreen() {
             distinguono. Qui sotto ci sono l'import, la diagnostica e l'azzeramento — cioè
             manutenzione, non preferenze. */}
         <SectionLabel>{t('you.device.maintenance')}</SectionLabel>
+        {/* Il backup automatico, che è una cosa del **telefono** e non di un gruppo: copre
+            tutti i gruppi insieme, ed è la differenza con «Esporta i dati», che sta dentro
+            il gruppo e ne copre uno solo. La riga dice sempre **quando** è stato fatto
+            l'ultimo: una funzione di backup che non lo dice chiede di essere creduta sulla
+            parola, ed è il genere di fiducia che si scopre mal riposta al momento peggiore. */}
+        <ListRow label={t('you.backup.title')} onPress={() => setSheet('backup')} />
+        <Rule inset={spacing.lg} color={colors.divider} />
         {/* Sta qui e non fra le voci del gruppo, benché sia il gemello di «Backup della
             chiave»: l'import **crea** un gruppo, quindi è una cosa del telefono, e va
             raggiungibile proprio quando di gruppi non ce n'è nessuno — che è il caso in cui
@@ -428,6 +436,16 @@ export default function TuScreen() {
 
       {/* Le due note in fondo restano dentro il foglio e non salgono in `hint`: dicono cosa
           fanno gli interruttori, e vanno lette accanto a loro. */}
+      {/* Il foglio del backup non ha `hint`: quello che c'è da dire dipende da se una
+          cartella è stata scelta o no, e sta dentro il componente insieme ai bottoni. */}
+      <SettingSheet
+        visible={sheet === 'backup'}
+        onClose={() => setSheet(null)}
+        title={t('you.backup.title')}
+      >
+        <BackupSettings />
+      </SettingSheet>
+
       <SettingSheet
         visible={sheet === 'alerts'}
         onClose={() => setSheet(null)}

@@ -98,6 +98,12 @@ confuse:
 - **`groupName` e `app` sono metadati, non record**: un valore illeggibile vale `null` e non produce
   né un rifiuto né uno scarto, perché nessuno dei due entra nel documento e il nome si può correggere
   prima di confermare l'import.
+- **Dallo Step 65 c'è il backup automatico** (`features/backup/`): una cartella scelta **una volta**
+  con `Directory.pickDirectoryAsync()`, il cui permesso Android è **persistente**. All'apertura
+  dell'app, passati 7 giorni, si scrive il JSON di **ogni** gruppo tenendone le ultime 3 copie. Non
+  gira mentre l'app è chiusa — quello vorrebbe dire un modulo nativo — e le schermate lo dicono con
+  quelle parole. Il segno si scrive **solo** a file finito sul disco, o una cartella revocata
+  spegnerebbe il backup per una settimana in silenzio.
 - **Dallo Step 64 il file si sceglie**, in `/importa` come in `/backup`: `File.pickFileAsync` di
   `expo-file-system`, che è già nella build. Gli appunti restano come ripiego, perché la build
   nativa installata può essere più vecchia del JavaScript che le arriva via etere — e in quel caso

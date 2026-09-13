@@ -262,6 +262,28 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
   Se manca il foglio di condivisione il bottone del `.xlsx` è **spento**: è voluto, un file binario
   non può ripiegare sugli appunti. Il JSON accanto invece deve continuare a ripiegarci.
 
+- **Il backup automatico dello Step 65 — è lo step meno provato di tutto il piano v8.** Il codice
+  nativo dice che scrivere in una cartella SAF si fa con `Directory.createFile` e non con
+  `File.create`, ed è quello che il codice fa; ma fra «il sorgente Kotlin dice così» e «funziona sul
+  telefono» c'è tutta la distanza che questo documento esiste per misurare. Nell'ordine:
+  1. Tu → **Backup automatico** → «Scegli una cartella» → il selettore di **cartelle** di Android si
+     apre (non quello dei file) → scegli `Documenti/JuTrack`, creandola se non c'è.
+  2. «Fai un backup adesso» → il messaggio deve dire **quanti gruppi** ha salvato, e il numero deve
+     corrispondere ai gruppi che hai. Apri Files: c'è **un file per ogni gruppo**, e il nome del
+     gruppo è dentro il nome del file.
+  3. Apri uno di quei file: dev'essere un export v4 completo, con `"groupName"` giusto.
+  4. **Il gesto che conta davvero: chiudi l'app dal menu dei recenti e riaprila**, poi torna in Tu →
+     Backup automatico. La riga deve dire ancora «Ultimo backup: …» e **non** richiedere il
+     permesso. È l'unico modo di provare che il permesso sulla cartella è persistente, e nessun test
+     può farlo al posto suo.
+  5. Poi i due casi storti, che sono quelli che si scoprono tardi: **rinomina un gruppo in
+     «Casa/Ufficio»** e rifai il backup — deve nascere `jutrack-casa-ufficio-….json` e **non** deve
+     fallire; e **sposta o cancella la cartella** dalle impostazioni di Android, poi rifai il backup
+     — deve comparire «Backup parziale» con il conteggio dei falliti, non un crash.
+  6. Se il bottone «Scegli una cartella» **non c'è** e al suo posto c'è l'avviso arancione, è
+     l'esito buono dell'altro tipo: la build nativa del 5 settembre non ha `pickDirectoryAsync`, e
+     serve una build EAS. Va scritto qui.
+
 - **Il selettore di file dello Step 64, che è il primo a dipendere da una funzione nativa arrivata
   via etere.** La development build installata è del **5 settembre**, e questo codice ci arriva come
   aggiornamento OTA: l'OTA porta JavaScript, non codice nativo. Quindi la prova ha **due esiti

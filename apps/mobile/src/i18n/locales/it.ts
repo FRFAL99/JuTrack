@@ -292,6 +292,32 @@ export const it = {
       title: 'Il gruppo aperto',
       manage: 'persone e invito',
     },
+    backup: {
+      title: 'Backup automatico',
+      hint: 'Scegli una cartella una volta sola: l’app ci scrive il backup di **ogni** gruppo, tenendo le ultime {{keep}} copie di ciascuno. Se quella cartella è sincronizzata da Nextcloud, Syncthing o simili, i backup escono dal telefono da soli.',
+      whenHint:
+        'Succede all’apertura dell’app, quando dall’ultima volta sono passati {{days}} giorni — non mentre l’app è chiusa.',
+      choose: 'Scegli una cartella',
+      change: 'Cambia cartella',
+      forget: 'Smetti di fare backup',
+      forgetTitle: 'Smettere di fare backup?',
+      forgetBody:
+        'L’app smette di scrivere in quella cartella. I file già salvati restano dove sono: sono backup, e cancellarli sarebbe l’opposto di quello che servono.',
+      forgetConfirm: 'Smetti',
+      runNow: 'Fai un backup adesso',
+      never: 'Su questo telefono non risulta nessun backup.',
+      last: 'Ultimo backup: {{day}}/{{month}}/{{year}}.',
+      doneTitle: 'Backup fatto',
+      doneBody: 'Gruppi salvati: {{written}}.',
+      partialTitle: 'Backup parziale',
+      partialBody:
+        'Salvati: {{written}}. Non riusciti: {{failed}}. Se la cartella è stata spostata o il permesso revocato, sceglila di nuovo.',
+      failedTitle: 'Non si riesce a scegliere la cartella',
+      unavailable: {
+        title: 'Non disponibile su questa versione',
+        body: 'Questa versione dell’app non riesce ad aprire il selettore di cartelle. Per il backup automatico serve un’app aggiornata; nel frattempo «Esporta i dati» dentro il gruppo funziona come sempre.',
+      },
+    },
     device: {
       maintenance: 'Dati e diagnostica',
       title: 'Questo telefono',

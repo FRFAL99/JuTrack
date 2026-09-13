@@ -9,6 +9,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '@/i18n';
 import { LanguageSync } from '@/i18n/LanguageSync';
 import { GroupIdentityGate } from '@/features/groups/GroupIdentityGate';
+import { AutoBackup } from '@/features/backup/AutoBackup';
 import { BackupWatcher } from '@/features/notifications/BackupWatcher';
 import { BudgetWatcher } from '@/features/notifications/BudgetWatcher';
 import { ReminderScheduler } from '@/features/notifications/ReminderScheduler';
@@ -157,6 +158,12 @@ function Shell() {
         <LanguageSync />
         <GroupsProvider>
           <GroupsGate>
+            {/* Scrive il backup di **tutti** i gruppi nella cartella scelta, quando è ora.
+                Sta qui e non sotto `VaultGate` insieme agli altri: gli avvisi guardano il
+                gruppo aperto, questo li copre tutti — ed è proprio il difetto che sana,
+                perché l'export a mano copriva un gruppo solo e chi ne ha tre doveva
+                ricordarsi di ripetere il gesto tre volte. */}
+            <AutoBackup />
             <VaultProvider>
               <VaultGate>
                 {/* Guarda i budget del gruppo aperto e avvisa quando uno cambia livello.

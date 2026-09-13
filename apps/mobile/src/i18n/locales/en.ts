@@ -265,6 +265,32 @@ export const en: Dictionary = {
       title: 'The open group',
       manage: 'people and invite',
     },
+    backup: {
+      title: 'Automatic backup',
+      hint: 'Choose a folder once: the app writes a backup of **every** group into it, keeping the last {{keep}} copies of each. If that folder is synced by Nextcloud, Syncthing or the like, the backups leave the phone on their own.',
+      whenHint:
+        'It happens when you open the app, once {{days}} days have passed since the last one — not while the app is closed.',
+      choose: 'Choose a folder',
+      change: 'Change folder',
+      forget: 'Stop backing up',
+      forgetTitle: 'Stop backing up?',
+      forgetBody:
+        'The app stops writing to that folder. The files already saved stay where they are: they are backups, and deleting them would be the opposite of what they are for.',
+      forgetConfirm: 'Stop',
+      runNow: 'Back up now',
+      never: 'No backup is on record on this phone.',
+      last: 'Last backup: {{month}}/{{day}}/{{year}}.',
+      doneTitle: 'Backup done',
+      doneBody: 'Groups saved: {{written}}.',
+      partialTitle: 'Partial backup',
+      partialBody:
+        'Saved: {{written}}. Failed: {{failed}}. If the folder was moved or the permission revoked, choose it again.',
+      failedTitle: 'Cannot choose the folder',
+      unavailable: {
+        title: 'Not available on this version',
+        body: 'This version of the app cannot open the folder picker. Automatic backup needs an updated app; in the meantime “Export your data” inside the group works as always.',
+      },
+    },
     device: {
       maintenance: 'Data and diagnostics',
       title: 'This phone',

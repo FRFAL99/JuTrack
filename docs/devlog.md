@@ -13,6 +13,99 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Step 65: una cartella scelta una volta, e il backup ci finisce da solo
+
+Il piano segnava questo step a **rischio alto** e diceva di provare per primo il punto fragile —
+scrivere dentro un `content://` SAF — prima di scrivere qualunque altra riga. Aveva ragione, e la
+risposta era già nel codice nativo:
+
+```kotlin
+fun create(options: CreateOptions = CreateOptions()) {
+  if (uri.isContentUri) {
+    throw UnableToCreateException("File.create function does not work with SAF
+      content:// uris, use `Directory.createFile` instead")
+```
+
+È `FileSystemFile.kt:44-47` di `expo-file-system`, verbatim. **`new File(dir, nome).create()` lancia
+su una cartella SAF** — cioè esattamente la forma che usa `features/export/share.ts`, dove funziona
+solo perché la cache è un `file:///`. Ricalcarla qui avrebbe prodotto un backup che fallisce sempre,
+e per giunta in silenzio. La strada giusta è **`Directory.createFile(nome, mimeType)`**, che è il
+metodo che quel messaggio d'errore indica. Va insieme a un secondo dettaglio: `File.write()` chiama
+`create()` quando il file non esiste, quindi si scrive **sul file restituito da `createFile`**, che a
+quel punto esiste già.
+
+Il ripiego che il piano teneva pronto — `StorageAccessFramework` di `expo-file-system/legacy` — **non
+è servito**: la nuova API ha il metodo giusto, bastava trovarlo. Il piano aveva indovinato il
+rischio e sbagliato il rimedio.
+
+**Un backup non deve poter danneggiare i dati che sta salvando.** Per leggere i gruppi non aperti
+serviva un modo di guardare dentro il loro log, e la via ovvia — `SqliteYPersistence.load()` — **non
+va bene**: quella non legge soltanto, registra un ascoltatore e, oltre `compactAfter`, accoda una
+**compattazione**, che cancella la tabella e la riscrive (`y-sqlite.ts:109-113`). Sul gruppo aperto
+sarebbero stati due scrittori che compattano la stessa tabella, ognuno con la propria coda. Quindi
+`vaults.ts` fa la cosa più noiosa possibile: legge le righe, le applica a un `Y.Doc` nuovo, legge, e
+non scrive niente da nessuna parte.
+
+**Anche il gruppo aperto si legge da SQLite**, non dallo store montato: il file può essere vecchio di
+qualche centinaio di millisecondi, e in cambio c'è una strada sola invece di due — di cui una
+percorsa quasi mai, e quindi mai provata.
+
+**Il segno si scrive solo a file finito sul disco.** `reviewAutoBackup` dice quali gruppi tocca e
+**non li segna**: segnarli lì vorrebbe dire che una cartella revocata spegne il backup per altri
+sette giorni, in silenzio e proprio dopo aver fallito. È lo stesso criterio per cui `/backup` chiama
+`recordBackup` solo a cifratura riuscita (Step 43). C'è un test che lo afferma.
+
+**Un nome di gruppo è testo libero, un nome di file no.** `validateFileSystemChildName` rifiuta `/`
+e `\`, e i filesystem sotto una cartella SAF — una scheda in FAT32, una cartella sincronizzata da
+Windows — rifiutano anche `: * ? " < > |`. Un gruppo chiamato «Casa/Ufficio» avrebbe fatto fallire il
+backup **e solo il suo**, mentre gli altri continuavano: il modo più silenzioso di perdere dei dati.
+`fileSlug` riduce a ASCII, conservando la lettera sotto l'accento (`Perù` → `peru`), e quando non
+resta niente — un gruppo di soli emoji — si ripiega sull'id, o due gruppi avrebbero lo stesso nome e
+la potatura ne cancellerebbe uno credendo di cancellare una copia vecchia dell'altro.
+
+**Tre copie per gruppo, e la potatura viene dopo la scrittura.** Tre e non una: un file scritto sopra
+un altro è un file solo, e se la copia di oggi fosse difettosa sarebbe l'unica rimasta. Dopo e non
+prima: cancellare le vecchie e poi fallire la nuova lascerebbe con meno backup di quanti se ne
+avevano cominciando. E la potatura **ordina per nome**, non per data di modifica — quella, dentro una
+cartella SAF, la decide il fornitore di documenti, e Drive o Nextcloud la riscrivono quando gli pare;
+il nome invece l'abbiamo scritto noi. Un file col prefisso giusto ma una coda che non è una data
+resta fuori: la cartella è dell'utente, e questa funzione non cancella quello che non ha scritto.
+
+**Un orologio spostato all'indietro non deve bloccare il backup per anni.** Un segno «nel futuro»
+con un confronto ingenuo dà una differenza negativa, che non supera mai la soglia. Si guarda il
+valore assoluto, e c'è il test.
+
+**Il `delete` prima di riscrivere non è pignoleria**: SAF non sovrascrive, `createDocument` su un
+nome già presente produce `nome (1).json`, e due backup fatti lo stesso giorno lascerebbero due file
+quasi identici che la potatura non riconosce.
+
+**«Automatico» vuol dire «alla riapertura», e la schermata lo dice con queste parole.** Un backup
+mentre l'app è chiusa vorrebbe dire `expo-background-task`, cioè un modulo nativo: è rimandato nel
+piano. Promettere di più di quello che si fa è il difetto peggiore che una funzione di backup possa
+avere, perché chi ci conta non ha modo di accorgersi che non è successo. Il giro parte **dopo** che
+l'interfaccia è disegnata (`InteractionManager`), una volta per sessione: tre gruppi con migliaia di
+spese sono lavoro vero sul thread JS.
+
+La sezione in «Tu» dice sempre **quando** è stato fatto l'ultimo backup, e usa «non risulta» invece
+di «non ne hai mai fatti» — stessa ragione dello Step 43. «Fai un backup adesso» non è una comodità:
+è l'unico modo di vedere se il giro funziona senza aspettare sette giorni, ed è il criterio di
+«fatto» dello step.
+
+### Verifica
+
+**1456 test verdi** (723 core + 679 app + 54 relay), `typecheck`, `lint` e `format:check` puliti,
+`expo export --platform android` completato. **Nessuna build EAS.**
+
+I trenta test nuovi stanno tutti su `auto.ts`, che è puro: le soglie, la potatura, gli slug, il
+segno che non si scrive troppo presto. `folder.ts` e `vaults.ts` non ne hanno, per la ragione
+dichiarata in `share.ts` e in `pick.ts` — su Node non c'è niente da provare che non sia un finto.
+
+**Quello che resta da provare col telefono è tutto lo step**, e il gesto che conta è il secondo:
+scegliere la cartella, poi **chiudere l'app dal menu dei recenti e riaprirla**. È l'unico modo di
+vedere se il permesso è davvero persistente, e nessun test può farlo al posto suo.
+
+---
+
 ## 2026-09-13 — Step 64: si sceglie un file, e gli appunti restano
 
 Per sei volte questo progetto ha rifiutato un modulo nativo per una comodità, e lo Step 42 l'aveva

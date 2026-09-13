@@ -90,7 +90,7 @@ Stato: ✅ chiuso · 🟡 in parte · ⬜ non fatto.
 | 62  | Il file Excel contiene tutto il gruppo  | v8        | ✅    | 2026-09-13 |
 | 63  | Il backup dice di che gruppo è          | v8        | ✅    | 2026-09-13 |
 | 64  | L'import sceglie un file                | v8        | ✅    | 2026-09-13 |
-| 65  | La cartella, e il backup che si fa solo | v8        | ⬜    | —          |
+| 65  | La cartella, e il backup che si fa solo | v8        | ✅    | 2026-09-13 |
 | 66  | L'avviso «il backup invecchia»          | v8        | ⬜    | —          |
 
 ## Le note che la tabella non può contenere
