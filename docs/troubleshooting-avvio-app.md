@@ -6,6 +6,44 @@ Documento scritto durante l'indagine, non dopo: include le ipotesi sbagliate, pe
 stato escluso vale quanto sapere cosa è stato trovato. La conclusione è in fondo, ma vale la pena
 leggere come ci si è arrivati — l'errore di metodo è più istruttivo dell'errore tecnico.
 
+## La development build sparisce quando installi una preview (13 settembre 2026)
+
+**Sintomo.** Apri JuTrack e non si aggancia a Metro. Ripieghi su Expo Go, e lì l'app non parte
+affatto: tre errori rossi che parlano di `expo-notifications` — «Android Push notifications ... was
+removed from Expo Go with the release of SDK 53» — e a cascata un
+`Cannot read property 'getAllScheduledNotificationsAsync' of undefined`.
+
+**Quegli errori non riguardano il codice dell'app.** Expo Go dalla SDK 53 non ha il lato nativo di
+`expo-notifications`, quindi `features/notifications/module.ts` non lo trova e chi lo usa cade dietro.
+In una development build quel modulo c'è e non succede niente. **Expo Go non è un modo di provare
+questa app**, e non lo sarà finché ci sono le notifiche.
+
+**La causa vera è un'altra.** `development` e `preview` costruivano lo stesso package
+`com.frfal.jutrack`: installando la build `preview` del 12 settembre, Android l'ha trattata come un
+aggiornamento — è la ragione per cui i dati erano sopravvissuti — e **ha sostituito il dev client**.
+La `preview` ha `developmentClient: false`, quindi non sa agganciarsi a Metro: gira solo il JS che si
+porta dentro.
+
+**Risolto alla radice**: `apps/mobile/app.config.ts` dà alla variante di sviluppo il package
+`com.frfal.jutrack.dev` e il nome «JuTrack dev», e `eas.json` passa `APP_VARIANT=development` a quel
+profilo. Le due app convivono sul telefono. Lo `scheme` resta `jutrack` per entrambe, così un invito
+`jutrack://join#…` può aprire quella che si sta provando — Android chiede quale.
+
+**Due cose misurate quel giorno, da ricordare:**
+
+- **`version` entra nell'impronta di `runtimeVersion`.** Alzarla da `0.1.0` a `1.0.0` (commit
+  `777b958`) ha cambiato il fingerprint, quindi la build `preview` installata **non accetta più**
+  nessun `eas update` pubblicato da `main`. Le due impronte: `da213b95…` con 0.1.0, `d862b56d…` con
+  1.0.0.
+- **`eas.json` è hashato come file intero.** Aggiungere un `env` al solo profilo `development` ha
+  spostato la `runtimeVersion` di _tutti_ i profili. Lo Step 47 esiste per mandare `eas update` alle
+  build già installate: **toccare `eas.json` le taglia fuori**, anche per una riga che riguarda un
+  altro profilo.
+
+**Attenzione anche a questo**: lanciare `npx expo …` dalla **root** del monorepo ci lascia un
+`app.json` vuoto (`{"expo":{}}`). È lo stesso file che fa credere a Metro di avere un progetto lì, ed
+è la trappola che è costata giorni. Se compare, si cancella.
+
 ## La causa
 
 **Metro era in esecuzione dalla root del monorepo invece che da `apps/mobile`.**
