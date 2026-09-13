@@ -91,10 +91,21 @@ Vuoto = il bundle non può riferirsi a niente che non ci sia già.
 | ---------- | ------------ | ----------- | ----------------------------------------------------------------------------------------------------------------------- |
 | 2026-09-13 | `production` | `d862b56d…` | Step 49–57, dal commit `6dfbbeb`. Il **primo** della storia del progetto: gruppo `dcf68b3d-30a1-4214-b85d-e91f76024c2d` |
 | 2026-09-13 | `production` | `d862b56d…` | Step 58–60 (Piano v7 intero), dal commit `26fb052`: gruppo `bd3db527-395b-4522-94c1-e8c67ccd067a`                       |
+| 2026-09-13 | `production` | `d862b56d…` | Step 61–66 (Piano v8 intero), dal commit `a7c69d8`: gruppo `3fa557a0-a8a5-4fb6-81df-c19611c8fc0b`                       |
 
 Si rilegge con `npx eas-cli channel:view production` e `npx eas-cli update:list`. Per tornare
 indietro: `npx eas-cli update:rollback`, oppure ripubblicare dal commit precedente — un aggiornamento
 via etere si disfa in un minuto, ed è la ragione per cui è meno rischioso di una build.
+
+**Una cosa imparata pubblicando il terzo.** L'impronta non serve solo a sapere se un update
+**arriverà**: dice anche **cosa c'è dentro il binario installato**. `@expo/fingerprint` hasha
+`node_modules/<modulo>/android` come cartella, quindi due impronte identiche significano codice
+nativo identico. Il Piano v8 usava tre funzioni native nuove — `File.pickFileAsync`,
+`Directory.pickDirectoryAsync`, `Directory.createFile` — e la domanda «ci sono nella build del 12
+settembre?» sembrava rispondibile solo col telefono in mano. Non lo era: l'impronta corrente
+combacia con `d862b56d…`, quindi la cartella `expo-file-system/android` della build è byte per byte
+quella che si legge in `node_modules` — dove quelle funzioni ci sono. Un ripiego previsto è rimasto
+previsto e basta.
 
 **Due cose imparate pubblicando il secondo.** `eas update` in `--non-interactive` pretende anche
 `--environment`, che il primo giro — fatto in interattivo — non aveva chiesto:

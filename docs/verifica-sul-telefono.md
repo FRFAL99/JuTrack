@@ -288,9 +288,11 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
      «Casa/Ufficio»** e rifai il backup — deve nascere `jutrack-casa-ufficio-….json` e **non** deve
      fallire; e **sposta o cancella la cartella** dalle impostazioni di Android, poi rifai il backup
      — deve comparire «Backup parziale» con il conteggio dei falliti, non un crash.
-  6. Se il bottone «Scegli una cartella» **non c'è** e al suo posto c'è l'avviso arancione, è
-     l'esito buono dell'altro tipo: la build nativa del 5 settembre non ha `pickDirectoryAsync`, e
-     serve una build EAS. Va scritto qui.
+  6. Se il bottone «Scegli una cartella» **non c'è** e al suo posto c'è l'avviso arancione, è un
+     **difetto**, non l'altro esito buono. Lo si è potuto stabilire senza il telefono: l'impronta
+     della build di produzione (`d862b56d…`) è identica a quella corrente, e `@expo/fingerprint`
+     hasha `node_modules/expo-file-system/android` come cartella — quindi il codice nativo dentro
+     quel binario è byte per byte quello in cui `pickDirectoryAsync` c'è.
 
 - **Il selettore di file dello Step 64, che è il primo a dipendere da una funzione nativa arrivata
   via etere.** La development build installata è del **5 settembre**, e questo codice ci arriva come
@@ -300,9 +302,10 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
     scegliere un `jutrack-vault-*.json` riempie il campo **senza incollare niente**, e da lì
     «Leggi il file» prosegue come prima. Prova anche a **chiudere il selettore senza scegliere**:
     non deve comparire nessun avviso, la schermata resta com'era.
-  - Se il bottone **non c'è**: è l'altro esito buono, non un guasto — quella build nativa non ha
-    `pickFileAsync`, e gli appunti funzionano come sempre. In quel caso serve una build EAS nuova
-    per averlo, e va scritto qui.
+  - Se il bottone **non c'è**: sulla build **di produzione** è un difetto, perché l'impronta dice
+    che `pickFileAsync` in quel binario c'è (vedi la voce del backup automatico qui sopra). Su una
+    build **di sviluppo** più vecchia può invece essere l'esito buono: quelle hanno impronte diverse
+    (`43c3366f…` quella del 13 settembre), e il ripiego sugli appunti è lì per loro.
   - `/backup` deve comportarsi **allo stesso modo** dell'import: o il bottone c'è in tutte e due, o
     in nessuna delle due. La passphrase resta da digitare in ogni caso.
   - Ultima: scegliere un file **che non è un export di JuTrack** (una foto rinominata, un JSON
