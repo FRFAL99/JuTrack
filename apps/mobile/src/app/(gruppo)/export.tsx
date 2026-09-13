@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import * as Clipboard from 'expo-clipboard';
 import { useTranslation } from 'react-i18next';
-import { Alert, ScrollView, Text, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 import { expensesToCsv, settlementsToCsv, toJsonExport } from '@jutrack/core';
 import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
+import { Note } from '@/components/Note';
+import { SectionLabel } from '@/components/SectionLabel';
 import { exportFileName } from '@/features/export/filenames';
 import { isFileSharingAvailable, shareTextFile } from '@/features/export/share';
 import { useVaultRuntime } from '@/state';
@@ -18,13 +19,20 @@ import { useTheme } from '@/theme';
  * potersi portare via tutto in formati che si aprono altrove — e senza passare da un
  * server, perché il server non li ha mai visti in chiaro.
  *
- * Due formati, due scopi diversi, spiegati nella schermata: il CSV si legge, il JSON si
- * conserva. Nessuno dei due contiene la chiave del vault: quella ha una schermata sua
- * (`/backup`) e viaggia cifrata con una passphrase.
+ * Due formati, due scopi diversi: il CSV si legge, il JSON si conserva. Nessuno dei due
+ * contiene la chiave del vault: quella ha una schermata sua (`/backup`) e viaggia cifrata
+ * con una passphrase.
+ *
+ * **La schermata non spiega più i formati in due paragrafi.** Erano tre card con un titolo
+ * in grassetto e sotto duecentosettanta caratteri ciascuna: un blocco che pesava quanto il
+ * bottone che accompagnava, e che dopo la prima lettura nessuno rileggeva. Adesso sono
+ * sezioni con una `Note` di una riga, come in «Tu» — quello che è stato tagliato è ciò che
+ * si scopre aprendo il file (che gli importi ci sono anche in centesimi interi), non ciò che
+ * serve a scegliere.
  */
 export default function ExportScreen() {
   const { t } = useTranslation();
-  const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const { spacing } = useTheme();
   const { store } = useVaultRuntime();
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -92,16 +100,10 @@ export default function ExportScreen() {
 
   return (
     <ModalScreen title={t('exportScreen.title')}>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
-        <Card style={{ gap: spacing.sm }}>
-          <Text
-            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-          >
-            {t('exportScreen.csvTitle')}
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            {t('exportScreen.csvBody')}
-          </Text>
+      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
+        <SectionLabel>{t('exportScreen.csvTitle')}</SectionLabel>
+        <Note>{t('exportScreen.csvBody')}</Note>
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
           <Button
             label={t('exportScreen.expensesCsvButton')}
             onPress={run('spese', 'spese', 'csv', 'text/csv', () =>
@@ -119,20 +121,16 @@ export default function ExportScreen() {
             loading={busy === 'pareggi'}
             disabled={busy !== null}
           />
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
-            {t('exportScreen.csvSplitHint')}
-          </Text>
-        </Card>
+        </View>
+        {/* Perché i pareggi sono un file a parte: è la sola domanda che i due bottoni
+            lasciano aperta, e sta **sotto** di loro perché è la risposta a averli visti. */}
+        <View style={{ paddingTop: spacing.sm }}>
+          <Note>{t('exportScreen.csvSplitHint')}</Note>
+        </View>
 
-        <Card style={{ gap: spacing.sm }}>
-          <Text
-            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-          >
-            {t('exportScreen.jsonTitle')}
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            {t('exportScreen.jsonBody')}
-          </Text>
+        <SectionLabel>{t('exportScreen.jsonTitle')}</SectionLabel>
+        <Note>{t('exportScreen.jsonBody')}</Note>
+        <View style={{ paddingHorizontal: spacing.lg }}>
           <Button
             label={t('exportScreen.jsonButton')}
             onPress={run('vault', 'vault', 'json', 'application/json', () =>
@@ -141,31 +139,16 @@ export default function ExportScreen() {
             loading={busy === 'vault'}
             disabled={busy !== null}
           />
-        </Card>
+        </View>
 
-        <Card style={{ gap: spacing.xs, borderColor: colors.danger }}>
-          <Text
-            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-          >
-            {t('exportScreen.unencryptedTitle')}
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            {t('exportScreen.unencryptedBody1')}
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            {t('exportScreen.unencryptedBody2', { label: t('you.group.backup') })}
-          </Text>
-        </Card>
+        {/* L'avviso resta in `danger` e resta **due frasi**: la prima dice cosa succede, la
+            seconda cosa non succede. Accorciarlo a una lascerebbe credere che anche la
+            chiave del vault esca in chiaro, che è l'equivoco peggiore possibile qui. */}
+        <SectionLabel>{t('exportScreen.unencryptedTitle')}</SectionLabel>
+        <Note tone="danger">{t('exportScreen.unencryptedBody1')}</Note>
+        <Note>{t('exportScreen.unencryptedBody2', { label: t('you.group.backup') })}</Note>
 
-        {!sharingAvailable && (
-          <Card>
-            <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-              {t('exportScreen.noSharingNote')}
-            </Text>
-          </Card>
-        )}
-
-        <View style={{ height: spacing.xl }} />
+        {!sharingAvailable && <Note tone="warning">{t('exportScreen.noSharingNote')}</Note>}
       </ScrollView>
     </ModalScreen>
   );

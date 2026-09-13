@@ -5,8 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { parseVaultExport, type ImportReport, type VaultSnapshot } from '@jutrack/core';
 import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
+import { Note } from '@/components/Note';
+import { SectionLabel } from '@/components/SectionLabel';
 import { encodeSnapshotAsState } from '@/features/import/build';
 import { describeKept, groupSkips, keptTotal, suggestedName } from '@/features/import/summary';
 import { plural } from '@/i18n/translate';
@@ -45,7 +46,7 @@ import { useTheme } from '@/theme';
  */
 export default function ImportScreen() {
   const { t } = useTranslation();
-  const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
+  const { colors, spacing, radius, fontSize } = useTheme();
   const { importState } = useGroups();
 
   const [text, setText] = useState('');
@@ -141,35 +142,17 @@ export default function ImportScreen() {
 
   return (
     <ModalScreen title={t('importScreen.title')}>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
-        <Card style={{ gap: spacing.xs }}>
-          <Text
-            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-          >
-            {t('importScreen.introTitle')}
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            {t('importScreen.intro.before')}{' '}
-            <Text style={{ fontWeight: fontWeight.semibold }}>{t('importScreen.intro.bold')}</Text>
-            {t('importScreen.intro.after')}
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            {t('importScreen.useBackupHint', { label: t('you.group.backup') })}
-          </Text>
-        </Card>
+      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
+        <SectionLabel>{t('importScreen.introTitle')}</SectionLabel>
+        <Note>
+          {t('importScreen.intro.before')} {t('importScreen.intro.bold')}
+          {t('importScreen.intro.after')}
+        </Note>
+        <Note>{t('importScreen.useBackupHint', { label: t('you.group.backup') })}</Note>
 
-        <Card style={{ gap: spacing.md }}>
-          <View style={{ gap: 2 }}>
-            <Text
-              style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-            >
-              {t('importScreen.fileTitle')}
-            </Text>
-            <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-              {t('importScreen.fileBody')}
-            </Text>
-          </View>
-
+        <SectionLabel>{t('importScreen.fileTitle')}</SectionLabel>
+        <Note>{t('importScreen.fileBody')}</Note>
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
           <TextInput
             value={text}
             onChangeText={(next) => {
@@ -208,77 +191,72 @@ export default function ImportScreen() {
               {error}
             </Text>
           )}
-        </Card>
+        </View>
 
         {read !== null && (
-          <Card style={{ gap: spacing.md }}>
-            <View style={{ gap: 2 }}>
-              <Text
-                style={{
-                  color: colors.text,
-                  fontSize: fontSize.md,
-                  fontWeight: fontWeight.semibold,
-                }}
-              >
-                {t('importScreen.summaryTitle')}
-              </Text>
-              <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
+          <>
+            <SectionLabel>{t('importScreen.summaryTitle')}</SectionLabel>
+            {/* Il riassunto **non** è una `Note`: non commenta la schermata, dice cosa sta
+                per entrare nei dati. È contenuto, e il contenuto non va in `textFaint`. */}
+            <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.sm }}>
+              <Text style={{ color: colors.text, fontSize: fontSize.sm, lineHeight: 20 }}>
                 {describeKept(read.report.kept)}.
               </Text>
             </View>
-
-            {/* Gli scarti si dicono **prima** di importare, e con il motivo. Un import che
+            <View style={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
+              {/* Gli scarti si dicono **prima** di importare, e con il motivo. Un import che
                 perde delle righe in silenzio è il difetto peggiore che questa schermata
                 possa avere: chi la usa crederebbe di aver riavuto tutto. */}
-            {skips.length > 0 && (
-              <View style={{ gap: 4 }}>
-                <Text style={{ color: colors.warning, fontSize: fontSize.sm }}>
-                  {plural('importScreen.skipCount', read.report.skipped.length)}
-                </Text>
-                {skips.map(({ reason, count }) => (
-                  <Text
-                    key={reason}
-                    style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}
-                  >
-                    • {reason}
-                    {count > 1 ? ` (${count})` : ''}
+              {skips.length > 0 && (
+                <View style={{ gap: 4 }}>
+                  <Text style={{ color: colors.warning, fontSize: fontSize.sm }}>
+                    {plural('importScreen.skipCount', read.report.skipped.length)}
                   </Text>
-                ))}
-              </View>
-            )}
+                  {skips.map(({ reason, count }) => (
+                    <Text
+                      key={reason}
+                      style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}
+                    >
+                      • {reason}
+                      {count > 1 ? ` (${count})` : ''}
+                    </Text>
+                  ))}
+                </View>
+              )}
 
-            <View style={{ gap: 2 }}>
-              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
-                {t('importScreen.groupNameLabel')}
-              </Text>
-              {/* L'export non porta con sé il nome del gruppo: sta in `meta`, che la
+              <View style={{ gap: 2 }}>
+                <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
+                  {t('importScreen.groupNameLabel')}
+                </Text>
+                {/* L'export non porta con sé il nome del gruppo: sta in `meta`, che la
                   fotografia non attraversa. Si propone la data del file e si lascia
                   cambiare, invece di alzare la versione del formato per un campo che si
                   può chiedere. */}
-              <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs, lineHeight: 16 }}>
-                {t('importScreen.groupNameHint')}
-              </Text>
+                <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs, lineHeight: 16 }}>
+                  {t('importScreen.groupNameHint')}
+                </Text>
+              </View>
+              <TextInput
+                value={name}
+                onChangeText={setName}
+                placeholder={t('importScreen.summary.defaultName')}
+                placeholderTextColor={colors.textMuted}
+                maxLength={MAX_GROUP_NAME}
+                accessibilityLabel={t('importScreen.groupNameA11y')}
+                style={fieldStyle}
+              />
+
+              <Button
+                label={
+                  importing ? t('importScreen.importing') : t('importScreen.createGroupButton')
+                }
+                onPress={handleImport}
+                loading={importing}
+                disabled={importing}
+              />
             </View>
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder={t('importScreen.summary.defaultName')}
-              placeholderTextColor={colors.textMuted}
-              maxLength={MAX_GROUP_NAME}
-              accessibilityLabel={t('importScreen.groupNameA11y')}
-              style={fieldStyle}
-            />
-
-            <Button
-              label={importing ? t('importScreen.importing') : t('importScreen.createGroupButton')}
-              onPress={handleImport}
-              loading={importing}
-              disabled={importing}
-            />
-          </Card>
+          </>
         )}
-
-        <View style={{ height: spacing.xl }} />
       </ScrollView>
     </ModalScreen>
   );

@@ -5,8 +5,9 @@ import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { deriveVaultKeys, exportBackup, importBackup } from '@jutrack/core';
 import { Button } from '@/components/Button';
-import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
+import { Note } from '@/components/Note';
+import { SectionLabel } from '@/components/SectionLabel';
 import { assessPassphrase } from '@/features/backup/passphrase';
 import { exportFileName } from '@/features/export/filenames';
 import { isFileSharingAvailable, shareTextFile } from '@/features/export/share';
@@ -38,7 +39,7 @@ import { useTheme } from '@/theme';
  */
 export default function BackupScreen() {
   const { t } = useTranslation();
-  const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
+  const { colors, spacing, radius, fontSize } = useTheme();
   const { meta } = useAppData();
   const { registry, groups, join, select } = useGroups();
   const group = useCurrentGroup();
@@ -195,102 +196,80 @@ export default function BackupScreen() {
           : t('backup.title.withGroup', { name: group.name })
       }
     >
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}>
-        <Card style={{ gap: spacing.xs, borderColor: colors.danger }}>
-          <Text
-            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-          >
-            {t('backup.noRecoveryTitle')}
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            {t('backup.noRecoveryBody')}
-          </Text>
-        </Card>
+      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
+        {/* L'avviso resta **rosso** ma scende di corpo: era una card con un titolo in
+            grassetto sopra una riga a `fontSize.sm`, cioè pesante quanto i due moduli che
+            la seguono. Qui è la prima cosa che si legge e la sola in `danger` di tutta la
+            schermata — che è quanto basta perché non passi inosservata. */}
+        <SectionLabel>{t('backup.noRecoveryTitle')}</SectionLabel>
+        <Note tone="danger">{t('backup.noRecoveryBody')}</Note>
 
         {/* Senza un gruppo aperto non c'è nessuna chiave da salvare, e un modulo che
             chiede una passphrase per cifrare il nulla sarebbe solo un modo di far
             sbagliare. Resta il ripristino, che è ciò per cui si arriva qui da zero. */}
         {group !== null && (
-          <Card style={{ gap: spacing.md }}>
-            <View style={{ gap: 2 }}>
-              <Text
-                style={{
-                  color: colors.text,
-                  fontSize: fontSize.md,
-                  fontWeight: fontWeight.semibold,
-                }}
-              >
-                {t('backup.createTitle')}
-              </Text>
-              <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-                {t('backup.createBody', { name: group.name })}
-              </Text>
+          <>
+            <SectionLabel>{t('backup.createTitle')}</SectionLabel>
+            <Note>{t('backup.createBody', { name: group.name })}</Note>
+            <View style={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
+              <TextInput
+                value={passphrase}
+                onChangeText={setPassphrase}
+                placeholder={t('backup.passphrasePlaceholder')}
+                placeholderTextColor={colors.textMuted}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                accessibilityLabel={t('backup.passphraseA11y')}
+                style={fieldStyle}
+              />
+              {passphrase !== '' && (
+                <Text
+                  style={{
+                    color: assessment.acceptable ? colors.textMuted : colors.danger,
+                    fontSize: fontSize.xs,
+                    lineHeight: 18,
+                  }}
+                >
+                  {assessment.message}
+                </Text>
+              )}
+
+              <TextInput
+                value={confirmation}
+                onChangeText={setConfirmation}
+                placeholder={t('backup.confirmPlaceholder')}
+                placeholderTextColor={colors.textMuted}
+                secureTextEntry
+                autoCapitalize="none"
+                autoCorrect={false}
+                accessibilityLabel={t('backup.confirmA11y')}
+                style={fieldStyle}
+              />
+              {mismatch && (
+                <Text style={{ color: colors.danger, fontSize: fontSize.xs }}>
+                  {t('backup.mismatch')}
+                </Text>
+              )}
+
+              <Button
+                label={exporting ? t('backup.encrypting') : t('backup.createButton')}
+                onPress={handleExport}
+                loading={exporting}
+                disabled={!canExport}
+              />
             </View>
-
-            <TextInput
-              value={passphrase}
-              onChangeText={setPassphrase}
-              placeholder={t('backup.passphrasePlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              accessibilityLabel={t('backup.passphraseA11y')}
-              style={fieldStyle}
-            />
-            {passphrase !== '' && (
-              <Text
-                style={{
-                  color: assessment.acceptable ? colors.textMuted : colors.danger,
-                  fontSize: fontSize.xs,
-                  lineHeight: 18,
-                }}
-              >
-                {assessment.message}
-              </Text>
-            )}
-
-            <TextInput
-              value={confirmation}
-              onChangeText={setConfirmation}
-              placeholder={t('backup.confirmPlaceholder')}
-              placeholderTextColor={colors.textMuted}
-              secureTextEntry
-              autoCapitalize="none"
-              autoCorrect={false}
-              accessibilityLabel={t('backup.confirmA11y')}
-              style={fieldStyle}
-            />
-            {mismatch && (
-              <Text style={{ color: colors.danger, fontSize: fontSize.xs }}>
-                {t('backup.mismatch')}
-              </Text>
-            )}
-
-            <Button
-              label={exporting ? t('backup.encrypting') : t('backup.createButton')}
-              onPress={handleExport}
-              loading={exporting}
-              disabled={!canExport}
-            />
-            <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
-              {t('backup.encryptHint')}
-            </Text>
-          </Card>
+            {/* Perché ci mette qualche secondo: sta **sotto** il bottone perché è la
+                risposta a averlo premuto, non una cosa da sapere prima. */}
+            <View style={{ paddingTop: spacing.sm }}>
+              <Note>{t('backup.encryptHint')}</Note>
+            </View>
+          </>
         )}
 
-        <Card style={{ gap: spacing.md }}>
-          <View style={{ gap: 2 }}>
-            <Text
-              style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-            >
-              {t('backup.restoreTitle')}
-            </Text>
-            <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-              {t('backup.restoreBody')}
-            </Text>
-          </View>
-
+        <SectionLabel>{t('backup.restoreTitle')}</SectionLabel>
+        <Note>{t('backup.restoreBody')}</Note>
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
           <TextInput
             value={restoreBlob}
             onChangeText={setRestoreBlob}
@@ -328,9 +307,7 @@ export default function BackupScreen() {
               {restoreError}
             </Text>
           )}
-        </Card>
-
-        <View style={{ height: spacing.xl }} />
+        </View>
       </ScrollView>
     </ModalScreen>
   );

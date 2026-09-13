@@ -4,6 +4,64 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Step 55: le impostazioni smettono di essere muri di testo
+
+Seconda tornata di correzioni dal telefono. La richiesta era «adattare le altre parti di
+impostazioni che posso aprire, che siano in linea con questo nuovo stile», più una parola: il
+segnaposto della nota diventa **«Nome spesa»**, che dice cosa scriverci invece di fare una domanda.
+
+### Il difetto era lo stesso in quattro schermate
+
+`export`, `backup`, `importa` e `azzera` erano fatte tutte così: una `Card`, dentro un titolo in
+grassetto a `fontSize.md`, sotto un paragrafo da due o trecento caratteri a `fontSize.sm` con
+`lineHeight: 20`, e in fondo i comandi. **La spiegazione pesava quanto la cosa da toccare**, e dopo
+la prima lettura nessuno la rileggeva più.
+
+`components/Note.tsx` è la forma nuova: `fontSize.xxs`, `textFaint`, `lineHeight: 16`. Con
+`SectionLabel` sopra, una schermata di impostazioni diventa quello che è già «Tu» — sezioni con una
+riga di spiegazione, e i comandi che si vedono.
+
+### La regola di `textFaint`, letta al contrario
+
+Allo Step 50 `textFaint` era **vietato** per i riassunti della nuova spesa: quelle righe portano un
+valore, e il commento in `tokens.ts` dice «mai per il contenuto». Qui è giusto, e non è
+un'incoerenza: queste righe portano un **commento**, non il contenuto — il contenuto di una
+schermata di impostazioni sono i comandi.
+
+Dove la distinzione vale davvero si vede in `importa`: il riassunto di cosa sta per entrare nei dati
+(«12 spese, 3 categorie…») **non** è una `Note`. Non commenta la schermata, dice cosa sta per
+succedere ai dati. È rimasto in `colors.text`.
+
+### Dove non ho alleggerito, e perché
+
+**`azzera` tiene la sua card rossa.** «Cosa sparisce» è lo scopo della schermata: è il blocco che
+deve fermare la mano, e alleggerirlo per uniformità sarebbe stato uniformare nella direzione
+sbagliata. È sceso di peso solo «Cosa resta», che parla di ciò che **non** succede. Su `backup`
+l'avviso «non esiste un password dimenticata» è sceso di corpo ma è diventato **rosso**, ed è la sola
+cosa in `danger` di tutta la schermata.
+
+**Il testo tagliato è quello che si scopre da sé.** Dal CSV è sparita la frase sugli importi presenti
+anche in centesimi interi: è vera, e resta vera nel file — ma è una cosa che si vede aprendolo, non
+che serve a decidere se esportarlo. Dall'avviso sui file non cifrati non è stato tolto niente di
+sostanza, ed è rimasto **due frasi**: la prima dice cosa succede, la seconda cosa non succede.
+Ridurlo a una lascerebbe credere che anche la chiave del vault esca in chiaro, che è l'equivoco
+peggiore possibile lì.
+
+In tutto **418 caratteri di prosa in meno** nel dizionario italiano, su quattro schermate, senza che
+sparisca un'informazione che serva a decidere.
+
+### Quelle che non avevano il problema
+
+`categories` non ha nemmeno un paragrafo lungo, `probe` ne ha uno: sono già elenchi. `pairing` è la
+sezione col più testo dell'app (1742 caratteri), ma è un **flusso** e non una schermata di
+impostazioni — lì il testo accompagna passo per passo, ed è un lavoro a sé.
+
+### Verificato
+
+`npm run typecheck`, `npm run lint`, `npm run format:check` puliti; `npm test` **1322 verdi**.
+
+---
+
 ## 2026-09-13 — Step 54: le tre cose che ha detto il telefono
 
 Primo giro di correzioni nate dall'aver avuto l'app **in mano**, non da un piano. Tutte e tre da

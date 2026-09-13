@@ -6,6 +6,8 @@ import { Alert, ScrollView, Switch, Text, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { ModalScreen } from '@/components/ModalScreen';
+import { Note } from '@/components/Note';
+import { SectionLabel } from '@/components/SectionLabel';
 import { NavCard } from '@/components/NavCard';
 import { useWipeDevice } from '@/features/profile/useWipeDevice';
 import { plural } from '@/i18n/translate';
@@ -101,16 +103,20 @@ export default function WipeDeviceScreen() {
 
         {/* Senza gruppi non c'è nessuna copia sul relay di cui parlare: dirlo lo stesso
             farebbe cercare all'utente qualcosa che non esiste. */}
+        {/* **Questa scende di peso, quella sopra no.** «Cosa sparisce» è lo scopo della
+            schermata e resta una card col bordo `danger`: è il blocco che deve fermare la
+            mano, e alleggerirlo per uniformità sarebbe uniformare nella direzione
+            sbagliata. Qui invece si parla di ciò che **non** succede, che va saputo ma non
+            deve competere con l'elenco di sopra. */}
         {groups.length > 0 && (
-          <Card style={{ gap: spacing.sm }}>
-            <Text style={heading}>{t('wipe.whatRemainsTitle')}</Text>
-            <Text style={body}>
-              {t('wipe.relayCopy.before')}{' '}
-              <Text style={{ color: colors.text }}>{t('wipe.relayCopy.switchLabel')}</Text>
+          <View style={{ marginHorizontal: -spacing.lg, gap: 0 }}>
+            <SectionLabel>{t('wipe.whatRemainsTitle')}</SectionLabel>
+            <Note>
+              {t('wipe.relayCopy.before')} {t('wipe.relayCopy.switchLabel')}
               {t('wipe.relayCopy.after')}
-            </Text>
-            <Text style={body}>{t('wipe.whatRemainsOthers')}</Text>
-          </Card>
+            </Note>
+            <Note>{t('wipe.whatRemainsOthers')}</Note>
+          </View>
         )}
 
         <Card style={{ gap: spacing.md, borderColor: colors.danger }}>

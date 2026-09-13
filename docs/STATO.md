@@ -204,6 +204,13 @@ la card dell'artifact, la **nota esce da «Dettagli» e diventa il primo campo**
 ancorato in fondo prende la safe area inferiore — **era davvero sotto la barra dei gesti**, difetto
 introdotto dallo Step 50 e rimasto invisibile per tre step.
 
+Subito dopo, lo **Step 55** ha portato lo stesso stile nelle schermate di impostazioni che si aprono
+da «Tu»: `export`, `backup`, `importa` e la parte secondaria di `azzera` erano card con un titolo in
+grassetto e sotto duecento o trecento caratteri, cioè una spiegazione che pesava quanto il comando.
+Adesso sono `SectionLabel` più `components/Note.tsx` — 418 caratteri di prosa in meno, senza perdere
+niente che serva a decidere. **Non** è stata alleggerita la card rossa «Cosa sparisce» di `azzera`:
+è il blocco che deve fermare la mano.
+
 **1322 test verdi** (639 core + 629 app + 54 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui

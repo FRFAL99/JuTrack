@@ -177,7 +177,7 @@ export const en: Dictionary = {
     },
     category: 'Category',
     date: 'Date',
-    notePrompt: 'What was it for?',
+    notePrompt: 'Expense name',
     noteLabel: 'Expense note',
     extra: {
       title: 'Additional details',
@@ -524,7 +524,7 @@ export const en: Dictionary = {
       'Your data is end-to-end encrypted: the server keeps blobs it cannot read. If you lose the key and have no backup, the expenses do not come back — nobody can recover them, us included.',
     createTitle: 'Create a backup',
     createBody:
-      '“{{name}}”’s key, in a file encrypted with the passphrase you choose. Neither the file nor the passphrase is any use alone: you need both. Each group has its own key, so it has to be saved one at a time.',
+      '“{{name}}”’s key in an encrypted file. You need the file and the passphrase together: one alone is no use. Each group has its own key.',
     passphrasePlaceholder: 'Passphrase',
     passphraseA11y: 'Backup passphrase',
     confirmPlaceholder: 'Repeat the passphrase',
@@ -662,22 +662,22 @@ export const en: Dictionary = {
     },
     csvTitle: 'To read them elsewhere',
     csvBody:
-      'A spreadsheet: one row per expense, one column with each person’s share. It opens in Excel, Google Sheets, or any other tool. The amounts appear twice, in euros and in whole cents: the second column is the one no program can misread.',
+      'One row per expense, one column for each person’s share. Opens in Excel, Google Sheets and the like.',
     expensesCsvButton: 'Expenses (CSV)',
     settlementsCsvButton: 'Settlements (CSV)',
     csvSplitHint:
-      'Settlements sit in a separate file because they are not expenses: adding them together would give a total that means nothing.',
+      'Settlements are in a separate file: they are not expenses, and adding them would give a total that means nothing.',
     jsonTitle: 'To keep them',
     jsonBody:
-      'A full copy of the vault in JSON: expenses, categories, people, budgets and settlements, as they are in memory. It is the format to keep on hand — the CSV, by its nature, loses pieces.',
+      'A full copy: expenses, categories, people, budgets and settlements. It is the format to keep on hand, because the CSV loses pieces.',
     jsonButton: 'The whole vault (JSON)',
     unencryptedTitle: 'These files are not encrypted',
     unencryptedBody1:
-      'They come out in plain text: whoever receives them can read your expenses. End-to-end encryption protects the data while it travels through the relay, not after you have sent it to someone else.',
+      'They come out in plain text: whoever receives them can read your expenses. Encryption protects the data on the relay, not after you have sent it to someone.',
     unencryptedBody2:
       'The vault’s key is not inside any of these files. For that there is “{{label}}”, protected by a passphrase.',
     noSharingNote:
-      'On this build the modules for writing and sharing files are not available: exports will go to the clipboard. An updated build of the app fixes this.',
+      'This build is missing the module for sharing files: exports will go to the clipboard.',
   },
   budget: {
     title: 'Budget',

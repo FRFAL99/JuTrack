@@ -185,7 +185,7 @@ export const it = {
     },
     category: 'Categoria',
     date: 'Data',
-    notePrompt: 'Che spesa è?',
+    notePrompt: 'Nome spesa',
     noteLabel: 'Nota della spesa',
     extra: {
       title: 'Informazioni aggiuntive',
@@ -545,7 +545,7 @@ export const it = {
       'I dati sono cifrati end-to-end: il server conserva blob che non sa leggere. Se perdi la chiave e non hai un backup, le spese non tornano — nessuno può recuperarle, noi compresi.',
     createTitle: 'Crea un backup',
     createBody:
-      'La chiave di «{{name}}», in un file cifrato con la passphrase che scegli. Da solo non serve a niente, e nemmeno la passphrase da sola: servono entrambi. Ogni gruppo ha la sua chiave, quindi va salvato uno per uno.',
+      'La chiave di «{{name}}» in un file cifrato. Servono file e passphrase insieme: uno solo non basta. Ogni gruppo ha la sua chiave.',
     passphrasePlaceholder: 'Passphrase',
     passphraseA11y: 'Passphrase per il backup',
     confirmPlaceholder: 'Ripeti la passphrase',
@@ -683,22 +683,22 @@ export const it = {
     },
     csvTitle: 'Per leggerli altrove',
     csvBody:
-      'Un foglio di calcolo: una riga per spesa, una colonna con la quota di ciascuno. Si apre in Excel, Fogli Google o qualunque altro strumento. Gli importi ci sono due volte, in euro e in centesimi interi: la seconda colonna è quella che nessun programma può interpretare male.',
+      'Una riga per spesa, una colonna per la quota di ciascuno. Si apre in Excel, Fogli Google e simili.',
     expensesCsvButton: 'Spese (CSV)',
     settlementsCsvButton: 'Pareggi (CSV)',
     csvSplitHint:
-      'I pareggi stanno in un file a parte perché non sono spese: sommarli insieme darebbe un totale che non vuol dire niente.',
+      'I pareggi sono in un file a parte: non sono spese, e sommarli darebbe un totale che non vuol dire niente.',
     jsonTitle: 'Per conservarli',
     jsonBody:
-      'Copia integrale del vault in JSON: spese, categorie, persone, budget e pareggi, com’è in memoria. È il formato da tenere da parte — il CSV, per come è fatto, perde pezzi.',
+      'Copia integrale: spese, categorie, persone, budget e pareggi. È il formato da tenere da parte, perché il CSV perde pezzi.',
     jsonButton: 'Tutto il vault (JSON)',
     unencryptedTitle: 'Questi file non sono cifrati',
     unencryptedBody1:
-      'Escono in chiaro: chi li riceve legge le vostre spese. La cifratura end-to-end protegge i dati mentre passano dal relay, non dopo che li avete mandati a qualcun altro.',
+      'Escono in chiaro: chi li riceve legge le vostre spese. La cifratura protegge i dati sul relay, non dopo che li avete mandati a qualcuno.',
     unencryptedBody2:
       'La chiave del vault non è dentro nessuno di questi file. Per quella c’è «{{label}}», ed è protetta da una passphrase.',
     noSharingNote:
-      'Su questa build i moduli per scrivere e condividere file non sono disponibili: gli export finiranno negli appunti. Una build aggiornata dell’app risolve.',
+      'Su questa build manca il modulo per condividere file: gli export finiranno negli appunti.',
   },
   budget: {
     title: 'Budget',
