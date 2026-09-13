@@ -261,9 +261,6 @@ export const en: Dictionary = {
     group: {
       title: 'The open group',
       manage: 'people and invite',
-      categories: 'Categories and budgets',
-      backup: 'Key backup',
-      export: 'Export your data',
     },
     device: {
       maintenance: 'Data and diagnostics',
@@ -408,6 +405,45 @@ export const en: Dictionary = {
     budgetNoneSet:
       'No limit set for {{month}}. A budget is for knowing halfway through the month if you’re overdoing it, not at the end.',
     footer: 'Calculated on this phone',
+  },
+  manage: {
+    name: {
+      title: 'Group name',
+      note: 'It lives inside the group, not on this phone: renaming it changes it for everyone.',
+      vault: 'vault {{id}}',
+    },
+    members: {
+      title: 'Who is in it',
+      alone: 'Just you for now. Anyone who connects their phone shows up here on their own.',
+      many: 'Everyone adds themselves by connecting their own phone.',
+      you: '· you',
+      invite: 'Invite someone',
+    },
+    group: {
+      title: 'This group',
+      note: 'Categories, budgets, settlements, key and data belong to **the group**, not to the phone: with more than one group open, “the key” would be a question with several answers.',
+      categories: 'Categories',
+      categoriesValue: { one: '{{count}} active', other: '{{count}} active' },
+      budget: 'Budgets',
+      settlements: 'Settlements',
+      backup: 'Key backup',
+      export: 'Export your data',
+    },
+    regenerate: {
+      title: 'Removing someone',
+      note: 'There is no way to take the key back from someone who has it: regenerating the group changes it for everyone. Expenses and balances come with you, and you re-invite whoever you want to keep.',
+      action: 'Regenerate with a new key',
+      busy: 'Regenerating…',
+    },
+    leave: {
+      title: 'Leave the group',
+      body: 'Deletes this group’s key and expenses from this phone. It throws nobody out: whoever has the key keeps reading, because in a system like this the key is the right of access.',
+      wipeRelay: 'Delete the relay copy too',
+      wipeRelayOn: 'Those who stay stop receiving updates, but keep what they already downloaded.',
+      wipeRelayOff: 'Left alone, it expires by itself after thirty days.',
+      action: 'Leave the group',
+      busy: 'Leaving…',
+    },
   },
   dashboard: {
     chapters: {

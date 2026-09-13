@@ -211,6 +211,13 @@ Adesso sono `SectionLabel` più `components/Note.tsx` — 418 caratteri di prosa
 niente che serva a decidere. **Non** è stata alleggerita la card rossa «Cosa sparisce» di `azzera`:
 è il blocco che deve fermare la mano.
 
+Lo **Step 56** ha chiuso il giro sulla gestione del gruppo: cinque `NavCard` con due o tre righe di
+sottotitolo sono diventate cinque `ListRow` sotto una `Note` sola, e **le tre voci che comparivano sia
+lì sia in «Tu»** — categorie, backup, export — vivono ora solo nel gruppo, perché sono sue: con due
+gruppi aperti «Backup della chiave» dalle impostazioni è una domanda con due risposte. Nel farlo è
+emerso che quella schermata **non era tradotta affatto** (zero `t()`, undici stringhe italiane nel
+JSX): ora il suo `manage.*` esiste in tutte e due le lingue.
+
 **1322 test verdi** (639 core + 629 app + 54 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui

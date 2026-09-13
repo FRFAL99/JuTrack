@@ -280,9 +280,6 @@ export const it = {
     group: {
       title: 'Il gruppo aperto',
       manage: 'persone e invito',
-      categories: 'Categorie e budget',
-      backup: 'Backup della chiave',
-      export: 'Esporta i dati',
     },
     device: {
       maintenance: 'Dati e diagnostica',
@@ -430,6 +427,45 @@ export const it = {
     budgetNoneSet:
       'Nessun limite impostato per {{month}}. Un budget serve a sapere a metà mese se si sta esagerando, non a fine mese.',
     footer: 'Calcolato su questo telefono',
+  },
+  manage: {
+    name: {
+      title: 'Nome del gruppo',
+      note: 'Sta dentro il gruppo, non sul telefono: rinominarlo lo cambia anche per gli altri.',
+      vault: 'vault {{id}}',
+    },
+    members: {
+      title: 'Chi ne fa parte',
+      alone: 'Per ora solo tu. Chi collega il proprio telefono compare qui da solo.',
+      many: 'Ognuno si aggiunge da sé collegando il proprio telefono.',
+      you: '· tu',
+      invite: 'Invita qualcuno',
+    },
+    group: {
+      title: 'Questo gruppo',
+      note: 'Categorie, budget, pareggi, chiave e dati sono **suoi**, non del telefono: con più gruppi aperti, «la chiave» sarebbe una domanda con più risposte.',
+      categories: 'Categorie',
+      categoriesValue: { one: '{{count}} attiva', other: '{{count}} attive' },
+      budget: 'Budget',
+      settlements: 'Pareggi',
+      backup: 'Backup della chiave',
+      export: 'Esporta i dati',
+    },
+    regenerate: {
+      title: 'Escludere qualcuno',
+      note: 'Non si può togliere la chiave a chi ce l’ha: rigenerare il gruppo la cambia per tutti. Spese e saldi vengono con te, e chi vuoi tenere lo reinviti subito dopo.',
+      action: 'Rigenera con una chiave nuova',
+      busy: 'Rigenerazione…',
+    },
+    leave: {
+      title: 'Esci dal gruppo',
+      body: 'Cancella da questo telefono la chiave e le spese di questo gruppo. Non caccia nessun altro: chi ha la chiave continua a leggere, perché in un sistema così la chiave è il diritto di accesso.',
+      wipeRelay: 'Cancella anche la copia sul relay',
+      wipeRelayOn: 'Chi resta smette di ricevere aggiornamenti, ma tiene ciò che ha già scaricato.',
+      wipeRelayOff: 'Lasciandola, scade da sola dopo trenta giorni.',
+      action: 'Esci dal gruppo',
+      busy: 'Uscita…',
+    },
   },
   dashboard: {
     chapters: {

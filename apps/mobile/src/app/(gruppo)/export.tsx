@@ -146,7 +146,7 @@ export default function ExportScreen() {
             chiave del vault esca in chiaro, che è l'equivoco peggiore possibile qui. */}
         <SectionLabel>{t('exportScreen.unencryptedTitle')}</SectionLabel>
         <Note tone="danger">{t('exportScreen.unencryptedBody1')}</Note>
-        <Note>{t('exportScreen.unencryptedBody2', { label: t('you.group.backup') })}</Note>
+        <Note>{t('exportScreen.unencryptedBody2', { label: t('manage.group.backup') })}</Note>
 
         {!sharingAvailable && <Note tone="warning">{t('exportScreen.noSharingNote')}</Note>}
       </ScrollView>

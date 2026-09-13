@@ -4,6 +4,54 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Step 56: la schermata del gruppo, e la fine delle voci doppie
+
+Ultima delle schermate fuori stile, e con essa una duplicazione che Francesco ha visto prima di me:
+«ho paura di creare confusione avendo alcune informazioni negli stessi posti».
+
+### Aveva ragione: tre voci stavano in due posti
+
+`/categories`, `/backup` e `/export` si aprivano **sia** da «Tu» **sia** dalla gestione del gruppo. Non
+è comodità, è il dubbio di stare guardando due cose diverse. E c'è una ragione più forte del gusto per
+cui devono stare **solo** nel gruppo, ed era già scritta in un commento di quella schermata: con due
+gruppi sullo stesso telefono, «Backup della chiave» aperto dalle impostazioni dell'app è una domanda
+con **due risposte**.
+
+In «Tu» il gruppo aperto è tornato una riga sola, che porta lì. Tre chiavi di dizionario sono rimaste
+senza chiamanti; le due frasi che _nominavano_ la schermata del backup — in «Esporta» e in «Importa» —
+adesso la citano da dove vive.
+
+### Cinque NavCard diventate cinque righe
+
+La schermata era una pila di `NavCard` con due o tre righe di sottotitolo ciascuna. I cinque
+sottotitoli ripetevano a turno la stessa cosa — _questa roba è del gruppo, non del telefono_ — e
+adesso quella frase si scrive **una volta** sopra la sezione, con cinque `ListRow` sotto. «Categorie»
+porta il proprio valore, «8 attive», come le righe di «Tu».
+
+Restano pesanti due blocchi, e per la stessa ragione della card rossa di `azzera`: «Escludere
+qualcuno» spiega una cosa che non si disfa, e «Esci dal gruppo» è il gesto distruttivo con
+l'interruttore della copia sul relay. Quelli non vanno alleggeriti per uniformità.
+
+### E una scoperta: la schermata non era tradotta
+
+**Zero chiamate a `t()`.** Undici stringhe italiane scritte nel JSX, sopravvissute allo Step 37 che
+aveva tradotto tutto il resto. Visto che ne stavo riscrivendo quasi tutte, il momento per portarle nel
+dizionario era questo: `manage.*` esiste ora in tutte e due le lingue.
+
+Il test delle traduzioni ha fatto il suo lavoro al primo colpo, bocciando `manage.name.vault` perché
+«vault {{id}}» è identico in italiano e in inglese. È il caso previsto dall'elenco
+`identicalOnPurpose` — «vault» è il nome della cosa, come già per `groups.vaultShort` — e ci è
+entrato con la sua riga di motivazione.
+
+### Verificato
+
+`npm run typecheck`, `npm run lint`, `npm run format:check` puliti; `npm test` **1322 verdi**. Sei
+schermate ora parlano la stessa lingua: `tu`, `manage`, `export`, `backup`, `importa` e la parte
+secondaria di `azzera`. Nessuna `NavCard` con un paragrafo sotto è rimasta, fuori da quella — voluta —
+in cima ad `azzera`.
+
+---
+
 ## 2026-09-13 — Step 55: le impostazioni smettono di essere muri di testo
 
 Seconda tornata di correzioni dal telefono. La richiesta era «adattare le altre parti di

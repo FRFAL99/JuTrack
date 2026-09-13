@@ -1,10 +1,14 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
+import { useTranslation } from 'react-i18next';
 import { Alert, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
+import { ListRow } from '@/components/ListRow';
 import { ModalScreen } from '@/components/ModalScreen';
-import { NavCard } from '@/components/NavCard';
+import { Note } from '@/components/Note';
+import { SectionLabel } from '@/components/SectionLabel';
+import { plural } from '@/i18n/translate';
 import { shortVaultId } from '@/features/groups/list';
 import { SyncBadge } from '@/features/sync/SyncBadge';
 import {
@@ -44,6 +48,7 @@ export default function GroupManageScreen() {
 }
 
 function ManageGroup({ current }: { current: GroupRecord }) {
+  const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const { groups, rename, leave, regenerate } = useGroups();
   const { store, keys } = useVaultRuntime();
@@ -153,27 +158,21 @@ function ManageGroup({ current }: { current: GroupRecord }) {
     <ModalScreen title={current.name} closeLabel="‹ Indietro">
       <ScrollView
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ padding: spacing.lg, gap: spacing.md }}
+        contentContainerStyle={{ paddingBottom: spacing.xl }}
       >
-        <Card style={{ gap: spacing.sm }}>
-          <Text
-            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-          >
-            Nome del gruppo
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            Sta dentro il gruppo, non sul telefono: rinominarlo lo cambia anche per gli altri.
-          </Text>
+        <SectionLabel>{t('manage.name.title')}</SectionLabel>
+        <Note>{t('manage.name.note')}</Note>
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.sm }}>
           <TextInput
             value={draft}
             onChangeText={setDraft}
             onBlur={commitName}
             onSubmitEditing={commitName}
-            placeholder="Nome del gruppo"
+            placeholder={t('manage.name.title')}
             placeholderTextColor={colors.textMuted}
             maxLength={MAX_GROUP_NAME}
             returnKeyType="done"
-            accessibilityLabel="Nome del gruppo"
+            accessibilityLabel={t('manage.name.title')}
             style={{
               color: colors.text,
               fontSize: fontSize.md,
@@ -184,148 +183,129 @@ function ManageGroup({ current }: { current: GroupRecord }) {
               padding: spacing.md,
             }}
           />
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.xs }}>
-            vault {shortVaultId(keys.vaultId)}
-          </Text>
-          <SyncBadge state={syncState} />
-        </Card>
-
-        <Card style={{ gap: spacing.sm }}>
-          <View style={{ gap: 2 }}>
-            <Text
-              style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-            >
-              Chi ne fa parte
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.md }}>
+            <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+              {t('manage.name.vault', { id: shortVaultId(keys.vaultId) })}
             </Text>
-            <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-              {members.length <= 1
-                ? 'Per ora solo tu. Chi collega il proprio telefono compare qui da solo, con il nome del suo profilo.'
-                : 'Ognuno si aggiunge da sé collegando il proprio telefono: qui non si aggiungono persone a mano.'}
-            </Text>
+            <SyncBadge state={syncState} />
           </View>
+        </View>
 
+        <SectionLabel>{t('manage.members.title')}</SectionLabel>
+        <Note>{members.length <= 1 ? t('manage.members.alone') : t('manage.members.many')}</Note>
+        <View style={{ paddingHorizontal: spacing.lg, gap: spacing.md }}>
           {/* Sola lettura, di proposito: una persona aggiunta a mano non ha un telefono
               dietro, quindi non potrebbe mai registrare una spesa né vedere il saldo. */}
-          {members.map((member) => (
-            <View
-              key={member.id}
-              style={{
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: spacing.sm,
-                paddingVertical: spacing.xs,
-              }}
-            >
-              <View
-                style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: member.color }}
-              />
-              <Text style={{ color: colors.text, fontSize: fontSize.md }}>{member.name}</Text>
-              {member.id === myMemberId && (
-                <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>· tu</Text>
-              )}
-            </View>
-          ))}
+          <View style={{ gap: spacing.xs }}>
+            {members.map((member) => (
+              <View key={member.id} style={styles.memberRow}>
+                <View
+                  style={{ width: 12, height: 12, borderRadius: 6, backgroundColor: member.color }}
+                />
+                <Text style={{ color: colors.text, fontSize: fontSize.md }}>{member.name}</Text>
+                {member.id === myMemberId && (
+                  <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
+                    {t('manage.members.you')}
+                  </Text>
+                )}
+              </View>
+            ))}
+          </View>
 
           <Button
-            label="Invita qualcuno"
+            label={t('manage.members.invite')}
             variant="secondary"
             onPress={() => router.push('/pair/invite')}
           />
-        </Card>
+        </View>
 
-        {/* Tutto ciò che riguarda **questo** gruppo sta qui dentro, e non nelle
-            impostazioni dell'app. Categorie, budget e pareggi sono suoi; e soprattutto lo
-            sono la chiave del backup e i dati dell'export. Chi apriva «Backup della
-            chiave» dalle impostazioni non aveva modo di sapere di quale chiave si
-            trattasse — con più gruppi sullo stesso telefono è una domanda con più
-            risposte. */}
-        <NavCard
-          title="Categorie"
-          subtitle={`${categories.length} attive in questo gruppo. Stanno nel vault, non sul telefono: chi ne fa parte le vede uguali.`}
+        {/* Tutto ciò che riguarda **questo** gruppo sta qui dentro, e non nelle impostazioni
+            dell'app: erano cinque `NavCard` con due o tre righe di sottotitolo ciascuna, e
+            tre di loro comparivano **anche** in «Tu». Adesso sono cinque righe, e la ragione
+            che i cinque sottotitoli ripetevano a turno — sono del gruppo, non del telefono —
+            si scrive una volta sopra. */}
+        <SectionLabel>{t('manage.group.title')}</SectionLabel>
+        <Note>{t('manage.group.note')}</Note>
+        <ListRow
+          label={t('manage.group.categories')}
+          value={plural('manage.group.categoriesValue', categories.length)}
           onPress={() => router.push('/categories')}
         />
-        <NavCard
-          title="Budget"
-          subtitle="Limiti di spesa per categoria, mese per mese. Un limite deciso a gennaio non si eredita da solo a febbraio."
-          onPress={() => router.push('/budget')}
-        />
-        <NavCard
-          title="Pareggi"
-          subtitle="Registra un pagamento che salda un debito. Non tocca le spese: sposta solo il saldo."
-          onPress={() => router.push('/settle')}
-        />
-        <NavCard
-          title="Backup della chiave"
-          subtitle={`La chiave di «${current.name}», cifrata con una passphrase che scegli tu. Se la perdi non esiste un reset lato server: le spese di questo gruppo non tornano.`}
-          onPress={() => router.push('/backup')}
-        />
-        <NavCard
-          title="Esporta i dati"
-          subtitle="Le spese e i pareggi di questo gruppo in CSV, oppure il vault intero in JSON. Nessun lock-in."
+        <Rule inset={spacing.lg} color={colors.divider} />
+        <ListRow label={t('manage.group.budget')} onPress={() => router.push('/budget')} />
+        <Rule inset={spacing.lg} color={colors.divider} />
+        <ListRow label={t('manage.group.settlements')} onPress={() => router.push('/settle')} />
+        <Rule inset={spacing.lg} color={colors.divider} />
+        <ListRow label={t('manage.group.backup')} onPress={() => router.push('/backup')} />
+        <Rule inset={spacing.lg} color={colors.divider} />
+        <ListRow
+          label={t('manage.group.export')}
+          value="CSV · JSON"
           onPress={() => router.push('/export')}
         />
 
-        <Card style={{ gap: spacing.sm }}>
-          <Text
-            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-          >
-            Escludere qualcuno
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            Non esiste un modo di togliere la chiave a chi ce l&apos;ha: rigenerare il gruppo la
-            cambia per tutti. Le spese e i saldi vengono con te; chi vuoi tenere lo reinviti subito
-            dopo, dalla schermata che si apre da sé.
-          </Text>
+        <SectionLabel>{t('manage.regenerate.title')}</SectionLabel>
+        <Note>{t('manage.regenerate.note')}</Note>
+        <View style={{ paddingHorizontal: spacing.lg, paddingBottom: spacing.lg }}>
           <Button
-            label={regenerating ? 'Rigenerazione…' : 'Rigenera con una chiave nuova'}
+            label={regenerating ? t('manage.regenerate.busy') : t('manage.regenerate.action')}
             variant="secondary"
             onPress={handleRegenerate}
             disabled={busy}
             loading={regenerating}
           />
-        </Card>
+        </View>
 
-        <Card style={{ gap: spacing.sm, borderColor: colors.danger }}>
-          <Text
-            style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
-          >
-            Esci dal gruppo
-          </Text>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
-            Cancella da questo telefono la chiave e le spese di questo gruppo. Non caccia nessun
-            altro: chi ha la chiave continua a leggere, perché in un sistema così la chiave *è* il
-            diritto di accesso.
-          </Text>
+        <View style={{ paddingHorizontal: spacing.lg }}>
+          <Card style={{ gap: spacing.sm, borderColor: colors.danger }}>
+            <Text
+              style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.semibold }}
+            >
+              {t('manage.leave.title')}
+            </Text>
+            <Text style={{ color: colors.textMuted, fontSize: fontSize.sm, lineHeight: 20 }}>
+              {t('manage.leave.body')}
+            </Text>
 
-          {/* Vale anche per la rigenerazione, che del gruppo vecchio esce comunque: è la
+            {/* Vale anche per la rigenerazione, che del gruppo vecchio esce comunque: è la
               stessa domanda, e ripeterla in due punti la farebbe sembrare due cose diverse. */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
-                Cancella anche la copia sul relay
-              </Text>
-              <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
-                {wipeRelay
-                  ? 'Chi resta smette di ricevere aggiornamenti, ma tiene ciò che ha già scaricato.'
-                  : 'Lasciandola, scade da sola dopo trenta giorni.'}
-              </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm }}>
+              <View style={{ flex: 1, gap: 2 }}>
+                <Text style={{ color: colors.text, fontSize: fontSize.sm }}>
+                  {t('manage.leave.wipeRelay')}
+                </Text>
+                <Text style={{ color: colors.textMuted, fontSize: fontSize.xs, lineHeight: 18 }}>
+                  {wipeRelay ? t('manage.leave.wipeRelayOn') : t('manage.leave.wipeRelayOff')}
+                </Text>
+              </View>
+              <Switch
+                value={wipeRelay}
+                onValueChange={setWipeRelay}
+                accessibilityLabel={t('manage.leave.wipeRelay')}
+              />
             </View>
-            <Switch
-              value={wipeRelay}
-              onValueChange={setWipeRelay}
-              accessibilityLabel="Cancella anche la copia sul relay"
-            />
-          </View>
 
-          <Button
-            label={leaving ? 'Uscita…' : 'Esci dal gruppo'}
-            variant="danger"
-            onPress={handleLeave}
-            disabled={busy}
-            loading={leaving}
-          />
-        </Card>
+            <Button
+              label={leaving ? t('manage.leave.busy') : t('manage.leave.action')}
+              variant="danger"
+              onPress={handleLeave}
+              disabled={busy}
+              loading={leaving}
+            />
+          </Card>
+        </View>
       </ScrollView>
     </ModalScreen>
   );
 }
+
+/** Filetto fra due righe della stessa lista, rientrato ad allinearsi al testo. */
+function Rule({ inset, color }: { inset: number; color: string }) {
+  return (
+    <View style={{ height: StyleSheet.hairlineWidth, backgroundColor: color, marginLeft: inset }} />
+  );
+}
+
+const styles = StyleSheet.create({
+  memberRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 2 },
+});

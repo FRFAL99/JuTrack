@@ -329,26 +329,20 @@ export default function TuScreen() {
               style={[styles.rule, { backgroundColor: colors.border, marginTop: spacing.lg }]}
             />
             <SectionLabel>{t('you.group.title')}</SectionLabel>
-            {/* `group.name` non passa da `t`, e non passerà mai: è un nome che qualcuno ha
+            {/* **Una riga sola, e porta via.** Categorie, backup ed export stavano anche
+                qui, e si aprivano identici dalla schermata del gruppo: la stessa cosa in due
+                posti diversi non è comodità, è il dubbio di stare guardando due cose diverse.
+                Sono roba del **gruppo** — con due gruppi aperti, «Backup della chiave» da
+                qui è una domanda con due risposte — quindi vivono dove il gruppo si gestisce,
+                e qui resta il modo di arrivarci.
+
+                `group.name` non passa da `t`, e non passerà mai: è un nome che qualcuno ha
                 scritto nel documento condiviso. Tradurre i dati del gruppo vorrebbe dire
                 mostrare all'altro telefono un gruppo con un altro nome. */}
             <ListRow
               label={group.name}
               value={t('you.group.manage')}
               onPress={() => router.push(`/groups/${group.vaultId}/manage`)}
-            />
-            <Rule inset={spacing.lg} color={colors.divider} />
-            <ListRow label={t('you.group.categories')} onPress={() => router.push('/categories')} />
-            <Rule inset={spacing.lg} color={colors.divider} />
-            <ListRow label={t('you.group.backup')} onPress={() => router.push('/backup')} />
-            <Rule inset={spacing.lg} color={colors.divider} />
-            {/* «CSV · JSON» resta letterale: sono due nomi di formato, uguali in ogni
-                lingua, e una chiave di dizionario per una costante è una chiave in più da
-                tenere allineata senza niente in cambio. */}
-            <ListRow
-              label={t('you.group.export')}
-              value="CSV · JSON"
-              onPress={() => router.push('/export')}
             />
           </>
         )}

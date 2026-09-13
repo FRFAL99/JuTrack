@@ -86,6 +86,9 @@ describe('dizionari', () => {
       // «vault» è il nome della cosa, non una parola italiana: si chiama così anche nel
       // codice, nel threat model e nel nome delle tabelle.
       'groups.vaultShort',
+      // Stessa ragione, nella schermata del gruppo: «vault ca4a3fb5…» è un identificatore
+      // preceduto dal nome della cosa che identifica.
+      'manage.name.vault',
       // Lo schema di un URI di pairing (`jutrack://`): un identificatore tecnico, non una
       // frase, e non cambia con la lingua.
       'pairing.scan.schemePrefix',

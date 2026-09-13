@@ -148,7 +148,7 @@ export default function ImportScreen() {
           {t('importScreen.intro.before')} {t('importScreen.intro.bold')}
           {t('importScreen.intro.after')}
         </Note>
-        <Note>{t('importScreen.useBackupHint', { label: t('you.group.backup') })}</Note>
+        <Note>{t('importScreen.useBackupHint', { label: t('manage.group.backup') })}</Note>
 
         <SectionLabel>{t('importScreen.fileTitle')}</SectionLabel>
         <Note>{t('importScreen.fileBody')}</Note>
