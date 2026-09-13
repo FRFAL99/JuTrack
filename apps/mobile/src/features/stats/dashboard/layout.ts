@@ -111,21 +111,59 @@ export function toggleWidget(layout: DashboardLayout, id: WidgetId): DashboardLa
 }
 
 /**
- * Sposta un widget di `delta` posizioni. Ai bordi non succede niente.
+ * Scambia un widget col vicino **fra i visibili del suo capitolo**. Ai bordi non succede niente.
  *
- * Lo scambio avviene sull'elenco **intero**, spenti compresi, perché è l'elenco che si sta
- * guardando mentre si riordina: nel selettore ci sono tutti, e uno scambio che saltasse i
- * widget spenti farebbe muovere la riga di due posti invece che di una.
+ * **Ha preso il posto di `moveWidget`, che faceva la regola opposta** — scambiava sull'elenco
+ * intero, spenti compresi — e la ragione delle due regole è la stessa: *si sposta su ciò che
+ * si sta guardando*. Nel selettore c'erano tutti e sedici in fila, quindi saltare gli spenti
+ * avrebbe fatto muovere la riga di due posti invece che di uno. In modalità modifica si
+ * guarda un capitolo, e solo i suoi widget accesi: con la regola di prima la freccia
+ * sposterebbe il widget di un posto **senza che a schermo cambi niente**, e a quel punto
+ * sembra rotta.
+ *
+ * Senza questo commento, al prossimo lettore le due regole sembreranno un'incoerenza.
+ *
+ * Uno **scambio** e non un'estrazione e reinserimento: i widget degli altri capitoli e quelli
+ * spenti restano nelle proprie posizioni assolute, quindi riordinare «Mese» non rimescola
+ * l'ordine salvato di «Abitudini».
  */
-export function moveWidget(layout: DashboardLayout, id: WidgetId, delta: number): DashboardLayout {
-  const from = layout.findIndex((item) => item.id === id);
-  if (from === -1) return layout;
+export function moveWithin(
+  layout: DashboardLayout,
+  id: WidgetId,
+  delta: number,
+  chapter: Chapter,
+): DashboardLayout {
+  const slots = layout
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => item.visible && chapterOf(item.id) === chapter);
 
-  const to = from + delta;
-  if (to < 0 || to >= layout.length) return layout;
+  const at = slots.findIndex(({ item }) => item.id === id);
+  if (at === -1) return layout;
+
+  const here = slots[at];
+  const target = slots[at + delta];
+  if (here === undefined || target === undefined) return layout;
 
   const next = [...layout];
-  const [moved] = next.splice(from, 1);
-  next.splice(to, 0, moved as LayoutItem);
+  next[here.index] = target.item;
+  next[target.index] = here.item;
   return next;
+}
+
+/**
+ * Riaccende tutti gli spenti di un capitolo, lasciandoli dove sono.
+ *
+ * Dietro il «Rimetti tutti» del cassetto, che è **di capitolo** come tutto il resto della
+ * modalità modifica: rimettere in un colpo anche ciò che vive in un capitolo che non si sta
+ * guardando sarebbe di nuovo un effetto che non si vede mentre lo si decide.
+ */
+export function showAllIn(layout: DashboardLayout, chapter: Chapter): DashboardLayout {
+  return layout.map((item) => (chapterOf(item.id) === chapter ? { ...item, visible: true } : item));
+}
+
+/** Gli id **spenti** di un capitolo, nell'ordine del layout. Le pillole del cassetto. */
+export function hiddenInChapter(layout: DashboardLayout, chapter: Chapter): WidgetId[] {
+  return layout
+    .filter((item) => !item.visible && chapterOf(item.id) === chapter)
+    .map((item) => item.id);
 }

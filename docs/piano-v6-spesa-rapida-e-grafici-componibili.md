@@ -5,7 +5,7 @@
 > ricostruzione dello stato attuale, le tre direzioni provate, le due composizioni dei Grafici) e il
 > registro delle decisioni che questo file riprende punto per punto.
 >
-> **Gli Step 49, 50 e 51 sono nel codice (13 settembre 2026); resta il 52.** Le 15 decisioni sono
+> **Il piano è chiuso: quattro step su quattro nel codice, il 13 settembre 2026.** Le 15 decisioni sono
 > prese, la direzione è scelta —
 > **Lastra** (turno 1a: stessi token, gerarchia rifatta) contro le due scartate, **Insegna** (1b:
 > fondo nero pieno, accento lime acido, cifre Space Grotesk) ed **Estratto** (1c: serif per le cifre,
@@ -187,9 +187,22 @@ l'alternativa — un selettore a sé con miniature dei grafici (turno 2c).
 in una schermata e si guardava in un'altra, quindi l'effetto non si vedeva mentre lo si decideva; e
 l'elenco dei widget _tolti_ non esisteva in nessun posto — l'unico modo di vederli era il selettore,
 dove una riga spenta si distingue da una accesa per la posizione di un interruttore. Comporre in
-posto risolve entrambe. Il selettore con le miniature (2c) risolveva solo la terza ragione — i nomi
-astratti — e a un costo maggiore: sedici miniature da disegnare e mantenere accanto a sedici grafici
-veri.
+posto risolve entrambe.
+
+> **Aggiunte dello Step 52.** Tre scelte che la decisione non copriva. **(1)** Le tre pillole dei
+> capitoli **restano visibili anche in modifica**, dove il mockup le sostituisce insieme ai filtri:
+> comporre un capitolo senza poter passare all'altro sarebbe di nuovo un giro per un'altra schermata,
+> cioè quello che questo step toglie. I filtri invece spariscono, perché non c'entrano con ciò che si
+> sta decidendo. **(2)** Il conteggio è **di capitolo** — «3 di 10 mostrati» — e non «7 di 16» come
+> nel mockup: tutto il resto della modalità è scoperto sul capitolo. **(3)** La `ScrollView` dei
+> Grafici ha preso un `flex: 1` esplicito, o col cassetto come fratello sotto lo spingerebbe fuori
+> dallo schermo.
+>
+> Col selettore sono sparite anche quattro chiavi rimaste senza chiamanti — `dashboard.title`,
+> `intro`, `allOff`, `visibleCount` — e le due schermate vuote dei Grafici adesso mandano da
+> «Modifica» invece che da «Componi la dashboard». Il selettore con le miniature (2c) risolveva solo la terza ragione — i nomi
+> astratti — e a un costo maggiore: sedici miniature da disegnare e mantenere accanto a sedici grafici
+> veri.
 
 ### 12 · `moveWidget` va riscritta, non riusata
 
@@ -255,15 +268,15 @@ Il layout salvato si rilegge com'è perché il capitolo è una proprietà del co
 
 ## Step
 
-Tre step su quattro sono nel codice. Prosegue la numerazione globale da 49, e vale la stessa regola
-delle altre serie: **uno step per sessione**.
+**Tutti e quattro sono nel codice**, chiusi il 13 settembre 2026 in quattro sessioni. La numerazione
+globale prosegue da 53 per ciò che verrà.
 
 | Step                                         | Stato | Cosa contiene                                                                                                           |
 | -------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------- |
 | 49 — Il tastierino in-app per l'importo      | ✅    | `TextInput` senza tastiera di sistema, `amount-pad.ts` con `applyKey`, tasto decimale per lingua (decisioni 4, 5, 6)    |
 | 50 — I tre gruppi apribili della nuova spesa | ✅    | `useState<GroupKey \| null>`, riassunto col valore vero, Data/Nota in «Dettagli» (decisioni 7, 8, 9)                    |
 | 51 — I capitoli dei grafici                  | ✅    | `Record<WidgetId, Chapter>`, i sedici widget divisi in Mese/Abitudini/Fra di voi (decisione 10)                         |
-| 52 — La composizione in loco                 | ⬜    | «Modifica» nei Grafici, `moveWithin`, `pointerEvents="none"`, × `danger`, redirect di `dashboard.tsx` (decisioni 11–15) |
+| 52 — La composizione in loco                 | ✅    | «Modifica» nei Grafici, `moveWithin`, `pointerEvents="none"`, × `danger`, redirect di `dashboard.tsx` (decisioni 11–15) |
 
 ## Resta aperto
 

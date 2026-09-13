@@ -4,6 +4,96 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Step 52: la composizione in loco, e il Piano v6 è chiuso
+
+Ultimo dei quattro step, decisioni 11–15. La composizione della dashboard non è più una schermata a
+sé: si compone **dentro** i Grafici, e `app/dashboard.tsx` è diventato un redirect.
+
+### Un booleano al posto di una schermata
+
+`app/dashboard.tsx` erano 216 righe — un `ModalScreen`, sedici righe con interruttore e due chevron,
+un intro, un contatore. Ciò che l'ha sostituito è `const [editing, setEditing] = useState(false)` più
+un ramo nella cornice che i widget avevano già. Non è una coincidenza: il problema non era il
+selettore ma **dove stava**. Si componeva in una schermata e si guardava in un'altra, quindi l'effetto
+non si vedeva mentre lo si decideva; e l'elenco dei widget _tolti_ non esisteva in nessun posto —
+l'unico modo di vederli era il selettore, dove una riga spenta si distingueva da una accesa per la
+posizione di un interruttore.
+
+L'icona a griglia, muta, è diventata un **«Modifica» scritto**. Era anche l'unico modo di riaccendere
+i widget, cioè nascosto proprio a chi li aveva spenti tutti.
+
+### `moveWithin` e la regola opposta a quella di prima
+
+`moveWidget` scambiava sull'elenco **intero**, spenti compresi, e il commento lo motivava così: «è
+l'elenco che si sta guardando mentre si riordina». Nel selettore era vero. In modalità modifica si
+guarda un capitolo e solo i suoi widget accesi, quindi la regola di prima farebbe muovere il widget
+di un posto **senza che a schermo cambi niente** — e a quel punto la freccia sembra rotta.
+
+`moveWithin(layout, id, delta, chapter)` scambia fra i visibili dello stesso capitolo. È la stessa
+ragione che portava alla regola opposta, applicata a una schermata diversa, e sta scritta accanto
+alla funzione: senza, al prossimo lettore le due sembreranno un'incoerenza. `moveWidget` è stata
+cancellata col suo unico chiamante.
+
+È uno **scambio** e non un'estrazione con reinserimento: i widget spenti e quelli degli altri
+capitoli restano nelle proprie posizioni assolute, quindi riordinare «Mese» non rimescola l'ordine
+salvato di «Abitudini». C'è un test che lo verifica.
+
+### Il prezzo di tenere a schermo il contenuto vero
+
+In modifica ogni grafico continua a disegnarsi al 45% di opacità — è l'unico modo di riconoscerlo
+senza dargli un nome astratto, ed è tutto il punto di comporre in loco. Ma a opacità ridotta il widget
+è comunque **montato**, e i suoi `Pressable` sono ancora attivi: toccare una barra dei mesi
+cambierebbe il periodo mentre lo si compone, e una cella della heatmap scriverebbe un giorno.
+`pointerEvents="none"` è quel prezzo, e costa una riga.
+
+La × che rimuove è `colors.danger` e non `colors.expense`. `tokens.ts` li definisce come due cose
+diverse — uscite di denaro e azioni distruttive — e su una schermata il cui soggetto sono i soldi il
+rosa di `expense` si legge come un importo. I due colori sono vicini a vista: è proprio per questo che
+la distinzione va tenuta dove è dichiarata, nei nomi.
+
+### Il cassetto, e cosa è di capitolo
+
+`HiddenDrawer` sta fuori dallo scorrimento, in fondo: «Non mostrati · N», «Rimetti tutti», e i widget
+tolti come pillole da rimettere con un tocco. Un widget a cui manca un dato si può rimettere lo
+stesso, spento di contrasto e con scritto cosa gli serve — impedirne la scelta vorrebbe dire che chi
+non ha mai scritto un negozio non può nemmeno scoprire che esiste un grafico dei negozi.
+
+Tutto ciò che è in modalità modifica è **di capitolo**: il conteggio, le frecce, il cassetto, il
+«Rimetti tutti». L'unica azione globale è «Ripristina tutti i grafici, nell'ordine di partenza», ed è
+stata rietichettata proprio per questo: due azioni vicine, una di capitolo e una globale, avevano
+bisogno di due nomi che si distinguono.
+
+### Tre scelte oltre il piano
+
+**Le tre pillole dei capitoli restano visibili anche in modifica**, mentre nel mockup la barra della
+composizione le sostituisce insieme ai filtri. Comporre un capitolo senza poter passare all'altro
+sarebbe di nuovo un giro per un'altra schermata, che è esattamente ciò che questo step toglie. I
+filtri invece spariscono: non c'entrano con ciò che si sta decidendo.
+
+**Il conteggio è di capitolo, non globale**: «3 di 10 mostrati» e non «7 di 16» come nel mockup.
+Tutto il resto della modalità è scoperto sul capitolo, e un totale che parla d'altro sarebbe l'unica
+cosa a non farlo.
+
+**La `ScrollView` ha preso un `flex: 1` esplicito.** Senza, si dimensiona sul contenuto, e col
+cassetto come fratello sotto lo spingerebbe fuori dallo schermo. È il genere di difetto che non si
+vede finché non si aggiunge il primo fratello.
+
+### Le chiavi morte sono andate via col selettore
+
+`dashboard.title`, `dashboard.intro`, `dashboard.allOff` e `dashboard.visibleCount` non avevano più
+chiamanti. Le due schermate vuote dei Grafici, che mandavano «da "Componi la dashboard"», adesso
+mandano da «Modifica».
+
+### Verificato
+
+`npm run typecheck`, `npm run lint`, `npm run format:check` puliti; `npm test` **1307 verdi** (639
+core + 614 app + 54 relay). Niente su telefono — e qui pesa, perché `pointerEvents="none"`,
+l'opacità e il cassetto ancorato in fondo sono tre cose che si vedono solo con un dito.
+
+**Il Piano v6 è chiuso: quattro step su quattro.**
+
+---
+
 ## 2026-09-13 — Step 51: i capitoli dei grafici
 
 Terzo step del Piano v6, decisione 10. I sedici widget non sono più una colonna sola: si dividono in

@@ -401,10 +401,6 @@ export const en: Dictionary = {
     footer: 'Calculated on this phone',
   },
   dashboard: {
-    title: 'Build the dashboard',
-    intro:
-      'Choose what to show in the Charts tab and in what order. This applies to this phone only: it changes nothing for the other people in the group.',
-    allOff: 'With every widget off, the Charts tab stays empty.',
     chapters: {
       month: 'Month',
       habits: 'Habits',
@@ -417,11 +413,18 @@ export const en: Dictionary = {
     chapterEmptyTitle: 'Empty chapter',
     chapterEmptyHint:
       'No widget is on in “{{chapter}}”. Turn some back on from “{{action}}”, top right.',
-    visibleCount: {
-      one: '{{count}} widget on out of {{total}}.',
-      other: '{{count}} widgets on out of {{total}}.',
+    resetOrder: 'Restore every chart, in its original order',
+    edit: 'Edit',
+    done: 'Done',
+    composeTitle: 'Compose the charts',
+    composeCount: '{{shown}} of {{total}} shown',
+    hidden: {
+      one: 'Hidden · {{count}}',
+      other: 'Hidden · {{count}}',
     },
-    resetOrder: 'Reset to the starting order',
+    restoreAll: 'Restore all',
+    remove: 'Remove {{title}}',
+    add: 'Put {{title}} back',
     moveUp: 'Move {{title}} up',
     moveDown: 'Move {{title}} down',
     emptyTitle: 'Empty dashboard',

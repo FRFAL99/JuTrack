@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_LAYOUT,
-  moveWidget,
+  hiddenInChapter,
+  moveWithin,
   parseLayout,
   serializeLayout,
+  showAllIn,
   toggleWidget,
   visibleInChapter,
   visibleWidgets,
@@ -116,37 +118,90 @@ describe('toggleWidget', () => {
   });
 });
 
-describe('moveWidget', () => {
-  it('scambia due righe vicine', () => {
-    expect(moveWidget(LAYOUT, 'budget', -1).map((item) => item.id)).toEqual([
-      'total',
+describe('moveWithin', () => {
+  /** Mese: total, daily, budget. Abitudini: year, weekdays. `daily` è spento. */
+  const MIXED: DashboardLayout = [
+    { id: 'total', visible: true },
+    { id: 'year', visible: true },
+    { id: 'daily', visible: false },
+    { id: 'budget', visible: true },
+    { id: 'weekdays', visible: true },
+  ];
+
+  it('scambia due widget vicini dello stesso capitolo', () => {
+    expect(moveWithin(MIXED, 'budget', -1, 'month').map((item) => item.id)).toEqual([
       'budget',
+      'year',
       'daily',
+      'total',
+      'weekdays',
     ]);
   });
 
-  it('scavalca anche un widget spento', () => {
-    // Lo scambio è sull'elenco intero perché è l'elenco che si sta guardando: saltare gli
-    // spenti farebbe muovere la riga di due posti invece che di uno.
-    expect(moveWidget(LAYOUT, 'total', 1).map((item) => item.id)).toEqual([
-      'daily',
-      'total',
+  it('salta i widget di altri capitoli e quelli spenti', () => {
+    // È la regola **opposta** a quella del vecchio `moveWidget`, e per la stessa ragione: si
+    // sposta su ciò che si sta guardando. In modifica si guarda un capitolo e solo i suoi
+    // accesi, quindi uno scambio con la riga di sopra nell'elenco intero sposterebbe il
+    // widget senza che a schermo cambi niente.
+    expect(visibleInChapter(MIXED, 'month')).toEqual(['total', 'budget']);
+    expect(visibleInChapter(moveWithin(MIXED, 'total', 1, 'month'), 'month')).toEqual([
       'budget',
+      'total',
     ]);
   });
 
-  it('moveWidget in cima o in fondo non cambia niente', () => {
-    expect(moveWidget(LAYOUT, 'total', -1)).toEqual(LAYOUT);
-    expect(moveWidget(LAYOUT, 'budget', 1)).toEqual(LAYOUT);
+  it('non rimescola gli altri capitoli', () => {
+    // Uno scambio e non un'estrazione e reinserimento: `year` e `weekdays` restano dove
+    // sono anche riordinando «Mese» da sopra e da sotto di loro.
+    const next = moveWithin(MIXED, 'total', 1, 'month');
+    expect(visibleInChapter(next, 'habits')).toEqual(['year', 'weekdays']);
+    expect(next.map((item) => item.id).filter((id) => id === 'daily')).toEqual(['daily']);
   });
 
-  it('un id che non c’è non cambia niente', () => {
-    expect(moveWidget(LAYOUT, 'heatmap', -1)).toEqual(LAYOUT);
+  it('ai bordi del capitolo non succede niente', () => {
+    expect(moveWithin(MIXED, 'total', -1, 'month')).toEqual(MIXED);
+    expect(moveWithin(MIXED, 'budget', 1, 'month')).toEqual(MIXED);
+  });
+
+  it('un widget spento, o di un altro capitolo, o assente non si muove', () => {
+    expect(moveWithin(MIXED, 'daily', -1, 'month')).toEqual(MIXED);
+    expect(moveWithin(MIXED, 'year', 1, 'month')).toEqual(MIXED);
+    expect(moveWithin(MIXED, 'heatmap', -1, 'month')).toEqual(MIXED);
   });
 
   it('non tocca l’elenco ricevuto', () => {
-    moveWidget(LAYOUT, 'budget', -1);
-    expect(LAYOUT.map((item) => item.id)).toEqual(['total', 'daily', 'budget']);
+    moveWithin(MIXED, 'budget', -1, 'month');
+    expect(MIXED.map((item) => item.id)).toEqual(['total', 'year', 'daily', 'budget', 'weekdays']);
+  });
+});
+
+describe('hiddenInChapter e showAllIn', () => {
+  const LAYOUT_OFF: DashboardLayout = [
+    { id: 'total', visible: false },
+    { id: 'budget', visible: false },
+    { id: 'year', visible: false },
+    { id: 'daily', visible: true },
+  ];
+
+  it('il cassetto elenca gli spenti del solo capitolo, nell’ordine del layout', () => {
+    expect(hiddenInChapter(LAYOUT_OFF, 'month')).toEqual(['total', 'budget']);
+    expect(hiddenInChapter(LAYOUT_OFF, 'habits')).toEqual(['year']);
+    expect(hiddenInChapter(LAYOUT_OFF, 'together')).toEqual([]);
+  });
+
+  it('«Rimetti tutti» riaccende solo il capitolo che si sta guardando', () => {
+    // Rimettere in un colpo anche ciò che vive altrove sarebbe di nuovo un effetto che non
+    // si vede mentre lo si decide.
+    const next = showAllIn(LAYOUT_OFF, 'month');
+    // `daily` era già acceso e sta anche lui in «Mese»: riaccendere tutti non lo sposta.
+    expect(visibleInChapter(next, 'month')).toEqual(['total', 'budget', 'daily']);
+    expect(hiddenInChapter(next, 'habits')).toEqual(['year']);
+  });
+
+  it('spento e riacceso, il widget torna al suo posto', () => {
+    const off = toggleWidget(DEFAULT_LAYOUT, 'heatmap');
+    expect(hiddenInChapter(off, 'month')).toEqual(['heatmap']);
+    expect(showAllIn(off, 'month')).toEqual(DEFAULT_LAYOUT);
   });
 });
 

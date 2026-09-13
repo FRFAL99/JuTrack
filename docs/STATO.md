@@ -11,9 +11,10 @@ che tiene tutto questo è installata.
 > spesa rapida e grafici componibili, da due artifact Claude Design (un mockup a più direzioni e il
 > registro delle decisioni). La direzione scelta è **Lastra** — stessi token del redesign chiuso in
 > [visualdesign.md](visualdesign.md), gerarchia rifatta — contro le due scartate, **Insegna** e
-> **Estratto**. **Il 13 settembre sono entrati tre dei quattro step — il 49 (tastierino in-app per
-> l'importo), il 50 (i tre gruppi apribili) e il 51 (i capitoli dei grafici)**; resta il 52, la
-> composizione in loco.
+> **Estratto**. **Il Piano v6 è chiuso: tutti e quattro gli step sono entrati il 13 settembre** — il
+> 49 (tastierino in-app per l'importo), il 50 (i tre gruppi apribili), il 51 (i capitoli dei grafici)
+> e il 52 (la composizione in loco, con `app/dashboard.tsx` ridotto a un redirect da cancellare al
+> ciclo dopo).
 
 > **La sessione del 12 settembre è raccontata in
 > [La verifica su telefono](#la-verifica-su-telefono-del-12-settembre-step-41)**, divisa fra ciò che
@@ -177,16 +178,16 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
 Piano v6 — [piano-v6-spesa-rapida-e-grafici-componibili.md](piano-v6-spesa-rapida-e-grafici-componibili.md),
-**deciso il 12 settembre, tre step su quattro nel codice**:
+**deciso il 12 settembre, chiuso il 13: quattro step su quattro nel codice**:
 
 | Step                                         | Stato | Cosa contiene                                                                     |
 | -------------------------------------------- | ----- | --------------------------------------------------------------------------------- |
 | 49 — Il tastierino in-app per l'importo      | ✅    | `TextInput` senza tastiera di sistema, `amount-pad.ts`, tasto decimale per lingua |
 | 50 — I tre gruppi apribili della nuova spesa | ✅    | Un gruppo aperto per volta, riassunto col valore vero, Data/Nota in «Dettagli»    |
 | 51 — I capitoli dei grafici                  | ✅    | Sedici widget divisi in Mese (10) / Abitudini (3) / Fra di voi (3)                |
-| 52 — La composizione in loco                 | ⬜    | «Modifica» dentro i Grafici, `moveWithin`, `app/dashboard.tsx` diventa redirect   |
+| 52 — La composizione in loco                 | ✅    | «Modifica» dentro i Grafici, `moveWithin`, `app/dashboard.tsx` diventa redirect   |
 
-**1303 test verdi** (639 core + 610 app + 54 relay), typecheck, lint e `format:check` puliti.
+**1307 test verdi** (639 core + 614 app + 54 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -1630,12 +1631,21 @@ segue è coperto dai test, perché sono tutte cose che hanno bisogno di uno sche
   per cui è rimasta un `TextInput`), e ogni riga di gruppo deve annunciare **nome e riassunto**,
   anche quelle che il nome, a vederle, non ce l'hanno.
 
-Lo **Step 51** aggiunge tre cose da guardare nei **Grafici**: le tre pillole in cima — Mese,
-Abitudini, Fra di voi — devono aprire un capitolo per volta restando ferme mentre i grafici scorrono;
-sotto «Abitudini» deve comparire una nota sola al posto di quelle che stavano sotto i singoli
-grafici; e con tutti i widget di un capitolo spenti la schermata deve dire che è vuoto **quel
-capitolo**, non la dashboard. Attenzione anche al selettore `/dashboard`, che per un solo step resta
-un elenco piatto senza capitoli: lo Step 52 lo cancella.
+Gli **Step 51 e 52** spostano l'attenzione sui **Grafici**, che sono la seconda schermata riscritta
+del giro:
+
+- **I capitoli (51).** Le tre pillole in cima — Mese, Abitudini, Fra di voi — devono aprire un
+  capitolo per volta restando ferme mentre i grafici scorrono; sotto «Abitudini» deve comparire una
+  nota sola al posto di quelle che stavano sotto i singoli grafici; con tutti i widget di un capitolo
+  spenti la schermata deve dire che è vuoto **quel capitolo**, non la dashboard.
+- **La composizione in loco (52).** «Modifica» in alto a destra apre la modalità senza cambiare
+  schermata. Da lì: i grafici devono restare **inerti** al tocco — è la prova del
+  `pointerEvents="none"`, e il modo di sbugiardarlo è toccare una barra dei mesi o una cella del
+  calendario e vedere se cambia qualcosa; le frecce devono spostare **solo dentro il capitolo**, e
+  quelle ai bordi devono essere spente; il cassetto «Non mostrati» deve restare ancorato in fondo
+  mentre la lista scorre; la × deve essere rossa `danger` e non rosa `expense`.
+- **Il redirect.** Aprire `/dashboard` (o riaprire l'app con quella come ultima rotta salvata) deve
+  portare ai Grafici, non a una schermata inesistente.
 
 **Blocco 2 — con `npm run peer` dall'altra parte (~20 min).** È il criterio di «fatto» che manca a
 tutti i piani. Il link mandato in chat che apre `/groups/<id>` **col fragment**, `Share.share`, la

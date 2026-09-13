@@ -53,7 +53,15 @@ import { TopList } from '@/features/stats/charts/TopList';
 import { WeekdayBars } from '@/features/stats/charts/WeekdayBars';
 import { ChapterTabs } from '@/features/stats/dashboard/ChapterTabs';
 import { DashboardWidget } from '@/features/stats/dashboard/DashboardWidget';
-import { visibleInChapter, visibleWidgets } from '@/features/stats/dashboard/layout';
+import { HiddenDrawer } from '@/features/stats/dashboard/HiddenDrawer';
+import {
+  hiddenInChapter,
+  moveWithin,
+  showAllIn,
+  toggleWidget,
+  visibleInChapter,
+  visibleWidgets,
+} from '@/features/stats/dashboard/layout';
 import { useDashboardLayout } from '@/features/stats/dashboard/useDashboardLayout';
 import {
   chapterNote,
@@ -147,7 +155,7 @@ export default function StatsScreen() {
  */
 function StatsOfGroup() {
   const { t } = useTranslation();
-  const { colors, spacing, fontSize, fontWeight } = useTheme();
+  const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const symbol = useCurrencySymbol();
   const [period, setPeriod] = useState<Period>(defaultPeriod);
   const [facets, setFacets] = useState<QueryFacets>({});
@@ -161,7 +169,18 @@ function StatsOfGroup() {
    * proprietà del codice, non un dato: niente da migrare, niente da rileggere.
    */
   const [chapter, setChapter] = useState<Chapter>('month');
-  const { layout, ready } = useDashboardLayout();
+  /**
+   * Si compone **qui**, non in un'altra schermata.
+   *
+   * Un booleano, e niente di più: è tutto ciò che è servito a togliere `app/dashboard.tsx`.
+   * La composizione non era chiara per due ragioni di collocazione — si componeva in una
+   * schermata e si guardava in un'altra, quindi l'effetto non si vedeva mentre lo si
+   * decideva; e l'elenco dei widget **tolti** non esisteva in nessun posto. Comporre in
+   * posto le risolve entrambe.
+   */
+  const [editing, setEditing] = useState(false);
+  // `resetLayout` e non `reset`: più sotto `reset` è già l'azzeramento dei **filtri**.
+  const { layout, ready, update, reset: resetLayout } = useDashboardLayout();
   // Saldi e pareggi dipendono da quello che ha scritto l'altro telefono, non solo da noi.
   useEngineActivity();
 
@@ -360,14 +379,23 @@ function StatsOfGroup() {
           onReset={reset}
         />
       </View>
+      {/* Un'icona a griglia non dice cosa fa: «Modifica» sì. Era muta ed era anche l'unico
+          modo di riaccendere i widget — nascosto proprio a chi li aveva spenti tutti. */}
       <Pressable
-        onPress={() => router.push('/dashboard')}
+        onPress={() => setEditing(true)}
         accessibilityRole="button"
-        accessibilityLabel={t('dashboard.title')}
         hitSlop={10}
-        style={{ paddingHorizontal: spacing.lg }}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 5,
+          paddingHorizontal: spacing.lg,
+        }}
       >
-        <Feather name="grid" size={18} color={colors.textMuted} />
+        <Feather name="edit-2" size={14} color={colors.textMuted} />
+        <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
+          {t('dashboard.edit')}
+        </Text>
       </Pressable>
     </View>
   );
@@ -713,7 +741,64 @@ function StatsOfGroup() {
   };
 
   const shown = visibleInChapter(layout, chapter);
+  const hidden = hiddenInChapter(layout, chapter);
   const note = chapterNote(chapter);
+
+  /**
+   * La barra della composizione, al posto dei filtri.
+   *
+   * I filtri spariscono mentre si compone perché non c'entrano con ciò che si sta
+   * decidendo, e perché due righe di comandi sopra i grafici lascerebbero ai grafici la
+   * metà bassa dello schermo. Le tre pillole invece **restano**: comporre un capitolo e non
+   * poter passare all'altro senza uscire dalla modalità sarebbe di nuovo un giro per un'altra
+   * schermata, che è esattamente ciò che questo step toglie.
+   */
+  const composeBar = (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: spacing.md,
+        paddingHorizontal: spacing.lg,
+        paddingBottom: spacing.md,
+      }}
+    >
+      <View style={{ flex: 1 }}>
+        <Text
+          accessibilityRole="header"
+          style={{ color: colors.text, fontSize: fontSize.md, fontWeight: fontWeight.bold }}
+        >
+          {t('dashboard.composeTitle')}
+        </Text>
+        <Text style={{ color: colors.textMuted, fontSize: fontSize.xxs }}>
+          {t('dashboard.composeCount', {
+            shown: shown.length,
+            total: shown.length + hidden.length,
+          })}
+        </Text>
+      </View>
+      <Pressable
+        onPress={() => setEditing(false)}
+        accessibilityRole="button"
+        style={({ pressed }) => ({
+          paddingVertical: spacing.sm,
+          paddingHorizontal: spacing.lg,
+          borderRadius: radius.pill,
+          backgroundColor: pressed ? colors.accentPressed : colors.accent,
+        })}
+      >
+        <Text
+          style={{
+            color: colors.textOnAccent,
+            fontSize: fontSize.sm,
+            fontWeight: fontWeight.bold,
+          }}
+        >
+          {t('dashboard.done')}
+        </Text>
+      </Pressable>
+    </View>
+  );
 
   /**
    * Le tre pillole stanno **sopra tutti i widget**, non sotto il totale.
@@ -749,12 +834,14 @@ function StatsOfGroup() {
     <Screen
       header={
         <>
-          {header}
+          {editing ? composeBar : header}
           {chapters}
         </>
       }
     >
-      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xl }}>
+      {/* `flex: 1` esplicito: senza, la `ScrollView` si dimensiona sul contenuto e col
+          cassetto dei non mostrati come fratello sotto lo spingerebbe fuori dallo schermo. */}
+      <ScrollView style={styles.flex} contentContainerStyle={{ paddingBottom: spacing.xl }}>
         {/* Finché il layout non è stato riletto non si disegna niente: partendo dal default
             si vedrebbe un lampo di schermata piena a ogni apertura del tab, a chi ne ha
             tolti dieci. È una lettura puntuale da SQLite, quindi è un battito di ciglia. */}
@@ -771,24 +858,35 @@ function StatsOfGroup() {
                 first={index === 0}
                 unmet={unmetNeeds(spec, facts)}
                 empty={block.empty ?? false}
+                {...(editing && {
+                  editing: {
+                    // I bordi sono quelli **del capitolo**, non del layout intero:
+                    // `moveWithin` scambia fra i visibili di questo capitolo, e una freccia
+                    // accesa che non muove niente si legge come rotta.
+                    canMoveUp: index > 0,
+                    canMoveDown: index < shown.length - 1,
+                    onMove: (delta: number) => update(moveWithin(layout, id, delta, chapter)),
+                    onRemove: () => update(toggleWidget(layout, id)),
+                  },
+                })}
               >
                 {block.node}
               </DashboardWidget>
             );
           })}
 
-        {/* Un capitolo vuoto non è una dashboard vuota: la prima frase manda a riaccendere
-            qualcosa **qui dentro**, la seconda dice che non c'è niente da nessuna parte. Con
-            i capitoli le due cose si possono vedere separate, e mandare a fare la cosa
-            sbagliata chi ha spento tre widget su sedici sarebbe una risposta a una domanda
-            che non ha posto. */}
-        {ready && shown.length === 0 && (
+        {/* Un capitolo vuoto non è una dashboard vuota: la seconda frase manda a riaccendere
+            qualcosa **qui dentro**, la prima dice che non c'è niente da nessuna parte —
+            mandare a fare la cosa sbagliata chi ha spento tre widget su sedici sarebbe una
+            risposta a una domanda che non ha posto. Mentre si compone non si spiega niente:
+            il cassetto dei non mostrati è lì sotto, ed è la risposta. */}
+        {ready && !editing && shown.length === 0 && (
           <View style={{ paddingTop: spacing.xl }}>
             {visibleWidgets(layout).length === 0 ? (
               <EmptyState
                 icon={<Feather name="grid" size={26} color={colors.textFaint} />}
                 title={t('dashboard.emptyTitle')}
-                hint={t('dashboard.emptyHint', { action: t('dashboard.title') })}
+                hint={t('dashboard.emptyHint', { action: t('dashboard.edit') })}
               />
             ) : (
               <EmptyState
@@ -796,20 +894,44 @@ function StatsOfGroup() {
                 title={t('dashboard.chapterEmptyTitle')}
                 hint={t('dashboard.chapterEmptyHint', {
                   chapter: chapterTitle(chapter),
-                  action: t('dashboard.title'),
+                  action: t('dashboard.edit'),
                 })}
               />
             )}
           </View>
         )}
 
-        <View style={[styles.footer, { paddingHorizontal: spacing.lg, paddingTop: spacing.xl }]}>
-          <Feather name="lock" size={13} color={colors.textFaint} />
-          <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
-            {t('stats.footer')}
-          </Text>
-        </View>
+        {editing ? (
+          <View style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.lg }}>
+            {/* L'uscita di sicurezza da una dashboard smontata male. Riguarda **tutti** i
+                capitoli, a differenza del «Rimetti tutti» del cassetto: per questo lo dice
+                l'etichetta, o due azioni vicine sembrerebbero la stessa. */}
+            <Pressable onPress={resetLayout} accessibilityRole="button" hitSlop={8}>
+              <Text style={{ color: colors.accent, fontSize: fontSize.sm }}>
+                {t('dashboard.resetOrder')}
+              </Text>
+            </Pressable>
+          </View>
+        ) : (
+          <View style={[styles.footer, { paddingHorizontal: spacing.lg, paddingTop: spacing.xl }]}>
+            <Feather name="lock" size={13} color={colors.textFaint} />
+            <Text style={{ color: colors.textFaint, fontSize: fontSize.xxs }}>
+              {t('stats.footer')}
+            </Text>
+          </View>
+        )}
       </ScrollView>
+
+      {/* Il cassetto sta **fuori** dallo scorrimento: i widget tolti si rimettono da
+          qualunque punto della lista, senza tornare in fondo. */}
+      {editing && hidden.length > 0 && (
+        <HiddenDrawer
+          specs={hidden.flatMap((id) => widgetSpec(id) ?? [])}
+          facts={facts}
+          onAdd={(spec) => update(toggleWidget(layout, spec.id))}
+          onAddAll={() => update(showAllIn(layout, chapter))}
+        />
+      )}
 
       {sheet}
     </Screen>
@@ -875,6 +997,7 @@ function Divider({ color }: { color: string }) {
 }
 
 const styles = StyleSheet.create({
+  flex: { flex: 1 },
   rowBetween: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   tiles: { flexDirection: 'row', alignItems: 'stretch' },
   footer: { flexDirection: 'row', alignItems: 'center', gap: 6 },

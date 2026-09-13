@@ -423,10 +423,6 @@ export const it = {
     footer: 'Calcolato su questo telefono',
   },
   dashboard: {
-    title: 'Componi la dashboard',
-    intro:
-      'Scegli cosa mostrare nel tab Grafici e in che ordine. Vale solo per questo telefono: non cambia niente per le altre persone del gruppo.',
-    allOff: 'Con tutti i widget spenti il tab Grafici resta vuoto.',
     chapters: {
       month: 'Mese',
       habits: 'Abitudini',
@@ -439,11 +435,18 @@ export const it = {
     chapterEmptyTitle: 'Capitolo vuoto',
     chapterEmptyHint:
       'In «{{chapter}}» non è acceso nessun widget. Riaccendine qualcuno da «{{action}}», in alto a destra.',
-    visibleCount: {
-      one: '{{count}} widget acceso su {{total}}.',
-      other: '{{count}} widget accesi su {{total}}.',
+    resetOrder: 'Ripristina tutti i grafici, nell’ordine di partenza',
+    edit: 'Modifica',
+    done: 'Fatto',
+    composeTitle: 'Componi i grafici',
+    composeCount: '{{shown}} di {{total}} mostrati',
+    hidden: {
+      one: 'Non mostrato · {{count}}',
+      other: 'Non mostrati · {{count}}',
     },
-    resetOrder: 'Ripristina l’ordine di partenza',
+    restoreAll: 'Rimetti tutti',
+    remove: 'Togli {{title}}',
+    add: 'Rimetti {{title}}',
     moveUp: 'Sposta {{title}} più in alto',
     moveDown: 'Sposta {{title}} più in basso',
     emptyTitle: 'Dashboard vuota',
