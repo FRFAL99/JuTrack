@@ -54,7 +54,8 @@ Le decisioni non ovvie sono registrate come ADR in [docs/adr/](docs/adr/).
 apps/mobile/       App Expo (UI, navigazione, schermate)
 packages/core/     Crypto, schema Yjs, sync client — zero import da react-native
 services/relay/    Cloudflare Worker + Durable Object
-docs/              Architettura, ADR, threat model, devlog
+scripts/           Utilità di repo, eseguite da tsx
+docs/              Stato, registro degli step, devlog, architettura, ADR, threat model
 ```
 
 `packages/core` non importa nulla di React Native: le primitive specifiche di piattaforma entrano per
@@ -70,6 +71,10 @@ npm run format:check && npm run lint && npm run typecheck && npm test
 Sono gli stessi passaggi che gira la CI (`.github/workflows/ci.yml`) a ogni push, seguiti da
 `expo export --platform android` — l'unico controllo che risolve il grafo dei moduli con Metro, e
 quindi l'unico che vede i problemi di bundling su React Native.
+
+Fuori dalla CI c'è `npm run doc:verifica`, che controlla link e ancore fra i documenti: serve quando
+si sposta o si rinomina un file in `docs/`, perché un'ancora rotta in markdown non dà errore, porta
+soltanto in cima alla pagina sbagliata.
 
 ### Provare l'app sul telefono
 
@@ -96,7 +101,7 @@ Poi si scansiona il QR con Expo Go.
 Nel Play Store dal 12 settembre 2026, in test chiuso. **Punto di partenza:
 [docs/STATO.md](docs/STATO.md)** — cosa è fatto, cosa manca, cosa è bloccato.
 
-La documentazione ha cinque ingressi, uno per domanda:
+La documentazione ha un ingresso per domanda:
 
 | Vuoi sapere…                          | Leggi                                                          |
 | ------------------------------------- | -------------------------------------------------------------- |
@@ -105,8 +110,10 @@ La documentazione ha cinque ingressi, uno per domanda:
 | com'è andata una giornata             | [docs/devlog.md](docs/devlog.md)                               |
 | come funziona una cosa, adesso        | [docs/conoscenza/](docs/conoscenza/)                           |
 | cosa provare col telefono in mano     | [docs/verifica-sul-telefono.md](docs/verifica-sul-telefono.md) |
+| com'era raccontato uno step in agosto | [docs/archivio/](docs/archivio/)                               |
 
-Chi ci lavora, umano o agente, parte da [CLAUDE.md](CLAUDE.md).
+Chi ci lavora, umano o agente, parte da [CLAUDE.md](CLAUDE.md): comandi di verifica, trappole
+frequenti, e il rituale con cui si apre un piano e si chiude uno step.
 
 Relay in produzione: https://jutrack-relay.jutrack-relayfrfal.workers.dev
 

@@ -3,7 +3,10 @@
 Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più recente in alto).
 
 > **Buco noto:** gli Step 58 e 59 non hanno una voce qui. Sono entrati il 13 settembre (commit
-> `07df3f9` e `e749749`) e sono raccontati per esteso in [STATO.md](STATO.md); il devlog è stato
+> `07df3f9` e `e749749`) e sono raccontati per esteso nel
+> [piano v7](piano-v7-data-e-vocabolario-del-gruppo.md) e in
+> [archivio/stato-step-0-60.md](archivio/stato-step-0-60.md), dove il racconto che stava in
+> `STATO.md` è stato spostato il 13 settembre; il devlog è stato
 > saltato in quelle due sessioni. Non ricostruiti a posteriori di proposito: una voce di devlog
 > scritta rileggendo il diff dice quello che il codice fa, non quello che si stava pensando mentre
 > lo si scriveva, ed è la seconda cosa che questo file esiste per conservare.

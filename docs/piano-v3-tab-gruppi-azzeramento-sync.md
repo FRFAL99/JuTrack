@@ -149,7 +149,8 @@ cd apps/mobile && npx expo export --platform android
 
 ### Step 15 — Questo documento ✅
 
-Il piano nel repo, e la tabella di avanzamento di [STATO.md](STATO.md) estesa alle righe 15–22. Ha lo
+Il piano nel repo, e la tabella di avanzamento — oggi [registro.md](registro.md) — estesa alle righe
+15–22. Ha lo
 stesso ruolo che `piano-v2` ha avuto per gli Step 10–14: è il documento da cui riprende ogni sessione
 successiva. Senza, «uno step per sessione» non funziona.
 

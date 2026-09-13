@@ -64,7 +64,7 @@
 
 ## Contesto
 
-Il redesign v4 è chiuso nel codice ([STATO.md](STATO.md)): resta solo la prova su due telefoni
+Il redesign v4 è chiuso nel codice ([registro.md](registro.md)): resta solo la prova su due telefoni
 fisici, niente di nuovo da scrivere per i quattro piani precedenti. Questo quinto piano nasce da una
 richiesta di prodotto e apre tre filoni indipendenti fra loro:
 
@@ -399,6 +399,7 @@ profilo.
   coperta da test Vitest, sullo stesso modello già in uso (`split-text.ts`, `extra-fields.ts`).
 - `npm run format:check && npm run lint && npm run typecheck && npm test` dopo ogni step, come da CI.
 - Dopo lo Step 30 (nuovi config plugin), rifare la build EAS di sviluppo e reinstallarla, esattamente
-  come già documentato in [STATO.md](STATO.md) per `expo-camera`.
+  come già documentato in [archivio/stato-step-0-60.md](archivio/stato-step-0-60.md) per
+  `expo-camera`.
 - Lo Step 40 non è facoltativo: chiude il piano solo dopo la prova su telefono reale, non dopo che i
   test passano.
