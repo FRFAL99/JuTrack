@@ -18,7 +18,7 @@
 > si programma prima e scatta da sola, senza che nessuno possa rivalutare la condizione al momento
 > in cui suona: la regola è diventata una **scadenza** ricalcolata alle tre occasioni che l'app
 > vede — apertura, spesa registrata, interruttore toccato. Il dettaglio è in
-> [STATO.md](STATO.md#il-promemoria-spese-step-31).
+> [STATO.md](archivio/stato-step-0-60.md#il-promemoria-spese-step-31).
 >
 > **Lo Step 32 è l'opposto, e le due cose vanno lette insieme**: «hai superato il budget» **è** una
 > condizione, valutabile solo mentre l'app è aperta, e l'avviso parte nell'istante. Ne segue tutto
@@ -27,7 +27,7 @@
 > vedrebbe affatto. Due punti in cui il piano andava oltre quel che diceva: l'avviso scatta **anche
 > all'80%** e non solo a limite superato (la soglia `near` esiste già nel core, e il suo commento
 > dice perché), e **`packages/core` non è stato toccato**. Il dettaglio è in
-> [STATO.md](STATO.md#lavviso-di-budget-step-32).
+> [STATO.md](archivio/stato-step-0-60.md#lavviso-di-budget-step-32).
 >
 > **Lo Step 33 è i due precedenti insieme, come il piano sospettava.** «Bloccato da tempo» è una
 > condizione **su una scadenza**: si guarda come il budget, ma quello che si guarda è da quanto
@@ -35,10 +35,10 @@
 > errore diventano **due** guai (`blocked` avvisa subito perché il motore ha smesso di ritentare,
 > `offline` ed `error` aspettano ventiquattr'ore), e **`offline` conta come `error`** benché lo
 > Step 17 li avesse distinti — cambia il rimedio, non il fatto, quindi cambia il testo e non la
-> regola. Il dettaglio è in [STATO.md](STATO.md#la-sincronizzazione-ferma-step-33).
+> regola. Il dettaglio è in [STATO.md](archivio/stato-step-0-60.md#la-sincronizzazione-ferma-step-33).
 >
 > **Due punti dello Step 30 erano scritti male qui**, e vanno letti da
-> [STATO.md](STATO.md#linfrastruttura-nativa-step-30):
+> [STATO.md](archivio/stato-step-0-60.md#linfrastruttura-nativa-step-30):
 >
 > - **I due widget vanno dichiarati in questo step, non al 34–35.** Il plugin di
 >   `react-native-android-widget` ha `widgets: Widget[]` obbligatorio e ogni voce diventa un
@@ -48,7 +48,7 @@
 >   È rimasto in `app.json` per leggibilità, non per necessità.
 >
 > **Due punti dello Step 29 erano scritti male qui, e sono stati corretti implementandolo** — vanno
-> letti da [STATO.md](STATO.md#la-valuta-di-default-nel-profilo-step-29), non da §Step 29 qui sotto:
+> letti da [STATO.md](archivio/stato-step-0-60.md#la-valuta-di-default-nel-profilo-step-29), non da §Step 29 qui sotto:
 >
 > 1. **«L'unico consumatore nuovo è il default nel form» era falso.** Il simbolo `€` era scritto a
 >    mano in 48 punti (il default di `formatMoney` più otto letterali nel JSX): senza toccarli, una
@@ -364,7 +364,7 @@ descrizioni di filtri.
 > `dashboard/widgets.ts` e `PERIOD_PRESETS` in `filters/period.ts` erano costanti di modulo con i
 > titoli già tradotti all'import, quindi congelate nella lingua di sistema. Diventate funzioni.
 >
-> Dettaglio completo in [STATO.md](STATO.md#il-resto-della-traduzione-step-40) e nel devlog.
+> Dettaglio completo in [STATO.md](archivio/stato-step-0-60.md#il-resto-della-traduzione-step-40) e nel devlog.
 
 ### Step 41 — Verifica end-to-end
 

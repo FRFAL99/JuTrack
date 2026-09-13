@@ -8,7 +8,7 @@ Dove sta ogni cosa nell'app, e perché sta lì. Sezioni estratte da
 Quattro tab: **Gruppi** 👥 · **Grafici** 📊 · **Impostazioni** ⚙️ · **Profilo** 🙂. Il primo non è
 una schermata ma uno **stack**: elenco dei gruppi → gruppo aperto.
 
-> **Due cose sono cambiate dopo**, e stanno in [Redesign visivo](../STATO.md#redesign-visivo): il passo 4 ha
+> **Due cose sono cambiate dopo**, e stanno in [Redesign visivo](../archivio/stato-step-0-60.md#redesign-visivo): il passo 4 ha
 > portato Impostazioni e Profilo a un solo tab, **Tu** (tre tab, non quattro); il passo 6 ha
 > invertito lo stack del primo tab — la radice sono **le spese del gruppo aperto**, e l'elenco dei
 > gruppi è un foglio. Tutto il resto di questa sezione è ancora valido, **compresi gli URL**, che
