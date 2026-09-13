@@ -4,6 +4,76 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-13 — Step 49: il tastierino in-app per l'importo
+
+Primo step del Piano v6 nel codice. L'importo della nuova spesa non apre più la tastiera di sistema:
+il `TextInput` resta un `TextInput` — con `showSoftInputOnFocus={false}` — e a scrivere è una griglia
+di dodici `Pressable` dentro l'app, sotto la card dell'importo. Decisioni 4, 5 e 6 del piano.
+
+### Perché il campo non diventa un `Text`
+
+Sarebbe stato più semplice: nessuna tastiera da spegnere, nessun cursore da gestire. Ma un `Text`
+perde l'annuncio di campo editabile, e con esso l'unico modo, con TalkBack, di sapere che quella
+cifra si può cambiare. Resta un `TextInput`, con due aggiunte: la selezione è **fissata in fondo**,
+perché il tastierino scrive in fondo e un caret che sta in mezzo alla cifra mentre le cifre compaiono
+altrove è un guasto visibile; e `keyboardType="decimal-pad"` **è rimasto**, come rete per un
+dispositivo che ignorasse `showSoftInputOnFocus` — la tastiera che comparirebbe sarebbe comunque
+quella numerica.
+
+### `applyKey`: ciò che la tastiera impediva, ora lo impedisce una funzione con dei test
+
+`keyboardType="decimal-pad"` era un guardiano invisibile: impediva da solo il secondo separatore
+decimale, il terzo decimale e le lettere. Togliendo la tastiera sparisce anche lui, e senza
+`applyKey` il campo mostrerebbe `1,2,3` con l'errore che compare solo al salvataggio. Una validazione
+a valle non sarebbe bastata: il difetto è che la cifra sbagliata si può **scrivere**.
+
+`applyKey(text, char)` sta in `features/expenses/amount-pad.ts`, è pura e non importa `react-native`,
+quindi i test dell'app ci arrivano — 17 nuovi, per 1278 totali. Le regole: un separatore solo, al
+massimo due decimali, lo zero iniziale che lascia il posto alla prima cifra vera, un tetto di nove
+cifre intere. L'ultimo non veniva dalla tastiera di sistema ma è della stessa famiglia: senza, un
+dito appoggiato sul 9 produrrebbe un numero che il resto dell'app tratta come denaro intero pur non
+essendolo più.
+
+Un test vale più degli altri: tremila sequenze di tasti, e per ognuna il testo prodotto è vuoto
+oppure `parseAmount` lo accetta. È la garanzia che serve davvero — mai un testo che si vede a schermo
+e che fallisce al salvataggio.
+
+### La motivazione della decisione 5 era giusta, la ragione scritta no
+
+Il piano motiva il tasto decimale per lingua con «un tasto che scrivesse "," renderebbe `parseAmount`
+sempre nullo». Verificato contro `packages/core/src/model/money.ts`: non è così. `parseAmount`
+sostituisce la prima virgola con un punto, quindi `12,50` in inglese dà 1250 centesimi senza
+protestare.
+
+La decisione resta giusta, ma per due ragioni diverse e più serie, entrambe silenziose: in inglese la
+virgola separa le **migliaia**, quindi `12,50` si legge a schermo come dodicimilacinquanta mentre il
+core lo intende 12,50 — e `1,234`, che chi lo scrive intende milleduecentotrentaquattro, `parseAmount`
+lo rifiuta davvero, perché dopo il separatore decimale conta tre cifre. Nessuno dei due casi dà un
+errore nel momento in cui si preme il tasto. I commenti in `amount-pad.ts` e nel test scrivono questa
+versione, non quella del piano.
+
+`decimalKey()` legge `numberFormat().decimal` **quando gira**, e `AmountPad` chiama `useTranslation()`
+pur avendo una stringa sola: senza l'hook, al cambio di lingua il tasto resterebbe quello di prima
+fino al primo ridisegno per altri motivi. È la regola dello Step 38, applicata a un tasto.
+
+### Cosa non è ancora qui
+
+La decisione 4 descrive anche la cifra a 62 punti e il salva fisso in fondo con il tastierino sempre
+a schermo: quel layout ha bisogno dei tre gruppi apribili, che sono lo **Step 50**. Per ora il
+tastierino sta dentro lo scorrimento, subito sotto l'importo — la schermata è già migliore di prima,
+perché il salva non è più coperto da niente, ma non è ancora quella del mockup.
+
+Le quote libere («Quote») restano sulla tastiera di sistema: sono più campi, e un tastierino solo
+dovrebbe sapere in quale sta scrivendo. Il tastierino serve all'importo, che è **la** schermata.
+
+### Verificato
+
+`npm run typecheck`, `npm run lint`, `npm run format:check` puliti; `npm test` 1278 verdi. Il
+tastierino **non è stato visto su un telefono**: è codice che compila e logica coperta dai test, e la
+distinzione fra le due cose e il terzo caso — visto funzionare — vale qui come altrove.
+
+---
+
 ## 2026-09-12 — Piano v6 deciso: spesa rapida e grafici componibili
 
 Lo stesso giorno della verifica su telefono (Step 41), un secondo giro di redesign: non un ritocco,

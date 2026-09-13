@@ -149,6 +149,11 @@ export const it = {
     amountPlaceholder: '0,00',
     amountLabel: 'Importo della spesa',
     amountError: 'Inserisci un importo maggiore di zero',
+    pad: {
+      title: 'Tastierino dell’importo',
+      decimal: 'Separatore decimale',
+      delete: 'Cancella l’ultima cifra',
+    },
     whoAndHow: 'Chi paga e come si divide',
     paidBy: 'Ha pagato {{name}}',
     me: 'Tu',

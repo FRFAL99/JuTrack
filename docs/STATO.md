@@ -1,6 +1,6 @@
 # Stato del progetto — punto di partenza
 
-Aggiornato: 2026-09-12 — **il criterio di «fatto» end-to-end è stato soddisfatto**: la mattina del
+Aggiornato: 2026-09-13 — **il criterio di «fatto» end-to-end è stato soddisfatto**: la mattina del
 12 settembre il sync è stato visto funzionare nei due versi con un telefono vero, coi membri e i
 saldi giusti, e i due widget si sono popolati con numeri identici a un calcolo indipendente. Tutti e
 quattro i piani e il redesign sono nel codice, il quinto è a dodici step su tredici, e la build EAS
@@ -11,8 +11,8 @@ che tiene tutto questo è installata.
 > spesa rapida e grafici componibili, da due artifact Claude Design (un mockup a più direzioni e il
 > registro delle decisioni). La direzione scelta è **Lastra** — stessi token del redesign chiuso in
 > [visualdesign.md](visualdesign.md), gerarchia rifatta — contro le due scartate, **Insegna** e
-> **Estratto**. **Nessuno dei quattro step del piano è ancora nel codice**: per ora esiste solo la
-> decisione.
+> **Estratto**. **Il 13 settembre è entrato il primo dei quattro step — il 49, il tastierino in-app
+> per l'importo**; restano il 50, il 51 e il 52.
 
 > **La sessione del 12 settembre è raccontata in
 > [La verifica su telefono](#la-verifica-su-telefono-del-12-settembre-step-41)**, divisa fra ciò che
@@ -176,16 +176,16 @@ Redesign visivo — [visualdesign.md](visualdesign.md), direzione **2a**, sette 
 | 7 — Nuova spesa            | ✅    | Riscrittura del form: importo → chi/come → categoria → dettagli |
 
 Piano v6 — [piano-v6-spesa-rapida-e-grafici-componibili.md](piano-v6-spesa-rapida-e-grafici-componibili.md),
-**deciso il 12 settembre, zero step su quattro nel codice**:
+**deciso il 12 settembre, uno step su quattro nel codice**:
 
 | Step                                         | Stato | Cosa contiene                                                                     |
 | -------------------------------------------- | ----- | --------------------------------------------------------------------------------- |
-| 49 — Il tastierino in-app per l'importo      | ⬜    | `TextInput` senza tastiera di sistema, `amount-pad.ts`, tasto decimale per lingua |
+| 49 — Il tastierino in-app per l'importo      | ✅    | `TextInput` senza tastiera di sistema, `amount-pad.ts`, tasto decimale per lingua |
 | 50 — I tre gruppi apribili della nuova spesa | ⬜    | Un gruppo aperto per volta, riassunto col valore vero, Data/Nota in «Dettagli»    |
 | 51 — I capitoli dei grafici                  | ⬜    | Sedici widget divisi in Mese (10) / Abitudini (3) / Fra di voi (3)                |
 | 52 — La composizione in loco                 | ⬜    | «Modifica» dentro i Grafici, `moveWithin`, `app/dashboard.tsx` diventa redirect   |
 
-**1261 test verdi** (639 core + 568 app + 54 relay), typecheck, lint e `format:check` puliti.
+**1278 test verdi** (639 core + 585 app + 54 relay), typecheck, lint e `format:check` puliti.
 
 > **Il redesign è finito nel codice, e adesso tocca al telefono.** Sette passi su sette, e da qui
 > non resta niente da scrivere: resta da **guardare**. È la stessa frase che valeva per i tre piani
@@ -1609,6 +1609,14 @@ spesa e i suoi tre modi di perdere quello che si scrive (passo 7, Step 24 e 38);
 l'app** (Step 28); valuta e lingua in Tu, che la chiedono anche loro (Step 29 e 37). Poi la prova
 singola che vale più di tutte le altre di questo blocco: **in inglese, aprire una spesa registrata
 prima e guardare il campo importo** — deve dire `12.30` e non `1230` (Step 39).
+
+Dal 13 settembre lo stesso blocco ha una riga nuova, ed è del genere che i test non possono coprire:
+**il tastierino in-app dello Step 49**. Toccando l'importo la tastiera di sistema **non deve
+comparire** (`showSoftInputOnFocus={false}` è l'unico pezzo che dipende dal dispositivo), le cifre
+devono uscire in fondo alla cifra e non dove capita il cursore, e il tasto del separatore deve
+scrivere «,» in italiano e «.» in inglese — si prova cambiando lingua in Tu con il form già aperto.
+Da guardare anche con TalkBack: la cifra deve annunciarsi come **campo editabile**, che è la sola
+ragione per cui è rimasta un `TextInput`.
 
 **Blocco 2 — con `npm run peer` dall'altra parte (~20 min).** È il criterio di «fatto» che manca a
 tutti i piani. Il link mandato in chat che apre `/groups/<id>` **col fragment**, `Share.share`, la

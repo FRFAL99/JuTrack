@@ -141,6 +141,11 @@ export const en: Dictionary = {
     amountPlaceholder: '0.00',
     amountLabel: 'Expense amount',
     amountError: 'Enter an amount greater than zero',
+    pad: {
+      title: 'Amount keypad',
+      decimal: 'Decimal separator',
+      delete: 'Delete last digit',
+    },
     whoAndHow: 'Who pays and how it splits',
     paidBy: '{{name}} paid',
     me: 'You',

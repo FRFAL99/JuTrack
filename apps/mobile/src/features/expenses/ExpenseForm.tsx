@@ -33,6 +33,8 @@ import { Chip } from '@/components/Chip';
 import { CategoryIcon } from '@/features/categories/CategoryIcon';
 import { useCategories, useCurrencyCode, useExpenses, useMembers, useMyMemberId } from '@/state';
 import { numeric, tightTitle, useTheme } from '@/theme';
+import { AmountPad } from './AmountPad';
+import { applyKey } from './amount-pad';
 import { extraSummary, tagChoices } from './extra-fields';
 import { formatDayTitle, todayIso } from './grouping';
 import { describeGap, previewShareCents, splitModeLabel, splitPreview } from './split-text';
@@ -260,6 +262,18 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
               onChangeText={setAmountText}
               placeholder={t('expense.amountPlaceholder')}
               placeholderTextColor={colors.textFaint}
+              // La tastiera di sistema non si apre più: a scrivere è il tastierino qui
+              // sotto (decisione 4 del Piano v6). Resta un `TextInput` e non un `Text`
+              // perché un `Text` perderebbe l'annuncio di campo editabile, e con esso
+              // l'unico modo di sapere, con TalkBack, che quella cifra si può cambiare.
+              showSoftInputOnFocus={false}
+              // Il cursore sta in fondo perché il tastierino scrive in fondo: senza, chi
+              // tocca in mezzo alla cifra vedrebbe il caret in un punto e le cifre
+              // comparire in un altro.
+              selection={{ start: amountText.length, end: amountText.length }}
+              // Tenuto come rete: su un dispositivo che ignorasse
+              // `showSoftInputOnFocus` la tastiera che compare è comunque quella
+              // numerica, non quella con le lettere.
               keyboardType="decimal-pad"
               autoFocus={initial === undefined}
               accessibilityLabel={t('expense.amountLabel')}
@@ -290,6 +304,14 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
             <Text style={{ color: colors.danger, fontSize: fontSize.xs }}>{amountError}</Text>
           )}
         </Card>
+
+        {/* Il tastierino sta sotto l'importo e sopra tutto il resto: sono la stessa cosa,
+            la cifra e il modo di scriverla. Al passo 50, coi tre gruppi apribili, la
+            schermata smetterà di scorrere e il tastierino si troverà stabilmente sopra il
+            salva; qui è ancora dentro lo scorrimento. */}
+        <View style={{ paddingTop: spacing.md }}>
+          <AmountPad onKey={(char) => setAmountText((text) => applyKey(text, char))} />
+        </View>
 
         {/* 2. Chi paga e come si divide: una domanda sola, perché la risposta all'una
             cambia il significato dell'altra. Con una persona sola non si pone. */}
@@ -358,6 +380,10 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
                         }
                         placeholder={t('expense.amountPlaceholder')}
                         placeholderTextColor={colors.textFaint}
+                        // Le quote libere restano sulla tastiera di sistema: sono più
+                        // campi, e un tastierino solo dovrebbe sapere in quale sta
+                        // scrivendo. Il tastierino serve all'importo, che è **la**
+                        // schermata; qui `decimal-pad` fa ancora da guardiano.
                         keyboardType="decimal-pad"
                         accessibilityLabel={t('expense.shareOf', { name: member.name })}
                         style={[

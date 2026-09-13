@@ -5,7 +5,8 @@
 > ricostruzione dello stato attuale, le tre direzioni provate, le due composizioni dei Grafici) e il
 > registro delle decisioni che questo file riprende punto per punto.
 >
-> **Nessuno step è ancora nel codice.** Le 15 decisioni sono prese, la direzione è scelta —
+> **Lo Step 49 è nel codice (13 settembre 2026); restano il 50, il 51 e il 52.** Le 15 decisioni sono
+> prese, la direzione è scelta —
 > **Lastra** (turno 1a: stessi token, gerarchia rifatta) contro le due scartate, **Insegna** (1b:
 > fondo nero pieno, accento lime acido, cifre Space Grotesk) ed **Estratto** (1c: serif per le cifre,
 > monospazio per i metadati) — e per la composizione dei Grafici si va con **2b**, comporre dentro i
@@ -76,10 +77,17 @@ l'unico modo di sapere, con TalkBack, che quella cifra si può cambiare.
 
 **Decisione.** Il primo tasto dell'ultima riga scrive `numberFormat().decimal`.
 
-**Perché.** In inglese il separatore decimale è il punto: un tasto che scrivesse «,» renderebbe
-`parseAmount` sempre nullo, e l'app sarebbe inutilizzabile in EN senza un errore visibile da nessuna
-parte. È la stessa trappola che lo Step 39 ha già chiuso sul separatore di raggruppamento in
-`ExpenseForm` — questa volta va chiusa prima di scriverla.
+**Perché.** In inglese il separatore decimale è il punto. È la stessa trappola che lo Step 39 ha già
+chiuso sul separatore di raggruppamento in `ExpenseForm` — questa volta va chiusa prima di scriverla.
+
+> **Correzione dello Step 49.** Questa decisione diceva che un tasto fisso a «,» renderebbe
+> `parseAmount` «sempre nullo». Verificato contro `packages/core/src/model/money.ts`: non è vero —
+> `parseAmount` sostituisce la prima virgola con un punto, quindi in inglese `12,50` dà 1250
+> centesimi senza protestare. La decisione resta, per due ragioni diverse e più serie: in inglese la
+> virgola separa le **migliaia**, quindi `12,50` si legge a schermo come dodicimilacinquanta mentre il
+> core lo intende 12,50; e `1,234` — milleduecentotrentaquattro per chi lo scrive — `parseAmount` lo
+> rifiuta davvero, perché dopo il separatore conta tre cifre. Nessuno dei due dà un errore nel momento
+> in cui si preme il tasto.
 
 ### 6 · Ciò che la tastiera impediva, ora lo impedisce una funzione con dei test
 
@@ -215,12 +223,12 @@ Il layout salvato si rilegge com'è perché il capitolo è una proprietà del co
 
 ## Step
 
-Nessuno step è nel codice. Prosegue la numerazione globale da 49, e vale la stessa regola delle
-altre serie: **uno step per sessione**.
+Uno step su quattro è nel codice. Prosegue la numerazione globale da 49, e vale la stessa regola
+delle altre serie: **uno step per sessione**.
 
 | Step                                         | Stato | Cosa contiene                                                                                                           |
 | -------------------------------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------- |
-| 49 — Il tastierino in-app per l'importo      | ⬜    | `TextInput` senza tastiera di sistema, `amount-pad.ts` con `applyKey`, tasto decimale per lingua (decisioni 4, 5, 6)    |
+| 49 — Il tastierino in-app per l'importo      | ✅    | `TextInput` senza tastiera di sistema, `amount-pad.ts` con `applyKey`, tasto decimale per lingua (decisioni 4, 5, 6)    |
 | 50 — I tre gruppi apribili della nuova spesa | ⬜    | `useState<GroupKey \| null>`, riassunto col valore vero, Data/Nota in «Dettagli» (decisioni 7, 8, 9)                    |
 | 51 — I capitoli dei grafici                  | ⬜    | `Record<WidgetId, Chapter>`, i sedici widget divisi in Mese/Abitudini/Fra di voi (decisione 10)                         |
 | 52 — La composizione in loco                 | ⬜    | «Modifica» nei Grafici, `moveWithin`, `pointerEvents="none"`, × `danger`, redirect di `dashboard.tsx` (decisioni 11–15) |
