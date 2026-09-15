@@ -131,6 +131,16 @@ export const en: Dictionary = {
       even: 'You are even',
     },
   },
+  sentence: {
+    open: 'Write',
+    openLabel: 'Write the expense as a sentence',
+    title: 'The expense in one line',
+    placeholder: '25 groceries esselunga yesterday half yours',
+    continue: 'Continue',
+    asNote: 'As the expense name: “{{text}}”',
+    twoNumbers: 'There are two numbers: put “€” next to the one that is the amount.',
+    help: 'Amount, store, category, when and how it splits, in any order. Stores and tags are only recognised if the group already uses them; the rest becomes the expense name.',
+  },
   expense: {
     newTitle: 'New expense',
     submitNew: 'Save the expense',

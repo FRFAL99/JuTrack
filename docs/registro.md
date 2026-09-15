@@ -93,7 +93,7 @@ Stato: ✅ chiuso · 🟡 in parte · ⬜ non fatto.
 | 65  | La cartella, e il backup che si fa solo | v8        | ✅    | 2026-09-13 |
 | 66  | L'avviso «il backup invecchia»          | v8        | ✅    | 2026-09-13 |
 | 67  | Il motore della frase                   | v9        | ✅    | 2026-09-15 |
-| 68  | La frase, sul telefono                  | v9        | ⬜    | —          |
+| 68  | La frase, sul telefono                  | v9        | ✅    | 2026-09-15 |
 | 69  | La categoria suggerita dal negozio      | v9        | ⬜    | —          |
 | 70  | La domanda scritta nei Grafici          | v9        | ⬜    | —          |
 | 71  | I widget dicono qualcosa di più         | v10       | ⬜    | —          |
@@ -124,8 +124,9 @@ negozio`. Lo Step 45 ha prodotto `icon-source.svg`; lo script che lo consuma è 
   [verifica-sul-telefono.md](verifica-sul-telefono.md).
 - **Il [v9](piano-v9-la-frase-che-diventa-una-spesa.md) è aperto** dal 15 settembre 2026 e occupa
   gli Step 67, 68 e **70**: una riga di testo diventa una spesa, e una domanda scritta diventa un
-  grafico filtrato. La grammatica gira sul telefono e non tocca la rete. **Uno step su tre è
-  chiuso:** il 67 ha fatto il motore, in `packages/core/src/parse/`.
+  grafico filtrato. La grammatica gira sul telefono e non tocca la rete. **Due step su tre sono
+  chiusi:** il 67 ha fatto il motore in `packages/core/src/parse/`, il 68 il foglio che lo usa.
+  Resta il 70, la domanda nei Grafici.
 - **Step 69 — ritirato prima di cominciare.** Era «la categoria suggerita dal negozio», tolta dal
   [v9](piano-v9-la-frase-che-diventa-una-spesa.md) il giorno stesso in cui il piano è stato scritto:
   è l'unica parte che indovinava invece di riconoscere. Nessuna riga di codice è mai esistita, e

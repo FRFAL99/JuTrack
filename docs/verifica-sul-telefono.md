@@ -434,7 +434,28 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
   la dimensione a cui vive davvero, e su uno sfondo chiaro: il fondo dell'icona è quasi bianco, ed è
   l'unico punto in cui potrebbe sparire contro il wallpaper
 
-Tutto il resto è verificato: 1258 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+- **La frase dello Step 68, che è tutta da guardare perché non ha nulla di automatizzabile.** In un
+  gruppo di **due** membri che ha già «Esselunga» in elenco e una categoria «Spesa»: home → tocca
+  **«Scrivi»**, il bottone chiaro accanto a «Spesa» in basso a destra → digita
+  `25 spesa esselunga ieri metà a te`. Quattro cose, nell'ordine in cui si rompono:
+
+  1. **mentre si scrive**, sotto il campo la frase si ricompone con le parole capite in accento e
+     le altre in grigio — è l'unico pezzo dello step che nessun test può vedere, perché è
+     tipografia;
+  2. sotto ancora compaiono **cinque pillole**: `25,00 €`, `Ieri`, `Spesa`, `Esselunga`,
+     `Metà e metà`;
+  3. **«Continua»** apre la nuova spesa con 25,00 € nel numero grande, la riga Dettagli che dice
+     «Esselunga», la data di ieri e la divisione a metà;
+  4. **Salva** → la spesa compare nell'elenco sotto «Ieri» con quei valori, e riaprendola è una
+     spesa normale: si modifica e si cancella come tutte le altre.
+
+  Poi le tre prove che cercano un guasto invece di confermare che funziona: una frase con un **`&`
+  e un `#`** dentro (`caffè & cornetto #2 3,40`), che deve arrivare intera nel nome della spesa e
+  non troncare la rotta; `birra 5 10`, che non deve compilare l'importo e deve dire perché; e
+  **l'app in inglese**, dove il bottone «Scrivi» semplicemente **non c'è** — nascosto, non rotto,
+  perché il lessico della grammatica è uno solo.
+
+Tutto il resto è verificato: 1618 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 > **Lo Step 25 è entrato in questa lista attraverso il 26**, come era stato scritto: la geometria

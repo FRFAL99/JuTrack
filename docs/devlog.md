@@ -13,6 +13,103 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-15 — Step 68: la frase, sul telefono
+
+Il motore dello Step 67 aveva un solo modo di essere usato: `npm run frase`. Adesso ha un bottone.
+
+**Dalla home, accanto a «Spesa», c'è «Scrivi».** Tinta di superficie contro l'accento del FAB, e
+non è un pareggio fra due vie: «Spesa» è ciò che si fa quasi sempre, «Scrivi» è la scorciatoia di
+chi la sintassi l'ha già imparata. I due bottoni stanno ora in una riga sola posizionata in fondo a
+destra; prima il FAB si posizionava da sé, e due elementi assoluti che si contendono lo stesso
+angolo sono il modo più rapido per vederne uno finire sotto l'altro.
+
+**Tre cose a schermo, e sono tre livelli della stessa risposta.** Il campo è ciò che si scrive;
+sotto, la frase ricomposta con le parole capite **in accento**; sotto ancora le pillole, che dicono
+il _valore_ — «ieri» diventa «Ieri», `25` diventa `25,00 €`, «metà a te» diventa «Metà e metà». La
+frase colorata **insegna la sintassi senza un manuale da leggere**; le pillole confermano che si è
+stati capiti come si voleva. Non sono due modi di dire la stessa cosa: sono la domanda e la
+risposta.
+
+**Le pillole sono cinque, non quattro come diceva il piano.** Il conto nel criterio di «fatto» era
+stato fatto prima che la divisione diventasse un campo della bozza. È scritto qui perché la
+prossima volta che qualcuno conta le pillole a schermo non deve credere di aver trovato un bug.
+
+### La cosa che non si è fatta, e perché
+
+**Le parole non si colorano _dentro_ il campo.** React Native lo permetterebbe — un `TextInput` con
+figli `<Text>` stilati — ma quel comportamento e un `value` controllato convivono male, e la
+combinazione non si può provare qui: sarebbe finita nel bundle come una cosa verde nei test e
+scoperta sul telefono. L'anteprima sta quindi **sotto** il campo, ed è il taglio della stessa
+stringa: `highlight()` restituisce pezzi che rimessi in fila ricompongono **esattamente** la frase
+scritta, e c'è il test che lo pretende su cinque frasi diverse, compresa quella coi doppi spazi.
+
+Un colore solo — l'accento — e non sette, uno per campo. La palette non ha sette tinte che reggano
+il contrasto in chiaro e in scuro, e inventarle avrebbe voluto dire rifare il lavoro che `inkOn` ha
+già fatto una volta per i colori di categoria. A distinguere i campi ci sono le pillole, che hanno
+le parole.
+
+### Le tre decisioni che il piano chiedeva, e come sono finite
+
+**`draft` è una prop nuova, non `initial` riusata.** `initial?: Expense` significa «spesa in
+modifica»: accende `onDelete` e porta la regola della valuta — «su una spesa in modifica è la sua,
+non quella di adesso». Seminare il form con un `Expense` finto vorrebbe dire inventare un `id`, un
+`createdAt` e una valuta, e far credere al form di star modificando qualcosa che non esiste. La
+precedenza negli otto inizializzatori è `initial` → `draft` → il default di sempre, e **senza
+`draft` nessuno stato iniziale è cambiato**: i test del form non sono stati toccati, che era il
+vincolo con cui verificare di aver seminato nel posto giusto.
+
+**Alla schermata della spesa viaggia la frase, non la bozza.** Una rappresentazione sola, e viva:
+serializzare la bozza nella rotta vorrebbe dire due versioni della stessa cosa che possono
+divergere, e la seconda invecchia appena si aggiunge un campo. Rifare l'analisi costa microsecondi.
+
+**Il `ParseContext` sta in un hook, e il `useMemo` non dipende dalla frase.** `sentenceContext`
+passa da `knownStores`, che scandisce **tutte** le spese del gruppo: costruito nel corpo del
+componente girerebbe a ogni tasto premuto, e su un gruppo con qualche migliaio di spese la scrittura
+diventerebbe a scatti mentre tutto sembra funzionare. L'hook è condiviso fra il foglio e
+`expense/new`, e non per risparmiare righe: due vocabolari costruiti in due modi diversi
+riconoscerebbero parole diverse, e la stessa parola capita nell'anteprima sparirebbe nel form.
+
+**Il vocabolario è quello che il form propone**, cioè `vocabularyChoices` con nessuna scelta:
+catalogo del gruppo più le parole già usate nelle spese. Un elenco diverso qui produrrebbe una
+parola scrivibile e non proponibile — o il contrario — e nessuno dei due si nota finché non capita.
+
+### «Tutto a Giulia» dice anche chi ha pagato
+
+È l'unica lettura non ovvia dello step, e sta in `payerOf` con il suo test. Nel modello dell'app la
+modalità `single` mette la spesa a carico di **chi paga** (`split-text.ts`: «`single` non si chiama
+"Tutto mio"»), quindi una frase che nomina una persona sola e le mette addosso tutta la spesa la sta
+nominando anche come pagante. È la lettura giusta nel caso frequente — «tutto io» — ed è l'unica che
+il form sa rappresentare. Un marcatore esplicito vince sempre: in «offro io, tutto a Giulia» ha
+pagato chi lo dice. E resta una riga da toccare, non un saldo scritto di nascosto.
+
+### Solo italiano, e il bottone sparisce
+
+`sentenceAvailable(language)` è una riga sola, ed è il punto in cui la decisione 9 del piano diventa
+codice: con l'app in inglese «Scrivi» **non c'è**. Non disabilitato, non con un avviso: assente.
+`ITALIAN_LEXICON` è l'unico lessico che esiste, e offrire il bottone a chi scriverebbe in inglese
+vorrebbe dire far scrivere una frase che non verrà capita — peggio che non offrirlo. Le chiavi
+inglesi ci sono lo stesso perché `en.ts` è tipizzato su `it.ts` e `tsc` non lascia divergere le due
+lingue.
+
+### Verifica
+
+**1618 test verdi** (850 core + 714 app + 54 relay), `typecheck`, `lint` e `format:check` puliti,
+`expo export --platform android` completato. **Nessuna build EAS**: non entra alcun modulo nativo,
+ed è l'ottava volta che il progetto lo rifiuta.
+
+I 22 test nuovi stanno tutti in `sentence.ts`, che è puro — il contesto, le pillole, il taglio della
+frase, le due letture che il form non può fare da sé. Il foglio non ne ha, per la regola di sempre:
+i test dell'app non caricano `react-native`, ed è la ragione per cui la logica è uscita dal
+componente.
+
+**Quello che resta da provare è tutto lo step**, ed è l'unica parte che nessun test può vedere
+perché è tipografia e navigazione: la frase che si colora mentre la si scrive, «Continua» che apre
+il form seminato, e il salvataggio che produce una spesa normale. I passaggi, con le tre prove che
+cercano un guasto invece di confermare che funziona, sono in
+[verifica-sul-telefono.md](verifica-sul-telefono.md).
+
+---
+
 ## 2026-09-15 — Step 67: il motore della frase
 
 Una riga di testo diventa una spesa, e per farlo non c'è voluto quasi niente di nuovo.

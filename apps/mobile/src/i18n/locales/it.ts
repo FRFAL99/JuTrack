@@ -147,6 +147,16 @@ export const it = {
       even: 'Siete pari',
     },
   },
+  sentence: {
+    open: 'Scrivi',
+    openLabel: 'Scrivi la spesa in una frase',
+    title: 'La spesa in una riga',
+    placeholder: '25 spesa esselunga ieri metà a te',
+    continue: 'Continua',
+    asNote: 'Nel nome della spesa: «{{text}}»',
+    twoNumbers: 'Ci sono due numeri: scrivi «€» accanto a quello che è l’importo.',
+    help: 'Importo, negozio, categoria, quando e com’è divisa, in qualunque ordine. Negozi e tag si riconoscono solo se il gruppo li usa già; il resto diventa il nome della spesa.',
+  },
   expense: {
     newTitle: 'Nuova spesa',
     submitNew: 'Salva la spesa',

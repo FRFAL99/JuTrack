@@ -19,7 +19,7 @@ dicendo tre cose false su sé stesso.
 la mattina dello stesso giorno: il sync visto funzionare nei due versi fra due telefoni veri, coi
 membri e i saldi giusti, e i due widget popolati con numeri identici a un calcolo indipendente.
 
-**Sessantotto step, dallo 0 al 67**, elencati uno per riga in [registro.md](registro.md). Sette piani
+**Sessantanove step, dallo 0 al 68**, elencati uno per riga in [registro.md](registro.md). Sette piani
 chiusi su dieci — l'originale, il [v2](piano-v2-profili-gruppi-sync.md),
 [v3](piano-v3-tab-gruppi-azzeramento-sync.md), [v4](piano-v4-grafici-e-dashboard.md),
 [v6](piano-v6-spesa-rapida-e-grafici-componibili.md),
@@ -28,7 +28,7 @@ chiusi su dieci — l'originale, il [v2](piano-v2-profili-gruppi-sync.md),
 ([visualdesign.md](visualdesign.md)). Il [v5](piano-v5-notifiche-widget-profilo.md) è a dodici step
 su tredici: manca solo la coda dello Step 41.
 
-**1596 test verdi** (850 core + 692 app + 54 relay), con `typecheck`, `lint` e `format:check`
+**1618 test verdi** (850 core + 714 app + 54 relay), con `typecheck`, `lint` e `format:check`
 puliti.
 
 **Gli aggiornamenti via etere funzionano, e ne sono già partiti tre** il 13 settembre: gli Step
@@ -76,10 +76,13 @@ bruciato. **Non contiene un solo byte che esca dal telefono:** l'analisi da cui 
 far leggere la frase a un modello linguistico, il codice ha detto che nove frasi su dieci non ne
 hanno bisogno perché le parole che contano il gruppo le conosce già.
 
-**Lo Step 67 è chiuso**: il motore sta in `packages/core/src/parse/`, con `parseExpense(text,
-context)` e il lessico italiano come parametro. Restano il **68** — il foglio sul telefono, con
-l'anteprima che si colora mentre si scrive — e il **70**, la stessa grammatica che risponde alla
-domanda nei Grafici.
+**Gli Step 67 e 68 sono chiusi**: il motore sta in `packages/core/src/parse/`, con
+`parseExpense(text, context)` e il lessico italiano come parametro, e dalla home un bottone
+«Scrivi» apre il foglio che lo usa — anteprima viva, pillole, e «Continua» che semina il form.
+Resta il **70**, la stessa grammatica che risponde alla domanda nei Grafici.
+
+**Il foglio della frase non è ancora stato visto su un telefono**, ed è l'unica cosa che i test non
+possono dire: la prova è in [verifica-sul-telefono.md](verifica-sul-telefono.md).
 
 Aperto ma non ancora cominciato c'è anche il **[Piano v10](piano-v10-i-widget-che-dicono-qualcosa.md)**
 (Step 71 e 72): i widget che mostrano l'andamento e il «+» sulla home da cui comincia una spesa
