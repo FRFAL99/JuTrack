@@ -15,6 +15,8 @@ import { ExpenseRow } from '@/features/expenses/ExpenseRow';
 import { describeMyBalance } from '@/features/expenses/balance-line';
 import { currentMonth, formatMonthTitle, groupByDay } from '@/features/expenses/grouping';
 import { yourShareCents } from '@/features/expenses/share';
+import { SentenceSheet } from '@/features/expenses/SentenceSheet';
+import { sentenceAvailable } from '@/features/expenses/sentence';
 import { GroupSwitcherSheet } from '@/features/groups/GroupSwitcherSheet';
 import { groupColor } from '@/features/groups/list';
 import { describeSync, syncTone } from '@/features/sync/describe';
@@ -52,7 +54,7 @@ import { numeric, tightTitle, useTheme } from '@/theme';
  * gruppo appena aperta. Un componente condiviso non naviga, e non ha quel modo di fallire.
  */
 export function GroupHome({ group }: { group: GroupRecord }) {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const symbol = useCurrencySymbol();
   const insets = useSafeAreaInsets();
@@ -60,6 +62,8 @@ export function GroupHome({ group }: { group: GroupRecord }) {
   useEngineActivity();
 
   const [switching, setSwitching] = useState(false);
+  const [writing, setWriting] = useState(false);
+  const writable = sentenceAvailable(i18n.language);
 
   const expenses = useExpenses();
   const categories = useCategories(true);
@@ -386,33 +390,68 @@ export function GroupHome({ group }: { group: GroupRecord }) {
         />
       )}
 
-      {/* Esteso, non un `+` nudo: quello non diceva **cosa** aggiunge, e in una schermata
-          che ha anche gruppi e categorie non era ovvio. */}
-      <Pressable
-        onPress={() => router.push('/expense/new')}
-        accessibilityRole="button"
-        accessibilityLabel={t('home.fabLabel')}
-        style={({ pressed }) => [
-          styles.fab,
-          {
-            backgroundColor: pressed ? colors.accentPressed : colors.accent,
-            borderRadius: radius.pill,
-            bottom: insets.bottom + 14,
-            right: spacing.lg,
-          },
-        ]}
-      >
-        <Feather name="plus" size={20} color={colors.textOnAccent} />
-        <Text
-          style={{
-            color: colors.textOnAccent,
-            fontSize: fontSize.md,
-            fontWeight: fontWeight.semibold,
-          }}
+      <View style={[styles.actions, { bottom: insets.bottom + 14, right: spacing.lg }]}>
+        {/* La seconda via, e resta la seconda: tinta di superficie contro l'accento del
+            FAB, perché «Spesa» è ciò che si fa quasi sempre e «Scrivi» è la scorciatoia di
+            chi la sintassi l'ha già imparata. Compare **solo in italiano**: il lessico della
+            grammatica è uno solo, e offrire il bottone a chi ha l'app in inglese vorrebbe
+            dire far scrivere una frase che non verrà capita. */}
+        {writable && (
+          <Pressable
+            onPress={() => setWriting(true)}
+            accessibilityRole="button"
+            accessibilityLabel={t('sentence.openLabel')}
+            style={({ pressed }) => [
+              styles.fab,
+              {
+                backgroundColor: pressed ? colors.surfacePressed : colors.surface,
+                borderRadius: radius.pill,
+                borderWidth: StyleSheet.hairlineWidth,
+                borderColor: colors.border,
+              },
+            ]}
+          >
+            <Feather name="edit-3" size={18} color={colors.text} />
+            <Text
+              style={{
+                color: colors.text,
+                fontSize: fontSize.md,
+                fontWeight: fontWeight.semibold,
+              }}
+            >
+              {t('sentence.open')}
+            </Text>
+          </Pressable>
+        )}
+
+        {/* Esteso, non un `+` nudo: quello non diceva **cosa** aggiunge, e in una schermata
+            che ha anche gruppi e categorie non era ovvio. */}
+        <Pressable
+          onPress={() => router.push('/expense/new')}
+          accessibilityRole="button"
+          accessibilityLabel={t('home.fabLabel')}
+          style={({ pressed }) => [
+            styles.fab,
+            {
+              backgroundColor: pressed ? colors.accentPressed : colors.accent,
+              borderRadius: radius.pill,
+            },
+          ]}
         >
-          {t('home.fab')}
-        </Text>
-      </Pressable>
+          <Feather name="plus" size={20} color={colors.textOnAccent} />
+          <Text
+            style={{
+              color: colors.textOnAccent,
+              fontSize: fontSize.md,
+              fontWeight: fontWeight.semibold,
+            }}
+          >
+            {t('home.fab')}
+          </Text>
+        </Pressable>
+      </View>
+
+      <SentenceSheet visible={writing} onClose={() => setWriting(false)} />
 
       <GroupSwitcherSheet
         visible={switching}
@@ -430,8 +469,8 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   heroTop: { flexDirection: 'row', alignItems: 'center' },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' },
+  actions: { position: 'absolute', flexDirection: 'row', alignItems: 'center', gap: 10 },
   fab: {
-    position: 'absolute',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

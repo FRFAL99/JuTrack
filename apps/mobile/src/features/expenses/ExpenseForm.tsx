@@ -20,6 +20,7 @@ import {
   storeKey,
   tagKey,
   type Expense,
+  type ExpenseDraft,
   type ExpenseSplit,
   type Member,
   type SplitMode,
@@ -40,6 +41,7 @@ import { applyKey } from './amount-pad';
 import { MAX_EXPENSE_NOTE } from './extra-fields';
 import { categorySummary, detailsSummary, payerSummary, type SummaryPart } from './group-summary';
 import { formatDayTitle, todayIso } from './grouping';
+import { payerOf, splitModeOf } from './sentence';
 import { describeGap, previewShareCents, splitModeLabel, splitPreview } from './split-text';
 
 export interface ExpenseFormValues {
@@ -77,6 +79,20 @@ export interface ExpenseFormValues {
 
 interface ExpenseFormProps {
   initial?: Expense;
+  /**
+   * Una spesa **proposta**, letta da una frase (Step 68). Mutuamente esclusiva con `initial`.
+   *
+   * Non si riusa `initial` per seminare il form, e non è pignoleria sui nomi: `initial`
+   * significa «spesa in modifica» — accende `onDelete` e porta con sé la regola della valuta
+   * scritta qui sotto, «su una spesa in modifica è la sua, non quella di adesso».
+   * Fabbricare un `Expense` finto vorrebbe dire inventare un `id`, un `createdAt` e una
+   * valuta, e far credere al form di star modificando qualcosa che non esiste.
+   *
+   * **Senza `draft`, ogni stato iniziale resta identico a prima.** È il vincolo che tiene
+   * validi senza toccarli i test del form: se uno di quelli va cambiato, la semina è stata
+   * fatta nel posto sbagliato.
+   */
+  draft?: ExpenseDraft;
   onSubmit: (values: ExpenseFormValues) => void;
   onDelete?: () => void;
   submitLabel: string;
@@ -128,7 +144,7 @@ const ROW_INSET = 48;
  * La logica di calcolo non è cambiata da nessuno dei due giri di redesign: `parseAmount`,
  * `buildSplit` e la validazione delle quote sono quelle di sempre.
  */
-export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: ExpenseFormProps) {
+export function ExpenseForm({ initial, draft, onSubmit, onDelete, submitLabel }: ExpenseFormProps) {
   const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const insets = useSafeAreaInsets();
@@ -152,12 +168,13 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   // togliere dipende dalla lingua: in italiano è il punto, in inglese la virgola. Scritto a
   // mano com'era prima (`replace(/\./g, '')`), aprire in inglese una spesa da 12,30
   // cancellerebbe il **separatore decimale** e il campo mostrerebbe 1230.
+  // La precedenza, qui e negli altri sette inizializzatori: `initial` (la spesa in
+  // modifica), poi `draft` (la frase appena scritta), poi il default di sempre.
+  const seeded = initial?.amountCents ?? draft?.amountCents ?? null;
   const [amountText, setAmountText] = useState(
-    initial === undefined
-      ? ''
-      : formatCents(initial.amountCents).replaceAll(numberFormat().group, ''),
+    seeded === null ? '' : formatCents(seeded).replaceAll(numberFormat().group, ''),
   );
-  const [note, setNote] = useState(initial?.note ?? '');
+  const [note, setNote] = useState(initial?.note ?? draft?.note ?? '');
   /**
    * La nota è aperta: il tastierino si smonta come per un gruppo.
    *
@@ -172,11 +189,11 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
    * spesa nasceva sempre oggi e nessuna poteva essere corretta. Il default non cambia — nove
    * volte su dieci la spesa si registra mentre la si fa.
    */
-  const [date, setDate] = useState(initial?.date ?? todayIso());
+  const [date, setDate] = useState(initial?.date ?? draft?.date ?? todayIso());
   /** La griglia è chiusa: a dire che la data è già quella giusta basta la riga. */
   const [pickingDate, setPickingDate] = useState(false);
-  const [store, setStore] = useState(initial?.store ?? '');
-  const [tags, setTags] = useState<string[]>(initial?.tags ?? []);
+  const [store, setStore] = useState(initial?.store ?? draft?.store ?? '');
+  const [tags, setTags] = useState<string[]>(initial?.tags ?? draft?.tags ?? []);
   // Una bozza per campo, e stanno **qui** e non dentro i due selettori: `handleSubmit` deve
   // poterle vedere, o chi tocca «Salva» senza confermare col tasto «fine» perderebbe ciò
   // che ha scritto. Era già la regola del vecchio campo dei tag.
@@ -185,12 +202,14 @@ export function ExpenseForm({ initial, onSubmit, onDelete, submitLabel }: Expens
   // Chiusi anche su una spesa che ha già negozio, tag o una categoria: a dire che sotto c'è
   // qualcosa è il riassunto sulla riga, non l'apertura d'ufficio del gruppo.
   const [openGroup, setOpenGroup] = useState<GroupKey | null>(null);
-  const [categoryId, setCategoryId] = useState<string | null>(initial?.categoryId ?? null);
+  const [categoryId, setCategoryId] = useState<string | null>(
+    initial?.categoryId ?? draft?.categoryId ?? null,
+  );
   // Chi paga è quasi sempre chi sta scrivendo: il proprio membro è il default, non il
   // primo della lista in ordine alfabetico.
-  const [paidBy, setPaidBy] = useState<string>(initial?.paidBy ?? myMemberId);
+  const [paidBy, setPaidBy] = useState<string>(initial?.paidBy ?? payerOf(draft, myMemberId));
   const [mode, setMode] = useState<SplitMode>(
-    initial?.split.mode ?? (members.length > 1 ? 'equal' : 'single'),
+    initial?.split.mode ?? splitModeOf(draft, members.length > 1 ? 'equal' : 'single'),
   );
   // Quote personalizzate come testo: convertirle in centesimi a ogni tasto
   // impedirebbe di scrivere «12,» mentre si digita «12,50».

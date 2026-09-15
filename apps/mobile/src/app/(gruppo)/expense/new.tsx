@@ -1,7 +1,10 @@
-import { router } from 'expo-router';
+import { useMemo } from 'react';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { parseExpense } from '@jutrack/core';
 import { ModalScreen } from '@/components/ModalScreen';
 import { ExpenseForm, type ExpenseFormValues } from '@/features/expenses/ExpenseForm';
+import { useSentenceContext } from '@/features/expenses/useSentence';
 import { useExpenseRegistered } from '@/features/notifications/useNotifications';
 import { useVaultStore } from '@/state';
 
@@ -9,6 +12,24 @@ export default function NewExpenseScreen() {
   const { t } = useTranslation();
   const store = useVaultStore();
   const noteRegistered = useExpenseRegistered();
+  /**
+   * La frase dello Step 68, quando si arriva dal foglio.
+   *
+   * **Viaggia la frase, non la bozza** (decisione 8 del piano v9): una rappresentazione
+   * sola, e viva. Serializzare la bozza nel parametro vorrebbe dire avere due versioni
+   * della stessa cosa che possono divergere, e la seconda invecchia appena si aggiunge un
+   * campo. Rifare l'analisi costa microsecondi e non tocca il disco.
+   *
+   * `useLocalSearchParams` dà `string | string[]`: un parametro ripetuto nella rotta
+   * arriverebbe come array, e concatenarlo produrrebbe una frase che nessuno ha scritto.
+   */
+  const { frase } = useLocalSearchParams<{ frase?: string | string[] }>();
+  const sentence = typeof frase === 'string' ? frase : '';
+  const context = useSentenceContext();
+  const draft = useMemo(
+    () => (sentence === '' ? undefined : parseExpense(sentence, context)),
+    [sentence, context],
+  );
 
   const handleSubmit = (values: ExpenseFormValues): void => {
     store.addExpense({
@@ -37,7 +58,11 @@ export default function NewExpenseScreen() {
     // `compact`: la x tonda a sinistra e il titolo al centro, perché l'azione che conclude
     // — «Salva la spesa» — è il bottone a piena larghezza in fondo al form.
     <ModalScreen title={t('expense.newTitle')} compact>
-      <ExpenseForm onSubmit={handleSubmit} submitLabel={t('expense.submitNew')} />
+      <ExpenseForm
+        {...(draft !== undefined && { draft })}
+        onSubmit={handleSubmit}
+        submitLabel={t('expense.submitNew')}
+      />
     </ModalScreen>
   );
 }
