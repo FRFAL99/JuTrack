@@ -43,6 +43,7 @@ function compose(args: {
 }) {
   return composeSnapshot({
     groupName: 'Casa',
+    vaultId: 'vault-casa',
     expenses: args.expenses,
     monthExpenses: args.monthExpenses ?? args.expenses,
     settlements: NO_SETTLEMENTS,
@@ -191,23 +192,31 @@ describe('il ritmo del mese', () => {
 });
 
 describe('i campi nuovi non toccano quelli di prima', () => {
-  it('lascia il saldo esattamente com’era', () => {
-    // Decisione 2: i campi nuovi sono **aggiunte**. Il saldo non ne ha nessuno, e se un
-    // giorno ne prendesse uno questo test lo direbbe.
+  it('non dà al saldo la striscia né il ritmo', () => {
+    // Decisione 2: i campi nuovi sono **aggiunte**, e ciascuna solo dove ha senso. Il saldo
+    // ha preso l'identificativo del gruppo (Step 72, per il «+») e nient'altro: non ha una
+    // serie storica da cui ricavare una striscia, e un ritmo di un saldo non vuol dire nulla.
     const snapshot = compose({ expenses: [shared(2000, IO, '2026-08-19')] });
     expect(Object.keys(snapshot.balance ?? {}).sort()).toEqual([
       'amount',
       'caption',
       'group',
       'tone',
+      'vaultId',
     ]);
   });
 
-  it('non mette i campi nuovi quando non hanno niente da dire', () => {
+  it('non mette striscia e ritmo quando non hanno niente da dire', () => {
     // Un campo `undefined` scritto nel foglietto sarebbe una chiave in più in `app_meta` a
     // ogni spesa, e `changedWidgets` confronta il JSON: una chiave che compare e scompare
-    // farebbe ridisegnare la home per niente.
+    // farebbe ridisegnare la home per niente. L'identificativo del gruppo resta, perché il
+    // «+» deve funzionare anche in un gruppo in cui non si è ancora speso niente.
     const snapshot = compose({ expenses: [] });
-    expect(Object.keys(snapshot.month ?? {}).sort()).toEqual(['amount', 'caption', 'group']);
+    expect(Object.keys(snapshot.month ?? {}).sort()).toEqual([
+      'amount',
+      'caption',
+      'group',
+      'vaultId',
+    ]);
   });
 });

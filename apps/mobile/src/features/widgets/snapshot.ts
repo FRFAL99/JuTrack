@@ -95,6 +95,20 @@ export interface WidgetLines {
   amount: string;
   /** La riga sotto: cosa vuol dire quel numero. L'importo **non** c'è: sta già sopra. */
   caption: string;
+  /**
+   * **Quale** gruppo, per il «+» che comincia una spesa.
+   *
+   * Non si disegna: `group` è il nome che si legge, questo è l'identificativo che finisce nel
+   * link. Servono tutti e due, e per una ragione sola — il nome di un gruppo si può cambiare
+   * e non è unico, quindi non identifica niente; l'identificativo non si può mostrare a
+   * nessuno.
+   *
+   * **Facoltativo** come tutti i campi entrati dopo (decisione 2): un foglietto scritto prima
+   * di questo step non ce l'ha, e il widget che lo disegna deve restare intero. Senza, il «+»
+   * non compare — il rettangolo torna a fare la sola cosa che ha sempre fatto, aprire l'app,
+   * finché l'app non riscrive il foglietto.
+   */
+  vaultId?: string;
 }
 
 /** Quello che il widget «Saldo» disegna. */
@@ -201,6 +215,7 @@ export function unknownMonth(): MonthSnapshot {
  */
 export function balanceSnapshot(args: {
   groupName: string;
+  vaultId: string;
   transfers: Transfer[];
   myMemberId: string;
   /** Quanti membri ha il gruppo, me compreso. */
@@ -208,11 +223,12 @@ export function balanceSnapshot(args: {
   nameOf: (memberId: string) => string;
   symbol: string;
 }): BalanceSnapshot {
-  const { groupName, transfers, myMemberId, memberCount, nameOf, symbol } = args;
+  const { groupName, vaultId, transfers, myMemberId, memberCount, nameOf, symbol } = args;
 
   if (memberCount <= 1) {
     return {
       group: groupName,
+      vaultId,
       amount: formatMoney(0, symbol),
       caption: t('widget.alone'),
       tone: 'even',
@@ -233,7 +249,7 @@ export function balanceSnapshot(args: {
           : t('widget.debtMany', { count: counterparties.length })
         : t('widget.even');
 
-  return { group: groupName, amount: formatMoney(cents, symbol), caption, tone };
+  return { group: groupName, vaultId, amount: formatMoney(cents, symbol), caption, tone };
 }
 
 /**
@@ -255,14 +271,16 @@ export function balanceSnapshot(args: {
  */
 export function monthSnapshot(args: {
   groupName: string;
+  vaultId: string;
   totalCents: Cents;
   /** Il mese già leggibile: «agosto», o «agosto 2025» se non è l'anno in corso. */
   monthTitle: string;
   symbol: string;
 }): MonthSnapshot {
-  const { groupName, totalCents, monthTitle, symbol } = args;
+  const { groupName, vaultId, totalCents, monthTitle, symbol } = args;
   return {
     group: groupName,
+    vaultId,
     amount: formatMoney(totalCents, symbol),
     caption: t('widget.monthCaption', { month: monthTitle }),
   };
@@ -336,11 +354,17 @@ function readMonth(value: unknown): MonthSnapshot | null {
  */
 function readLines(value: unknown): WidgetLines | null {
   if (typeof value !== 'object' || value === null) return null;
-  const { group, amount, caption } = value as Record<string, unknown>;
+  const { group, amount, caption, vaultId } = value as Record<string, unknown>;
   if (typeof group !== 'string' || typeof amount !== 'string' || typeof caption !== 'string') {
     return null;
   }
-  return { group, amount, caption };
+  // Il gruppo mancante o illeggibile non porta via le tre righe: costa il «+», non il widget.
+  return {
+    group,
+    amount,
+    caption,
+    ...(typeof vaultId === 'string' && vaultId !== '' ? { vaultId } : {}),
+  };
 }
 
 /**

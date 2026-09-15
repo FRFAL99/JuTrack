@@ -29,6 +29,14 @@ export async function handleWidgetTask({
   // lo stesso vorrebbe dire aprire il database per un rettangolo che non esiste.
   if (widgetAction === 'WIDGET_DELETED') return;
 
+  // **`WIDGET_CLICK` non arriva qui, ed è voluto** (Step 72). Il «+» usa `OPEN_URI`, che
+  // Android esegue da sé aprendo il link: il task headless non viene nemmeno svegliato. La
+  // riga è scritta perché l'alternativa — un `clickAction` personalizzato gestito qui —
+  // sembra la strada naturale e non lo è: qui non ci sono né la chiave né il documento
+  // montato, quindi una spesa non si potrebbe scrivere comunque. Se un giorno arrivasse, non
+  // c'è niente da ridisegnare e si esce.
+  if (widgetAction === 'WIDGET_CLICK') return;
+
   const { widgetName } = widgetInfo;
   // Un nome che non conosciamo non si disegna: sarebbe un provider comparso nel manifest
   // senza un contenuto qui, e mostrargli il saldo vorrebbe dire un numero giusto sotto

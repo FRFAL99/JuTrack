@@ -14,6 +14,7 @@ import {
 } from './snapshot';
 
 const IO = 'membro-io';
+const VAULT = 'vault-casa';
 const JUJU = 'membro-juju';
 const TERZO = 'membro-terzo';
 
@@ -27,6 +28,7 @@ function transfer(fromMember: string, toMember: string, amountCents: number): Tr
 function snapshotOf(transfers: Transfer[], memberCount = 2): BalanceSnapshot {
   return balanceSnapshot({
     groupName: 'Casa',
+    vaultId: VAULT,
     transfers,
     myMemberId: IO,
     memberCount,
@@ -36,7 +38,7 @@ function snapshotOf(transfers: Transfer[], memberCount = 2): BalanceSnapshot {
 }
 
 function monthOf(totalCents: number, monthTitle = 'agosto'): WidgetSnapshot['month'] {
-  return monthSnapshot({ groupName: 'Casa', totalCents, monthTitle, symbol: '€' });
+  return monthSnapshot({ groupName: 'Casa', vaultId: VAULT, totalCents, monthTitle, symbol: '€' });
 }
 
 describe('balanceSnapshot', () => {
@@ -84,6 +86,7 @@ describe('balanceSnapshot', () => {
     // da nessuna parte.
     const snapshot = balanceSnapshot({
       groupName: 'Casa',
+      vaultId: VAULT,
       transfers: [transfer(JUJU, IO, 2500)],
       myMemberId: IO,
       memberCount: 2,
@@ -125,6 +128,7 @@ describe('monthSnapshot', () => {
   it('usa il simbolo della valuta scelta nel profilo', () => {
     const snapshot = monthSnapshot({
       groupName: 'Casa',
+      vaultId: VAULT,
       totalCents: 34050,
       monthTitle: 'agosto',
       symbol: '£',
@@ -278,6 +282,7 @@ describe('changedWidgets', () => {
     const after = {
       balance: balanceSnapshot({
         groupName: 'Vacanza',
+        vaultId: 'vault-vacanza',
         transfers: [],
         myMemberId: IO,
         memberCount: 2,
@@ -286,6 +291,7 @@ describe('changedWidgets', () => {
       }),
       month: monthSnapshot({
         groupName: 'Vacanza',
+        vaultId: 'vault-vacanza',
         totalCents: 1000,
         monthTitle: 'agosto',
         symbol: '€',
@@ -335,5 +341,38 @@ describe('dueForRefresh', () => {
     // Capita spostando l'orologio del telefono: aspettare vorrebbe dire widget fermi fino a
     // quando quell'istante arriva davvero.
     expect(dueForRefresh(String(ORA + 3_600_000), ORA)).toBe(true);
+  });
+});
+
+describe('il gruppo dentro il foglietto', () => {
+  it('porta l’identificativo accanto al nome, su tutti e due i widget', () => {
+    // Servono tutti e due: il nome si legge sul rettangolo, l'identificativo finisce nel link
+    // del «+». Un nome si può cambiare e non è unico, quindi non identifica niente.
+    expect(snapshotOf([]).vaultId).toBe(VAULT);
+    expect(monthOf(0)?.vaultId).toBe(VAULT);
+  });
+
+  it('rilegge l’identificativo dal disco', () => {
+    const raw = JSON.stringify({ balance: snapshotOf([]), month: monthOf(0) });
+    expect(parseSnapshot(raw).balance?.vaultId).toBe(VAULT);
+    expect(parseSnapshot(raw).month?.vaultId).toBe(VAULT);
+  });
+
+  it('disegna un foglietto scritto prima che il «+» esistesse', () => {
+    // Decisione 2 ancora: senza l'identificativo il rettangolo resta intero e il «+» non
+    // compare — torna a fare la sola cosa che ha sempre fatto, aprire l'app.
+    const raw = JSON.stringify({
+      month: { group: 'Casa', amount: '340,50 €', caption: 'Speso in agosto' },
+    });
+    expect(parseSnapshot(raw).month?.amount).toBe('340,50 €');
+    expect(parseSnapshot(raw).month?.vaultId).toBeUndefined();
+  });
+
+  it('scarta un identificativo che non è una stringa, senza portare via il widget', () => {
+    const raw = JSON.stringify({
+      month: { group: 'Casa', amount: '340,50 €', caption: 'Speso in agosto', vaultId: 42 },
+    });
+    expect(parseSnapshot(raw).month?.amount).toBe('340,50 €');
+    expect(parseSnapshot(raw).month?.vaultId).toBeUndefined();
   });
 });

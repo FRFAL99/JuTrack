@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { router } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import {
   Keyboard,
@@ -26,6 +25,17 @@ import { useSentenceContext } from './useSentence';
 interface SentenceSheetProps {
   visible: boolean;
   onClose: () => void;
+  /**
+   * Dove va a finire la frase, deciso da chi apre il foglio.
+   *
+   * **Il foglio non naviga**, e dallo Step 72 non può più: i chiamanti sono due e vogliono
+   * due cose diverse. Dalla home la frase diventa una rotta nuova verso il form; arrivando
+   * dal «+» del widget il form **è già aperto**, e spingerne un secondo lascerebbe sotto una
+   * schermata di spesa vuota da cui si torna indietro senza capire perché. Far decidere al
+   * foglio quale dei due casi è in corso vorrebbe dire dargli da sapere come ci si è
+   * arrivati, che è esattamente ciò che non deve sapere.
+   */
+  onSentence: (sentence: string) => void;
 }
 
 /** Quanto può essere lunga la frase. Oltre non è più una frase, è una nota. */
@@ -85,7 +95,7 @@ function useKeyboardHeight(): number {
  * spesa, che la rilegge e semina il form: la spesa si salva di là, come tutte le altre. Una
  * lettura sbagliata che si salvasse da sola sarebbe molto peggio di una che si vede prima.
  */
-export function SentenceSheet({ visible, onClose }: SentenceSheetProps) {
+export function SentenceSheet({ visible, onClose, onSentence }: SentenceSheetProps) {
   const { t } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const insets = useSafeAreaInsets();
@@ -127,9 +137,10 @@ export function SentenceSheet({ visible, onClose }: SentenceSheetProps) {
     const sentence = text.trim();
     if (sentence === '') return;
     close();
-    // La frase viaggia, non la bozza (decisione 8): una rappresentazione sola, e viva.
-    // `encodeURIComponent` perché una nota con `&` o `#` troncherebbe la rotta.
-    router.push(`/expense/new?frase=${encodeURIComponent(sentence)}`);
+    // **Viaggia la frase, non la bozza** (decisione 8 del piano v9): una rappresentazione
+    // sola, e viva. Serializzare la bozza vorrebbe dire due versioni della stessa cosa che
+    // possono divergere, e la seconda invecchia appena si aggiunge un campo.
+    onSentence(sentence);
   };
 
   return (

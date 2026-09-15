@@ -13,6 +13,78 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-15 — Step 72: la spesa comincia dalla home, e il Piano v10 è chiuso
+
+Il gesto più frequente dell'app — registrare una spesa appena fatta — passava per due schermate che
+non servono a registrarla: tutto il rettangolo del widget apriva l'app, e da lì si toccava «Nuova
+spesa». Adesso c'è un «+» nell'angolo, e da lì comincia una spesa **intera**.
+
+**Il «+» sta nella riga del gruppo, sopra la cifra.** Non è una scelta estetica: la decisione 6 del
+piano chiede che il bersaglio non copra la cifra a **nessuna** delle dimensioni che il `resizeMode`
+ammette, e la riga del gruppo è la più vuota delle tre. La zona grande resta quella innocua — chi
+sbaglia mira apre l'app, non una schermata che scrive — e le due `accessibilityLabel` sono distinte,
+con quella del «+» che **nomina il gruppo**: fra due widget affiancati, «Aggiungi una spesa» detto
+due volte non direbbe quale dei due si sta toccando.
+
+### Il gruppo viaggia nel link, ed è tutto lo step
+
+Il punto che il piano lasciava da decidere qui era il terzo dei tre casi scomodi: **il gruppo aperto
+nell'app è un altro rispetto a quello che il widget sta mostrando.** Aprire la scrittura su quello
+aperto sarebbe il modo più silenzioso di mettere una spesa nel posto sbagliato, e capita esattamente
+a chi ha due gruppi — cioè a chi il widget lo guarda per sapere **quale** dei due.
+
+Quindi il foglietto ha guadagnato un campo, `vaultId`, e il link se lo porta dietro:
+`jutrack://spesa?gruppo=<id>`. Servono tutti e due i campi e non uno: `group` è il nome che si legge
+sul rettangolo, e un nome si può cambiare e non è unico, quindi non identifica niente;
+l'identificativo non si può mostrare a nessuno. Facoltativo come ogni campo entrato dopo
+(decisione 2): un foglietto scritto prima di oggi non ce l'ha, e lì il «+» **non compare** — il
+rettangolo torna a fare la sola cosa che ha sempre fatto, finché l'app non riscrive il foglietto.
+
+**La rotta che riceve il link sta fuori da `app/(gruppo)/`**, ed è la trappola nuova. Cambiare
+gruppo smonta un runtime e ne monta un altro; farlo da una schermata che quel runtime lo sta già
+leggendo vuol dire vederselo sparire sotto a metà. `app/spesa.tsx` non legge nessun vault: sceglie
+il gruppo, e **poi** entra in `/expense/new`. `replace` e non `push`, perché non è un posto in cui
+tornare — con `push`, il «indietro» dal form ci ripasserebbe e riaprirebbe il form.
+
+Quando quel gruppo su questo telefono non c'è più — ci si è usciti, o è stato azzerato mentre il
+rettangolo restava sulla home — non si ripiega sul gruppo aperto: **ci si ferma e lo si dice.** È lo
+stesso criterio di sempre, che un'attesa dichiarata costa molto meno di un dato scritto nel posto
+sbagliato.
+
+### Il foglio della frase non naviga più
+
+`SentenceSheet` faceva `router.push('/expense/new?frase=…')` da sé. Dallo Step 72 non può: i
+chiamanti sono due e vogliono due cose opposte. Dalla home la frase apre una rotta nuova verso il
+form; arrivando dal «+» il form **è già aperto**, e spingerne un secondo lascerebbe sotto una
+schermata di spesa vuota da cui si torna indietro senza capire perché. Far decidere al foglio quale
+dei due casi è in corso avrebbe voluto dire dargli da sapere come ci si è arrivati — che è
+esattamente ciò che non deve sapere. Adesso consegna la frase con `onSentence`, e dove va lo decide
+chi l'ha aperto.
+
+### Due cose piccole che costano un pomeriggio se non si sanno
+
+**`TextWidget` non accetta `flex`**: il suo stile è il solo `CommonStyleProps`. Un nome di gruppo
+lungo spingeva il «+» fuori dal rettangolo invece di troncarsi; si avvolge in un `FlexWidget` con
+`flex: 1`.
+
+**`WIDGET_CLICK` non arriva al task headless**, e `handler.tsx` adesso lo dice a parole. `OPEN_URI`
+lo esegue Android da sé aprendo il link, e il task non viene nemmeno svegliato. La riga sta lì
+perché l'alternativa — un `clickAction` personalizzato gestito nel task — sembra la strada naturale
+e non lo è: là dentro non ci sono né la chiave né il documento montato, quindi una spesa non si
+potrebbe scrivere comunque. È la stessa ragione per cui la decisione 5 apre l'app invece di
+scrivere.
+
+### Verifica
+
+`format:check`, `lint`, `typecheck` puliti; **1727 test verdi** (901 core + 772 app + 54 relay),
+tredici più di prima. `npx expo export --platform android` produce il bundle, e l'impronta resta
+`d862b56d70daebe68db62e164e03d66e5245ed33`: **il Piano v10 intero non ha consumato una build EAS**,
+come la decisione 0 prevedeva.
+
+**Il Piano v10 è chiuso**, due step su due. Resta da provare col telefono, e il quarto punto della
+checklist è quello che conta: con due gruppi, toccare il «+» del widget che mostra quello **non**
+aperto nell'app.
+
 ## 2026-09-15 — La tastiera non copre più la frase
 
 Fuori piano, quindi senza numero: il foglio della frase dello Step 68 è stato visto su un telefono

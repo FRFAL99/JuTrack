@@ -246,6 +246,13 @@ export const it = {
      * contrario.
      */
     pace: 'Di questo passo, ~{{amount}} a fine mese',
+    addExpense: 'Aggiungi una spesa a {{group}}',
+    deeplink: {
+      title: 'Nuova spesa',
+      goneTitle: 'Quel gruppo non è più su questo telefono',
+      goneHint:
+        'Il widget mostra un gruppo da cui sei uscito, o che è stato azzerato. La spesa non è stata scritta da nessuna parte: togli il widget dalla home e rimettilo, così tornerà a parlare di un gruppo che c’è.',
+    },
   },
   you: {
     name: {

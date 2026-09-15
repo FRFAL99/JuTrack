@@ -389,6 +389,16 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
   vuol dire che gli eventi non arrivano; il foglio staccato dalla tastiera con una **striscia vuota
   in mezzo** vuol dire che la finestra della `Modal` si ridimensionava già da sé e adesso si alza due
   volte. È l'unica cosa di questa correzione che i test non possono dire
+- **Lo Step 72, e il quarto punto è quello che conta.** Nell'ordine: tocca il **«+»** sul widget con
+  l'app **chiusa** — si deve aprire direttamente il foglio della frase, non l'elenco delle spese;
+  scrivi `12 bar` e salva, e tornando alla home il widget deve mostrare il totale aggiornato; tocca
+  il **resto** del rettangolo e si deve aprire l'app dov'è sempre andata. Poi la prova che vale per
+  tutte: **con due gruppi**, cambia gruppo nell'app, torna alla home e tocca il «+» del widget che
+  mostra l'**altro** — la spesa deve finire nel gruppo che il widget sta mostrando, mai in silenzio
+  in quello aperto. Infine il caso che si prova una volta sola: **esci** da un gruppo lasciandone il
+  widget sulla home, poi tocca il suo «+» — deve dire che quel gruppo non c'è più, e non scrivere
+  niente da nessuna parte. Un «+» che non compare affatto vuol dire che il foglietto è ancora quello
+  vecchio: apri l'app una volta e riguarda
 - **Lo Step 71, che si prova quasi tutto in un minuto e ha una trappola sola.** Sul widget «Speso
   questo mese», nell'ordine: il rettangolo deve mostrare il totale, **la striscia degli ultimi
   quattordici giorni** e la riga del ritmo («Di questo passo, ~840 € a fine mese»); **stringilo a

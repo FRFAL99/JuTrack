@@ -90,6 +90,7 @@ function Publish({ vaultId }: { vaultId: string }) {
     () =>
       composeSnapshot({
         groupName,
+        vaultId,
         expenses,
         monthExpenses,
         settlements,
@@ -99,7 +100,18 @@ function Publish({ vaultId }: { vaultId: string }) {
         symbol,
         today,
       }),
-    [groupName, expenses, monthExpenses, settlements, members, myMemberId, month, symbol, today],
+    [
+      groupName,
+      vaultId,
+      expenses,
+      monthExpenses,
+      settlements,
+      members,
+      myMemberId,
+      month,
+      symbol,
+      today,
+    ],
   );
 
   /**

@@ -29,7 +29,7 @@ chiusi su dieci — l'originale, il [v2](piano-v2-profili-gruppi-sync.md),
 ([visualdesign.md](visualdesign.md)). Il [v5](piano-v5-notifiche-widget-profilo.md) è a dodici step
 su tredici: manca solo la coda dello Step 41.
 
-**1704 test verdi** (901 core + 749 app + 54 relay), con `typecheck`, `lint` e `format:check`
+**1727 test verdi** (901 core + 772 app + 54 relay), con `typecheck`, `lint` e `format:check`
 puliti.
 
 **Gli aggiornamenti via etere funzionano, e ne sono già partiti quattro**: tre il 13 settembre — gli
@@ -83,15 +83,19 @@ del 5 settembre (commit `9606e0f`) combacia con `main`, e tutto ciò che è entr
 
 ## Il piano in corso
 
-Il **[Piano v10](piano-v10-i-widget-che-dicono-qualcosa.md)**, aperto il 15 settembre e **a uno step
-su due**: lo **71** è fatto — i due widget si adattano alla propria dimensione, e «Speso questo
-mese» mostra la striscia degli ultimi quattordici giorni e il ritmo del mese — e resta il **72**, il
-«+» sulla home da cui comincia una spesa intera.
+**Nessuno.** Il **[Piano v10](piano-v10-i-widget-che-dicono-qualcosa.md)** è chiuso il 15 settembre,
+due step su due: lo **71** ha dato ai due widget l'andamento e l'adattamento alla propria dimensione
+— «Speso questo mese» mostra la striscia degli ultimi quattordici giorni e il ritmo — e il **72** il
+«+» da cui comincia una spesa intera.
 
 **Il calcolo sta nell'app, il disegno legge e basta.** È il vincolo dello Step 34 e regge anche qui:
 il task headless che disegna i widget non ha il documento, quindi la striscia si calcola dove le
 spese ci sono e finisce nel foglietto come tracciato — senza colore, perché Android sceglie il tema
 **nel momento in cui disegna**, che può essere ore dopo.
+
+**E il gruppo viaggia nel link del «+».** Il widget dice di che gruppo parla, e la rotta che riceve
+il tocco sceglie quel gruppo **prima** di entrare nella scrittura: è l'unico modo di non mettere una
+spesa nel posto sbagliato quando l'app ne ha aperto un altro.
 
 Il Piano v9 è chiuso il 15 settembre con lo Step 70, tre step su tre, e **in produzione via etere**
 dallo stesso giorno. Lo Step 69 resta bruciato. **Nessuno degli step del v9 e del v10 ha richiesto

@@ -217,6 +217,13 @@ export const en: Dictionary = {
     even: 'You are even',
     monthCaption: 'Spent in {{month}}',
     pace: 'At this rate, ~{{amount}} by month end',
+    addExpense: 'Add an expense to {{group}}',
+    deeplink: {
+      title: 'New expense',
+      goneTitle: 'That group is no longer on this phone',
+      goneHint:
+        'The widget shows a group you have left, or one that was wiped. Nothing was recorded anywhere: remove the widget from the home screen and add it again, so it talks about a group that exists.',
+    },
   },
   you: {
     name: {

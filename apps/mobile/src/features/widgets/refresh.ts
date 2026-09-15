@@ -157,6 +157,7 @@ export async function refreshWidgetsInBackground(): Promise<RefreshOutcome> {
         // pensa l'app alla prossima apertura, che è anche quando il nome nuovo comparirebbe
         // sulle schermate.
         groupName: group.name,
+        vaultId: group.vaultId,
         expenses: store.listExpenses(),
         monthExpenses: store.listExpenses({ from: bounds.from, to: bounds.to }),
         settlements: store.listSettlements(),

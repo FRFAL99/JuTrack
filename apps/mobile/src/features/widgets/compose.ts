@@ -42,6 +42,8 @@ import {
  */
 export function composeSnapshot(args: {
   groupName: string;
+  /** Quale gruppo, per il «+» del widget. Il nome si legge, questo identifica. */
+  vaultId: string;
   /** Tutte le spese: un debito non lo azzera il calendario. */
   expenses: Expense[];
   /** Le sole spese del mese in corso. */
@@ -61,7 +63,7 @@ export function composeSnapshot(args: {
    */
   today: IsoDate;
 }): WidgetSnapshot {
-  const { groupName, expenses, monthExpenses, settlements, members, myMemberId } = args;
+  const { groupName, vaultId, expenses, monthExpenses, settlements, members, myMemberId } = args;
   const { monthTitle, symbol, today } = args;
 
   const monthTotal = monthExpenses.reduce((sum, expense) => sum + expense.amountCents, 0);
@@ -71,6 +73,7 @@ export function composeSnapshot(args: {
   return {
     balance: balanceSnapshot({
       groupName,
+      vaultId,
       transfers: simplifyDebts(
         computeBalances(
           expenses,
@@ -88,6 +91,7 @@ export function composeSnapshot(args: {
     month: withExtras(
       monthSnapshot({
         groupName,
+        vaultId,
         // Il totale del **gruppo**, non la mia quota: è il numero grande della card in cima
         // alle spese, e non può essere due numeri diversi in due posti.
         totalCents: monthTotal,
