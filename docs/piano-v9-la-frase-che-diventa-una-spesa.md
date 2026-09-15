@@ -1,11 +1,14 @@
-# JuTrack — Piano v9: una frase diventa una spesa, senza rete
+# JuTrack — Piano v9: una frase diventa una spesa, una domanda diventa un grafico
 
 > Punto d'ingresso del progetto: [STATO.md](STATO.md). **Da dove viene questo piano:** una
 > conversazione di analisi del 15 settembre 2026 su come rendere l'app diversa da quelle già sul
 > mercato, più un check a freddo del codice che tocca. Scritto il 15 settembre 2026.
 >
-> **Occupa gli Step 67–69**, uno per sessione. I numeri sono già scritti in
-> [registro.md](registro.md).
+> **Occupa gli Step 67, 68 e 70**, uno per sessione. I numeri sono già scritti in
+> [registro.md](registro.md). **Il 69 non c'è, ed è voluto:** era stato assegnato alla categoria
+> suggerita dal negozio, ritirata dal piano il 15 settembre 2026 (l'ultima voce di «cosa NON fare»).
+> Vale la regola 1 del registro — _un numero ritirato resta bruciato_ — la stessa che tiene fuori
+> uso il 48.
 >
 > **Ogni misura e ogni riferimento qui sotto è stato letto nel codice**, non dedotto. È la regola
 > operativa nata dagli errori del piano v6, che aveva sbagliato il perché e il quanto su tre
@@ -31,8 +34,15 @@ Due problemi, tutti e due in «Nuova spesa», e sono lo stesso problema visto da
    dato al gruppo un elenco di negozi e tag da toccare. Con dieci voci è comodo; con quaranta, la
    pillola giusta si cerca — mentre chi scrive «esselunga» quella parola ce l'ha già in testa.
 
-Il rimedio è uno solo per entrambi: **una riga di testo che porta tutti i campi insieme**, e una
-grammatica che li riconosce senza chiedere niente a nessuno.
+3. **Nei Grafici la domanda si compone, non si fa.** Il periodo si sceglie fra sei preset e i cinque
+   filtri stanno in un foglio: per arrivare a «quanto ho speso al supermercato quest'estate» si
+   toccano un preset, due date, una categoria e un negozio, in quattro posti diversi, mentre la
+   domanda in testa era già una frase.
+
+Il rimedio è uno solo per tutti e tre: **una riga di testo che porta tutti i campi insieme**, e una
+grammatica che li riconosce senza chiedere niente a nessuno. I primi due sono la stessa frase
+scritta per creare; il terzo è la stessa frase scritta per chiedere, e sotto ha lo stesso
+vocabolario.
 
 ## La cosa che il codice sapeva già (decisione 0)
 
@@ -247,6 +257,42 @@ serva: un file e i suoi test.
 **Vincolo.** Nessuna stringa italiana finisce nel codice dei riconoscitori: stanno tutte nel
 lessico, o il file inglese non basterà ad aggiungere l'inglese.
 
+### 10 · La stessa grammatica risponde a due domande, e sono due funzioni
+
+**Decisione.** `parse/` espone **due** punti d'ingresso sopra un tokenizzatore solo:
+`parseExpense(text, context)` per la spesa da creare, `parseQuery(text, context)` per la domanda da
+fare ai Grafici. Membri, categorie, negozi e tag si riconoscono con gli stessi riconoscitori; data,
+numeri e divisione no.
+
+**Perché.** Le parole del gruppo sono le stesse in tutte e due le frasi, e duplicarne il
+riconoscimento vorrebbe dire due elenchi di sinonimi che divergono. Ma **un numero vuol dire due
+cose diverse**: in «25 spesa esselunga» è l'importo della spesa; in «spesa sopra i 25» è una soglia,
+cioè `minCents` — lo stesso numero, due campi opposti. Una funzione sola con un interruttore
+`modo: 'spesa' | 'domanda'` sarebbe la stessa cosa scritta peggio, con l'interruttore da passare
+giusto a ogni chiamata.
+
+**Vincolo.** Il tokenizzatore, il lessico e i riconoscitori di persone e parole sono **condivisi per
+davvero**: se `parseQuery` ne riscrive uno, la condivisione è fallita e lo dice il test che dà la
+stessa frase alle due funzioni aspettandosi gli stessi negozi riconosciuti.
+
+### 11 · La domanda produce **periodo e filtri**, non un `ExpenseQuery`
+
+**Decisione.** `parseQuery` restituisce `{ period, facets }` — esattamente i due `useState` di
+`app/(tabs)/stats.tsx:160-161` — e non la query composta.
+
+**Perché.** La schermata non tiene un `ExpenseQuery`: tiene un `Period` (uno dei sei preset, o
+`custom` con due date) e dei `QueryFacets`, e li compone in un `useMemo` alla riga 201. Il `Period`
+non è ricavabile all'indietro da `from`/`to`: «questo mese» e «dal 1° al 15» hanno lo stesso
+intervallo il 15 del mese, ma il primo è un preset che si muove col calendario e porta l'etichetta
+che il chip mostra — `periodPresets()` in [`filters/period.ts`](../apps/mobile/src/features/stats/filters/period.ts).
+Restituire la query composta significherebbe buttare via quell'informazione e poi provare a
+indovinarla.
+
+**Vincolo.** `QueryFacets` è `Omit<ExpenseQuery, 'from' | 'to'>`
+([`filters/facets.ts`](../apps/mobile/src/features/stats/filters/facets.ts)): la frase riempie
+quelli e nient'altro. Chi tocca un chip dopo aver scritto la frase deve poter continuare a filtrare
+a mano — la frase **imposta** i filtri, non prende il posto della barra.
+
 ---
 
 ## Step 67 — «il motore della frase»
@@ -345,43 +391,55 @@ Col telefono in mano, in un gruppo che ha già «Esselunga» in elenco e due mem
 
 ---
 
-## Step 69 — «la categoria che il gruppo ha già scelto»
+## Step 70 — «la domanda che diventa un grafico»
 
-| File                                                | Cosa                                                                                                |
-| --------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| `packages/core/src/insights/suggest.ts`             | **nuovo** — `categoryForStore(expenses, key)`: la categoria più usata per quel negozio              |
-| `packages/core/src/insights/suggest.test.ts`        | **nuovo**                                                                                           |
-| `packages/core/src/insights/index.ts`               | la riesporta                                                                                        |
-| `packages/core/src/parse/draft.ts`                  | il `ParseContext` guadagna `categoryForStore?`, usata **solo** se la frase non nomina una categoria |
-| `apps/mobile/src/features/expenses/ExpenseForm.tsx` | scelto un negozio con categoria ancora vuota, propone una pillola da accettare                      |
+| File                                                       | Cosa                                                                                              |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `packages/core/src/parse/query.ts`                         | **nuovo** — `parseQuery`: periodo, soglie, filtri (decisioni 10 e 11)                             |
+| `packages/core/src/parse/periods.ts`                       | **nuovo** — «questo mese», «ad agosto», «l'anno scorso», «ultimi 7 giorni» → un preset o due date |
+| `packages/core/src/parse/index.ts`                         | riesporta `parseQuery`                                                                            |
+| `apps/mobile/src/features/stats/filters/QuestionField.tsx` | **nuovo** — il campo sopra la barra dei filtri                                                    |
+| `apps/mobile/src/features/stats/filters/question.ts`       | **nuovo** — dal `ParseContext` alla coppia `period`/`facets` da impostare                         |
+| `apps/mobile/src/app/(tabs)/stats.tsx`                     | il campo chiama `setPeriod` e `setFacets`: due `setState` che esistono già                        |
+| `apps/mobile/src/i18n/locales/it.ts` e `en.ts`             | le chiavi nuove, in tutte e due                                                                   |
 
-Questo sta in `insights/` e non in `parse/` perché **è un'aggregazione sulle spese esistenti**,
-esattamente come `totalsByStore`: la stessa forma, la stessa chiave normalizzata. Ed è uno step suo
-e non una coda del 68 perché serve **anche a chi non usa la frase** — è il suggerimento che compare
-scegliendo un negozio dal `VocabularyPicker`, dove oggi la categoria resta vuota.
-
-**Esiste già e non si riscrive:** `storeKey` e `mostUsedSpelling` (`naming.ts:34,142`), la forma di
-`NamedTotal` e l'ordinamento deterministico di `insights/stores.ts`.
+**Esiste già e non si riscrive:** tutto il resto della schermata. `applyQuery`, i sedici widget, la
+`FilterBar` con i suoi chip, `queryParts` di `@/i18n/query` che scrive le frasi dei filtri, e i sei
+preset di `periodPresets()`. La frase **non disegna niente**: imposta due stati, e il resto della
+schermata reagisce come se i chip fossero stati toccati a mano.
 
 ### Il punto che non va dimenticato
 
-**Una proposta non è una scelta, e una proposta rifiutata non torna.** Non sovrascrive mai una
-categoria già scelta, e se la togli non deve riproporsi finché quel form è aperto: un suggerimento
-che ricompare dopo essere stato scartato smette di essere un aiuto in due spese. Sotto le **due**
-spese con lo stesso negozio non si propone niente: una sola occorrenza non è un'abitudine, è un
-caso.
+**Una domanda che non si capisce non deve azzerare i filtri di prima.** Il caso è banale e capita
+subito: si scrive mezza frase, il parser non ne cava niente, e applicando comunque il risultato la
+schermata si svuoterebbe — cioè esattamente ciò che `FilterBar` descrive nel proprio commento: _«un
+filtro che non si vede è un filtro che non si sa di avere»_, che a schermata vuota _«si legge come
+un guasto dell'app»_. Regola: si applica **solo** ciò che è stato riconosciuto; se non è stato
+riconosciuto niente, non si tocca niente, e il campo lo dice.
 
 ### Criterio di «fatto»
 
-Registra tre spese con negozio «Esselunga» e categoria «Spesa». Poi: nuova spesa → Dettagli →
-scegli «Esselunga» → compare la pillola **«Spesa?»** → toccala → la riga Categoria dice «Spesa». E
-nella frase: `30 esselunga` → l'anteprima mostra anche la pillola della categoria, senza che la
-parola «spesa» sia stata scritta.
+Col telefono in mano, nel tab Grafici:
+
+1. tocca il campo in cima e scrivi `spesa da esselunga questo mese`;
+2. la barra dei filtri si accende con i chip «Questo mese», «Spesa» ed «Esselunga» — **gli stessi**
+   che si sarebbero ottenuti dal foglio;
+3. il totale in testa e i grafici sotto cambiano di conseguenza;
+4. tocca la × su «Esselunga»: il chip se ne va e i grafici si riaprono, cioè la frase ha impostato
+   dei filtri veri e non una modalità a parte;
+5. scrivi `sopra i 50`: resta il periodo, si aggiunge la soglia.
 
 ---
 
 ## Cosa questo piano ha deciso di NON fare
 
+- **Ritirato: la categoria suggerita dal negozio**, che era lo Step 69 di questo piano fino al 15
+  settembre 2026. Non guardava l'importo — da un importo non si può sapere niente, ed è vero — ma il
+  **negozio**: tre spese «Esselunga» già messe in «Spesa» avrebbero fatto comparire «Spesa?» alla
+  quarta, da accettare con un tocco. È stata tolta lo stesso, perché è l'unica parte del piano che
+  **indovina** invece di riconoscere, e tutto il resto vale senza. Si riapre solo se, usando la
+  frase, la categoria risulterà la casella che si compila a mano più spesso. Il numero 69 resta
+  bruciato.
 - **Rimandato: chiedere a un modello quando la grammatica non capisce.** È il piano successivo, e le
   sue condizioni sono note — un Worker separato da `services/relay` (che è documentato e provato
   come incapace di leggere), un tetto di spesa che renda impossibile una bolletta, una riga nuova
@@ -413,7 +471,7 @@ parola «spesa» sia stata scritta.
 | ---- | ---------------------------------------------- | -------------------------------------------------------------------- | --------- |
 | 67   | Il motore della frase, nel core                | Basso: non tocca niente di esistente, solo aggiunge                  | No        |
 | 68   | Il foglio, l'anteprima viva e il form seminato | Medio: è l'unico che modifica `ExpenseForm`, che è il cuore dell'app | No        |
-| 69   | La categoria suggerita dal negozio             | Basso: una proposta che si accetta con un tocco, mai una scrittura   | No        |
+| 70   | La domanda scritta nei Grafici                 | Basso: imposta due stati che esistono già, e non disegna niente      | No        |
 
 Baseline di partenza: **1469 test verdi** (723 core + 692 app + 54 relay), `typecheck`, `lint` e
 `format:check` puliti, come dichiara [STATO.md](STATO.md) al 13 settembre 2026.

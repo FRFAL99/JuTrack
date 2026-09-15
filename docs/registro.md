@@ -4,7 +4,7 @@ Una riga per step, dallo 0 in avanti. È l'unico posto in cui guardare per saper
 uno step, a che piano appartiene e se è chiuso**; com'è andata sta in [devlog.md](devlog.md), dove
 siamo adesso sta in [STATO.md](STATO.md).
 
-## Prossimo numero libero: **70**
+## Prossimo numero libero: **73**
 
 ## Le regole
 
@@ -95,6 +95,9 @@ Stato: ✅ chiuso · 🟡 in parte · ⬜ non fatto.
 | 67  | Il motore della frase                   | v9        | ⬜    | —          |
 | 68  | La frase, sul telefono                  | v9        | ⬜    | —          |
 | 69  | La categoria suggerita dal negozio      | v9        | ⬜    | —          |
+| 70  | La domanda scritta nei Grafici          | v9        | ⬜    | —          |
+| 71  | I widget dicono qualcosa di più         | v10       | ⬜    | —          |
+| 72  | La spesa comincia dalla home            | v10       | ⬜    | —          |
 
 ## Le note che la tabella non può contenere
 
@@ -120,5 +123,12 @@ negozio`. Lo Step 45 ha prodotto `icon-source.svg`; lo script che lo consuma è 
   in Fogli Google, e provare col telefono il backup automatico — è in
   [verifica-sul-telefono.md](verifica-sul-telefono.md).
 - **Il [v9](piano-v9-la-frase-che-diventa-una-spesa.md) è aperto** dal 15 settembre 2026 e occupa
-  gli Step 67–69: una riga di testo diventa una spesa, con una grammatica che gira sul telefono e
-  non tocca la rete.
+  gli Step 67, 68 e **70**: una riga di testo diventa una spesa, e una domanda scritta diventa un
+  grafico filtrato. La grammatica gira sul telefono e non tocca la rete.
+- **Step 69 — ritirato prima di cominciare.** Era «la categoria suggerita dal negozio», tolta dal
+  [v9](piano-v9-la-frase-che-diventa-una-spesa.md) il giorno stesso in cui il piano è stato scritto:
+  è l'unica parte che indovinava invece di riconoscere. Nessuna riga di codice è mai esistita, e
+  **il numero resta bruciato lo stesso** — vale la regola 1, come per il 48.
+- **Il [v10](piano-v10-i-widget-che-dicono-qualcosa.md) è aperto** dal 15 settembre 2026 e occupa
+  gli Step 71 e 72: i due widget mostrano l'andamento e si adattano alla propria dimensione, e dal
+  «+» sulla home comincia una spesa intera. Dipende dallo Step 68 solo per dove atterra il «+».
