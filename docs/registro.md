@@ -4,7 +4,7 @@ Una riga per step, dallo 0 in avanti. È l'unico posto in cui guardare per saper
 uno step, a che piano appartiene e se è chiuso**; com'è andata sta in [devlog.md](devlog.md), dove
 siamo adesso sta in [STATO.md](STATO.md).
 
-## Prossimo numero libero: **67**
+## Prossimo numero libero: **70**
 
 ## Le regole
 
@@ -92,6 +92,9 @@ Stato: ✅ chiuso · 🟡 in parte · ⬜ non fatto.
 | 64  | L'import sceglie un file                | v8        | ✅    | 2026-09-13 |
 | 65  | La cartella, e il backup che si fa solo | v8        | ✅    | 2026-09-13 |
 | 66  | L'avviso «il backup invecchia»          | v8        | ✅    | 2026-09-13 |
+| 67  | Il motore della frase                   | v9        | ⬜    | —          |
+| 68  | La frase, sul telefono                  | v9        | ⬜    | —          |
+| 69  | La categoria suggerita dal negozio      | v9        | ⬜    | —          |
 
 ## Le note che la tabella non può contenere
 
@@ -116,3 +119,6 @@ negozio`. Lo Step 45 ha prodotto `icon-source.svg`; lo script che lo consuma è 
   sei step su sei (61–66). Resta una sola cosa da fare, e non è codice: aprire il `.xlsx` in Excel e
   in Fogli Google, e provare col telefono il backup automatico — è in
   [verifica-sul-telefono.md](verifica-sul-telefono.md).
+- **Il [v9](piano-v9-la-frase-che-diventa-una-spesa.md) è aperto** dal 15 settembre 2026 e occupa
+  gli Step 67–69: una riga di testo diventa una spesa, con una grammatica che gira sul telefono e
+  non tocca la rete.
