@@ -92,6 +92,7 @@ Vuoto = il bundle non può riferirsi a niente che non ci sia già.
 | 2026-09-13 | `production` | `d862b56d…` | Step 49–57, dal commit `6dfbbeb`. Il **primo** della storia del progetto: gruppo `dcf68b3d-30a1-4214-b85d-e91f76024c2d` |
 | 2026-09-13 | `production` | `d862b56d…` | Step 58–60 (Piano v7 intero), dal commit `26fb052`: gruppo `bd3db527-395b-4522-94c1-e8c67ccd067a`                       |
 | 2026-09-13 | `production` | `d862b56d…` | Step 61–66 (Piano v8 intero), dal commit `a7c69d8`: gruppo `3fa557a0-a8a5-4fb6-81df-c19611c8fc0b`                       |
+| 2026-09-15 | `production` | `d862b56d…` | Step 67, 68 e 70 (Piano v9 intero), dal commit `98f44d4`: gruppo `8d2d8fc3-38cc-4089-8f8a-fe5384fc3c37`                 |
 
 Si rilegge con `npx eas-cli channel:view production` e `npx eas-cli update:list`. Per tornare
 indietro: `npx eas-cli update:rollback`, oppure ripubblicare dal commit precedente — un aggiornamento
