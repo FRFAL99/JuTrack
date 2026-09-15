@@ -455,6 +455,12 @@ export const it = {
     },
   },
   stats: {
+    question: {
+      placeholder: 'spesa da esselunga questo mese',
+      label: 'Chiedi con una frase',
+      missed:
+        'Non ho riconosciuto niente: i filtri restano quelli di prima. Prova con un periodo («questo mese», «ad agosto»), un negozio o una categoria che il gruppo usa già, o una soglia («sopra i 50»).',
+    },
     filters: {
       periodA11y: 'Periodo: {{label}}. Tocca per cambiare i filtri',
       activeA11y: 'Filtro attivo: {{part}}. Tocca per cambiarlo',

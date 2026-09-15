@@ -148,4 +148,37 @@ export interface Lexicon {
   me: string[];
   /** Pronomi che si risolvono **solo** in un gruppo di due. */
   you: string[];
+
+  // Da qui in giù: le parole che servono solo alla **domanda**, non alla spesa.
+  // Stanno nello stesso lessico perché sono la stessa lingua, e un secondo file vorrebbe
+  // dire due elenchi di sinonimi che divergono — la ragione per cui `parseExpense` e
+  // `parseQuery` condividono tokenizzatore e riconoscitori invece di somigliarsi.
+
+  /** I sei preset del periodo, ognuno con le frasi che lo nominano. */
+  periods: {
+    last7: string[];
+    last30: string[];
+    thisMonth: string[];
+    lastMonth: string[];
+    last12Months: string[];
+    thisYear: string[];
+  };
+  /** «ultimi», che apre un conteggio: «ultimi 15 giorni». */
+  lastN: string[];
+  /** Le unità di un conteggio all'indietro. */
+  units: { days: string[]; months: string[] };
+  /** Si lascia consumare davanti a un mese o a un anno: «ad agosto», «nel 2025». */
+  inTime: string[];
+  /** Apre una soglia minima: «sopra i 50». */
+  above: string[];
+  /** Apre una soglia massima: «sotto i 20». */
+  below: string[];
+  /** Apre una coppia di soglie: «fra 10 e 50». */
+  between: string[];
+  /** Separa i due estremi di «fra 10 e 50». */
+  and: string[];
+  /** Articoli e preposizioni che stanno fra un marcatore e il suo numero: «sopra **i** 50». */
+  articles: string[];
+  /** Chiede le spese **a carico** di qualcuno, invece che pagate da qualcuno. */
+  owed: string[];
 }

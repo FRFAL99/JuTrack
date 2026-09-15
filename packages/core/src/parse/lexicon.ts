@@ -52,4 +52,26 @@ export const ITALIAN_LEXICON: Lexicon = {
   by: ['da'],
   me: ['io', 'me', 'mio', 'mia', 'miei', 'mie'],
   you: ['te', 'tu', 'tuo', 'tua', 'tuoi', 'tue', 'ti'],
+
+  periods: {
+    last7: ['ultimi 7 giorni', 'ultimi sette giorni', 'ultima settimana'],
+    last30: ['ultimi 30 giorni', 'ultimi trenta giorni'],
+    thisMonth: ['questo mese', 'mese corrente', 'nel mese'],
+    lastMonth: ['mese scorso', 'il mese scorso', 'lo scorso mese', 'mese passato'],
+    last12Months: ['ultimi 12 mesi', 'ultimi dodici mesi', 'ultimo anno'],
+    // «quest'anno» è un token solo: il tokenizzatore non spezza dentro una parola.
+    thisYear: ["quest'anno", 'questo anno', 'anno corrente'],
+  },
+  lastN: ['ultimi', 'ultime'],
+  units: { days: ['giorni', 'gg'], months: ['mesi'] },
+  inTime: ['a', 'ad', 'in', 'nel', 'del', 'di', "dell'", 'per'],
+  // «da» non c'è, e non è una svista: «spesa da esselunga» nomina un negozio, non una
+  // soglia, ed è la frase del criterio di «fatto» dello step.
+  above: ['sopra', 'oltre', 'piu di', 'maggiori di', 'superiori a'],
+  below: ['sotto', 'meno di', 'fino a', 'inferiori a'],
+  between: ['fra', 'tra'],
+  and: ['e', 'ed'],
+  articles: ['i', 'gli', 'le', 'il', 'lo', 'la', 'a', 'ai', 'alle', 'di', 'ad', "l'"],
+  // Una frase intera e non «di»: «di» da solo aprirebbe «spesa di agosto» come una persona.
+  owed: ['a carico di', 'a carico', 'per conto di'],
 };

@@ -19,16 +19,17 @@ dicendo tre cose false su sé stesso.
 la mattina dello stesso giorno: il sync visto funzionare nei due versi fra due telefoni veri, coi
 membri e i saldi giusti, e i due widget popolati con numeri identici a un calcolo indipendente.
 
-**Sessantanove step, dallo 0 al 68**, elencati uno per riga in [registro.md](registro.md). Sette piani
+**Settantuno step, dallo 0 al 70**, elencati uno per riga in [registro.md](registro.md). Otto piani
 chiusi su dieci — l'originale, il [v2](piano-v2-profili-gruppi-sync.md),
 [v3](piano-v3-tab-gruppi-azzeramento-sync.md), [v4](piano-v4-grafici-e-dashboard.md),
 [v6](piano-v6-spesa-rapida-e-grafici-componibili.md),
-[v7](piano-v7-data-e-vocabolario-del-gruppo.md) e
-[v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md) — più i sette passi del redesign
+[v7](piano-v7-data-e-vocabolario-del-gruppo.md),
+[v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md) e
+[v9](piano-v9-la-frase-che-diventa-una-spesa.md) — più i sette passi del redesign
 ([visualdesign.md](visualdesign.md)). Il [v5](piano-v5-notifiche-widget-profilo.md) è a dodici step
 su tredici: manca solo la coda dello Step 41.
 
-**1618 test verdi** (850 core + 714 app + 54 relay), con `typecheck`, `lint` e `format:check`
+**1683 test verdi** (901 core + 728 app + 54 relay), con `typecheck`, `lint` e `format:check`
 puliti.
 
 **Gli aggiornamenti via etere funzionano, e ne sono già partiti tre** il 13 settembre: gli Step
@@ -57,6 +58,10 @@ all'aggiornamento di arrivare, in silenzio.
   — in particolare **chiudere l'app dai recenti e riaprirla**, che è l'unico modo di sapere se il
   permesso sulla cartella è davvero persistente. I passaggi sono in
   [verifica-sul-telefono.md](verifica-sul-telefono.md).
+- **Il Piano v9 non è ancora stato visto su un telefono**, ed è la sola cosa che i test non possono
+  dire: il foglio della frase dalla home e il campo della domanda nei Grafici. I passaggi, con le
+  prove che cercano un guasto invece di confermare che funziona, sono in
+  [verifica-sul-telefono.md](verifica-sul-telefono.md).
 - **La guardia su `paidBy` è stata tentata e ritirata** nello Step 60 — è l'ottava voce di otto del
   check a freddo, l'unica non chiusa. La ragione per cui non si poteva mettere è nel devlog del 13
   settembre, e va riletta prima di ritentarla.
@@ -69,24 +74,20 @@ del 5 settembre (commit `9606e0f`) combacia con `main`, e tutto ciò che è entr
 
 ## Il piano in corso
 
-**Il [Piano v9](piano-v9-la-frase-che-diventa-una-spesa.md)**, aperto il 15 settembre: una riga di
-testo diventa una spesa, e una domanda scritta diventa un grafico filtrato. Occupa gli Step 67, 68 e
-**70** — il 69 è stato ritirato il giorno stesso in cui il piano è stato scritto, e il numero resta
-bruciato. **Non contiene un solo byte che esca dal telefono:** l'analisi da cui nasce immaginava di
-far leggere la frase a un modello linguistico, il codice ha detto che nove frasi su dieci non ne
-hanno bisogno perché le parole che contano il gruppo le conosce già.
+**Nessuno.** Il [Piano v9](piano-v9-la-frase-che-diventa-una-spesa.md) è chiuso il 15 settembre con
+lo Step 70, tre step su tre: una riga di testo diventa una spesa (il motore in
+`packages/core/src/parse/`, il foglio che si apre da «Scrivi» sulla home) e una riga di testo
+diventa un grafico filtrato (il campo sopra la barra dei filtri nei Grafici). Lo Step 69 resta
+bruciato. **Nessuno dei tre ha richiesto una build EAS**: viaggiano tutti via etere.
 
-**Gli Step 67 e 68 sono chiusi**: il motore sta in `packages/core/src/parse/`, con
-`parseExpense(text, context)` e il lessico italiano come parametro, e dalla home un bottone
-«Scrivi» apre il foglio che lo usa — anteprima viva, pillole, e «Continua» che semina il form.
-Resta il **70**, la stessa grammatica che risponde alla domanda nei Grafici.
+**Non esce un solo byte dal telefono.** L'analisi da cui il piano nasce immaginava di far leggere la
+frase a un modello linguistico; il codice ha detto che nove frasi su dieci non ne hanno bisogno,
+perché le parole che contano il gruppo le conosce già. I `marks` dello Step 67 sono il modo per
+misurare **quante** frasi vere restano incomprese, invece di deciderlo a naso.
 
-**Il foglio della frase non è ancora stato visto su un telefono**, ed è l'unica cosa che i test non
-possono dire: la prova è in [verifica-sul-telefono.md](verifica-sul-telefono.md).
-
-Aperto ma non ancora cominciato c'è anche il **[Piano v10](piano-v10-i-widget-che-dicono-qualcosa.md)**
-(Step 71 e 72): i widget che mostrano l'andamento e il «+» sulla home da cui comincia una spesa
-intera.
+Il prossimo è il **[Piano v10](piano-v10-i-widget-che-dicono-qualcosa.md)**, aperto il 15 settembre
+e non ancora cominciato: gli Step **71** e **72** — i widget che mostrano l'andamento e si adattano
+alla propria dimensione, e il «+» sulla home da cui comincia una spesa intera.
 
 ## Dove sta cosa
 
