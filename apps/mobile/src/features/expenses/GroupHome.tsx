@@ -451,7 +451,13 @@ export function GroupHome({ group }: { group: GroupRecord }) {
         </Pressable>
       </View>
 
-      <SentenceSheet visible={writing} onClose={() => setWriting(false)} />
+      <SentenceSheet
+        visible={writing}
+        onClose={() => setWriting(false)}
+        // Dalla home la frase apre il form: è una rotta nuova, e la frase ci viaggia dentro.
+        // `encodeURIComponent` perché una nota con `&` o `#` troncherebbe la rotta.
+        onSentence={(sentence) => router.push(`/expense/new?frase=${encodeURIComponent(sentence)}`)}
+      />
 
       <GroupSwitcherSheet
         visible={switching}

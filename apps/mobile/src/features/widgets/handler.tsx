@@ -3,6 +3,7 @@ import { markError } from '@/diagnostics';
 import { ExpoSqliteDatabase, SqliteAppMeta } from '@/platform';
 import { refreshWidgetsInBackground } from './refresh';
 import { NOTHING_KNOWN, parseSnapshot, SNAPSHOT_KEY, type WidgetSnapshot } from './snapshot';
+import { widgetSize } from './size';
 import { balanceView, monthView } from './views';
 
 /**
@@ -27,6 +28,14 @@ export async function handleWidgetTask({
   // Il widget è appena stato tolto dalla home: non c'è più niente da disegnare, e disegnarlo
   // lo stesso vorrebbe dire aprire il database per un rettangolo che non esiste.
   if (widgetAction === 'WIDGET_DELETED') return;
+
+  // **`WIDGET_CLICK` non arriva qui, ed è voluto** (Step 72). Il «+» usa `OPEN_URI`, che
+  // Android esegue da sé aprendo il link: il task headless non viene nemmeno svegliato. La
+  // riga è scritta perché l'alternativa — un `clickAction` personalizzato gestito qui —
+  // sembra la strada naturale e non lo è: qui non ci sono né la chiave né il documento
+  // montato, quindi una spesa non si potrebbe scrivere comunque. Se un giorno arrivasse, non
+  // c'è niente da ridisegnare e si esce.
+  if (widgetAction === 'WIDGET_CLICK') return;
 
   const { widgetName } = widgetInfo;
   // Un nome che non conosciamo non si disegna: sarebbe un provider comparso nel manifest
@@ -66,7 +75,12 @@ export async function handleWidgetTask({
   // Si disegna **sempre**, anche dopo un errore: il foglietto resta vuoto e il widget dice
   // «apri l'app». Uscire senza chiamare `renderWidget` lascerebbe sulla home il rettangolo
   // vuoto del launcher, che si legge come un'app rotta e non come un dato mancante.
+  // Il taglio esce da `widgetInfo`, che qui c'è per costruzione: è il sistema a chiamare, e
+  // chiama perché il rettangolo è appena stato aggiunto, riacceso o **ridimensionato**.
+  const size = widgetSize(widgetInfo);
   renderWidget(
-    widgetName === 'Balance' ? balanceView(snapshot.balance) : monthView(snapshot.month),
+    widgetName === 'Balance'
+      ? balanceView(snapshot.balance, size)
+      : monthView(snapshot.month, size),
   );
 }

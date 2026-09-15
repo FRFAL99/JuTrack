@@ -240,6 +240,19 @@ export const it = {
     debtMany: 'Devi a {{count}} persone',
     even: 'Siete pari',
     monthCaption: 'Speso in {{month}}',
+    /**
+     * «Di questo passo» è la condizione, e la tilde toglie la precisione che una media non
+     * ha: è una moltiplicazione, non una previsione, e la frase non deve far credere il
+     * contrario.
+     */
+    pace: 'Di questo passo, ~{{amount}} a fine mese',
+    addExpense: 'Aggiungi una spesa a {{group}}',
+    deeplink: {
+      title: 'Nuova spesa',
+      goneTitle: 'Quel gruppo non è più su questo telefono',
+      goneHint:
+        'Il widget mostra un gruppo da cui sei uscito, o che è stato azzerato. La spesa non è stata scritta da nessuna parte: togli il widget dalla home e rimettilo, così tornerà a parlare di un gruppo che c’è.',
+    },
   },
   you: {
     name: {

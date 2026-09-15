@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { monthBounds } from '@jutrack/core';
-import { currentMonth, formatMonthTitle } from '@/features/expenses/grouping';
+import { currentMonth, formatMonthTitle, todayIso } from '@/features/expenses/grouping';
 import {
   useAppData,
   useCurrencySymbol,
@@ -74,6 +74,12 @@ function Publish({ vaultId }: { vaultId: string }) {
   const bounds = useMemo(() => monthBounds(month), [month]);
   const monthExpenses = useExpenses({ from: bounds.from, to: bounds.to });
 
+  // Rilette a ogni render come `currentMonth()`, e per la stessa ragione: a mezzanotte la
+  // striscia deve scorrere di un giorno, e il primo del mese il ritmo deve ripartire. Il
+  // valore è una stringa, quindi entra nelle dipendenze del `useMemo` senza farlo rifare
+  // finché la data non cambia davvero.
+  const today = todayIso();
+
   const groupName = groups.find((group) => group.vaultId === vaultId)?.name ?? 'Gruppo';
 
   // Il conto sta in `compose.ts` e non qui dallo Step 36: da allora ha un secondo chiamante,
@@ -84,6 +90,7 @@ function Publish({ vaultId }: { vaultId: string }) {
     () =>
       composeSnapshot({
         groupName,
+        vaultId,
         expenses,
         monthExpenses,
         settlements,
@@ -91,8 +98,20 @@ function Publish({ vaultId }: { vaultId: string }) {
         myMemberId,
         monthTitle: formatMonthTitle(month),
         symbol,
+        today,
       }),
-    [groupName, expenses, monthExpenses, settlements, members, myMemberId, month, symbol],
+    [
+      groupName,
+      vaultId,
+      expenses,
+      monthExpenses,
+      settlements,
+      members,
+      myMemberId,
+      month,
+      symbol,
+      today,
+    ],
   );
 
   /**

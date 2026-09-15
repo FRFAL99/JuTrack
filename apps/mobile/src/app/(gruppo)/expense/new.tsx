@@ -1,15 +1,18 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { parseExpense } from '@jutrack/core';
 import { ModalScreen } from '@/components/ModalScreen';
 import { ExpenseForm, type ExpenseFormValues } from '@/features/expenses/ExpenseForm';
+import { SentenceSheet } from '@/features/expenses/SentenceSheet';
+import { sentenceAvailable } from '@/features/expenses/sentence';
 import { useSentenceContext } from '@/features/expenses/useSentence';
+import { cameFromWidget, FROM_PARAM } from '@/features/widgets/deeplink';
 import { useExpenseRegistered } from '@/features/notifications/useNotifications';
 import { useVaultStore } from '@/state';
 
 export default function NewExpenseScreen() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const store = useVaultStore();
   const noteRegistered = useExpenseRegistered();
   /**
@@ -23,8 +26,26 @@ export default function NewExpenseScreen() {
    * `useLocalSearchParams` dà `string | string[]`: un parametro ripetuto nella rotta
    * arriverebbe come array, e concatenarlo produrrebbe una frase che nessuno ha scritto.
    */
-  const { frase } = useLocalSearchParams<{ frase?: string | string[] }>();
-  const sentence = typeof frase === 'string' ? frase : '';
+  const params = useLocalSearchParams<{ frase?: string | string[]; da?: string | string[] }>();
+  const fromRoute = typeof params.frase === 'string' ? params.frase : '';
+
+  /**
+   * La frase scritta **qui**, arrivando dal «+» di un widget.
+   *
+   * Dalla home il foglio si apre prima e questa schermata nasce già seminata; dal widget
+   * l'ordine è rovesciato — la schermata c'è già, e il foglio le si apre sopra. Quindi la
+   * frase non può viaggiare in un parametro: spingere una seconda `/expense/new` lascerebbe
+   * sotto questa, vuota, e il «indietro» dal form ci ricadrebbe senza spiegazioni.
+   */
+  const [written, setWritten] = useState('');
+
+  // Il foglio si apre da solo **solo** arrivando dal widget, e solo dove la grammatica
+  // esiste: in inglese il «+» porta al form normale, che è la stessa cosa in un gesto in più.
+  const [sheetOpen, setSheetOpen] = useState(
+    cameFromWidget(params[FROM_PARAM]) && sentenceAvailable(i18n.language),
+  );
+
+  const sentence = written !== '' ? written : fromRoute;
   const context = useSentenceContext();
   const draft = useMemo(
     () => (sentence === '' ? undefined : parseExpense(sentence, context)),
@@ -62,6 +83,15 @@ export default function NewExpenseScreen() {
         {...(draft !== undefined && { draft })}
         onSubmit={handleSubmit}
         submitLabel={t('expense.submitNew')}
+      />
+
+      {/* Chiudere il foglio senza scrivere niente **non torna alla home**: sotto c'è il form
+          della spesa, che è dove si stava andando. È il ripiego giusto — chi ha toccato il
+          «+» voleva registrare una spesa, e la frase è una scorciatoia, non l'unica strada. */}
+      <SentenceSheet
+        visible={sheetOpen}
+        onClose={() => setSheetOpen(false)}
+        onSentence={setWritten}
       />
     </ModalScreen>
   );

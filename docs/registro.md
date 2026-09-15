@@ -96,8 +96,8 @@ Stato: ✅ chiuso · 🟡 in parte · ⬜ non fatto.
 | 68  | La frase, sul telefono                  | v9        | ✅    | 2026-09-15 |
 | 69  | La categoria suggerita dal negozio      | v9        | ⬜    | —          |
 | 70  | La domanda scritta nei Grafici          | v9        | ✅    | 2026-09-15 |
-| 71  | I widget dicono qualcosa di più         | v10       | ⬜    | —          |
-| 72  | La spesa comincia dalla home            | v10       | ⬜    | —          |
+| 71  | I widget dicono qualcosa di più         | v10       | ✅    | 2026-09-15 |
+| 72  | La spesa comincia dalla home            | v10       | ✅    | 2026-09-15 |
 
 ## Le note che la tabella non può contenere
 
@@ -132,6 +132,7 @@ negozio`. Lo Step 45 ha prodotto `icon-source.svg`; lo script che lo consuma è 
   [v9](piano-v9-la-frase-che-diventa-una-spesa.md) il giorno stesso in cui il piano è stato scritto:
   è l'unica parte che indovinava invece di riconoscere. Nessuna riga di codice è mai esistita, e
   **il numero resta bruciato lo stesso** — vale la regola 1, come per il 48.
-- **Il [v10](piano-v10-i-widget-che-dicono-qualcosa.md) è aperto** dal 15 settembre 2026 e occupa
-  gli Step 71 e 72: i due widget mostrano l'andamento e si adattano alla propria dimensione, e dal
-  «+» sulla home comincia una spesa intera. Dipende dallo Step 68 solo per dove atterra il «+».
+- **Il [v10](piano-v10-i-widget-che-dicono-qualcosa.md) è chiuso** il 15 settembre 2026, due step su
+  due: il 71 ha dato ai due widget l'andamento e l'adattamento alla propria dimensione, il 72 il «+»
+  da cui comincia una spesa intera. Dipendeva dallo Step 68 solo per dove atterra il «+», e ci
+  atterra. **Nessuno dei due ha richiesto una build EAS.**

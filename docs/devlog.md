@@ -13,6 +13,209 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-15 — Step 72: la spesa comincia dalla home, e il Piano v10 è chiuso
+
+Il gesto più frequente dell'app — registrare una spesa appena fatta — passava per due schermate che
+non servono a registrarla: tutto il rettangolo del widget apriva l'app, e da lì si toccava «Nuova
+spesa». Adesso c'è un «+» nell'angolo, e da lì comincia una spesa **intera**.
+
+**Il «+» sta nella riga del gruppo, sopra la cifra.** Non è una scelta estetica: la decisione 6 del
+piano chiede che il bersaglio non copra la cifra a **nessuna** delle dimensioni che il `resizeMode`
+ammette, e la riga del gruppo è la più vuota delle tre. La zona grande resta quella innocua — chi
+sbaglia mira apre l'app, non una schermata che scrive — e le due `accessibilityLabel` sono distinte,
+con quella del «+» che **nomina il gruppo**: fra due widget affiancati, «Aggiungi una spesa» detto
+due volte non direbbe quale dei due si sta toccando.
+
+### Il gruppo viaggia nel link, ed è tutto lo step
+
+Il punto che il piano lasciava da decidere qui era il terzo dei tre casi scomodi: **il gruppo aperto
+nell'app è un altro rispetto a quello che il widget sta mostrando.** Aprire la scrittura su quello
+aperto sarebbe il modo più silenzioso di mettere una spesa nel posto sbagliato, e capita esattamente
+a chi ha due gruppi — cioè a chi il widget lo guarda per sapere **quale** dei due.
+
+Quindi il foglietto ha guadagnato un campo, `vaultId`, e il link se lo porta dietro:
+`jutrack://spesa?gruppo=<id>`. Servono tutti e due i campi e non uno: `group` è il nome che si legge
+sul rettangolo, e un nome si può cambiare e non è unico, quindi non identifica niente;
+l'identificativo non si può mostrare a nessuno. Facoltativo come ogni campo entrato dopo
+(decisione 2): un foglietto scritto prima di oggi non ce l'ha, e lì il «+» **non compare** — il
+rettangolo torna a fare la sola cosa che ha sempre fatto, finché l'app non riscrive il foglietto.
+
+**La rotta che riceve il link sta fuori da `app/(gruppo)/`**, ed è la trappola nuova. Cambiare
+gruppo smonta un runtime e ne monta un altro; farlo da una schermata che quel runtime lo sta già
+leggendo vuol dire vederselo sparire sotto a metà. `app/spesa.tsx` non legge nessun vault: sceglie
+il gruppo, e **poi** entra in `/expense/new`. `replace` e non `push`, perché non è un posto in cui
+tornare — con `push`, il «indietro» dal form ci ripasserebbe e riaprirebbe il form.
+
+Quando quel gruppo su questo telefono non c'è più — ci si è usciti, o è stato azzerato mentre il
+rettangolo restava sulla home — non si ripiega sul gruppo aperto: **ci si ferma e lo si dice.** È lo
+stesso criterio di sempre, che un'attesa dichiarata costa molto meno di un dato scritto nel posto
+sbagliato.
+
+### Il foglio della frase non naviga più
+
+`SentenceSheet` faceva `router.push('/expense/new?frase=…')` da sé. Dallo Step 72 non può: i
+chiamanti sono due e vogliono due cose opposte. Dalla home la frase apre una rotta nuova verso il
+form; arrivando dal «+» il form **è già aperto**, e spingerne un secondo lascerebbe sotto una
+schermata di spesa vuota da cui si torna indietro senza capire perché. Far decidere al foglio quale
+dei due casi è in corso avrebbe voluto dire dargli da sapere come ci si è arrivati — che è
+esattamente ciò che non deve sapere. Adesso consegna la frase con `onSentence`, e dove va lo decide
+chi l'ha aperto.
+
+### Due cose piccole che costano un pomeriggio se non si sanno
+
+**`TextWidget` non accetta `flex`**: il suo stile è il solo `CommonStyleProps`. Un nome di gruppo
+lungo spingeva il «+» fuori dal rettangolo invece di troncarsi; si avvolge in un `FlexWidget` con
+`flex: 1`.
+
+**`WIDGET_CLICK` non arriva al task headless**, e `handler.tsx` adesso lo dice a parole. `OPEN_URI`
+lo esegue Android da sé aprendo il link, e il task non viene nemmeno svegliato. La riga sta lì
+perché l'alternativa — un `clickAction` personalizzato gestito nel task — sembra la strada naturale
+e non lo è: là dentro non ci sono né la chiave né il documento montato, quindi una spesa non si
+potrebbe scrivere comunque. È la stessa ragione per cui la decisione 5 apre l'app invece di
+scrivere.
+
+### Verifica
+
+`format:check`, `lint`, `typecheck` puliti; **1727 test verdi** (901 core + 772 app + 54 relay),
+tredici più di prima. `npx expo export --platform android` produce il bundle, e l'impronta resta
+`d862b56d70daebe68db62e164e03d66e5245ed33`: **il Piano v10 intero non ha consumato una build EAS**,
+come la decisione 0 prevedeva.
+
+**Il Piano v10 è chiuso**, due step su due. Resta da provare col telefono, e il quarto punto della
+checklist è quello che conta: con due gruppi, toccare il «+» del widget che mostra quello **non**
+aperto nell'app.
+
+## 2026-09-15 — La tastiera non copre più la frase
+
+Fuori piano, quindi senza numero: il foglio della frase dello Step 68 è stato visto su un telefono
+vero, è piaciuto, e aveva un difetto solo — **ciò che si scriveva finiva sotto la tastiera**.
+
+**La causa erano due cose sovrapposte, e la seconda nascondeva la prima.** La riga era
+`behavior={Platform.OS === 'ios' ? 'padding' : undefined}`: su Android `KeyboardAvoidingView`
+restava senza `behavior`, quindi inerte. È un modo di scrivere che di solito va benissimo, perché su
+Android a spostare le cose ci pensa l'`adjustResize` del manifest — ed è qui che si nasconde la
+trappola vera: **una `Modal` di React Native su Android è una finestra sua**, e quel
+ridimensionamento, che salva ogni altra schermata dell'app, lì non arriva. Nessuno alzava il foglio,
+e nessuno lo diceva.
+
+**Quindi il foglio si alza da sé.** `Keyboard.addListener` dà l'altezza vera, e il foglio si stacca
+dal fondo di quel tanto. Gli eventi non sono gli stessi sulle due piattaforme e non è una
+preferenza: iOS annuncia la tastiera **prima** di aprirla (`keyboardWillShow`) e il foglio si alza
+insieme a lei, mentre Android quegli eventi non li manda affatto — restare su `Will` lì sarebbe
+stato il difetto di prima riscritto in un altro modo.
+
+**La riga che chiude il difetto per davvero è l'altezza massima.** `maxHeight: '80%'` era l'80%
+dello **schermo intero**: alzare il foglio e lasciargli quel tetto vuol dire vederlo riallungarsi
+dentro la tastiera da cui si era appena tolto. Adesso la frazione si prende su ciò che **resta**, e
+c'è il test che pretende che quanto il foglio si alza più quanto è alto non superi mai la finestra.
+
+**A tastiera aperta il margine di sicurezza in fondo sparisce**, ed è voluto: `insets.bottom` tiene
+il foglio sopra la barra di navigazione, che in quel momento sta **dietro** la tastiera. Sommarlo lo
+stesso aggiungerebbe una striscia di niente fra il foglio e i tasti.
+
+**L'aritmetica sta in `sheet-metrics.ts`, puro e con i test; la sottoscrizione agli eventi resta nel
+componente.** È la stessa divisione di `snapshot.ts` rispetto a `publish.ts`: chi decide si può
+provare, chi parla con la piattaforma no. Vale per questo foglio soltanto — gli altri fogli ancorati
+in fondo (`FilterSheet`, `SettingSheet`, `GroupSwitcherSheet`) non hanno campi di testo, e
+generalizzare adesso vorrebbe dire scrivere una regola per casi che non esistono.
+
+### Verifica
+
+`format:check`, `lint`, `typecheck` puliti; **1714 test verdi** (901 core + 759 app + 54 relay),
+dieci più di prima. `npx expo export --platform android` produce il bundle e l'impronta resta
+`d862b56d…`: nessuna build EAS.
+
+**Ed è una correzione che solo il telefono conferma**, perché dipende da come Android tratta la
+finestra di una `Modal`. I due esiti sbagliati sono opposti, e la checklist li descrive tutti e due:
+il campo di nuovo sotto la tastiera vuol dire che gli eventi non arrivano; il foglio staccato con
+una striscia vuota in mezzo vuol dire che quella finestra si ridimensionava già da sé, e adesso si
+alza due volte.
+
+## 2026-09-15 — Step 71: i due widget dicono qualcosa di più
+
+Il Piano v10 parte da un'osservazione fatta con la home di un telefono vero davanti: i due widget
+mostrano **un numero fermo**, e un widget che dice sempre la stessa cosa nello stesso modo si smette
+di guardare. Questo step gli dà un contorno — una striscia, un ritmo — senza toccare l'architettura
+dello Step 34 e **senza consumare una build EAS**.
+
+**Il disegno non calcola, legge.** È il vincolo della piattaforma, scritto in `snapshot.ts` da due
+step: il widget lo disegna un task headless che non ha il documento, né la chiave, né il profilo.
+Quindi la striscia si calcola **nell'app**, dove le spese ci sono, e finisce nel foglietto in
+`app_meta` come tracciato. `totalsByDay` e `linePath` sono le stesse funzioni che disegnano
+l'andamento dentro i Grafici — `packages/core/src/chart/` non importa `react-native` proprio perché
+possa servire anche qui — e due curve calcolate da due codici diversi si sarebbero contraddette il
+giorno del primo arrotondamento.
+
+**Nel foglietto va la spezzata, non l'SVG.** È la decisione che non era nel piano e che il piano
+avrebbe preso lo stesso: il colore **non si può sapere** al momento in cui si scrive. `widgetCard`
+restituisce due rettangoli, chiaro e scuro, e Android sceglie quale disegnare **nel momento in cui
+disegna** — che può essere ore dopo. Un colore cotto nel foglietto sarebbe quello del tema di quando
+l'app è stata aperta l'ultima volta, cioè sbagliato per metà delle volte in cui il widget viene
+guardato. Quindi `sparkPath` è la sola spezzata, e `WidgetCard.tsx` ci costruisce attorno il
+documento SVG con il colore della palette che sta usando. Le costanti del riquadro —
+`SPARK_WIDTH`, `SPARK_HEIGHT` — stanno in `snapshot.ts` e non in uno dei due file, perché chi scrive
+i punti e chi chiude l'area devono usare **gli stessi due numeri**.
+
+**Il ritmo è una moltiplicazione, e la frase lo dice.** «Di questo passo, ~840 € a fine mese»: «di
+questo passo» è la condizione, la tilde toglie la precisione che una media non ha, e l'arrotondamento
+all'euro toglie i centesimi di una stima. Non si mostra **prima del terzo giorno** del mese, perché
+il 1° la proiezione moltiplica per trentuno quello che si è speso in un giorno solo — una spesa
+grossa fatta il primo darebbe un numero enorme e falso proprio quando non si ha ancora nessun altro
+dato per non crederci.
+
+**La striscia si scala sul massimo del periodo.** Serve a mostrare il ritmo — dove sono stati i
+giorni pieni e dove i vuoti — non a confrontare due settimane fra loro: con un fondoscala fisso,
+quattordici giorni da pochi euro darebbero una riga schiacciata sul fondo, cioè un grafico che non
+dice niente. E quando non si è speso nulla la striscia **non c'è**: un'area alta zero è un trattino
+che si legge come un grafico rotto, non come una settimana tranquilla.
+
+**Il saldo non prende la striscia, e non è una dimenticanza.** Non ha una serie storica da cui
+ricavarla: è una fotografia di chi deve cosa a chi _adesso_, e ricostruirne l'andamento vorrebbe
+dire rifare il giro dei debiti per ognuno degli ultimi quattordici giorni — un conto che non sta né
+nel foglietto né in un task headless. Del taglio si serve comunque, per non stringere le tre righe
+dove non ci stanno.
+
+### Il punto che il piano aveva scritto in maiuscolo, ed era vero
+
+`publish.ts` faceva `renderWidget: () => view`, con la vista calcolata **prima** del giro: perfetto
+finché il rettangolo era lo stesso a ogni dimensione, e un guasto dal momento in cui non lo è più. Il
+guasto non si vede nei test — lì il modulo nativo non esiste — e **non si vede nemmeno
+ridimensionando il widget**, perché quel gesto passa dall'altro percorso, `handler.tsx`. Si vede solo
+così: widget largo sulla home, si registra una spesa, e il rettangolo si ridisegna nella versione
+stretta, con l'app in mano, cioè nel momento esatto in cui lo si sta guardando. Adesso è
+`renderWidget: (info) => …`, e tutti e due i percorsi passano per la **stessa** `widgetSize`.
+
+**`size.ts` è un file in più rispetto alla tabella del piano**, ed è la ragione per cui quel punto
+adesso è verificato: i due percorsi devono decidere uguale, e una funzione pura con i suoi test è
+l'unico modo di provarlo senza il modulo nativo. Importare lì `react-native-android-widget` avrebbe
+reso il file non testabile, che è esattamente il modo in cui la regola smetterebbe di essere
+controllata.
+
+### La decisione 2, che è quella che protegge i telefoni fermi
+
+I campi nuovi sono **facoltativi**, e i tre di prima non si toccano. Il caso non è teorico: fra
+l'aggiornamento via etere e il primo avvio dell'app può passare mezza giornata, e in mezzo il sistema
+disegna i widget col foglietto **vecchio**. Un campo obbligatorio darebbe un rettangolo vuoto in
+quella finestra — il difetto peggiore che un widget possa avere, perché si legge come un'app rotta.
+`parseSnapshot` legge il mese con un lettore suo, che accoglie i due campi nuovi se ci sono e si
+capiscono, e c'è il test che gli dà un foglietto in forma vecchia e pretende un widget intero meno le
+parti nuove.
+
+Il tetto sulla lunghezza del tracciato si ricontrolla **in lettura** e non solo in scrittura: il
+foglietto è un file su disco, e chi lo rilegge non sa chi l'ha scritto né con quale versione
+dell'app.
+
+### Verifica
+
+`format:check`, `lint`, `typecheck` puliti; **1704 test verdi** (901 core + 749 app + 54 relay),
+ventuno più di ieri. `npx expo export --platform android` produce il bundle, e l'impronta resta
+`d862b56d70daebe68db62e164e03d66e5245ed33` — la stessa del binario in produzione, quindi lo step
+viaggia via etere senza consumare una build, come la decisione 0 del piano prevedeva.
+
+Resta da provare col telefono, e la trappola da cercare è una sola: registrare una spesa con l'app
+aperta e guardare se il widget largo resta largo. I passaggi sono in
+[verifica-sul-telefono.md](verifica-sul-telefono.md).
+
 ## 2026-09-15 — Step 70: la domanda scritta nei Grafici, e il Piano v9 è chiuso
 
 La stessa grammatica, girata dall'altra parte: non «registra questa spesa», ma «fammi vedere queste

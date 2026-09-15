@@ -29,12 +29,14 @@ chiusi su dieci — l'originale, il [v2](piano-v2-profili-gruppi-sync.md),
 ([visualdesign.md](visualdesign.md)). Il [v5](piano-v5-notifiche-widget-profilo.md) è a dodici step
 su tredici: manca solo la coda dello Step 41.
 
-**1683 test verdi** (901 core + 728 app + 54 relay), con `typecheck`, `lint` e `format:check`
+**1727 test verdi** (901 core + 772 app + 54 relay), con `typecheck`, `lint` e `format:check`
 puliti.
 
-**Gli aggiornamenti via etere funzionano, e ne sono già partiti tre** il 13 settembre: gli Step
-49–57, il Piano v7 intero e il **Piano v8 intero** (gruppo `3fa557a0…`, dal commit `a7c69d8`), tutti
-sul canale `production` con impronta `d862b56d…`, la stessa del binario in test. Il registro è in [versioni-e-aggiornamenti.md](versioni-e-aggiornamenti.md),
+**Gli aggiornamenti via etere funzionano, e ne sono già partiti cinque**: tre il 13 settembre — gli
+Step 49–57, il Piano v7 intero e il Piano v8 intero — e due il 15 settembre, il **Piano v9 intero**
+(gruppo `8d2d8fc3…`, dal commit `98f44d4`) e il **Piano v10 intero** più la correzione della
+tastiera (gruppo `6c1bfb85…`, dal commit `2d00608`). Tutti sul canale `production` con impronta
+`d862b56d…`, la stessa del binario in test. Il registro è in [versioni-e-aggiornamenti.md](versioni-e-aggiornamenti.md),
 insieme alla regola controintuitiva che li governa: **un `eas update` si pubblica con `version`
 invariata**, perché `version` entra nell'impronta della `runtimeVersion` e alzarla impedisce
 all'aggiornamento di arrivare, in silenzio.
@@ -58,10 +60,18 @@ all'aggiornamento di arrivare, in silenzio.
   — in particolare **chiudere l'app dai recenti e riaprirla**, che è l'unico modo di sapere se il
   permesso sulla cartella è davvero persistente. I passaggi sono in
   [verifica-sul-telefono.md](verifica-sul-telefono.md).
-- **Il Piano v9 non è ancora stato visto su un telefono**, ed è la sola cosa che i test non possono
-  dire: il foglio della frase dalla home e il campo della domanda nei Grafici. I passaggi, con le
-  prove che cercano un guasto invece di confermare che funziona, sono in
-  [verifica-sul-telefono.md](verifica-sul-telefono.md).
+- **La tastiera che copriva il campo della frase è corretta, e va riguardata col telefono.** Il
+  foglio adesso si alza di quanto la tastiera misura davvero, e l'aritmetica sta in
+  `sheet-metrics.ts` con i suoi test — ma è proprio la classe di difetto che **solo il dispositivo
+  conferma**, perché dipende da come Android tratta la finestra di una `Modal`. Da guardare: il
+  campo deve restare visibile mentre si scrive, e il foglio non deve staccarsi dalla tastiera
+  lasciando una striscia vuota in mezzo (sarebbe il caso opposto, cioè la finestra che si
+  ridimensiona già da sé).
+- **Il campo della domanda nei Grafici non si è fatto notare.** C'è, ed è dove il piano voleva —
+  in cima al tab, sopra la barra dei chip, prima riga della schermata. Ma alla prima apertura è stato
+  scambiato per una casella di ricerca qualunque: quello che manca non è il funzionamento, è la
+  scoperta. Il segnaposto _«spesa da esselunga questo mese»_ dice cosa si può scrivere solo a chi si
+  ferma a leggerlo.
 - **La guardia su `paidBy` è stata tentata e ritirata** nello Step 60 — è l'ottava voce di otto del
   check a freddo, l'unica non chiusa. La ragione per cui non si poteva mettere è nel devlog del 13
   settembre, e va riletta prima di ritentarla.
@@ -74,20 +84,23 @@ del 5 settembre (commit `9606e0f`) combacia con `main`, e tutto ciò che è entr
 
 ## Il piano in corso
 
-**Nessuno.** Il [Piano v9](piano-v9-la-frase-che-diventa-una-spesa.md) è chiuso il 15 settembre con
-lo Step 70, tre step su tre: una riga di testo diventa una spesa (il motore in
-`packages/core/src/parse/`, il foglio che si apre da «Scrivi» sulla home) e una riga di testo
-diventa un grafico filtrato (il campo sopra la barra dei filtri nei Grafici). Lo Step 69 resta
-bruciato. **Nessuno dei tre ha richiesto una build EAS**: viaggiano tutti via etere.
+**Nessuno.** Il **[Piano v10](piano-v10-i-widget-che-dicono-qualcosa.md)** è chiuso il 15 settembre,
+due step su due: lo **71** ha dato ai due widget l'andamento e l'adattamento alla propria dimensione
+— «Speso questo mese» mostra la striscia degli ultimi quattordici giorni e il ritmo — e il **72** il
+«+» da cui comincia una spesa intera.
 
-**Non esce un solo byte dal telefono.** L'analisi da cui il piano nasce immaginava di far leggere la
-frase a un modello linguistico; il codice ha detto che nove frasi su dieci non ne hanno bisogno,
-perché le parole che contano il gruppo le conosce già. I `marks` dello Step 67 sono il modo per
-misurare **quante** frasi vere restano incomprese, invece di deciderlo a naso.
+**Il calcolo sta nell'app, il disegno legge e basta.** È il vincolo dello Step 34 e regge anche qui:
+il task headless che disegna i widget non ha il documento, quindi la striscia si calcola dove le
+spese ci sono e finisce nel foglietto come tracciato — senza colore, perché Android sceglie il tema
+**nel momento in cui disegna**, che può essere ore dopo.
 
-Il prossimo è il **[Piano v10](piano-v10-i-widget-che-dicono-qualcosa.md)**, aperto il 15 settembre
-e non ancora cominciato: gli Step **71** e **72** — i widget che mostrano l'andamento e si adattano
-alla propria dimensione, e il «+» sulla home da cui comincia una spesa intera.
+**E il gruppo viaggia nel link del «+».** Il widget dice di che gruppo parla, e la rotta che riceve
+il tocco sceglie quel gruppo **prima** di entrare nella scrittura: è l'unico modo di non mettere una
+spesa nel posto sbagliato quando l'app ne ha aperto un altro.
+
+Il Piano v9 è chiuso il 15 settembre con lo Step 70, tre step su tre, e **in produzione via etere**
+dallo stesso giorno. Lo Step 69 resta bruciato. **Nessuno degli step del v9 e del v10 ha richiesto
+una build EAS**: l'impronta non si è mossa da `d862b56d…`.
 
 ## Dove sta cosa
 

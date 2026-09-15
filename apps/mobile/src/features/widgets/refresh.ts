@@ -11,7 +11,7 @@ import {
 } from '@jutrack/core';
 import { RELAY_URL } from '@/config';
 import { markError } from '@/diagnostics';
-import { currentMonth, formatMonthTitle } from '@/features/expenses/grouping';
+import { currentMonth, formatMonthTitle, todayIso } from '@/features/expenses/grouping';
 import i18n from '@/i18n';
 import { resolveLanguage, systemLocale } from '@/i18n/language';
 // Import puntuali e non dal barrel `@/state`: quello espone i provider, che tirerebbero
@@ -157,6 +157,7 @@ export async function refreshWidgetsInBackground(): Promise<RefreshOutcome> {
         // pensa l'app alla prossima apertura, che è anche quando il nome nuovo comparirebbe
         // sulle schermate.
         groupName: group.name,
+        vaultId: group.vaultId,
         expenses: store.listExpenses(),
         monthExpenses: store.listExpenses({ from: bounds.from, to: bounds.to }),
         settlements: store.listSettlements(),
@@ -164,6 +165,7 @@ export async function refreshWidgetsInBackground(): Promise<RefreshOutcome> {
         myMemberId,
         monthTitle: formatMonthTitle(month),
         symbol: currencySymbol(profile.currency ?? DEFAULT_CURRENCY),
+        today: todayIso(),
       }),
     );
 
