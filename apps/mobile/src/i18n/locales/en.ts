@@ -407,6 +407,12 @@ export const en: Dictionary = {
     },
   },
   stats: {
+    question: {
+      placeholder: 'groceries at esselunga this month',
+      label: 'Ask with a sentence',
+      missed:
+        'Nothing recognised: the previous filters stay. Try a period (“this month”, “in August”), a store or category the group already uses, or a threshold (“over 50”).',
+    },
     filters: {
       periodA11y: 'Period: {{label}}. Tap to change the filters',
       activeA11y: 'Active filter: {{part}}. Tap to change it',

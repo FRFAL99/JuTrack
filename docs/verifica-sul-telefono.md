@@ -455,7 +455,24 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
   **l'app in inglese**, dove il bottone «Scrivi» semplicemente **non c'è** — nascosto, non rotto,
   perché il lessico della grammatica è uno solo.
 
-Tutto il resto è verificato: 1618 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
+- **La domanda dello Step 70, nel tab Grafici.** Nello stesso gruppo che ha «Esselunga» in elenco:
+  tocca il campo in cima ai Grafici e scrivi `spesa da esselunga questo mese`, poi conferma con il
+  tasto di ricerca della tastiera. Cinque cose, e la quarta è quella che conta:
+
+  1. la barra dei filtri si accende con i chip **«Questo mese»**, **«Spesa»** ed **«Esselunga»** —
+     gli stessi che si sarebbero ottenuti dal foglio dei filtri;
+  2. il totale in testa e i grafici sotto cambiano di conseguenza;
+  3. **il campo si svuota**: da lì in poi la verità sono i chip;
+  4. tocca la **×** su «Esselunga» → il chip se ne va e i grafici si riaprono. È la prova che la
+     frase ha impostato **filtri veri** e non una modalità a parte, ed è l'unica cosa che nessun
+     test può dimostrare;
+  5. scrivi `sopra i 50` → resta il periodo, si aggiunge la soglia.
+
+  Poi le due prove che cercano un guasto: `quanto ho sp`, che non deve **togliere niente** e deve
+  dire che non ha riconosciuto nulla; e l'app **in inglese**, dove il campo non c'è affatto — come
+  il bottone «Scrivi» della home, e per la stessa ragione.
+
+Tutto il resto è verificato: 1683 test, convergenza CRDT, relay reale in produzione, e l'esecuzione
 su un dispositivo Android reale.
 
 > **Lo Step 25 è entrato in questa lista attraverso il 26**, come era stato scritto: la geometria

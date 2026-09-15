@@ -9,6 +9,11 @@ export { isEmptyDraft, parseExpense } from './draft';
 
 export { ITALIAN_LEXICON } from './lexicon';
 
+export { isEmptyQuestion, parseQuery } from './query';
+export type { ExpenseQuestion, QuestionField, QuestionMark, QueryFilters } from './query';
+
+export type { QueryPeriod, QueryPreset } from './periods';
+
 export type {
   DraftField,
   DraftMark,

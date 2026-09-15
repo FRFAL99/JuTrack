@@ -62,6 +62,23 @@ export function findAmount(tokens: Token[], taken: boolean[], lexicon: Lexicon):
   return { match: { cents: only.cents, from: only.from, to: only.to }, ambiguous: false };
 }
 
+/**
+ * Una cifra di denaro scritta in un token, o `null`.
+ *
+ * **La usa anche `query.ts`**, ed è l'unico pezzo di lettura dei numeri che le due funzioni
+ * condividono: in «25 spesa esselunga» il numero è l'importo, in «spesa sopra i 25» è una
+ * soglia — lo stesso numero, due campi opposti — ma *come si legge* «12,50» è una cosa sola.
+ * Duplicarla vorrebbe dire due regole sul punto delle migliaia che possono divergere.
+ */
+export function moneyOf(plain: string, lexicon: Lexicon): Cents | null {
+  const attached = stripCurrency(plain, lexicon);
+  if (!NUMBER.test(attached.digits)) return null;
+  const cents = parseAmount(decimalPoint(attached.digits));
+  // Zero non è una spesa, e un importo negativo non esiste in questo modello: meglio
+  // lasciarli alla nota che fabbricare un numero che il form rifiuterebbe.
+  return cents === null || cents <= 0 ? null : cents;
+}
+
 /** Il numero che comincia a `index`, col suo eventuale segno di valuta. */
 function readNumber(
   tokens: Token[],
@@ -73,13 +90,9 @@ function readNumber(
   if (token === undefined) return null;
   if (looksLikeDate(tokens, index, lexicon)) return null;
 
+  const cents = moneyOf(token.plain, lexicon);
+  if (cents === null) return null;
   const attached = stripCurrency(token.plain, lexicon);
-  if (!NUMBER.test(attached.digits)) return null;
-
-  const cents = parseAmount(decimalPoint(attached.digits));
-  // Zero non è una spesa, e un importo negativo non esiste in questo modello: meglio
-  // lasciarli alla nota che fabbricare una spesa che il form rifiuterebbe.
-  if (cents === null || cents <= 0) return null;
 
   let from = index;
   let to = index;

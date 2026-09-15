@@ -95,7 +95,7 @@ Stato: ✅ chiuso · 🟡 in parte · ⬜ non fatto.
 | 67  | Il motore della frase                   | v9        | ✅    | 2026-09-15 |
 | 68  | La frase, sul telefono                  | v9        | ✅    | 2026-09-15 |
 | 69  | La categoria suggerita dal negozio      | v9        | ⬜    | —          |
-| 70  | La domanda scritta nei Grafici          | v9        | ⬜    | —          |
+| 70  | La domanda scritta nei Grafici          | v9        | ✅    | 2026-09-15 |
 | 71  | I widget dicono qualcosa di più         | v10       | ⬜    | —          |
 | 72  | La spesa comincia dalla home            | v10       | ⬜    | —          |
 
@@ -111,11 +111,12 @@ negozio`. Lo Step 45 ha prodotto `icon-source.svg`; lo script che lo consuma è 
 - **Step 58 e 59 non hanno una entry di devlog.** Buco dichiarato in testa a [devlog.md](devlog.md)
   e non ricostruito a posteriori di proposito. Quello che si sa è nel
   [piano v7](piano-v7-data-e-vocabolario-del-gruppo.md).
-- **I piani chiusi sono sette:** l'originale (0–9), [v2](piano-v2-profili-gruppi-sync.md),
+- **I piani chiusi sono otto:** l'originale (0–9), [v2](piano-v2-profili-gruppi-sync.md),
   [v3](piano-v3-tab-gruppi-azzeramento-sync.md), [v4](piano-v4-grafici-e-dashboard.md),
   [v6](piano-v6-spesa-rapida-e-grafici-componibili.md),
-  [v7](piano-v7-data-e-vocabolario-del-gruppo.md) e
-  [v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md). Il
+  [v7](piano-v7-data-e-vocabolario-del-gruppo.md),
+  [v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md) e
+  [v9](piano-v9-la-frase-che-diventa-una-spesa.md). Il
   [v5](piano-v5-notifiche-widget-profilo.md) è a dodici step su tredici: manca solo la coda dello
   Step 41.
 - **Il [v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md) è chiuso** il 13 settembre 2026,
@@ -124,9 +125,9 @@ negozio`. Lo Step 45 ha prodotto `icon-source.svg`; lo script che lo consuma è 
   [verifica-sul-telefono.md](verifica-sul-telefono.md).
 - **Il [v9](piano-v9-la-frase-che-diventa-una-spesa.md) è aperto** dal 15 settembre 2026 e occupa
   gli Step 67, 68 e **70**: una riga di testo diventa una spesa, e una domanda scritta diventa un
-  grafico filtrato. La grammatica gira sul telefono e non tocca la rete. **Due step su tre sono
-  chiusi:** il 67 ha fatto il motore in `packages/core/src/parse/`, il 68 il foglio che lo usa.
-  Resta il 70, la domanda nei Grafici.
+  grafico filtrato. La grammatica gira sul telefono e non tocca la rete. **È chiuso** il 15 settembre 2026,
+  tre step su tre: il 67 ha fatto il motore in `packages/core/src/parse/`, il 68 il foglio che lo
+  usa, il 70 la domanda scritta nei Grafici. Il 69 resta bruciato.
 - **Step 69 — ritirato prima di cominciare.** Era «la categoria suggerita dal negozio», tolta dal
   [v9](piano-v9-la-frase-che-diventa-una-spesa.md) il giorno stesso in cui il piano è stato scritto:
   è l'unica parte che indovinava invece di riconoscere. Nessuna riga di codice è mai esistita, e

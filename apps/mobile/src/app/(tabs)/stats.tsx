@@ -74,6 +74,9 @@ import {
 } from '@/features/stats/dashboard/widgets';
 import type { QueryFacets } from '@/features/stats/filters/facets';
 import { FilterBar } from '@/features/stats/filters/FilterBar';
+import { QuestionField } from '@/features/stats/filters/QuestionField';
+import { mergeFacets, type QuestionResult } from '@/features/stats/filters/question';
+import { sentenceAvailable } from '@/features/expenses/sentence';
 import { FilterSheet } from '@/features/stats/filters/FilterSheet';
 import {
   anchorMonth,
@@ -154,9 +157,13 @@ export default function StatsScreen() {
  * mesi. Tutto il resto passa da `applyQuery` in due `useMemo`.
  */
 function StatsOfGroup() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { colors, spacing, radius, fontSize, fontWeight } = useTheme();
   const symbol = useCurrencySymbol();
+  // Il campo della domanda compare **solo in italiano**, come il bottone «Scrivi» della
+  // home: il lessico della grammatica è uno solo, e una domanda in inglese non verrebbe
+  // capita. Nascosto, non rotto.
+  const writable = sentenceAvailable(i18n.language);
   const [period, setPeriod] = useState<Period>(defaultPeriod);
   const [facets, setFacets] = useState<QueryFacets>({});
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -342,6 +349,19 @@ function StatsOfGroup() {
   const filtering = !isEmptyQuery(facets);
   const reset = () => setFacets({});
 
+  /**
+   * Una domanda scritta imposta i filtri, e niente di più.
+   *
+   * Due `setState` che esistevano già: la schermata non sa di essere stata pilotata da una
+   * frase, e per questo la × su un chip continua a funzionare. I filtri si **fondono** con
+   * quelli di prima — «sopra i 50» dopo «questo mese» aggiunge la soglia e lascia il
+   * periodo — e ciò che la frase non nomina non si tocca.
+   */
+  const applyQuestion = (result: QuestionResult): void => {
+    if (result.period !== null) setPeriod(result.period);
+    setFacets((previous) => mergeFacets(previous, result.facets));
+  };
+
   const categorySlices: Slice[] = byCategory.map((total) => {
     const category = total.categoryId === null ? undefined : byId(categories, total.categoryId);
     return {
@@ -369,34 +389,40 @@ function StatsOfGroup() {
    * di riaccendere i widget, nascosto proprio a chi li ha spenti tutti.
    */
   const header = (
-    <View style={[styles.rowBetween, { paddingBottom: spacing.md }]}>
-      <View style={{ flex: 1 }}>
-        <FilterBar
-          period={period}
-          facets={facets}
-          labels={labels}
-          onOpen={() => setSheetOpen(true)}
-          onReset={reset}
-        />
-      </View>
-      {/* Un'icona a griglia non dice cosa fa: «Modifica» sì. Era muta ed era anche l'unico
+    <View style={{ paddingBottom: spacing.md, gap: spacing.md }}>
+      {/* Sopra i chip e non dentro il foglio: la domanda si scrive **guardando** ciò che
+          cambia, e un campo nascosto dietro un'apertura sarebbe la quinta via per comporre
+          la stessa cosa invece della prima. */}
+      {writable && <QuestionField onApply={applyQuestion} />}
+      <View style={styles.rowBetween}>
+        <View style={{ flex: 1 }}>
+          <FilterBar
+            period={period}
+            facets={facets}
+            labels={labels}
+            onOpen={() => setSheetOpen(true)}
+            onReset={reset}
+          />
+        </View>
+        {/* Un'icona a griglia non dice cosa fa: «Modifica» sì. Era muta ed era anche l'unico
           modo di riaccendere i widget — nascosto proprio a chi li aveva spenti tutti. */}
-      <Pressable
-        onPress={() => setEditing(true)}
-        accessibilityRole="button"
-        hitSlop={10}
-        style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          gap: 5,
-          paddingHorizontal: spacing.lg,
-        }}
-      >
-        <Feather name="edit-2" size={14} color={colors.textMuted} />
-        <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-          {t('dashboard.edit')}
-        </Text>
-      </Pressable>
+        <Pressable
+          onPress={() => setEditing(true)}
+          accessibilityRole="button"
+          hitSlop={10}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 5,
+            paddingHorizontal: spacing.lg,
+          }}
+        >
+          <Feather name="edit-2" size={14} color={colors.textMuted} />
+          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
+            {t('dashboard.edit')}
+          </Text>
+        </Pressable>
+      </View>
     </View>
   );
 

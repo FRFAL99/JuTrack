@@ -13,6 +13,114 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-15 — Step 70: la domanda scritta nei Grafici, e il Piano v9 è chiuso
+
+La stessa grammatica, girata dall'altra parte: non «registra questa spesa», ma «fammi vedere queste
+spese».
+
+**Nei Grafici la domanda si componeva in quattro posti** — il selettore del periodo, il foglio dei
+filtri, i chip, la barra dei mesi — e chi sapeva già cosa voleva sapere doveva attraversarli tutti.
+Adesso c'è un campo sopra la barra: `spesa da esselunga questo mese` accende gli **stessi** chip che
+si sarebbero ottenuti a mano.
+
+**Due punti d'ingresso sopra un tokenizzatore solo, e non una funzione con un interruttore.** Le
+parole del gruppo sono le stesse in tutte e due le frasi, e `findWords` e i pronomi si riusano tali
+e quali — c'è il test che dà la stessa frase a `parseExpense` e a `parseQuery` e pretende gli stessi
+negozi, le stesse categorie, gli stessi tag. Ma **un numero vuol dire due cose opposte**: in «spesa
+25» è l'importo, in «spesa sopra i 25» è una soglia. Un `modo: 'spesa' | 'domanda'` da passare
+giusto a ogni chiamata sarebbe stata la stessa cosa scritta peggio, con l'interruttore da ricordare.
+
+La stessa inversione vale per i mesi: **«agosto» da solo non è una data di una spesa** — un mese non
+è un giorno, e `parseExpense` lo lascia nella nota — ma **è** un periodo di una domanda. Anche
+questo ha il suo test, uno accanto all'altro, perché è la differenza che si dimentica per prima.
+
+**Da `parseQuery` escono periodo e filtri, non una `ExpenseQuery` composta.** Il periodo è un preset
+che si muove col calendario e porta l'etichetta che il chip mostra: «questo mese» e «dal 1° al 15»
+hanno gli stessi estremi il 15 del mese e restano due cose diverse. Schiacciare il preset su
+`from`/`to` avrebbe buttato via proprio l'informazione che si vede, e ricavarlo all'indietro sarebbe
+stato indovinare. Quindi `QueryPeriod` porta **o** un preset **o** due date, e a rimetterlo insieme
+è la schermata, con i due `useState` che aveva già.
+
+**La frase non disegna niente**, ed è questo che la rende togliibile: imposta due stati, e la × su
+un chip continua a funzionare perché sotto non c'è una modalità a parte — ci sono i filtri di
+sempre.
+
+### Le tre regole che tengono
+
+**Una domanda che non si capisce non azzera i filtri di prima.** Si scrive «quanto ho sp», il parser
+non ne cava niente, e applicare comunque il risultato svuoterebbe la schermata — cioè esattamente
+ciò che `FilterBar` descrive nel proprio commento: _«un filtro che non si vede è un filtro che non
+si sa di avere»_, che a schermata vuota _«si legge come un guasto dell'app»_. Si applica **solo** ciò
+che è stato riconosciuto; se non è stato riconosciuto niente, non si tocca niente, e il campo lo
+dice con una riga che suggerisce cosa prova a scrivere.
+
+**I filtri si fondono, non si sostituiscono.** È il criterio di «fatto» dello step: dopo «spesa da
+esselunga questo mese» si scrive «sopra i 50» e resta tutto il resto. Sostituire vorrebbe dire far
+riscrivere ogni volta la domanda intera, che è il modo più rapido per smettere di usarla. Per
+togliere c'è «Azzera», dov'è sempre stato: una frase che **toglie** un filtro sarebbe una grammatica
+nuova da imparare per fare ciò che una × già fa.
+
+**Si applica quando si conferma, non a ogni tasto** — al contrario del foglio della spesa, e la
+differenza non è la prestazione soltanto. Rifare sedici widget a ogni lettera costa, ma il punto è
+un altro: una frase scritta a metà è una domanda **diversa** da quella che si sta scrivendo, e
+«ad ago» filtrerebbe su qualcosa che nessuno ha chiesto, sotto le dita. E il campo **si svuota** dopo
+aver applicato: da quel momento la verità sono i chip, e una frase rimasta scritta direbbe ancora «da
+esselunga» dopo che quel chip è stato tolto — la schermata racconterebbe due cose diverse di sé
+stessa, e quella scritta più in grande sarebbe la falsa.
+
+### La trappola, ed è un ordine
+
+**Le soglie si leggono prima del periodo.** «sopra i 2000» ha un numero di quattro cifre che il
+riconoscitore degli anni leggerebbe volentieri come il 2000, e la domanda diventerebbe «tutto
+l'anno 2000» invece di «sopra i venti euro». Un numero marcato ha già detto cos'è, e chi l'ha
+marcato se lo prende per primo. C'è la riga nella tabella dei test, ed è la ragione per cui l'ordine
+dei riconoscitori è scritto nel commento in testa a `parseQuery` invece di essere implicito
+nell'ordine delle chiamate.
+
+L'altra cosa che non era ovvia: **una preposizione appiccicata a una parola riconosciuta non è un
+avanzo**. «spesa **da** esselunga questo mese» — la frase del criterio — lasciava un «da» solitario
+nella nota, e una domanda capita per intero che dichiara di non aver capito una parola si legge come
+un difetto. Si consuma solo ciò che è davvero una parola di servizio, e l'elenco sta nel lessico
+insieme a tutto il resto.
+
+### L'unica aggiunta al vincolo del piano
+
+`periods.ts` importa `insights/period`, che la decisione 1 del piano non prevedeva: `parse/` doveva
+importare da `insights/` soltanto `naming` e `calendar`. L'aggiunta è deliberata e vale la pena
+scriverla — **un periodo _è_ aritmetica sui mesi**, e riscrivere `daysInMonth` e `shiftMonth` dentro
+`parse/` sarebbe stata la quarta copia di una regola che `tidy` racconta già di aver avuto in quattro
+punti. Restano fuori `query` e `breakdown`, che erano i due nominati nel vincolo e che sarebbero
+davvero il mestiere sbagliato.
+
+### Il Piano v9 è chiuso
+
+Tre step su tre — 67, 68 e 70 — e il 69 resta bruciato, ritirato il giorno stesso in cui il piano è
+stato scritto perché era l'unica parte che indovinava invece di riconoscere. **Nessuno dei tre ha
+richiesto una build EAS**: viaggiano tutti via etere.
+
+Una riga di testo diventa una spesa, e una riga di testo diventa un grafico filtrato. **Non esce un
+solo byte dal telefono**: l'analisi da cui il piano nasce immaginava di far leggere la frase a un
+modello linguistico, e il codice ha detto che nove frasi su dieci non ne hanno bisogno, perché le
+parole che contano il gruppo le conosce già. La rete resta un piano successivo, **e questo piano è
+ciò che la rende facoltativa** — i `marks` dello Step 67 sono il modo per misurare quante frasi vere
+restano incomprese, invece di deciderlo a naso.
+
+### Verifica
+
+**1683 test verdi** (901 core + 728 app + 54 relay), `typecheck`, `lint` e `format:check` puliti,
+`expo export --platform android` completato. **Nessuna build EAS.**
+
+I 65 test nuovi: 51 nel core — la tabella delle domande vere accanto a quella delle frasi, più i
+periodi uno per uno — e 14 in `question.ts`, che è la parte dell'app che può essere sbagliata.
+`QuestionField` non ne ha, per la regola di sempre.
+
+**Quello che resta da provare col telefono** è il giro del criterio: scrivere la domanda, vedere i
+tre chip accendersi, togliere «Esselunga» con la × e vedere i grafici riaprirsi — che è la prova che
+la frase ha impostato filtri veri e non una modalità a parte. È in
+[verifica-sul-telefono.md](verifica-sul-telefono.md), insieme a quello dello Step 68.
+
+---
+
 ## 2026-09-15 — Step 68: la frase, sul telefono
 
 Il motore dello Step 67 aveva un solo modo di essere usato: `npm run frase`. Adesso ha un bottone.
