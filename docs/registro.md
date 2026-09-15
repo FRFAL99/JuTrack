@@ -96,7 +96,7 @@ Stato: ✅ chiuso · 🟡 in parte · ⬜ non fatto.
 | 68  | La frase, sul telefono                  | v9        | ✅    | 2026-09-15 |
 | 69  | La categoria suggerita dal negozio      | v9        | ⬜    | —          |
 | 70  | La domanda scritta nei Grafici          | v9        | ✅    | 2026-09-15 |
-| 71  | I widget dicono qualcosa di più         | v10       | ⬜    | —          |
+| 71  | I widget dicono qualcosa di più         | v10       | ✅    | 2026-09-15 |
 | 72  | La spesa comincia dalla home            | v10       | ⬜    | —          |
 
 ## Le note che la tabella non può contenere

@@ -104,12 +104,59 @@ export interface BalanceSnapshot extends WidgetLines {
 }
 
 /**
+ * Il riquadro in cui la striscia è disegnata, e che **i due lati devono condividere**.
+ *
+ * Il tracciato nel foglietto è in queste coordinate, non in pixel: chi lo disegna lo scala
+ * al rettangolo vero con `preserveAspectRatio="none"`. Scriverlo in pixel avrebbe legato un
+ * foglietto calcolato stamattina alla dimensione che il widget aveva stamattina.
+ *
+ * Sono esportate perché **chi chiude l'area riusa questi due numeri**: `compose.ts` produce
+ * la sola spezzata, e `WidgetCard.tsx` la chiude sul fondo per riempirla (vedi `sparkPath`).
+ */
+export const SPARK_WIDTH = 100;
+export const SPARK_HEIGHT = 32;
+
+/** Quanti giorni entrano nella striscia. Due settimane: un ritmo settimanale si vede due volte. */
+export const SPARK_DAYS = 14;
+
+/**
+ * Quanto può essere lungo il tracciato, in caratteri.
+ *
+ * Il foglietto è **una riga di `app_meta` riscritta a ogni spesa**: un campo che cresce con
+ * la storia del gruppo la farebbe gonfiare senza che nessuno se ne accorga. Con quattordici
+ * punti e due decimali il tracciato sta sotto i trecento caratteri, quindi questo tetto non
+ * si incontra mai — ed è il punto: se un giorno lo si incontra, è cambiato qualcosa che
+ * andava deciso, e la striscia sparisce invece di crescere in silenzio.
+ */
+export const SPARK_MAX_CHARS = 600;
+
+/**
  * Quello che il widget «Speso questo mese» disegna.
  *
  * Nessun `tone`: una somma di spese non ha un verso da colorare. Il saldo sì, ed è l'unica
  * differenza fra i due foglietti.
+ *
+ * **I due campi in più sono facoltativi, e lo sono per un caso reale** (decisione 2 del
+ * [piano v10](../../../../../docs/piano-v10-i-widget-che-dicono-qualcosa.md)): fra
+ * l'aggiornamento via etere e il primo avvio dell'app può passare mezza giornata, e in mezzo
+ * il sistema disegna i widget col foglietto **vecchio**, che questi campi non li ha. Un campo
+ * obbligatorio darebbe un rettangolo vuoto in quella finestra; così ne dà uno identico a
+ * quello di ieri, che è la cosa giusta da mostrare.
  */
-export type MonthSnapshot = WidgetLines;
+export interface MonthSnapshot extends WidgetLines {
+  /**
+   * La striscia degli ultimi giorni: **solo la spezzata**, senza colore e senza `<svg>`.
+   *
+   * Il colore non sta qui perché non si può sapere: il rettangolo è disegnato nei due temi
+   * (`widgetCard` ne restituisce due) e Android sceglie quale mostrare **nel momento in cui
+   * disegna**, che può essere ore dopo. Un colore cotto nel foglietto sarebbe quello del tema
+   * di quando l'app è stata aperta l'ultima volta, cioè sbagliato per metà delle volte in cui
+   * il widget viene guardato.
+   */
+  sparkPath?: string;
+  /** Dove va a finire il mese di questo passo, già scritta per esteso. Assente nei primi giorni. */
+  pace?: string;
+}
 
 /** Il foglietto intero: un campo per widget. */
 export interface WidgetSnapshot {
@@ -247,12 +294,39 @@ export function parseSnapshot(raw: string | null): WidgetSnapshot {
 
   const fields = parsed as Record<string, unknown>;
   const balance = readLines(fields['balance']);
-  const month = readLines(fields['month']);
 
   return {
     balance: balance === null ? null : { ...balance, tone: readTone(fields['balance']) },
-    month,
+    month: readMonth(fields['month']),
   };
+}
+
+/**
+ * Il totale del mese, con i due campi in più **se ci sono e se si capiscono**.
+ *
+ * È qui che la decisione 2 diventa codice: le tre righe si leggono come sempre, e ciò che
+ * manca o non si capisce semplicemente non c'è. Un foglietto scritto prima di questo step —
+ * quello che sta sul telefono finché l'app non si riapre — passa di qui e ne esce **intero**,
+ * meno la striscia e il ritmo. È il caso che il test copre per primo.
+ */
+function readMonth(value: unknown): MonthSnapshot | null {
+  const lines = readLines(value);
+  if (lines === null) return null;
+
+  const fields = value as Record<string, unknown>;
+  const month: MonthSnapshot = { ...lines };
+
+  const sparkPath = fields['sparkPath'];
+  // Il tetto si ricontrolla **in lettura** e non solo in scrittura: il foglietto è un file su
+  // disco, e chi lo rilegge non sa chi l'ha scritto né con quale versione dell'app.
+  if (typeof sparkPath === 'string' && sparkPath !== '' && sparkPath.length <= SPARK_MAX_CHARS) {
+    month.sparkPath = sparkPath;
+  }
+
+  const pace = fields['pace'];
+  if (typeof pace === 'string' && pace !== '') month.pace = pace;
+
+  return month;
 }
 
 /**

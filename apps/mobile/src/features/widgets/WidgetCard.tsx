@@ -1,11 +1,13 @@
 import {
   FlexWidget,
+  SvgWidget,
   TextWidget,
   type HexColor,
   type WidgetRepresentation,
 } from 'react-native-android-widget';
 import { darkPalette, fontSize, lightPalette, radius, spacing, type Palette } from '@/theme/tokens';
-import type { WidgetLines } from './snapshot';
+import { SPARK_HEIGHT, SPARK_WIDTH, type WidgetLines } from './snapshot';
+import type { WidgetSize } from './size';
 
 /**
  * Il rettangolo che entrambi i widget disegnano sulla home di Android.
@@ -50,7 +52,66 @@ export const hex = (color: string): HexColor => color as HexColor;
 /** Da che colore si scrive la cifra grande, dato il tema. */
 export type InkOf = (palette: Palette) => HexColor;
 
-function Card({ lines, ink, palette }: { lines: WidgetLines; ink: InkOf; palette: Palette }) {
+/**
+ * Cosa mettere nel rettangolo oltre alle tre righe, se c'è posto.
+ *
+ * `| undefined` esplicito perché il progetto ha `exactOptionalPropertyTypes`: chi chiama legge
+ * due campi facoltativi da un foglietto e li passa così com'è, e senza questo dovrebbe
+ * ricostruire l'oggetto campo per campo per dire la stessa cosa.
+ */
+export interface CardExtras {
+  /** La spezzata degli ultimi giorni, nelle coordinate di `SPARK_WIDTH`×`SPARK_HEIGHT`. */
+  sparkPath?: string | undefined;
+  /** Una riga in più sotto la didascalia. */
+  note?: string | undefined;
+}
+
+/** Quanto è alta la striscia disegnata, in dp. */
+const SPARK_DP = 30;
+
+/**
+ * Dalla spezzata al documento SVG, **col colore deciso adesso**.
+ *
+ * Due tracciati e non uno: la linea marcata, e sotto la stessa linea chiusa sul fondo e
+ * riempita in trasparenza. La chiusura usa `SPARK_WIDTH`/`SPARK_HEIGHT`, cioè gli stessi due
+ * numeri con cui `compose.ts` ha prodotto i punti — è la ragione per cui quelle costanti
+ * stanno in `snapshot.ts` e non in uno dei due file che le usano.
+ *
+ * `preserveAspectRatio="none"`: la striscia si stira fino a riempire il rettangolo, che è
+ * ciò che si vuole da uno sfondo di andamento. Mantenere le proporzioni lascerebbe due bande
+ * vuote ai lati, larghe quanto il launcher decide.
+ *
+ * `fill-opacity` e non un colore già smorzato: il colore arriva dalla palette, e schiarirlo
+ * qui vorrebbe dire rifare la palette a mano per il tema scuro.
+ */
+function sparkSvg(path: string, color: HexColor): string {
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SPARK_WIDTH} ${SPARK_HEIGHT}" preserveAspectRatio="none">` +
+    `<path d="${path} L${SPARK_WIDTH},${SPARK_HEIGHT} L0,${SPARK_HEIGHT} Z" fill="${color}" fill-opacity="0.16"/>` +
+    `<path d="${path}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>` +
+    `</svg>`
+  );
+}
+
+function Card({
+  lines,
+  ink,
+  palette,
+  size,
+  extras,
+}: {
+  lines: WidgetLines;
+  ink: InkOf;
+  palette: Palette;
+  size: WidgetSize;
+  extras: CardExtras;
+}) {
+  // **Il taglio si legge una volta e decide tutto insieme.** Sparso su tre `&&` diventerebbe
+  // tre condizioni che si possono scordare separatamente, ed è così che un rettangolo stretto
+  // finisce per mostrare due righe su tre.
+  const roomy = size === 'full';
+  const spark = roomy ? extras.sparkPath : undefined;
+  const note = roomy ? extras.note : undefined;
   return (
     <FlexWidget
       clickAction="OPEN_APP"
@@ -86,18 +147,47 @@ function Card({ lines, ink, palette }: { lines: WidgetLines; ink: InkOf; palette
       />
       <TextWidget
         text={lines.caption}
-        maxLines={2}
+        // Una riga sola quando sotto c'è dell'altro: la didascalia che va a capo spingerebbe
+        // fuori dal rettangolo proprio ciò che si è appena fatto spazio per mostrare.
+        maxLines={note === undefined ? 2 : 1}
         truncate="END"
         style={{ fontSize: fontSize.xs, color: hex(palette.textMuted) }}
       />
+
+      {note !== undefined && (
+        <TextWidget
+          text={note}
+          maxLines={1}
+          truncate="END"
+          style={{ fontSize: fontSize.xxs, color: hex(palette.textFaint) }}
+        />
+      )}
+
+      {spark !== undefined && (
+        <SvgWidget
+          svg={sparkSvg(spark, ink(palette))}
+          style={{ width: 'match_parent', height: SPARK_DP, marginTop: spacing.sm }}
+        />
+      )}
     </FlexWidget>
   );
 }
 
-/** Il rettangolo pronto da consegnare al sistema, nei due temi. */
-export function widgetCard(lines: WidgetLines, ink: InkOf): WidgetRepresentation {
+/**
+ * Il rettangolo pronto da consegnare al sistema, nei due temi.
+ *
+ * Il taglio arriva da fuori e non si indovina qui: chi disegna lo ha appena letto da
+ * `WidgetInfo`, e i due percorsi — l'app e il task headless — passano per la **stessa**
+ * `widgetSize`.
+ */
+export function widgetCard(
+  lines: WidgetLines,
+  ink: InkOf,
+  size: WidgetSize,
+  extras: CardExtras = {},
+): WidgetRepresentation {
   return {
-    light: <Card lines={lines} ink={ink} palette={lightPalette} />,
-    dark: <Card lines={lines} ink={ink} palette={darkPalette} />,
+    light: <Card lines={lines} ink={ink} palette={lightPalette} size={size} extras={extras} />,
+    dark: <Card lines={lines} ink={ink} palette={darkPalette} size={size} extras={extras} />,
   };
 }

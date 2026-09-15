@@ -8,6 +8,7 @@ import {
   parseSnapshot,
   REFRESH_COOLDOWN_MS,
   serializeSnapshot,
+  SPARK_MAX_CHARS,
   type BalanceSnapshot,
   type WidgetSnapshot,
 } from './snapshot';
@@ -181,6 +182,68 @@ describe('parseSnapshot', () => {
     });
     expect(parseSnapshot(raw).balance).not.toBeNull();
     expect(parseSnapshot(raw).month).toBeNull();
+  });
+
+  it('disegna un foglietto scritto prima che esistessero striscia e ritmo', () => {
+    // **È la decisione 2 del piano v10, ed è il caso reale che protegge.** Fra
+    // l'aggiornamento via etere e il primo avvio dell'app può passare mezza giornata, e in
+    // mezzo il sistema disegna i widget con questo foglietto qui. Deve uscirne un widget
+    // intero meno le parti nuove — non un rettangolo vuoto, che si legge come un'app rotta.
+    const raw = JSON.stringify({
+      balance: { group: 'Casa', amount: '25,00 €', caption: 'Juju ti deve', tone: 'credit' },
+      month: { group: 'Casa', amount: '340,50 €', caption: 'Speso in agosto' },
+    });
+    const month = parseSnapshot(raw).month;
+    expect(month?.amount).toBe('340,50 €');
+    expect(month?.caption).toBe('Speso in agosto');
+    expect(month?.sparkPath).toBeUndefined();
+    expect(month?.pace).toBeUndefined();
+  });
+
+  it('rilegge striscia e ritmo quando ci sono', () => {
+    const raw = JSON.stringify({
+      month: {
+        group: 'Casa',
+        amount: '340,50 €',
+        caption: 'Speso in agosto',
+        sparkPath: 'M0,32 L100,0',
+        pace: 'Di questo passo, ~500,00 € a fine mese',
+      },
+    });
+    expect(parseSnapshot(raw).month?.sparkPath).toBe('M0,32 L100,0');
+    expect(parseSnapshot(raw).month?.pace).toBe('Di questo passo, ~500,00 € a fine mese');
+  });
+
+  it('scarta striscia e ritmo scritti male, senza portare via il totale', () => {
+    // Stessa direzione dell'errore del `tone`: perdere un contorno costa molto meno che
+    // perdere il numero, che è la ragione per cui il widget è sulla home.
+    const raw = JSON.stringify({
+      month: {
+        group: 'Casa',
+        amount: '340,50 €',
+        caption: 'Speso in agosto',
+        sparkPath: 42,
+        pace: '',
+      },
+    });
+    expect(parseSnapshot(raw).month?.amount).toBe('340,50 €');
+    expect(parseSnapshot(raw).month?.sparkPath).toBeUndefined();
+    expect(parseSnapshot(raw).month?.pace).toBeUndefined();
+  });
+
+  it('scarta una striscia più lunga del tetto', () => {
+    // Il tetto si ricontrolla **in lettura**: il foglietto è un file su disco, e chi lo
+    // rilegge non sa chi l'ha scritto né con quale versione dell'app.
+    const raw = JSON.stringify({
+      month: {
+        group: 'Casa',
+        amount: '340,50 €',
+        caption: 'Speso in agosto',
+        sparkPath: 'M'.repeat(SPARK_MAX_CHARS + 1),
+      },
+    });
+    expect(parseSnapshot(raw).month?.amount).toBe('340,50 €');
+    expect(parseSnapshot(raw).month?.sparkPath).toBeUndefined();
   });
 });
 

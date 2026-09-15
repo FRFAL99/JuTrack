@@ -3,6 +3,7 @@ import { markError } from '@/diagnostics';
 import { ExpoSqliteDatabase, SqliteAppMeta } from '@/platform';
 import { refreshWidgetsInBackground } from './refresh';
 import { NOTHING_KNOWN, parseSnapshot, SNAPSHOT_KEY, type WidgetSnapshot } from './snapshot';
+import { widgetSize } from './size';
 import { balanceView, monthView } from './views';
 
 /**
@@ -66,7 +67,12 @@ export async function handleWidgetTask({
   // Si disegna **sempre**, anche dopo un errore: il foglietto resta vuoto e il widget dice
   // «apri l'app». Uscire senza chiamare `renderWidget` lascerebbe sulla home il rettangolo
   // vuoto del launcher, che si legge come un'app rotta e non come un dato mancante.
+  // Il taglio esce da `widgetInfo`, che qui c'è per costruzione: è il sistema a chiamare, e
+  // chiama perché il rettangolo è appena stato aggiunto, riacceso o **ridimensionato**.
+  const size = widgetSize(widgetInfo);
   renderWidget(
-    widgetName === 'Balance' ? balanceView(snapshot.balance) : monthView(snapshot.month),
+    widgetName === 'Balance'
+      ? balanceView(snapshot.balance, size)
+      : monthView(snapshot.month, size),
   );
 }

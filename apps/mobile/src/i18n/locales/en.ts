@@ -216,6 +216,7 @@ export const en: Dictionary = {
     debtMany: 'You owe {{count}} people',
     even: 'You are even',
     monthCaption: 'Spent in {{month}}',
+    pace: 'At this rate, ~{{amount}} by month end',
   },
   you: {
     name: {

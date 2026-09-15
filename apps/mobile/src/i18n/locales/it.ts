@@ -240,6 +240,12 @@ export const it = {
     debtMany: 'Devi a {{count}} persone',
     even: 'Siete pari',
     monthCaption: 'Speso in {{month}}',
+    /**
+     * «Di questo passo» è la condizione, e la tilde toglie la precisione che una media non
+     * ha: è una moltiplicazione, non una previsione, e la frase non deve far credere il
+     * contrario.
+     */
+    pace: 'Di questo passo, ~{{amount}} a fine mese',
   },
   you: {
     name: {

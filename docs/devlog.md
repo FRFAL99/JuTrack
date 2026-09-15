@@ -13,6 +13,91 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-15 — Step 71: i due widget dicono qualcosa di più
+
+Il Piano v10 parte da un'osservazione fatta con la home di un telefono vero davanti: i due widget
+mostrano **un numero fermo**, e un widget che dice sempre la stessa cosa nello stesso modo si smette
+di guardare. Questo step gli dà un contorno — una striscia, un ritmo — senza toccare l'architettura
+dello Step 34 e **senza consumare una build EAS**.
+
+**Il disegno non calcola, legge.** È il vincolo della piattaforma, scritto in `snapshot.ts` da due
+step: il widget lo disegna un task headless che non ha il documento, né la chiave, né il profilo.
+Quindi la striscia si calcola **nell'app**, dove le spese ci sono, e finisce nel foglietto in
+`app_meta` come tracciato. `totalsByDay` e `linePath` sono le stesse funzioni che disegnano
+l'andamento dentro i Grafici — `packages/core/src/chart/` non importa `react-native` proprio perché
+possa servire anche qui — e due curve calcolate da due codici diversi si sarebbero contraddette il
+giorno del primo arrotondamento.
+
+**Nel foglietto va la spezzata, non l'SVG.** È la decisione che non era nel piano e che il piano
+avrebbe preso lo stesso: il colore **non si può sapere** al momento in cui si scrive. `widgetCard`
+restituisce due rettangoli, chiaro e scuro, e Android sceglie quale disegnare **nel momento in cui
+disegna** — che può essere ore dopo. Un colore cotto nel foglietto sarebbe quello del tema di quando
+l'app è stata aperta l'ultima volta, cioè sbagliato per metà delle volte in cui il widget viene
+guardato. Quindi `sparkPath` è la sola spezzata, e `WidgetCard.tsx` ci costruisce attorno il
+documento SVG con il colore della palette che sta usando. Le costanti del riquadro —
+`SPARK_WIDTH`, `SPARK_HEIGHT` — stanno in `snapshot.ts` e non in uno dei due file, perché chi scrive
+i punti e chi chiude l'area devono usare **gli stessi due numeri**.
+
+**Il ritmo è una moltiplicazione, e la frase lo dice.** «Di questo passo, ~840 € a fine mese»: «di
+questo passo» è la condizione, la tilde toglie la precisione che una media non ha, e l'arrotondamento
+all'euro toglie i centesimi di una stima. Non si mostra **prima del terzo giorno** del mese, perché
+il 1° la proiezione moltiplica per trentuno quello che si è speso in un giorno solo — una spesa
+grossa fatta il primo darebbe un numero enorme e falso proprio quando non si ha ancora nessun altro
+dato per non crederci.
+
+**La striscia si scala sul massimo del periodo.** Serve a mostrare il ritmo — dove sono stati i
+giorni pieni e dove i vuoti — non a confrontare due settimane fra loro: con un fondoscala fisso,
+quattordici giorni da pochi euro darebbero una riga schiacciata sul fondo, cioè un grafico che non
+dice niente. E quando non si è speso nulla la striscia **non c'è**: un'area alta zero è un trattino
+che si legge come un grafico rotto, non come una settimana tranquilla.
+
+**Il saldo non prende la striscia, e non è una dimenticanza.** Non ha una serie storica da cui
+ricavarla: è una fotografia di chi deve cosa a chi _adesso_, e ricostruirne l'andamento vorrebbe
+dire rifare il giro dei debiti per ognuno degli ultimi quattordici giorni — un conto che non sta né
+nel foglietto né in un task headless. Del taglio si serve comunque, per non stringere le tre righe
+dove non ci stanno.
+
+### Il punto che il piano aveva scritto in maiuscolo, ed era vero
+
+`publish.ts` faceva `renderWidget: () => view`, con la vista calcolata **prima** del giro: perfetto
+finché il rettangolo era lo stesso a ogni dimensione, e un guasto dal momento in cui non lo è più. Il
+guasto non si vede nei test — lì il modulo nativo non esiste — e **non si vede nemmeno
+ridimensionando il widget**, perché quel gesto passa dall'altro percorso, `handler.tsx`. Si vede solo
+così: widget largo sulla home, si registra una spesa, e il rettangolo si ridisegna nella versione
+stretta, con l'app in mano, cioè nel momento esatto in cui lo si sta guardando. Adesso è
+`renderWidget: (info) => …`, e tutti e due i percorsi passano per la **stessa** `widgetSize`.
+
+**`size.ts` è un file in più rispetto alla tabella del piano**, ed è la ragione per cui quel punto
+adesso è verificato: i due percorsi devono decidere uguale, e una funzione pura con i suoi test è
+l'unico modo di provarlo senza il modulo nativo. Importare lì `react-native-android-widget` avrebbe
+reso il file non testabile, che è esattamente il modo in cui la regola smetterebbe di essere
+controllata.
+
+### La decisione 2, che è quella che protegge i telefoni fermi
+
+I campi nuovi sono **facoltativi**, e i tre di prima non si toccano. Il caso non è teorico: fra
+l'aggiornamento via etere e il primo avvio dell'app può passare mezza giornata, e in mezzo il sistema
+disegna i widget col foglietto **vecchio**. Un campo obbligatorio darebbe un rettangolo vuoto in
+quella finestra — il difetto peggiore che un widget possa avere, perché si legge come un'app rotta.
+`parseSnapshot` legge il mese con un lettore suo, che accoglie i due campi nuovi se ci sono e si
+capiscono, e c'è il test che gli dà un foglietto in forma vecchia e pretende un widget intero meno le
+parti nuove.
+
+Il tetto sulla lunghezza del tracciato si ricontrolla **in lettura** e non solo in scrittura: il
+foglietto è un file su disco, e chi lo rilegge non sa chi l'ha scritto né con quale versione
+dell'app.
+
+### Verifica
+
+`format:check`, `lint`, `typecheck` puliti; **1704 test verdi** (901 core + 749 app + 54 relay),
+ventuno più di ieri. `npx expo export --platform android` produce il bundle, e l'impronta resta
+`d862b56d70daebe68db62e164e03d66e5245ed33` — la stessa del binario in produzione, quindi lo step
+viaggia via etere senza consumare una build, come la decisione 0 del piano prevedeva.
+
+Resta da provare col telefono, e la trappola da cercare è una sola: registrare una spesa con l'app
+aperta e guardare se il widget largo resta largo. I passaggi sono in
+[verifica-sul-telefono.md](verifica-sul-telefono.md).
+
 ## 2026-09-15 — Step 70: la domanda scritta nei Grafici, e il Piano v9 è chiuso
 
 La stessa grammatica, girata dall'altra parte: non «registra questa spesa», ma «fammi vedere queste

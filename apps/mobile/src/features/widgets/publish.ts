@@ -1,6 +1,7 @@
 import { markError } from '@/diagnostics';
 import type { KeyValueStore } from '@/platform/app-meta';
 import { loadWidgetModule, type WidgetName } from './module';
+import { widgetSize } from './size';
 import {
   changedWidgets,
   NOTHING_KNOWN,
@@ -75,6 +76,15 @@ export async function clearWidgets(): Promise<void> {
  * I due percorsi sono separati e disegnano le stesse viste. `widgetNotFound` non fa niente di
  * proposito — nessun widget sulla home è il caso normale, non un guasto.
  *
+ * **`renderWidget` riceve `WidgetInfo`, e da questo step lo usa.** Fino allo Step 70 la vista
+ * si calcolava una volta prima del giro e la funzione ignorava l'argomento: andava benissimo
+ * finché il rettangolo era lo stesso a ogni dimensione. Adesso non lo è più, e quella riga
+ * sarebbe diventata un guasto che **nessun test può vedere** — qui il modulo nativo non
+ * esiste — e che nemmeno il ridimensionamento mostrerebbe, perché quel gesto passa
+ * dall'**altro** percorso, `handler.tsx`. Si vedrebbe soltanto così: widget largo sulla home,
+ * si registra una spesa, e il rettangolo si ridisegna nella versione stretta, con l'app in
+ * mano — cioè nel momento esatto in cui lo si sta guardando.
+ *
  * I due giri sono **in fila e non in parallelo**: sono due chiamate al processo del launcher,
  * e un `Promise.all` guadagnerebbe qualche millisecondo su un aggiornamento che nessuno sta
  * guardando, al prezzo di un errore su uno dei due che porta via anche l'altro.
@@ -88,11 +98,12 @@ async function draw(snapshot: WidgetSnapshot, names: readonly WidgetName[]): Pro
     const { balanceView, monthView } = require('./views') as typeof Views;
 
     for (const widgetName of names) {
-      const view =
-        widgetName === 'Balance' ? balanceView(snapshot.balance) : monthView(snapshot.month);
       await module.requestWidgetUpdate({
         widgetName,
-        renderWidget: () => view,
+        renderWidget: (info) =>
+          widgetName === 'Balance'
+            ? balanceView(snapshot.balance, widgetSize(info))
+            : monthView(snapshot.month, widgetSize(info)),
         widgetNotFound: () => {},
       });
     }

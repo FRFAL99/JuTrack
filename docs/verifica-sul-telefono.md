@@ -382,6 +382,17 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
   telefono lo stesso. Infine la guardia: con l'app aperta davanti, il giro periodico non deve fare
   niente. Da tenere d'occhio nei giorni seguenti la voce di JuTrack nei consumi di sistema, che è
   l'unico modo di sapere se mezz'ora è il numero giusto
+- **Lo Step 71, che si prova quasi tutto in un minuto e ha una trappola sola.** Sul widget «Speso
+  questo mese», nell'ordine: il rettangolo deve mostrare il totale, **la striscia degli ultimi
+  quattordici giorni** e la riga del ritmo («Di questo passo, ~840 € a fine mese»); **stringilo a
+  due celle** e la striscia deve sparire, lasciando gruppo, cifra e didascalia senza **nessun testo
+  tagliato a metà**; riallargalo e la striscia deve tornare. Poi il caso che i test non possono
+  vedere e che nemmeno il ridimensionamento mostra, perché passa dall'**altro** percorso di disegno:
+  **con l'app aperta, registra una spesa** e guarda la home — il widget deve aggiornarsi e restare
+  **largo**, con la striscia che comprende la spesa appena fatta. Se si ridisegna stretto, è
+  `renderWidget` in `publish.ts` che ha smesso di leggere `WidgetInfo`. Infine spegni e riaccendi lo
+  schermo: nessun rettangolo vuoto. Il saldo non ha striscia di proposito — una fotografia di chi
+  deve a chi non ha una serie storica — ma deve reggere lo stesso i due tagli
 - **Lo Step 37, dove la prova facile va fatta per prima e quella difficile richiede un telefono in
   inglese.** La facile: toccare «English» in Tu e vedere cambiare **la schermata sotto le dita e le
   tre etichette dei tab** — quelle sono la prova che il cambio esce da dove lo si è toccato — poi
