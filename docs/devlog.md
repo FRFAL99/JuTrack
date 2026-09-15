@@ -13,6 +13,52 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-15 — La tastiera non copre più la frase
+
+Fuori piano, quindi senza numero: il foglio della frase dello Step 68 è stato visto su un telefono
+vero, è piaciuto, e aveva un difetto solo — **ciò che si scriveva finiva sotto la tastiera**.
+
+**La causa erano due cose sovrapposte, e la seconda nascondeva la prima.** La riga era
+`behavior={Platform.OS === 'ios' ? 'padding' : undefined}`: su Android `KeyboardAvoidingView`
+restava senza `behavior`, quindi inerte. È un modo di scrivere che di solito va benissimo, perché su
+Android a spostare le cose ci pensa l'`adjustResize` del manifest — ed è qui che si nasconde la
+trappola vera: **una `Modal` di React Native su Android è una finestra sua**, e quel
+ridimensionamento, che salva ogni altra schermata dell'app, lì non arriva. Nessuno alzava il foglio,
+e nessuno lo diceva.
+
+**Quindi il foglio si alza da sé.** `Keyboard.addListener` dà l'altezza vera, e il foglio si stacca
+dal fondo di quel tanto. Gli eventi non sono gli stessi sulle due piattaforme e non è una
+preferenza: iOS annuncia la tastiera **prima** di aprirla (`keyboardWillShow`) e il foglio si alza
+insieme a lei, mentre Android quegli eventi non li manda affatto — restare su `Will` lì sarebbe
+stato il difetto di prima riscritto in un altro modo.
+
+**La riga che chiude il difetto per davvero è l'altezza massima.** `maxHeight: '80%'` era l'80%
+dello **schermo intero**: alzare il foglio e lasciargli quel tetto vuol dire vederlo riallungarsi
+dentro la tastiera da cui si era appena tolto. Adesso la frazione si prende su ciò che **resta**, e
+c'è il test che pretende che quanto il foglio si alza più quanto è alto non superi mai la finestra.
+
+**A tastiera aperta il margine di sicurezza in fondo sparisce**, ed è voluto: `insets.bottom` tiene
+il foglio sopra la barra di navigazione, che in quel momento sta **dietro** la tastiera. Sommarlo lo
+stesso aggiungerebbe una striscia di niente fra il foglio e i tasti.
+
+**L'aritmetica sta in `sheet-metrics.ts`, puro e con i test; la sottoscrizione agli eventi resta nel
+componente.** È la stessa divisione di `snapshot.ts` rispetto a `publish.ts`: chi decide si può
+provare, chi parla con la piattaforma no. Vale per questo foglio soltanto — gli altri fogli ancorati
+in fondo (`FilterSheet`, `SettingSheet`, `GroupSwitcherSheet`) non hanno campi di testo, e
+generalizzare adesso vorrebbe dire scrivere una regola per casi che non esistono.
+
+### Verifica
+
+`format:check`, `lint`, `typecheck` puliti; **1714 test verdi** (901 core + 759 app + 54 relay),
+dieci più di prima. `npx expo export --platform android` produce il bundle e l'impronta resta
+`d862b56d…`: nessuna build EAS.
+
+**Ed è una correzione che solo il telefono conferma**, perché dipende da come Android tratta la
+finestra di una `Modal`. I due esiti sbagliati sono opposti, e la checklist li descrive tutti e due:
+il campo di nuovo sotto la tastiera vuol dire che gli eventi non arrivano; il foglio staccato con
+una striscia vuota in mezzo vuol dire che quella finestra si ridimensionava già da sé, e adesso si
+alza due volte.
+
 ## 2026-09-15 — Step 71: i due widget dicono qualcosa di più
 
 Il Piano v10 parte da un'osservazione fatta con la home di un telefono vero davanti: i due widget

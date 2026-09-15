@@ -59,12 +59,13 @@ all'aggiornamento di arrivare, in silenzio.
   — in particolare **chiudere l'app dai recenti e riaprirla**, che è l'unico modo di sapere se il
   permesso sulla cartella è davvero persistente. I passaggi sono in
   [verifica-sul-telefono.md](verifica-sul-telefono.md).
-- **La tastiera copre il campo del foglio della frase.** Visto sul telefono il 15 settembre: il
-  foglio funziona e piace, ma ciò che si scrive finisce sotto la tastiera. La causa è una riga,
-  `SentenceSheet.tsx:94`: `KeyboardAvoidingView` riceve un `behavior` **solo su iOS**, e su Android
-  dentro una `Modal` l'`adjustResize` del manifest non raggiunge la finestra del modale — quindi il
-  foglio non lo alza nessuno. Non basta passare un `behavior` anche ad Android: il foglio è ancorato
-  in fondo, e va deciso **dove sta** quando la tastiera è aperta.
+- **La tastiera che copriva il campo della frase è corretta, e va riguardata col telefono.** Il
+  foglio adesso si alza di quanto la tastiera misura davvero, e l'aritmetica sta in
+  `sheet-metrics.ts` con i suoi test — ma è proprio la classe di difetto che **solo il dispositivo
+  conferma**, perché dipende da come Android tratta la finestra di una `Modal`. Da guardare: il
+  campo deve restare visibile mentre si scrive, e il foglio non deve staccarsi dalla tastiera
+  lasciando una striscia vuota in mezzo (sarebbe il caso opposto, cioè la finestra che si
+  ridimensiona già da sé).
 - **Il campo della domanda nei Grafici non si è fatto notare.** C'è, ed è dove il piano voleva —
   in cima al tab, sopra la barra dei chip, prima riga della schermata. Ma alla prima apertura è stato
   scambiato per una casella di ricerca qualunque: quello che manca non è il funzionamento, è la

@@ -382,6 +382,13 @@ _in ritardo_ dello Step 33, che ne vuole **uno**; e il primo del mese dello Step
   telefono lo stesso. Infine la guardia: con l'app aperta davanti, il giro periodico non deve fare
   niente. Da tenere d'occhio nei giorni seguenti la voce di JuTrack nei consumi di sistema, che è
   l'unico modo di sapere se mezz'ora è il numero giusto
+- **La tastiera sul foglio della frase, corretta il 15 settembre e da riguardare.** Apri «Scrivi»
+  dalla home: il foglio si apre con `autoFocus`, quindi la tastiera compare da sola. **Il campo deve
+  restare visibile mentre si scrive**, e sotto devono vedersi l'anteprima della frase e le pillole,
+  scorrendo se serve. Due esiti sbagliati, e sono opposti: il campo di nuovo **sotto** la tastiera
+  vuol dire che gli eventi non arrivano; il foglio staccato dalla tastiera con una **striscia vuota
+  in mezzo** vuol dire che la finestra della `Modal` si ridimensionava già da sé e adesso si alza due
+  volte. È l'unica cosa di questa correzione che i test non possono dire
 - **Lo Step 71, che si prova quasi tutto in un minuto e ha una trappola sola.** Sul widget «Speso
   questo mese», nell'ordine: il rettangolo deve mostrare il totale, **la striscia degli ultimi
   quattordici giorni** e la riga del ritmo («Di questo passo, ~840 € a fine mese»); **stringilo a
