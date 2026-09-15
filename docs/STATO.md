@@ -32,10 +32,11 @@ su tredici: manca solo la coda dello Step 41.
 **1727 test verdi** (901 core + 772 app + 54 relay), con `typecheck`, `lint` e `format:check`
 puliti.
 
-**Gli aggiornamenti via etere funzionano, e ne sono già partiti quattro**: tre il 13 settembre — gli
-Step 49–57, il Piano v7 intero e il Piano v8 intero — e il **Piano v9 intero** (gruppo `8d2d8fc3…`,
-dal commit `98f44d4`) il 15 settembre, tutti sul canale `production` con impronta `d862b56d…`, la
-stessa del binario in test. Il registro è in [versioni-e-aggiornamenti.md](versioni-e-aggiornamenti.md),
+**Gli aggiornamenti via etere funzionano, e ne sono già partiti cinque**: tre il 13 settembre — gli
+Step 49–57, il Piano v7 intero e il Piano v8 intero — e due il 15 settembre, il **Piano v9 intero**
+(gruppo `8d2d8fc3…`, dal commit `98f44d4`) e il **Piano v10 intero** più la correzione della
+tastiera (gruppo `6c1bfb85…`, dal commit `2d00608`). Tutti sul canale `production` con impronta
+`d862b56d…`, la stessa del binario in test. Il registro è in [versioni-e-aggiornamenti.md](versioni-e-aggiornamenti.md),
 insieme alla regola controintuitiva che li governa: **un `eas update` si pubblica con `version`
 invariata**, perché `version` entra nell'impronta della `runtimeVersion` e alzarla impedisce
 all'aggiornamento di arrivare, in silenzio.
