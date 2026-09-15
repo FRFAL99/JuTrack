@@ -20,5 +20,6 @@ export * from './insights';
 export * from './chart';
 export * from './export';
 export * from './pairing';
+export * from './parse';
 export * from './persistence';
 export * from './sync';

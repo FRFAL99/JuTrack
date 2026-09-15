@@ -22,7 +22,8 @@
     "doc:verifica": "tsx scripts/verifica-doc.mts",
     "peer": "npm run peer --workspace @jutrack/mobile --",
     "prova": "npm run prova --workspace @jutrack/mobile",
-    "icone": "npm run icone --workspace @jutrack/mobile --"
+    "icone": "npm run icone --workspace @jutrack/mobile --",
+    "frase": "tsx scripts/frase.mts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -13,6 +13,111 @@ Registro cronologico dell'avanzamento. Entry in ordine cronologico inverso (più
 
 ---
 
+## 2026-09-15 — Step 67: il motore della frase
+
+Una riga di testo diventa una spesa, e per farlo non c'è voluto quasi niente di nuovo.
+
+**Il pezzo difficile era già scritto.** `parse/` non interpreta numeri, non decide quando due parole
+sono la stessa parola, non fa aritmetica sui giorni: chiama `parseAmount` (`model/money.ts`),
+`storeKey`/`tagKey`/`tidy` (`insights/naming.ts`) e `addDays`/`dayOfWeek` (`insights/calendar.ts`),
+e si limita a dire **quale pezzo di frase riguarda quale campo**. Le 660 righe di riconoscitori sono
+quasi tutte elenchi di parole e confini di token.
+
+**Sta accanto a `insights/`, non dentro.** `insights` risponde a «che numero esce dalle spese che
+esistono» — un'aggregazione in lettura il cui costo è scandire la lista. Qui la direzione è opposta:
+da un testo si propone una spesa che **non esiste ancora**, e l'unica lista che si legge è il
+vocabolario, che arriva già pronto nel `ParseContext`.
+
+**La grammatica non inventa niente.** Una parola diventa un negozio solo se `storeKey(parola)` è già
+nel vocabolario del gruppo; idem per i tag, idem per le categorie sul nome. Il perché è la frase in
+testa a `naming.ts` — «senza questo, "top negozi" diventa un elenco di refusi» — e un parser che
+battezza un negozio a ogni parola sconosciuta farebbe quel danno **più in fretta di un umano**, in
+silenzio. Il prezzo è che il primo acquisto da «Esselunga» si scrive a mano una volta; dopo, la
+frase lo conosce. C'è il test: una frase di parole mai viste produce una bozza vuota e tutto nella
+nota.
+
+**Un numero nudo è l'importo; una data ha sempre un marcatore.** È l'unica ambiguità che renderebbe
+imprevedibile tutto il resto, e «il marcatore distingue» si spiega in una riga a chi guarda, cosa
+che «vince il numero più grande» non fa. Se restano **due** numeri nudi e nessuno porta un segno di
+valuta, l'importo non si compila e la bozza lo dichiara (`amountAmbiguous`): non scegliere è sempre
+disponibile, perché sotto c'è il tastierino di sempre.
+
+**Mai una data nel futuro.** «venerdì» è il venerdì appena passato, «il 3» il 3 più recente, «3
+dicembre» a settembre è quello dell'anno prima. Una spesa datata domani entrerebbe nei grafici del
+mese senza che nessuno l'abbia chiesta — e «domani», che nel lessico non c'è, finisce nella nota.
+
+**«te» esiste solo in un gruppo di due.** «io», «me», «mio» risolvono sempre a chi scrive; «te» in
+un gruppo di tre resta una parola qualunque, perché lì è chiunque e un `paidBy` sbagliato produce
+saldi sbagliati che si scoprono settimane dopo. I nomi propri valgono sempre, e un nome senza
+marcatore di pagamento non muove niente: «30 regalo per Giulia» lascia «per Giulia» nella nota.
+
+**Ogni campo capito si porta dietro i caratteri da cui viene.** I `marks` servono a tre cose che non
+si potevano aggiungere dopo senza rifare il tokenizzatore: l'evidenziazione dello Step 68, i test
+che asseriscono **quali** caratteri hanno prodotto un campo — così un riconoscitore ingordo fallisce
+invece di nascondersi dietro un risultato giusto per caso — e, domani, la misura onesta di quante
+frasi la grammatica non capisce, che è l'unico modo di decidere se valga la pena chiedere a un
+modello invece di deciderlo a naso.
+
+**La bozza non è una spesa.** `parseExpense` restituisce una struttura in memoria; `parse/` non
+conosce `VaultStore`. La normalizzazione di negozio e tag resta nell'unico punto da cui il testo
+entra nel documento, e una lettura sbagliata che si salvasse da sola sarebbe molto peggio di una che
+si vede prima.
+
+### Tre trappole, tutte silenziose
+
+**Il punto fa due mestieri.** In `1.234,56` separa le migliaia, in `25.50` i centesimi. La prima
+versione toglieva sempre il punto e faceva di venticinque euro e mezzo **duemilacinquecentocinquanta
+euro** — un errore che nessun tipo intercetta e che si scopre sull'estratto conto. Si toglie solo
+quando dietro c'è un gruppo di tre cifre esatte.
+
+**Le voci del lessico vanno scritte già ripiegate.** I token arrivano ai riconoscitori senza accenti;
+una voce scritta `metà` invece di `meta` non verrebbe riconosciuta **mai**, senza alcun errore —
+solo una parola che non funziona. C'è un test che passa ogni voce per `fold` e pretende che non
+cambi.
+
+**Niente `normalize('NFD')` per togliere gli accenti.** L'app gira su Hermes, dove la normalizzazione
+Unicode non è garantita come su Node: sarebbe una grammatica verde nei test e muta sul telefono.
+Nove coppie di caratteri stanno in una tabella scritta a mano.
+
+E una quarta, che il piano aveva già visto e che è bastato non commettere: **si tokenizza sul testo
+originale**. Normalizzando prima, gli estremi punterebbero la stringa ripulita e l'evidenziazione
+mostrerebbe i caratteri sbagliati solo nelle frasi con due spazi di fila — cioè quasi mai mentre si
+prova, e sempre a casa di qualcun altro.
+
+### Verifica
+
+**1596 test verdi** (850 core + 692 app + 54 relay), `typecheck`, `lint` e `format:check` puliti,
+`expo export --platform android` completato. **Nessuna build EAS**, e nemmeno una riga di
+interfaccia: questo step non ha niente a schermo.
+
+I 127 test nuovi stanno tutti in `packages/core/src/parse/`, uno per modulo più la tabella: quarantadue
+frasi vere, dalla più secca (`25`) a quelle che non si capiscono (`boh`, la stringa vuota), ognuna
+con la bozza attesa su una riga sola. È il posto in cui si vede se la grammatica serve, ed è il
+posto in cui si aggiunge la frase che un giorno non funzionerà.
+
+Il criterio di «fatto» dello step non è sul telefono ma sulla tastiera, ed è passato:
+
+```
+$ npm run frase -- "25 spesa esselunga ieri metà a te" --oggi=2026-09-15
+
+  25 spesa esselunga ieri metà a te
+  €€ CCCCC NNNNNNNNN DDDD /////////
+
+  Importo    25,00 €
+  Data       2026-09-14
+  Categoria  🛒 Spesa
+  Negozio    Esselunga
+  Tag        —
+  Pagata da  —
+  Divisione  a metà
+  Nota       —
+```
+
+e `npm run frase -- "cena con i suoi 40"` stampa 40,00 € con `cena con i suoi` nella nota, e
+nient'altro compilato — **che è il caso normale, non il fallimento**.
+
+---
+
 ## 2026-09-13 — Step 66: l'avviso che il backup invecchia, e il Piano v8 è chiuso
 
 Il quinto avviso, e il primo che si **riarma**.

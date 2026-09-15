@@ -1,6 +1,6 @@
 # Stato del progetto — punto di partenza
 
-> Aggiornato: **2026-09-13**
+> Aggiornato: **2026-09-15**
 
 Dove siamo oggi, cosa manca e cosa è bloccato. Niente cronaca: quella sta in
 [devlog.md](devlog.md), e il racconto degli Step 0–60 che questo file ha accumulato fino al 13
@@ -19,8 +19,8 @@ dicendo tre cose false su sé stesso.
 la mattina dello stesso giorno: il sync visto funzionare nei due versi fra due telefoni veri, coi
 membri e i saldi giusti, e i due widget popolati con numeri identici a un calcolo indipendente.
 
-**Sessantasette step, dallo 0 al 66**, elencati uno per riga in [registro.md](registro.md). Sette piani
-chiusi su otto — l'originale, il [v2](piano-v2-profili-gruppi-sync.md),
+**Sessantotto step, dallo 0 al 67**, elencati uno per riga in [registro.md](registro.md). Sette piani
+chiusi su dieci — l'originale, il [v2](piano-v2-profili-gruppi-sync.md),
 [v3](piano-v3-tab-gruppi-azzeramento-sync.md), [v4](piano-v4-grafici-e-dashboard.md),
 [v6](piano-v6-spesa-rapida-e-grafici-componibili.md),
 [v7](piano-v7-data-e-vocabolario-del-gruppo.md) e
@@ -28,7 +28,7 @@ chiusi su otto — l'originale, il [v2](piano-v2-profili-gruppi-sync.md),
 ([visualdesign.md](visualdesign.md)). Il [v5](piano-v5-notifiche-widget-profilo.md) è a dodici step
 su tredici: manca solo la coda dello Step 41.
 
-**1469 test verdi** (723 core + 692 app + 54 relay), con `typecheck`, `lint` e `format:check`
+**1596 test verdi** (850 core + 692 app + 54 relay), con `typecheck`, `lint` e `format:check`
 puliti.
 
 **Gli aggiornamenti via etere funzionano, e ne sono già partiti tre** il 13 settembre: gli Step
@@ -69,17 +69,21 @@ del 5 settembre (commit `9606e0f`) combacia con `main`, e tutto ciò che è entr
 
 ## Il piano in corso
 
-**Nessuno.** Il [Piano v8](piano-v8-dati-che-escono-e-backup-che-si-fa-da-solo.md) è chiuso il 13
-settembre con lo Step 66: il `.xlsx` ha preso il posto dei due CSV — con
-l'[ADR 0004](adr/0004-l-xlsx-al-posto-del-csv.md) che supera la
-[0003](adr/0003-formati-di-export.md) — il file ha sette fogli, il formato JSON è alla v4 col nome
-del gruppo dentro, l'import sceglie un file, il backup di tutti i gruppi si scrive da sé in una
-cartella scelta una volta, e un quinto avviso dice quando quel backup invecchia. **Nessuno dei sei
-step ha richiesto una build EAS**: viaggiano tutti via etere.
+**Il [Piano v9](piano-v9-la-frase-che-diventa-una-spesa.md)**, aperto il 15 settembre: una riga di
+testo diventa una spesa, e una domanda scritta diventa un grafico filtrato. Occupa gli Step 67, 68 e
+**70** — il 69 è stato ritirato il giorno stesso in cui il piano è stato scritto, e il numero resta
+bruciato. **Non contiene un solo byte che esca dal telefono:** l'analisi da cui nasce immaginava di
+far leggere la frase a un modello linguistico, il codice ha detto che nove frasi su dieci non ne
+hanno bisogno perché le parole che contano il gruppo le conosce già.
 
-Il prossimo piano parte da [piano-TEMPLATE.md](piano-TEMPLATE.md), si chiama `piano-v9-<slug>.md` e
-dichiara in testa quali step occupa — il primo libero è il **67**, come dice
-[registro.md](registro.md).
+**Lo Step 67 è chiuso**: il motore sta in `packages/core/src/parse/`, con `parseExpense(text,
+context)` e il lessico italiano come parametro. Restano il **68** — il foglio sul telefono, con
+l'anteprima che si colora mentre si scrive — e il **70**, la stessa grammatica che risponde alla
+domanda nei Grafici.
+
+Aperto ma non ancora cominciato c'è anche il **[Piano v10](piano-v10-i-widget-che-dicono-qualcosa.md)**
+(Step 71 e 72): i widget che mostrano l'andamento e il «+» sulla home da cui comincia una spesa
+intera.
 
 ## Dove sta cosa
 
